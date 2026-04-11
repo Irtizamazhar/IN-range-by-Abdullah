@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { PasswordToggleInput } from "@/components/ui/PasswordToggleInput";
 
 const accent = "#F59E0B";
 
@@ -100,14 +101,13 @@ export default function VendorLoginPage() {
               >
                 Password
               </label>
-              <input
+              <PasswordToggleInput
                 id="vendor-password"
-                type="password"
                 autoComplete="current-password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-neutral-900 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-400/40"
+                className="mt-1 w-full rounded-lg border border-neutral-300 py-2.5 pl-3 pr-11 text-neutral-900 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-400/40"
               />
             </div>
             <div className="flex flex-wrap items-center justify-between gap-3">

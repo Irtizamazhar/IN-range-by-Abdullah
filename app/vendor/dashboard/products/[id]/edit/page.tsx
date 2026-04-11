@@ -32,6 +32,8 @@ export default async function VendorEditProductPage({ params }: Props) {
           productName: p.productName,
           description: p.description,
           price: p.price.toString(),
+          originalPrice:
+            p.originalPrice != null ? p.originalPrice.toString() : "",
           category: p.category,
           stock: p.stock,
           images: p.images,

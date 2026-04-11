@@ -1,22 +1,23 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useMemo, useState, type ClipboardEvent, type DragEvent } from "react";
 import toast from "react-hot-toast";
+import {
+  imageFilesFromClipboard,
+  isAllowedImageFile,
+} from "@/lib/clipboard-image-files";
+import {
+  fetchShopCategoryNameList,
+  SHOP_CATEGORY_FALLBACK,
+} from "@/lib/shop-category-names";
 import { parseImagesJson } from "@/lib/vendor-product-schemas";
-
-const CATEGORIES = [
-  "Clothing",
-  "Electronics",
-  "Food",
-  "Beauty",
-  "Other",
-] as const;
 
 export type VendorProductFormInitial = {
   productName: string;
   description: string;
   price: string;
+  originalPrice?: string | null;
   category: string;
   stock: number;
   images: unknown;
@@ -40,12 +41,47 @@ export function VendorProductForm({
     initial?.description ?? ""
   );
   const [price, setPrice] = useState(initial?.price ?? "");
-  const [category, setCategory] = useState(
-    initial?.category ?? CATEGORIES[0]
+  const [originalPrice, setOriginalPrice] = useState(
+    initial?.originalPrice != null && String(initial.originalPrice) !== ""
+      ? String(initial.originalPrice)
+      : ""
   );
-  const categoryOptions = Array.from(
-    new Set<string>([category, ...CATEGORIES])
-  );
+  const [shopCategoryNames, setShopCategoryNames] = useState<string[]>([]);
+  const [category, setCategory] = useState(initial?.category ?? "");
+
+  const categoryOptions = useMemo(() => {
+    const fromApi =
+      shopCategoryNames.length > 0
+        ? shopCategoryNames
+        : [...SHOP_CATEGORY_FALLBACK];
+    return Array.from(
+      new Set<string>([
+        ...(initial?.category ? [initial.category] : []),
+        ...fromApi,
+      ])
+    );
+  }, [shopCategoryNames, initial?.category]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchShopCategoryNameList().then((names) => {
+      if (cancelled) return;
+      setShopCategoryNames(names);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    setCategory((cur) => {
+      if (cur && categoryOptions.includes(cur)) return cur;
+      if (initial?.category && categoryOptions.includes(initial.category)) {
+        return initial.category;
+      }
+      return categoryOptions[0] ?? "";
+    });
+  }, [categoryOptions, initial?.category]);
   const [stock, setStock] = useState(String(initial?.stock ?? 0));
   const [images, setImages] = useState<string[]>(() =>
     parseImagesJson(initial?.images)
@@ -57,17 +93,20 @@ export function VendorProductForm({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  async function onPickFiles(files: FileList | null) {
-    if (!files?.length) return;
+  async function uploadImageFiles(files: File[]) {
+    const allowed = files.filter(isAllowedImageFile);
+    if (!allowed.length) {
+      toast.error("Use JPG, PNG, or WebP images");
+      return;
+    }
     setUploading(true);
     try {
       const next = [...images];
-      for (let i = 0; i < files.length; i++) {
+      for (const file of allowed) {
         if (next.length >= 8) {
           toast.error("Maximum 8 images");
           break;
         }
-        const file = files[i];
         const fd = new FormData();
         fd.append("file", file);
         const r = await fetch("/api/vendor/upload", {
@@ -83,13 +122,52 @@ export function VendorProductForm({
         if (data.url) next.push(data.url);
       }
       setImages(next);
+      if (allowed.length && next.length > images.length) {
+        toast.success(
+          allowed.length > 1 ? `${allowed.length} images added` : "Image added"
+        );
+      }
     } finally {
       setUploading(false);
     }
   }
 
+  function onPickFiles(files: FileList | null) {
+    if (!files?.length) return;
+    void uploadImageFiles(Array.from(files));
+  }
+
+  function onPasteImages(e: ClipboardEvent<HTMLDivElement>) {
+    const pasted = imageFilesFromClipboard(e);
+    if (!pasted.length) {
+      toast.error(
+        "No image in clipboard — copy a picture first (e.g. right-click → Copy image)"
+      );
+      return;
+    }
+    e.preventDefault();
+    void uploadImageFiles(pasted);
+  }
+
+  function onDropImages(e: DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    if (e.dataTransfer.files?.length) {
+      void uploadImageFiles(Array.from(e.dataTransfer.files));
+    }
+  }
+
   function removeImage(idx: number) {
     setImages((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  function parseOptionalOriginal(): number | undefined | null {
+    const t = originalPrice.trim();
+    if (!t) return mode === "edit" ? null : undefined;
+    const n = Number(t);
+    if (!Number.isFinite(n) || n <= 0) {
+      return NaN;
+    }
+    return n;
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -102,6 +180,11 @@ export function VendorProductForm({
     }
     if (!Number.isFinite(priceNum) || priceNum <= 0) {
       toast.error("Enter a valid price");
+      return;
+    }
+    const origParsed = parseOptionalOriginal();
+    if (origParsed !== undefined && origParsed !== null && Number.isNaN(origParsed)) {
+      toast.error("Enter a valid original price or leave it empty");
       return;
     }
     if (!Number.isFinite(stockNum) || stockNum < 0) {
@@ -124,6 +207,9 @@ export function VendorProductForm({
             productName: productName.trim(),
             description: description.trim(),
             price: priceNum,
+            ...(origParsed != null && origParsed !== undefined
+              ? { originalPrice: origParsed }
+              : {}),
             category,
             stock: stockNum,
             images,
@@ -151,6 +237,7 @@ export function VendorProductForm({
             productName: productName.trim(),
             description: description.trim(),
             price: priceNum,
+            originalPrice: origParsed as number | null,
             category,
             stock: stockNum,
             images,
@@ -228,7 +315,9 @@ export function VendorProductForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label className="text-sm font-bold text-neutral-800">Price (PKR)</label>
+          <label className="text-sm font-bold text-neutral-800">
+            Price (PKR)
+          </label>
           <input
             type="number"
             inputMode="decimal"
@@ -241,6 +330,24 @@ export function VendorProductForm({
           />
         </div>
         <div>
+          <label className="text-sm font-bold text-neutral-800">
+            Original (optional)
+          </label>
+          <input
+            type="number"
+            inputMode="decimal"
+            min={0}
+            step="0.01"
+            value={originalPrice}
+            onChange={(e) => setOriginalPrice(e.target.value)}
+            placeholder="Higher “was” price for discount"
+            className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2"
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
           <label className="text-sm font-bold text-neutral-800">Stock</label>
           <input
             type="number"
@@ -252,9 +359,6 @@ export function VendorProductForm({
             required
           />
         </div>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label className="text-sm font-bold text-neutral-800">Category</label>
           <select
@@ -270,7 +374,7 @@ export function VendorProductForm({
           </select>
         </div>
         {mode === "edit" ? (
-          <div>
+          <div className="sm:col-span-2">
             <label className="text-sm font-bold text-neutral-800">
               Listing status
             </label>
@@ -292,17 +396,32 @@ export function VendorProductForm({
         <label className="text-sm font-bold text-neutral-800">
           Images (1–8, JPG/PNG/WebP, max 5MB each)
         </label>
-        <input
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          multiple
-          disabled={uploading || images.length >= 8}
-          onChange={(e) => void onPickFiles(e.target.files)}
-          className="mt-2 block w-full text-sm"
-        />
-        {uploading ? (
-          <p className="mt-2 text-sm text-amber-700">Uploading…</p>
-        ) : null}
+        <div
+          tabIndex={0}
+          onPaste={onPasteImages}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={onDropImages}
+          className="mt-2 rounded-xl border-2 border-dashed border-amber-400/60 bg-amber-50/40 p-4 text-center outline-none focus:ring-2 focus:ring-amber-400/50 sm:p-6"
+        >
+          <p className="mb-3 text-sm text-neutral-600">
+            Drag &amp; drop, choose files, or{" "}
+            <strong className="text-neutral-800">
+              click here and press Ctrl+V
+            </strong>{" "}
+            (⌘+V on Mac) to paste from clipboard
+          </p>
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            multiple
+            disabled={uploading || images.length >= 8}
+            onChange={(e) => onPickFiles(e.target.files)}
+            className="mx-auto block w-full max-w-md text-sm"
+          />
+          {uploading ? (
+            <p className="mt-2 text-sm text-amber-800">Uploading…</p>
+          ) : null}
+        </div>
         <div className="mt-3 flex flex-wrap gap-3">
           {images.map((url, idx) => (
             <div key={`${url}-${idx}`} className="relative">

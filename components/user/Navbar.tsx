@@ -166,6 +166,7 @@ export function Navbar({ whatsappNumber }: { whatsappNumber: string }) {
   }, [searchQuery, pathname]);
 
   const isTrackOrderPage = pathname?.startsWith("/track-order");
+  const isCheckoutPage = pathname === "/checkout";
 
   return (
     <>
@@ -274,7 +275,7 @@ export function Navbar({ whatsappNumber }: { whatsappNumber: string }) {
           </div>
         </div>
 
-        {/* ROW 2 — Track Order: full-width banner (no logo/search/cart). Else: logo + search + cart. */}
+        {/* ROW 2 — Track Order: banner. Checkout: no logo/search/cart; mobile menu only. Else: logo + search + cart. */}
         {isTrackOrderPage ? (
           <div className="relative border-b border-borderGray bg-neutral-100">
             <button
@@ -293,6 +294,22 @@ export function Navbar({ whatsappNumber }: { whatsappNumber: string }) {
               className="h-auto w-full object-cover object-center max-h-[200px] sm:max-h-[260px] md:max-h-[320px]"
               priority
             />
+          </div>
+        ) : isCheckoutPage ? (
+          <div className="border-b border-borderGray bg-white md:hidden">
+            <div className="flex items-center gap-3 px-4 py-3">
+              <button
+                type="button"
+                className="shrink-0 rounded-full border border-primaryBlue/40 p-2 text-primaryBlue"
+                onClick={() => setMobileOpen(true)}
+                aria-label="Open menu"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+              <span className="text-sm font-semibold text-darkText">
+                Checkout
+              </span>
+            </div>
           </div>
         ) : (
           <div className="border-b border-borderGray bg-white">
@@ -514,17 +531,19 @@ export function Navbar({ whatsappNumber }: { whatsappNumber: string }) {
                 );
               }
             )}
-            <button
-              type="button"
-              className="flex items-center gap-3 text-left"
-              onClick={() => {
-                setMobileOpen(false);
-                setCartOpen(true);
-              }}
-            >
-              <ShoppingCart className="h-6 w-6" />
-              Cart {totalQty > 0 ? `(${totalQty})` : ""}
-            </button>
+            {!isCheckoutPage ? (
+              <button
+                type="button"
+                className="flex items-center gap-3 text-left"
+                onClick={() => {
+                  setMobileOpen(false);
+                  setCartOpen(true);
+                }}
+              >
+                <ShoppingCart className="h-6 w-6" />
+                Cart {totalQty > 0 ? `(${totalQty})` : ""}
+              </button>
+            ) : null}
             <a
               href={`https://wa.me/${whatsappNumber.replace(/\D/g, "")}`}
               target="_blank"

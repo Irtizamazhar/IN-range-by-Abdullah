@@ -13,6 +13,7 @@ import {
   WHERE_PARENT_ORDER_ONLY,
 } from "@/lib/prisma-order-includes";
 import { prisma } from "@/lib/prisma";
+import { sanitizePlainText } from "@/lib/security/sanitize";
 import { notifyAdminNewOrder, notifyAdminScreenshotUploaded } from "@/lib/order-emails";
 import { createVendorNotification } from "@/lib/vendor-notifications";
 import { primaryProductImageUrl, serializeOrder } from "@/lib/serialize";
@@ -112,6 +113,7 @@ export async function POST(req: NextRequest) {
     bankAccount,
     paymentScreenshot,
     paymentProofStagingId,
+    cardPaymentMeta,
   } = body as {
     customerName?: string;
     customerPhone?: string;
@@ -123,6 +125,11 @@ export async function POST(req: NextRequest) {
     bankAccount?: string;
     paymentScreenshot?: string;
     paymentProofStagingId?: string;
+    cardPaymentMeta?: {
+      last4?: string;
+      expiry?: string;
+      holderName?: string;
+    };
   };
 
   const lineItems: CartLine[] = Array.isArray(rawLines) ? rawLines : [];
@@ -133,11 +140,39 @@ export async function POST(req: NextRequest) {
   if (!customerName || !customerPhone || !customerEmail || !customerAddress || !city) {
     return NextResponse.json({ error: "Missing customer fields" }, { status: 400 });
   }
-  if (paymentMethod !== "bank_transfer" && paymentMethod !== "cod") {
+  if (
+    paymentMethod !== "bank_transfer" &&
+    paymentMethod !== "cod" &&
+    paymentMethod !== "card"
+  ) {
     return NextResponse.json({ error: "Invalid payment method" }, { status: 400 });
   }
 
   const settings = await getOrCreateSettings();
+
+  let orderNotes: string | null = null;
+  if (paymentMethod === "card") {
+    const meta = cardPaymentMeta;
+    const last4 = String(meta?.last4 || "").replace(/\D/g, "").slice(0, 4);
+    const expiryRaw = String(meta?.expiry || "").trim();
+    const expDigits = expiryRaw.replace(/\D/g, "").slice(0, 4);
+    const exp =
+      expDigits.length === 4
+        ? `${expDigits.slice(0, 2)}/${expDigits.slice(2)}`
+        : "";
+    const holder = sanitizePlainText(String(meta?.holderName || ""), 120);
+    const mm = parseInt(expDigits.slice(0, 2), 10);
+    if (last4.length !== 4 || exp.length !== 5 || !holder.length) {
+      return NextResponse.json(
+        { error: "Please complete all card fields (last 4 digits required)" },
+        { status: 400 }
+      );
+    }
+    if (!Number.isFinite(mm) || mm < 1 || mm > 12) {
+      return NextResponse.json({ error: "Invalid card expiry month" }, { status: 400 });
+    }
+    orderNotes = `Card payment (manual verification): •••• ${last4} | Exp ${exp} | ${holder}`;
+  }
 
   if (paymentMethod === "cod") {
     const allowed = settings.codAvailableCities.some(
@@ -335,7 +370,9 @@ export async function POST(req: NextRequest) {
           paymentMethod === "bank_transfer" && paymentShot ? paymentShot : null,
         paymentProofData,
         paymentProofMime,
-        paymentStatus: paymentMethod === "cod" ? "received" : "pending",
+        notes: orderNotes,
+        paymentStatus:
+          paymentMethod === "cod" ? "received" : "pending",
         orderStatus: paymentMethod === "cod" ? "confirmed" : "pending",
         isRead: false,
         orderItems: {

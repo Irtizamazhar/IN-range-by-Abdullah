@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { computeDiscountPercent } from "@/lib/product-discount";
 import { parseImagesJson } from "@/lib/vendor-product-schemas";
 
 type StorefrontDb = {
@@ -21,22 +22,31 @@ export async function syncVendorProductStorefront(
   if (!vp) return;
 
   const urls = parseImagesJson(vp.images);
-  const listingJson: Prisma.InputJsonValue | typeof Prisma.JsonNull =
-    urls.length > 0 ? urls : Prisma.JsonNull;
+  /** Omit when empty (matches admin Product.create); avoid JsonNull here — it can trigger client validation issues on optional JSON. */
+  const listingImageUrls: Prisma.InputJsonValue | undefined =
+    urls.length > 0 ? (urls as Prisma.InputJsonValue) : undefined;
 
   const isActive = vp.status === "active";
+
+  const priceNum = Number(vp.price);
+  const originalNum =
+    vp.originalPrice != null ? Number(vp.originalPrice) : null;
+  const discountPercent = computeDiscountPercent(priceNum, originalNum);
 
   const baseData = {
     name: vp.productName,
     description: vp.description,
     price: vp.price,
-    originalPrice: null,
-    discountPercent: 0,
+    originalPrice:
+      originalNum != null && Number.isFinite(originalNum)
+        ? new Prisma.Decimal(originalNum.toFixed(2))
+        : null,
+    discountPercent,
     category: vp.category,
     stock: vp.stock,
     variants: [] as Prisma.InputJsonValue,
     isActive,
-    listingImageUrls: listingJson,
+    ...(listingImageUrls !== undefined ? { listingImageUrls } : {}),
   };
 
   if (!vp.publishedProductId) {

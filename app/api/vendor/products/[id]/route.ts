@@ -30,6 +30,8 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
       productName: p.productName,
       description: p.description,
       price: p.price.toString(),
+      originalPrice:
+        p.originalPrice != null ? p.originalPrice.toString() : null,
       category: p.category,
       stock: p.stock,
       images: p.images,
@@ -77,8 +79,14 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   if (d.price != null) {
     data.price = new Prisma.Decimal(d.price.toFixed(2));
   }
+  if (d.originalPrice !== undefined) {
+    data.originalPrice =
+      d.originalPrice === null
+        ? null
+        : new Prisma.Decimal(d.originalPrice.toFixed(2));
+  }
   if (d.category != null) {
-    data.category = sanitizePlainText(d.category, 100);
+    data.category = sanitizePlainText(d.category, 255);
   }
   if (d.stock != null) {
     data.stock = d.stock;

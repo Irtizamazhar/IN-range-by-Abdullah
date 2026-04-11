@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { AnnouncementBar } from "@/components/user/AnnouncementBar";
 import { Navbar } from "@/components/user/Navbar";
 import { Footer } from "@/components/user/Footer";
@@ -24,7 +25,16 @@ export function UserRouteShell({
       <CustomerAuthProvider>
         <div className="flex min-h-screen flex-col overflow-x-hidden bg-white">
           <AnnouncementBar />
-          <Navbar whatsappNumber={whatsappNumber} />
+          <Suspense
+            fallback={
+              <header
+                className="sticky top-0 z-50 h-16 w-full shrink-0 border-b border-neutral-200 bg-white"
+                aria-hidden
+              />
+            }
+          >
+            <Navbar whatsappNumber={whatsappNumber} />
+          </Suspense>
           <main className="flex-1 overflow-x-hidden">{children}</main>
           <Footer settings={footerSettings} />
           <WhatsAppFloat number={whatsappNumber} />

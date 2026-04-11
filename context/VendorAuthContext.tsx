@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  Suspense,
   useCallback,
   useContext,
   useEffect,
@@ -27,7 +28,20 @@ type VendorAuthState = {
 
 const VendorAuthContext = createContext<VendorAuthState | null>(null);
 
-export function VendorAuthProvider({ children }: { children: React.ReactNode }) {
+function VendorAuthFallbackProvider({ children }: { children: React.ReactNode }) {
+  const refresh = useCallback(async () => {}, []);
+  const value = useMemo(
+    () => ({ vendor: null, loading: true, refresh }),
+    [refresh]
+  );
+  return (
+    <VendorAuthContext.Provider value={value}>
+      {children}
+    </VendorAuthContext.Provider>
+  );
+}
+
+function VendorAuthProviderInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [vendor, setVendor] = useState<VendorMe | null>(null);
   const [loading, setLoading] = useState(true);
@@ -74,6 +88,17 @@ export function VendorAuthProvider({ children }: { children: React.ReactNode }) 
     <VendorAuthContext.Provider value={value}>
       {children}
     </VendorAuthContext.Provider>
+  );
+}
+
+/** Suspense: usePathname needs a boundary or pathNameContext can be null during SSR/streaming. */
+export function VendorAuthProvider({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense
+      fallback={<VendorAuthFallbackProvider>{children}</VendorAuthFallbackProvider>}
+    >
+      <VendorAuthProviderInner>{children}</VendorAuthProviderInner>
+    </Suspense>
   );
 }
 

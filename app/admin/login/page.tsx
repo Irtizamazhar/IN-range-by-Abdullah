@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { LogoMark } from "@/components/user/LogoMark";
+import { PasswordToggleInput } from "@/components/ui/PasswordToggleInput";
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("");
@@ -48,13 +49,13 @@ export default function AdminLoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
-          <input
-            type="password"
+          <PasswordToggleInput
             required
-            className="w-full rounded-xl border border-borderGray px-4 py-2.5"
+            className="w-full rounded-xl border border-borderGray py-2.5 pl-4 pr-11"
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
           />
           {error ? (
             <p className="text-sm text-red-600 text-center">{error}</p>

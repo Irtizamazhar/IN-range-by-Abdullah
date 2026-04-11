@@ -23,6 +23,8 @@ export async function GET() {
       productName: p.productName,
       description: p.description,
       price: p.price.toString(),
+      originalPrice:
+        p.originalPrice != null ? p.originalPrice.toString() : null,
       category: p.category,
       stock: p.stock,
       images: p.images,
@@ -54,7 +56,16 @@ export async function POST(req: NextRequest) {
   const d = parsed.data;
   const productName = sanitizePlainText(d.productName, 200);
   const description = sanitizeDescriptionHtml(d.description, 20_000);
-  const category = sanitizePlainText(d.category, 100);
+  const category = sanitizePlainText(d.category, 255);
+  if (!productName.length || !description.length || !category.length) {
+    return NextResponse.json(
+      {
+        error:
+          "Name, description, and category must not be empty (check for disallowed content).",
+      },
+      { status: 400 }
+    );
+  }
 
   try {
     const created = await prisma.$transaction(async (tx) => {
@@ -64,6 +75,10 @@ export async function POST(req: NextRequest) {
           productName,
           description,
           price: new Prisma.Decimal(d.price.toFixed(2)),
+          originalPrice:
+            d.originalPrice != null
+              ? new Prisma.Decimal(d.originalPrice.toFixed(2))
+              : undefined,
           category,
           stock: d.stock,
           images: d.images as unknown as Prisma.InputJsonValue,
@@ -83,9 +98,33 @@ export async function POST(req: NextRequest) {
     });
   } catch (e) {
     console.error("vendor product create", e);
-    return NextResponse.json(
-      { error: "Could not create product or publish to storefront" },
-      { status: 500 }
-    );
+    const msg = vendorProductCreateErrorMessage(e);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
+}
+
+function vendorProductCreateErrorMessage(e: unknown): string {
+  if (e instanceof Prisma.PrismaClientKnownRequestError) {
+    if (e.code === "P2022") {
+      return "Database is missing the latest columns. On the server PC run: npx prisma db push — then restart npm run dev.";
+    }
+    if (e.code === "P2002") {
+      return "Could not save: duplicate value (try again or change the product name).";
+    }
+  }
+  const name =
+    e && typeof e === "object" && "name" in e
+      ? String((e as { name: unknown }).name)
+      : "";
+  if (name === "PrismaClientValidationError" && e instanceof Error) {
+    const oneLine = e.message.replace(/\s+/g, " ").trim();
+    if (/Unknown argument|Unknown field/i.test(oneLine)) {
+      return `Prisma client is out of date. Stop the dev server, run: npx prisma generate — then npm run dev again. (${oneLine.slice(0, 160)}${oneLine.length > 160 ? "…" : ""})`;
+    }
+    return oneLine.length > 300 ? `${oneLine.slice(0, 300)}…` : oneLine;
+  }
+  if (process.env.NODE_ENV === "development" && e instanceof Error) {
+    return `Could not create product: ${e.message}`;
+  }
+  return "Could not create product or publish to storefront.";
 }

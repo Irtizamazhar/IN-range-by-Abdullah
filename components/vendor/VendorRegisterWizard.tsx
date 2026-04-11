@@ -3,15 +3,10 @@
 import Link from "next/link";
 import { useCallback, useEffect, useId, useState } from "react";
 
-const accent = "#F59E0B";
+import { PasswordToggleInput } from "@/components/ui/PasswordToggleInput";
+import { fetchShopCategoryNameList } from "@/lib/shop-category-names";
 
-const CATEGORIES = [
-  "Clothing",
-  "Electronics",
-  "Food",
-  "Beauty",
-  "Other",
-] as const;
+const accent = "#F59E0B";
 
 type DocSlot = "cnic_front" | "cnic_back" | "license";
 
@@ -55,7 +50,8 @@ export function VendorRegisterWizard() {
   );
   const [businessRegNo, setBusinessRegNo] = useState("");
   const [cnic, setCnic] = useState("");
-  const [category, setCategory] = useState<string>(CATEGORIES[0]);
+  const [shopCategories, setShopCategories] = useState<string[]>([]);
+  const [category, setCategory] = useState("");
 
   const [bankName, setBankName] = useState("");
   const [accountTitle, setAccountTitle] = useState("");
@@ -103,6 +99,20 @@ export function VendorRegisterWizard() {
   }, [email, checkEmail]);
 
   useEffect(() => {
+    let cancelled = false;
+    void fetchShopCategoryNameList().then((names) => {
+      if (cancelled) return;
+      setShopCategories(names);
+      setCategory((prev) =>
+        prev && names.includes(prev) ? prev : names[0] ?? ""
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     if (step !== 3) return;
     function onPaste(e: ClipboardEvent) {
       const items = e.clipboardData?.files;
@@ -148,6 +158,7 @@ export function VendorRegisterWizard() {
   function canAdvanceFrom2(): boolean {
     if (shopName.trim().length < 1) return false;
     if (cnic.replace(/\D/g, "").length !== 13) return false;
+    if (!shopCategories.length || !category.trim()) return false;
     if (businessType === "company" && businessRegNo.trim().length < 2) {
       return false;
     }
@@ -308,12 +319,12 @@ export function VendorRegisterWizard() {
               )}
             </Field>
             <Field label="Password" htmlFor="vr-pw">
-              <input
+              <PasswordToggleInput
                 id="vr-pw"
-                type="password"
+                autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-neutral-900 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-400/40"
+                className="mt-1 w-full rounded-lg border border-neutral-300 py-2.5 pl-3 pr-11 text-neutral-900 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-400/40"
               />
               <div className="mt-2 flex gap-1">
                 {[0, 1, 2, 3].map((i) => (
@@ -429,13 +440,18 @@ export function VendorRegisterWizard() {
                 id="vr-cat"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-neutral-900 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-400/40"
+                disabled={!shopCategories.length}
+                className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-neutral-900 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-400/40 disabled:cursor-not-allowed disabled:bg-neutral-100"
               >
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
+                {!shopCategories.length ? (
+                  <option value="">Loading categories…</option>
+                ) : (
+                  shopCategories.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))
+                )}
               </select>
             </Field>
             <div className="flex gap-3">
