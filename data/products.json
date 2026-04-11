@@ -1,0 +1,150 @@
+[
+  {
+    "id": 9,
+    "name": "3e",
+    "price": 432243,
+    "originalPrice": 4323424325,
+    "category": "wsa",
+    "image": "/uploads/products/1775457462521-image.png",
+    "images": [
+      "/uploads/products/1775457462521-image.png"
+    ],
+    "description": "4etrtrtt43rgrrreddc",
+    "isNew": true,
+    "stock": 324342,
+    "inStock": true,
+    "isFeatured": true,
+    "createdAt": "2026-04-06"
+  },
+  {
+    "id": 8,
+    "name": "hello",
+    "price": 3232,
+    "originalPrice": 23,
+    "category": "Health & Beauty",
+    "image": "/uploads/products/1775215490134-image.png",
+    "images": [
+      "/uploads/products/1775215490134-image.png",
+      "/uploads/products/1775215493814-image.png"
+    ],
+    "description": "its very good product for us",
+    "isNew": true,
+    "stock": 23,
+    "inStock": true,
+    "isFeatured": false,
+    "createdAt": "2026-04-03"
+  },
+  {
+    "id": 7,
+    "name": "rtte",
+    "price": 4345,
+    "originalPrice": 4545,
+    "category": "Wardrobe and Organizers",
+    "image": "/uploads/products/1775213641146-image.png",
+    "images": [
+      "/uploads/products/1775213641146-image.png"
+    ],
+    "isNew": true,
+    "stock": 544,
+    "inStock": true,
+    "isFeatured": true,
+    "createdAt": "2026-04-03"
+  },
+  {
+    "id": 6,
+    "name": "ewqw",
+    "price": 323,
+    "originalPrice": 435,
+    "category": "Wardrobe and Organizers",
+    "image": "/uploads/products/1775210898919-image.png",
+    "images": [
+      "/uploads/products/1775210898919-image.png"
+    ],
+    "isNew": true,
+    "stock": 342,
+    "inStock": true,
+    "isFeatured": true,
+    "createdAt": "2026-04-03"
+  },
+  {
+    "id": 5,
+    "name": "Multi Purpose Silicone Cleaning Gloves For Household",
+    "price": 230,
+    "originalPrice": 857,
+    "category": "Hangers & Hooks",
+    "image": "/uploads/products/1774954149366-image.png",
+    "isNew": true,
+    "inStock": true,
+    "isFeatured": true,
+    "createdAt": "2026-03-05",
+    "stock": 233,
+    "images": [
+      "/uploads/products/1774954149366-image.png"
+    ]
+  },
+  {
+    "id": 4,
+    "name": "Makeup Brush Holder",
+    "price": 749,
+    "originalPrice": 999,
+    "category": "Health & Beauty",
+    "image": "/uploads/products/1774955173917-image.png",
+    "isNew": true,
+    "inStock": true,
+    "isFeatured": false,
+    "createdAt": "2026-03-04",
+    "stock": 1,
+    "images": [
+      "/uploads/products/1774955173917-image.png"
+    ]
+  },
+  {
+    "id": 3,
+    "name": "Baby Toy Storage Box",
+    "price": 999,
+    "originalPrice": 1299,
+    "category": "Babies & Toys",
+    "image": "/uploads/products/1775022604283-image.png",
+    "isNew": true,
+    "inStock": true,
+    "isFeatured": true,
+    "createdAt": "2026-03-03",
+    "stock": 1,
+    "images": [
+      "/uploads/products/1775022604283-image.png",
+      "/uploads/products/1775022614978-image.png"
+    ]
+  },
+  {
+    "id": 2,
+    "name": "Elegant Wall Frame Set",
+    "price": 1599,
+    "originalPrice": 2100,
+    "category": "Home & Wall Decor",
+    "image": "/uploads/products/1775023306137-image.png",
+    "isNew": true,
+    "inStock": true,
+    "isFeatured": true,
+    "createdAt": "2026-03-02",
+    "stock": 1,
+    "images": [
+      "/uploads/products/1775023306137-image.png"
+    ]
+  },
+  {
+    "id": 1,
+    "name": "Premium Kitchen Organizer",
+    "price": 1299,
+    "originalPrice": 1799,
+    "category": "Kitchen Accessories",
+    "image": "/uploads/products/1775023342574-image.png",
+    "isNew": true,
+    "inStock": true,
+    "isFeatured": true,
+    "createdAt": "2026-03-01",
+    "stock": 1,
+    "images": [
+      "/uploads/products/1775023342574-image.png"
+    ]
+  }
+]

@@ -1,0 +1,520 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Customer {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String   @db.VarChar(255)
+  name         String
+  phone        String   @default("")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  vendorReviews    VendorReview[]
+  vendorShopOrders VendorShopOrder[]
+  productReviews   Review[]
+}
+
+model Product {
+  id              String         @id @default(cuid())
+  name            String
+  description     String         @db.Text
+  price           Decimal        @db.Decimal(12, 2)
+  originalPrice   Decimal?       @db.Decimal(12, 2)
+  discountPercent Int            @default(0)
+  category        String
+  stock           Int            @default(0)
+  variants        Json
+  isActive        Boolean        @default(true)
+  isBestSeller    Boolean        @default(false)
+  /// When set (e.g. vendor uploads), storefront uses these URLs instead of `ProductImage` rows.
+  listingImageUrls Json?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  orderItems      OrderItem[]
+  productImages   ProductImage[]
+  reviews         Review[]
+  vendorPublication VendorProduct?
+
+  @@index([isActive, isBestSeller])
+}
+
+model Review {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String
+  rating    Int
+  comment   String   @db.Text
+  imageUrl  String? @db.VarChar(2048)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  approved  Boolean  @default(false)
+  /// Logged-in purchase review (one per order + product when set).
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  orderId    String?
+  order      Order?    @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@unique([orderId, productId])
+  @@index([productId])
+  @@index([approved, createdAt])
+}
+
+/// Guest reviews for JSON-catalog "new arrival" items (numeric id from `data/products.json`).
+model NewArrivalReview {
+  id           Int      @id @default(autoincrement())
+  name         String
+  email        String
+  rating       Int
+  comment      String   @db.Text
+  imageUrl     String? @db.VarChar(2048)
+  newArrivalId Int
+  createdAt    DateTime @default(now())
+  approved     Boolean  @default(false)
+
+  @@index([newArrivalId])
+  @@index([approved, createdAt])
+}
+
+/// productId null = staging (before product save). Filled = live product image.
+model ProductImage {
+  id        String   @id @default(cuid())
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  data      Bytes    @db.MediumBlob
+  mimeType  String
+  sortOrder Int      @default(0)
+}
+
+/// Guest payment screenshot before order is created.
+model PaymentProofStaging {
+  id        String   @id @default(cuid())
+  data      Bytes    @db.MediumBlob
+  mimeType  String
+  createdAt DateTime @default(now())
+}
+
+model Order {
+  id                    String      @id @default(cuid())
+  orderNumber           String      @unique
+  customerName          String
+  customerPhone         String
+  customerEmail         String
+  customerAddress       String      @db.Text
+  city                  String
+  totalAmount           Decimal     @db.Decimal(12, 2)
+  paymentMethod         String
+  paymentStatus         String      @default("pending")
+  paymentRejectedReason String?     @db.Text
+  /// Legacy external URL (optional)
+  paymentScreenshot     String?     @db.Text
+  paymentProofData      Bytes?      @db.MediumBlob
+  paymentProofMime      String?
+  bankAccount           String?
+  orderStatus           String      @default("pending")
+  isRead                Boolean     @default(false)
+  trackingNumber        String?
+  notes                 String?     @db.Text
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+  orderItems            OrderItem[]
+  vendorOrders          VendorOrder[]
+  vendorShopOrders      VendorShopOrder[]
+  vendorEarnings        VendorEarning[]
+  vendorReviews         VendorReview[]
+  productReviews        Review[]
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  /// Null after the catalog product is deleted; line still has name, price, image.
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  name      String
+  price     Decimal @db.Decimal(12, 2)
+  quantity  Int
+  image     String  @default("")
+  variant   String?
+}
+
+model Settings {
+  id                 String   @id @default(cuid())
+  shopName           String   @default("In Range By Abdullah")
+  whatsappNumber     String   @default("923001234567")
+  codCharges         Decimal  @default(150) @db.Decimal(12, 2)
+  codAvailableCities Json
+  bankMeezanTitle    String   @default("")
+  bankMeezanNumber   String   @default("")
+  bankHblTitle       String   @default("")
+  bankHblNumber      String   @default("")
+  bankEasypaisa      String   @default("")
+  bankJazzcash       String   @default("")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+// ─── Multi-vendor (additive; does not alter existing shop tables) ───
+
+enum VendorAccountStatus {
+  pending
+  approved
+  rejected
+  suspended
+}
+
+enum VendorBusinessType {
+  individual
+  company
+}
+
+enum VendorDocumentType {
+  cnic_front
+  cnic_back
+  license
+}
+
+enum VendorProductStatus {
+  active
+  inactive
+}
+
+enum VendorOrderStatus {
+  pending
+  processing
+  shipped
+  delivered
+  cancelled
+}
+
+/// Vendor-facing bundle for one checkout slice (all lines for that seller on a parent Order).
+enum VendorShopOrderStatus {
+  pending
+  confirmed
+  packed
+  shipped
+  delivered
+  cancelled
+}
+
+enum VendorEarningStatus {
+  pending
+  cleared
+  paid
+}
+
+enum VendorWithdrawalStatus {
+  pending
+  approved
+  paid
+  rejected
+}
+
+enum VendorCouponDiscountType {
+  percent
+  fixed
+}
+
+enum VendorCouponStatus {
+  active
+  inactive
+}
+
+model Vendor {
+  id                    String              @id @default(cuid())
+  shopName              String
+  ownerName             String
+  email                 String              @unique
+  passwordHash          String              @db.VarChar(255)
+  phone                 String
+  cnic                  String              @unique
+  address               String              @db.Text
+  city                  String
+  businessType          VendorBusinessType
+  businessRegNo         String?
+  bankName              String
+  accountNumber         String
+  accountTitle          String
+  /// Optional IBAN for payouts (PK-…).
+  iban                  String?             @db.VarChar(34)
+  status                VendorAccountStatus @default(pending)
+  rejectionReason       String?             @db.Text
+  profileImage          String?             @db.Text
+  shopLogo              String?             @db.Text
+  specialCommissionRate Decimal?            @db.Decimal(5, 2)
+  totalSales            Decimal             @default(0) @db.Decimal(14, 2)
+  totalOrders           Int                 @default(0)
+  loginAttempts         Int                 @default(0)
+  lockedUntil           DateTime?
+  lastLoginAt           DateTime?
+  isEmailVerified       Boolean             @default(false)
+  emailVerifyToken      String?             @db.VarChar(255)
+  passwordResetToken    String?             @db.VarChar(255)
+  passwordResetExpires  DateTime?
+  /// Used with commission_settings (Clothing, Electronics, …)
+  primaryCategory       String              @default("Other")
+  shopDescription       String?             @db.Text
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  documents     VendorDocument[]
+  products      VendorProduct[]
+  orders        VendorOrder[]
+  earnings      VendorEarning[]
+  withdrawals   VendorWithdrawal[]
+  reviews       VendorReview[]
+  coupons       VendorCoupon[]
+  notifications VendorNotification[]
+  sessions      VendorSession[]
+  auditLogs     VendorAuditLog[]
+  vendorShopOrders VendorShopOrder[]
+
+  @@index([status])
+}
+
+model VendorDocument {
+  id           String             @id @default(cuid())
+  vendorId     String
+  vendor       Vendor             @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  documentType VendorDocumentType
+  fileUrl      String             @db.Text
+  uploadedAt   DateTime           @default(now())
+
+  @@index([vendorId])
+}
+
+model VendorProduct {
+  id          String              @id @default(cuid())
+  vendorId    String
+  vendor      Vendor              @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  productName String
+  description String              @db.Text
+  price       Decimal             @db.Decimal(12, 2)
+  category    String
+  stock       Int                 @default(0)
+  images      Json
+  status      VendorProductStatus @default(active)
+  /// Synced storefront `Product.id` when published (customer /products + checkout).
+  publishedProductId String?      @unique
+  publishedProduct   Product?      @relation(fields: [publishedProductId], references: [id], onDelete: SetNull)
+  totalSold   Int                 @default(0)
+  viewsCount  Int                 @default(0)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  orders VendorOrder[]
+
+  @@index([vendorId])
+}
+
+model VendorOrder {
+  id                String            @id @default(cuid())
+  vendorId          String
+  vendor            Vendor            @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  orderId           String
+  order             Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  /// Grouped shop-order row (one per vendor per parent checkout); legacy rows may be null until backfilled.
+  vendorShopOrderId String?
+  vendorShopOrder   VendorShopOrder?  @relation(fields: [vendorShopOrderId], references: [id], onDelete: SetNull)
+  vendorProductId   String?
+  vendorProduct     VendorProduct?    @relation(fields: [vendorProductId], references: [id], onDelete: SetNull)
+  customerName      String
+  customerPhone     String
+  quantity          Int
+  saleAmount        Decimal           @db.Decimal(12, 2)
+  commissionRate    Decimal           @db.Decimal(5, 2)
+  commissionAmount  Decimal           @db.Decimal(12, 2)
+  vendorAmount      Decimal           @db.Decimal(12, 2)
+  status            VendorOrderStatus @default(pending)
+  /// Seller-provided tracking when status is shipped (marketplace-style).
+  trackingNumber    String?           @db.VarChar(255)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([vendorId])
+  @@index([orderId])
+  @@index([vendorShopOrderId])
+}
+
+model VendorShopOrder {
+  id               String                @id @default(cuid())
+  /// Human-friendly id for vendor UI (e.g. IRV-0001).
+  shopOrderNumber  String                @unique
+  orderId          String
+  order            Order                 @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  vendorId         String
+  vendor           Vendor                @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  customerId       String?
+  customer         Customer?             @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  customerName     String
+  customerPhone    String
+  customerEmail    String
+  customerAddress  String                @db.Text
+  city             String
+
+  /// Snapshot: [{ productId, productName, quantity, price, subtotal, vendorProductId?, variant? }]
+  items            Json
+
+  totalAmount      Decimal               @db.Decimal(12, 2)
+  commissionAmount Decimal               @db.Decimal(12, 2)
+  netAmount        Decimal               @db.Decimal(12, 2)
+
+  paymentMethod    String
+  paymentStatus    String
+
+  status           VendorShopOrderStatus @default(pending)
+  /// [{ status, updatedAt, note }]
+  statusHistory    Json                  @default("[]")
+  cancelReason     String?               @db.Text
+  trackingNumber   String?               @db.VarChar(255)
+
+  placedAt         DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  lineOrders       VendorOrder[]
+  vendorEarning    VendorEarning?
+
+  @@index([vendorId])
+  @@index([orderId])
+  @@index([vendorId, status])
+  @@index([placedAt])
+}
+
+model CommissionSetting {
+  id                   String   @id @default(cuid())
+  categoryName         String   @unique
+  commissionPercentage Decimal  @db.Decimal(5, 2)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+model VendorEarning {
+  id               String              @id @default(cuid())
+  vendorId         String
+  vendor           Vendor              @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  orderId          String?
+  order            Order?              @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  /// One earning row per delivered shop-order bundle (prevents duplicates).
+  vendorShopOrderId String?            @unique
+  vendorShopOrder  VendorShopOrder?    @relation(fields: [vendorShopOrderId], references: [id], onDelete: SetNull)
+  /// Gross sale (sum of line sale amounts) for this bundle.
+  saleAmount       Decimal             @db.Decimal(12, 2)
+  /// Weighted average commission % (for display).
+  commissionRate   Decimal             @db.Decimal(5, 2)
+  commissionAmount Decimal             @db.Decimal(12, 2)
+  /// Net to vendor for this bundle (sale − commission).
+  vendorAmount     Decimal             @db.Decimal(12, 2)
+  status           VendorEarningStatus @default(pending)
+  holdReleaseDate  DateTime?
+  createdAt        DateTime            @default(now())
+
+  @@index([vendorId])
+  @@index([orderId])
+  @@index([vendorShopOrderId])
+}
+
+model VendorWithdrawal {
+  id                String                 @id @default(cuid())
+  vendorId          String
+  vendor            Vendor                 @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  requestedAmount   Decimal                @db.Decimal(12, 2)
+  bankName          String
+  accountTitle      String
+  accountNumber     String
+  /// Optional note from vendor at request time.
+  notes             String?                @db.Text
+  status            VendorWithdrawalStatus @default(pending)
+  rejectionReason   String?                @db.Text
+  adminNote         String?                @db.Text
+  requestedAt       DateTime               @default(now())
+  processedAt       DateTime?
+
+  @@index([vendorId])
+  @@index([status])
+}
+
+model VendorReview {
+  id         String   @id @default(cuid())
+  vendorId   String
+  vendor     Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  orderId    String?
+  order      Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  rating     Int
+  comment    String   @db.Text
+  isVisible  Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  @@index([vendorId])
+  @@index([customerId])
+}
+
+model VendorCoupon {
+  id              String                   @id @default(cuid())
+  vendorId        String
+  vendor          Vendor                   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  couponCode      String
+  discountType    VendorCouponDiscountType
+  discountValue   Decimal                  @db.Decimal(12, 2)
+  minOrderAmount  Decimal                  @default(0) @db.Decimal(12, 2)
+  maxUses         Int?
+  usedCount       Int                      @default(0)
+  expiryDate      DateTime?
+  status          VendorCouponStatus       @default(active)
+  createdAt       DateTime                 @default(now())
+
+  @@unique([vendorId, couponCode])
+  @@index([vendorId])
+}
+
+model VendorNotification {
+  id        String   @id @default(cuid())
+  vendorId  String
+  vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  title     String
+  message   String   @db.Text
+  type      String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([vendorId])
+  @@index([vendorId, isRead])
+}
+
+model VendorSession {
+  id        String   @id @default(cuid())
+  vendorId  String
+  vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  ipAddress String?  @db.VarChar(45)
+  userAgent String?  @db.Text
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  isRevoked Boolean  @default(false)
+
+  @@index([vendorId])
+}
+
+model VendorAuditLog {
+  id        String   @id @default(cuid())
+  vendorId  String?
+  vendor    Vendor?  @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  action    String
+  ipAddress String?  @db.VarChar(45)
+  userAgent String?  @db.Text
+  details   Json?
+  createdAt DateTime @default(now())
+
+  @@index([vendorId])
+  @@index([createdAt])
+}
