@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useId, useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 
-import { PasswordToggleInput } from "@/components/ui/PasswordToggleInput";
+import { LogoMark } from "@/components/user/LogoMark";
 import { fetchShopCategoryNameList } from "@/lib/shop-category-names";
 
 const accent = "#F59E0B";
@@ -67,6 +68,7 @@ export function VendorRegisterWizard() {
   const [emailCheckLoading, setEmailCheckLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const score = passwordScore(password);
 
@@ -245,48 +247,105 @@ export function VendorRegisterWizard() {
   }
 
   const pct = step === 1 ? 33 : step === 2 ? 66 : 100;
+  const inputClass =
+    "mt-1 h-9 w-full rounded-lg border-[1.5px] border-gray-200 bg-white px-3 py-1.5 text-sm text-neutral-900 outline-none transition-all duration-200 focus:border-[1.5px] focus:border-orange-500 focus:bg-orange-50/40 focus:shadow-[0_0_0_3px_rgba(249,115,22,0.15)]";
+  const inputErrorClass =
+    "border-[1.5px] border-red-500 shadow-[0_0_0_3px_rgba(239,68,68,0.1)]";
+  const textareaClass =
+    "mt-1 h-12 w-full resize-none rounded-lg border-[1.5px] border-gray-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none transition-all duration-200 focus:border-[1.5px] focus:border-orange-500 focus:bg-orange-50/40 focus:shadow-[0_0_0_3px_rgba(249,115,22,0.15)]";
+  const primaryBtnClass =
+    "h-11 w-full rounded-[10px] border-0 bg-[linear-gradient(135deg,#f97316_0%,#f59e0b_100%)] px-3 text-[15px] font-semibold text-white shadow-[0_4px_15px_rgba(249,115,22,0.35)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_25px_rgba(249,115,22,0.5)] active:translate-y-0 active:shadow-[0_4px_12px_rgba(249,115,22,0.3)] disabled:cursor-not-allowed disabled:opacity-40";
+  const emailErrorClass =
+    "mt-0.5 flex items-center gap-1 text-[11px] font-medium text-red-500";
 
   return (
-    <div className="min-h-screen px-4 py-10">
-      <div className="mx-auto max-w-lg">
-        <Link
-          href="/vendor/login"
-          className="text-sm font-semibold text-neutral-600 hover:text-neutral-900"
-        >
-          ← Back to sign in
-        </Link>
+    <div className="vendor-reg-shell flex h-screen overflow-hidden bg-white">
+      <aside className="relative hidden w-1/2 flex-col items-center justify-center overflow-hidden bg-[linear-gradient(160deg,#f97316_0%,#ea580c_40%,#c2410c_100%)] p-6 md:flex">
+        <div className="pointer-events-none absolute -left-12 -top-12 h-64 w-64 rounded-full bg-white/10 vendor-float-1" />
+        <div className="pointer-events-none absolute -bottom-10 -right-10 h-48 w-48 rounded-full bg-white/10 vendor-float-2" />
+        <div className="pointer-events-none absolute left-1/2 top-1/2 h-32 w-32 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/10 vendor-float-3" />
 
-        <h1 className="mt-6 text-2xl font-extrabold text-neutral-900">
-          Vendor registration
-        </h1>
-        <p className="mt-1 text-sm text-neutral-600">
-          Step {step} of 3 — tell us about you, your shop, and payout details
-        </p>
+        <div className="relative z-10 w-full max-w-sm">
+          <div className="vendor-logo-float mb-4 inline-flex h-20 w-20 items-center justify-center rounded-full bg-white p-2 shadow-[0_8px_25px_rgba(0,0,0,0.2)]">
+            <LogoMark
+              href={null}
+              className="[&_img]:max-h-[60px] [&_img]:max-w-[100px] [&_img]:w-auto"
+            />
+          </div>
 
-        <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-neutral-200">
-          <div
-            className="h-full rounded-full transition-all duration-300"
-            style={{ width: `${pct}%`, backgroundColor: accent }}
-          />
+          <h2 className="vendor-fade-up mb-1 text-[22px] font-bold text-white">
+            Start Selling Today!
+          </h2>
+          <p className="mb-4 text-[13px] text-white/85">
+            Join thousands of vendors and grow your business online
+          </p>
+
+          <div>
+            {[
+              "✅ Free shop setup — no upfront cost",
+              "🚀 Auto featured after 14 days",
+              "💰 Fast & secure payments",
+            ].map((item, idx) => (
+              <div
+                key={item}
+                className={`mb-2 flex items-center gap-2.5 rounded-[10px] border border-white/25 bg-white/15 px-[14px] py-[10px] text-[13px] text-white backdrop-blur-[10px] transition-all duration-200 hover:translate-x-1.5 hover:bg-white/20 ${
+                  idx === 0
+                    ? "vendor-card-in-1"
+                    : idx === 1
+                      ? "vendor-card-in-2"
+                      : "vendor-card-in-3"
+                }`}
+              >
+                <span>{item}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </aside>
+
+      <section className="right-side vendor-reg-right flex h-screen w-full flex-col md:w-1/2">
+        <div className="relative z-10 px-8 pb-0 pt-4">
+          <Link
+            href="/vendor/login"
+            className="inline-block text-xs font-semibold text-orange-500 hover:text-orange-600"
+          >
+            ← Back to sign in
+          </Link>
         </div>
 
-        {error && (
-          <div
-            className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
-            role="alert"
-          >
-            {error}
-          </div>
-        )}
+        <div className="right-content flex-1 overflow-y-auto px-8 py-2">
+          <div className="mx-auto w-full max-w-lg">
+          <h1 className="text-xl font-semibold text-neutral-900">
+            Registration as Seller
+          </h1>
+          <p className="mb-2 mt-0 text-xs text-gray-400">
+            Step {step} of 3 — tell us about you, your shop, and payout details
+          </p>
 
-        {step === 1 && (
-          <div className="mt-8 space-y-4 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+          <div className="mb-3 h-1 w-full overflow-hidden rounded-full bg-slate-100">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-300 transition-all duration-300"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+
+          {error && (
+            <div
+              className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+              role="alert"
+            >
+              {error}
+            </div>
+          )}
+
+          {step === 1 && (
+            <div className="mt-1 space-y-2 pb-2">
             <Field label="Full name" htmlFor="vr-name">
               <input
                 id="vr-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-neutral-900 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-400/40"
+                className={inputClass}
               />
             </Field>
             <Field label="Email" htmlFor="vr-email">
@@ -295,49 +354,52 @@ export function VendorRegisterWizard() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-neutral-900 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-400/40"
+                className={`${inputClass} ${emailAvailable === false ? inputErrorClass : ""}`}
               />
               {emailCheckLoading && (
                 <p className="mt-1 text-xs text-neutral-500">Checking…</p>
               )}
               {!emailCheckLoading && email.includes("@") && (
-                <p
-                  className={`mt-1 text-xs font-semibold ${
-                    emailAvailable
-                      ? "text-green-700"
-                      : emailAvailable === false
-                        ? "text-red-700"
-                        : "text-neutral-500"
-                  }`}
-                >
-                  {emailAvailable === false
-                    ? "This email is already registered"
-                    : emailAvailable === true
-                      ? "Email is available"
-                      : null}
-                </p>
+                <>
+                  {emailAvailable === false ? (
+                    <p className={emailErrorClass}>⚠️ This email is already registered</p>
+                  ) : emailAvailable === true ? (
+                    <p className="mt-0.5 text-xs font-medium text-green-700">Email is available</p>
+                  ) : null}
+                </>
               )}
             </Field>
             <Field label="Password" htmlFor="vr-pw">
-              <PasswordToggleInput
-                id="vr-pw"
-                autoComplete="new-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-neutral-300 py-2.5 pl-3 pr-11 text-neutral-900 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-400/40"
-              />
-              <div className="mt-2 flex gap-1">
+              <div className="relative mt-1">
+                <input
+                  id="vr-pw"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-9 w-full rounded-lg border-[1.5px] border-gray-200 bg-white py-1.5 pl-3 pr-10 text-sm text-neutral-900 outline-none transition-all duration-200 focus:border-[1.5px] focus:border-orange-500 focus:bg-orange-50/40 focus:shadow-[0_0_0_3px_rgba(249,115,22,0.15)]"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((s) => !s)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+              <div className="mt-1 flex gap-1">
                 {[0, 1, 2, 3].map((i) => (
                   <div
                     key={i}
-                    className="h-1.5 flex-1 rounded-full bg-neutral-200"
+                    className="h-0.5 flex-1 rounded-full bg-neutral-200"
                     style={{
                       backgroundColor: i < score ? accent : undefined,
                     }}
                   />
                 ))}
               </div>
-              <p className="mt-1 text-xs text-neutral-500">
+              <p className="mb-2 mt-1 text-xs text-neutral-500">
                 Use 8+ characters with mixed case, numbers, or symbols.
               </p>
             </Field>
@@ -348,7 +410,7 @@ export function VendorRegisterWizard() {
                 value={phone}
                 onChange={(e) => setPhone(formatPkMobile(e.target.value))}
                 placeholder="0300-1234567"
-                className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-neutral-900 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-400/40"
+                className={inputClass}
               />
             </Field>
             <Field label="City" htmlFor="vr-city">
@@ -356,38 +418,29 @@ export function VendorRegisterWizard() {
                 id="vr-city"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-neutral-900 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-400/40"
+                className={inputClass}
               />
             </Field>
             <Field label="Address" htmlFor="vr-address">
               <textarea
                 id="vr-address"
-                rows={3}
+                rows={2}
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-neutral-900 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-400/40"
+                className={textareaClass}
               />
             </Field>
-            <button
-              type="button"
-              disabled={!canAdvanceFrom1()}
-              onClick={() => setStep(2)}
-              className="w-full rounded-xl py-3 font-extrabold text-neutral-900 disabled:opacity-40"
-              style={{ backgroundColor: accent }}
-            >
-              Continue
-            </button>
           </div>
-        )}
+          )}
 
-        {step === 2 && (
-          <div className="mt-8 space-y-4 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+          {step === 2 && (
+            <div className="mt-2 space-y-2 pb-2">
             <Field label="Shop / brand name" htmlFor="vr-shop">
               <input
                 id="vr-shop"
                 value={shopName}
                 onChange={(e) => setShopName(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-neutral-900 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-400/40"
+                className={inputClass}
               />
             </Field>
             <div>
@@ -421,7 +474,7 @@ export function VendorRegisterWizard() {
                   id="vr-reg"
                   value={businessRegNo}
                   onChange={(e) => setBusinessRegNo(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-neutral-900 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-400/40"
+                  className={inputClass}
                 />
               </Field>
             )}
@@ -432,7 +485,7 @@ export function VendorRegisterWizard() {
                 value={cnic}
                 onChange={(e) => setCnic(formatCnic(e.target.value))}
                 placeholder="35202-1234567-1"
-                className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-neutral-900 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-400/40"
+                className={inputClass}
               />
             </Field>
             <Field label="Primary category" htmlFor="vr-cat">
@@ -441,7 +494,7 @@ export function VendorRegisterWizard() {
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
                 disabled={!shopCategories.length}
-                className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-neutral-900 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-400/40 disabled:cursor-not-allowed disabled:bg-neutral-100"
+                className="mt-1 h-9 w-full rounded-lg border-[1.5px] border-gray-200 px-3 text-sm text-neutral-900 outline-none transition focus:border-orange-500 disabled:cursor-not-allowed disabled:bg-neutral-100"
               >
                 {!shopCategories.length ? (
                   <option value="">Loading categories…</option>
@@ -458,7 +511,7 @@ export function VendorRegisterWizard() {
               <button
                 type="button"
                 onClick={() => setStep(1)}
-                className="flex-1 rounded-xl border border-neutral-300 py-3 font-bold text-neutral-800"
+                className="h-10 flex-1 rounded-xl border border-neutral-300 px-3 text-sm font-bold text-neutral-800"
               >
                 Back
               </button>
@@ -466,23 +519,22 @@ export function VendorRegisterWizard() {
                 type="button"
                 disabled={!canAdvanceFrom2()}
                 onClick={() => setStep(3)}
-                className="flex-1 rounded-xl py-3 font-extrabold text-neutral-900 disabled:opacity-40"
-                style={{ backgroundColor: accent }}
+                className="h-10 flex-1 rounded-[10px] bg-[linear-gradient(135deg,#f97316,#f59e0b)] px-3 text-sm font-semibold text-white shadow-[0_4px_15px_rgba(249,115,22,0.4)] transition-all duration-200 hover:-translate-y-px hover:shadow-[0_6px_20px_rgba(249,115,22,0.5)] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Continue
               </button>
             </div>
           </div>
-        )}
+          )}
 
-        {step === 3 && (
-          <div className="mt-8 space-y-4 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+          {step === 3 && (
+            <div className="mt-2 space-y-2 pb-2">
             <Field label="Bank name" htmlFor="vr-bank">
               <input
                 id="vr-bank"
                 value={bankName}
                 onChange={(e) => setBankName(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-neutral-900 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-400/40"
+                className={inputClass}
               />
             </Field>
             <Field label="Account title" htmlFor="vr-title">
@@ -490,7 +542,7 @@ export function VendorRegisterWizard() {
                 id="vr-title"
                 value={accountTitle}
                 onChange={(e) => setAccountTitle(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-neutral-900 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-400/40"
+                className={inputClass}
               />
             </Field>
             <Field label="Account number" htmlFor="vr-acc">
@@ -498,7 +550,7 @@ export function VendorRegisterWizard() {
                 id="vr-acc"
                 value={accountNumber}
                 onChange={(e) => setAccountNumber(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-neutral-900 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-400/40"
+                className={inputClass}
               />
             </Field>
 
@@ -540,7 +592,7 @@ export function VendorRegisterWizard() {
               <button
                 type="button"
                 onClick={() => setStep(2)}
-                className="flex-1 rounded-xl border border-neutral-300 py-3 font-bold text-neutral-800"
+                className="h-10 flex-1 rounded-xl border border-neutral-300 px-3 text-sm font-bold text-neutral-800"
               >
                 Back
               </button>
@@ -548,15 +600,131 @@ export function VendorRegisterWizard() {
                 type="button"
                 disabled={pending || !docsValid()}
                 onClick={() => void submit()}
-                className="flex-1 rounded-xl py-3 font-extrabold text-neutral-900 disabled:opacity-40"
-                style={{ backgroundColor: accent }}
+                className="h-10 flex-1 rounded-[10px] bg-[linear-gradient(135deg,#f97316,#f59e0b)] px-3 text-sm font-semibold text-white shadow-[0_4px_15px_rgba(249,115,22,0.4)] transition-all duration-200 hover:-translate-y-px hover:shadow-[0_6px_20px_rgba(249,115,22,0.5)] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {pending ? "Submitting…" : "Submit application"}
               </button>
             </div>
           </div>
-        )}
-      </div>
+          )}
+          </div>
+        </div>
+
+        <div className="shrink-0 bg-white px-8 pb-5 pt-3">
+          {step === 1 ? (
+            <button
+              type="button"
+              disabled={!canAdvanceFrom1()}
+              onClick={() => setStep(2)}
+              className={primaryBtnClass}
+            >
+              Continue →
+            </button>
+          ) : null}
+        </div>
+      </section>
+      <style jsx>{`
+        .right-side::-webkit-scrollbar {
+          display: none;
+        }
+        .right-side {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .vendor-float-1 {
+          animation: float1 6s ease-in-out infinite;
+        }
+        .vendor-float-2 {
+          animation: float2 8s ease-in-out infinite;
+        }
+        .vendor-float-3 {
+          animation: float3 5s ease-in-out infinite;
+        }
+        .vendor-logo-float {
+          animation: logoFloat 3s ease-in-out infinite;
+        }
+        .vendor-card-in-1 {
+          opacity: 0;
+          animation: slideIn 0.5s ease forwards 0.2s;
+        }
+        .vendor-card-in-2 {
+          opacity: 0;
+          animation: slideIn 0.5s ease forwards 0.4s;
+        }
+        .vendor-card-in-3 {
+          opacity: 0;
+          animation: slideIn 0.5s ease forwards 0.6s;
+        }
+        .vendor-fade-up {
+          opacity: 0;
+          animation: fadeUp 0.6s ease forwards;
+        }
+        @keyframes float1 {
+          0%,
+          100% {
+            transform: translate(0, 0) scale(1);
+          }
+          50% {
+            transform: translate(20px, -30px) scale(1.1);
+          }
+        }
+        @keyframes float2 {
+          0%,
+          100% {
+            transform: translate(0, 0) scale(1);
+          }
+          50% {
+            transform: translate(-15px, 20px) scale(0.95);
+          }
+        }
+        @keyframes float3 {
+          0%,
+          100% {
+            transform: translate(0, 0);
+          }
+          50% {
+            transform: translate(25px, 15px);
+          }
+        }
+        @keyframes logoFloat {
+          0%,
+          100% {
+            transform: translateY(0px);
+          }
+          50% {
+            transform: translateY(-8px);
+          }
+        }
+        @keyframes slideIn {
+          from {
+            opacity: 0;
+            transform: translateX(-30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+        @keyframes fadeUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        @media (max-height: 700px) {
+          .vendor-reg-shell {
+            font-size: 0.95rem;
+          }
+          .vendor-reg-shell aside,
+          .vendor-reg-right {
+            padding: 0.75rem;
+          }
+        }
+      `}</style>
     </div>
   );
 }
@@ -574,7 +742,7 @@ function Field({
     <div>
       <label
         htmlFor={htmlFor}
-        className="text-sm font-semibold text-neutral-800"
+        className="text-xs font-semibold text-neutral-800"
       >
         {label}
       </label>

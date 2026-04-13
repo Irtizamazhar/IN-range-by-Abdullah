@@ -30,6 +30,11 @@ type AdminVendorRow = {
   status: VendorStatus;
   isEmailVerified: boolean;
   rejectionReason: string | null;
+  latestAppeal: {
+    id: string;
+    createdAt: string;
+    message: string | null;
+  } | null;
   createdAt: string;
   documents: VendorDoc[];
 };
@@ -323,6 +328,17 @@ export default function AdminVendorsPage() {
                       <div className="rounded-lg border border-red-200 bg-red-50 p-3">
                         <p className="font-bold text-red-900">Last rejection</p>
                         <p className="text-red-800">{v.rejectionReason}</p>
+                      </div>
+                    ) : null}
+                    {v.latestAppeal ? (
+                      <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                        <p className="font-bold text-amber-900">Latest appeal</p>
+                        <p className="text-xs text-amber-800/80">
+                          {formatDate(v.latestAppeal.createdAt)}
+                        </p>
+                        <p className="mt-1 text-amber-900">
+                          {v.latestAppeal.message?.trim() || "No message provided."}
+                        </p>
                       </div>
                     ) : null}
                     <div>

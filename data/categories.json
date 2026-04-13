@@ -57,7 +57,7 @@
     "id": 12,
     "name": "weqw",
     "image": "/uploads/categories/1775207975702-img-3.jpg",
-    "showOnHome": true
+    "showOnHome": false
   },
   {
     "id": 13,
@@ -69,6 +69,6 @@
     "id": 14,
     "name": "wsa",
     "image": "/uploads/categories/1775208043171-newplot.png",
-    "showOnHome": true
+    "showOnHome": false
   }
 ]

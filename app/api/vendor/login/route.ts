@@ -76,42 +76,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Pending / rejected: must verify inbox link first. Once admin approves, email link is optional.
-  if (!vendor.isEmailVerified && vendor.status !== "approved") {
-    return NextResponse.json(
-      {
-        code: "unverified",
-        error:
-          "Please verify your email before signing in. Check your inbox or resend the verification link.",
-      },
-      { status: 403 }
-    );
-  }
-
-  if (vendor.status === "pending") {
-    return NextResponse.json(
-      { code: "pending", error: "Application under review" },
-      { status: 403 }
-    );
-  }
-
-  if (vendor.status === "rejected") {
-    return NextResponse.json(
-      {
-        code: "rejected",
-        error: vendor.rejectionReason?.trim() || "Your application was not approved.",
-      },
-      { status: 403 }
-    );
-  }
-
-  if (vendor.status === "suspended") {
-    return NextResponse.json(
-      { code: "suspended", error: "Account suspended" },
-      { status: 403 }
-    );
-  }
-
   const submittedPassword = parsed.data.password;
   let ok = await bcrypt.compare(submittedPassword, vendor.passwordHash);
   if (!ok) {
@@ -146,6 +110,42 @@ export async function POST(req: NextRequest) {
       data: lock,
     });
     return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
+  }
+
+  // Show account-state messages only after credentials are correct.
+  if (!vendor.isEmailVerified && vendor.status !== "approved") {
+    return NextResponse.json(
+      {
+        code: "unverified",
+        error:
+          "Please verify your email before signing in. Check your inbox or resend the verification link.",
+      },
+      { status: 403 }
+    );
+  }
+
+  if (vendor.status === "pending") {
+    return NextResponse.json(
+      { code: "pending", error: "Application under review" },
+      { status: 403 }
+    );
+  }
+
+  if (vendor.status === "rejected") {
+    return NextResponse.json(
+      {
+        code: "rejected",
+        error: vendor.rejectionReason?.trim() || "Your application was not approved.",
+      },
+      { status: 403 }
+    );
+  }
+
+  if (vendor.status === "suspended") {
+    return NextResponse.json(
+      { code: "suspended", error: "Account suspended" },
+      { status: 403 }
+    );
   }
 
   await prisma.vendor.update({

@@ -52,8 +52,8 @@ export function HeroSection({ sellNowHref }: { sellNowHref: string }) {
   }, [currentWord, isDeleting, isPaused, wordIndex]);
 
   return (
-    <section className="relative isolate overflow-hidden bg-[#16213e] text-white">
-      <div className="absolute inset-0 z-0 bg-[#16213e] pointer-events-none">
+    <section className="relative isolate w-full max-w-[100vw] overflow-hidden bg-[#16213e] text-white">
+      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden bg-[#16213e]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <video
           src="/videos/mixkit-delivering-a-package-to-a-woman-at-home-42130-full-hd.mp4"
@@ -62,7 +62,7 @@ export function HeroSection({ sellNowHref }: { sellNowHref: string }) {
           loop
           playsInline
           preload="auto"
-          className="h-full w-full object-cover bg-[#16213e]"
+          className="h-full w-full max-w-full object-cover bg-[#16213e]"
         />
       </div>
 

@@ -49,6 +49,16 @@ export async function GET(req: NextRequest) {
         isEmailVerified: true,
         rejectionReason: true,
         createdAt: true,
+        auditLogs: {
+          where: { action: "vendor_appeal" },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: {
+            id: true,
+            createdAt: true,
+            details: true,
+          },
+        },
         documents: {
           select: {
             id: true,
@@ -62,6 +72,24 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       vendors: vendors.map((v) => ({
         ...v,
+        latestAppeal:
+          v.auditLogs[0] != null
+            ? {
+                id: v.auditLogs[0].id,
+                createdAt: v.auditLogs[0].createdAt.toISOString(),
+                message:
+                  v.auditLogs[0].details &&
+                  typeof v.auditLogs[0].details === "object" &&
+                  "message" in
+                    (v.auditLogs[0].details as Record<string, unknown>) &&
+                  typeof (v.auditLogs[0].details as Record<string, unknown>)
+                    .message === "string"
+                    ? ((v.auditLogs[0].details as Record<string, string>).message ??
+                      null)
+                    : null,
+              }
+            : null,
+        auditLogs: undefined,
         specialCommissionRate:
           v.specialCommissionRate != null
             ? Number(v.specialCommissionRate)

@@ -606,7 +606,7 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
                       }
                     >
                       <GoogleIcon className="h-5 w-5" />
-                      Sign in with Google
+                      Sign up with Google
                     </button>
 
                     <p className="text-center text-sm text-gray-600">
