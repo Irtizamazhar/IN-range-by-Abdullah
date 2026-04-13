@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import Image from "next/image";
 import { Loader2, Lock, Phone, User, X } from "lucide-react";
 import type { ComponentType } from "react";
 
@@ -37,6 +38,7 @@ export function CustomerProfileModal({
   isOpen,
   onClose,
   displayName,
+  avatarUrl,
   name,
   setName,
   phone,
@@ -51,6 +53,7 @@ export function CustomerProfileModal({
   isOpen: boolean;
   onClose: () => void;
   displayName: string;
+  avatarUrl?: string | null;
   name: string;
   setName: (v: string) => void;
   phone: string;
@@ -100,8 +103,20 @@ export function CustomerProfileModal({
                 <X className="h-5 w-5" strokeWidth={2.25} />
               </button>
 
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white text-xl font-bold text-primaryBlue shadow-md">
-                {initialsFromName(displayName || name)}
+              <div className="mx-auto h-16 w-16 overflow-hidden rounded-full bg-white text-xl font-bold text-primaryBlue shadow-md">
+                {avatarUrl ? (
+                  <Image
+                    src={avatarUrl}
+                    alt={displayName || "Profile image"}
+                    width={64}
+                    height={64}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center">
+                    {initialsFromName(displayName || name)}
+                  </div>
+                )}
               </div>
               <h2
                 id="customer-profile-title"

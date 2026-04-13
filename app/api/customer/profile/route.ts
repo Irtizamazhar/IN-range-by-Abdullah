@@ -17,6 +17,7 @@ export async function GET() {
   const { createdAt, ...rest } = customer;
   return NextResponse.json({
     ...rest,
+    image: session.user.image ?? null,
     createdAt: createdAt.toISOString(),
   });
 }

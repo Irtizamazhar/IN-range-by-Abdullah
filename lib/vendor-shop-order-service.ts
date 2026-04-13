@@ -6,23 +6,34 @@ import {
   syncLineOrdersToShopStatus,
 } from "@/lib/vendor-shop-order-helpers";
 
+export type AdvanceShopOrderActor = "vendor" | "admin";
+
 /**
- * Advance shop order one step in the linear flow (vendor).
- * Optionally attach courier tracking when entering `shipped`.
+ * Advance shop order one step. Vendors: only through `packed`. Admin: only
+ * `packed`→`shipped` and `shipped`→`delivered`.
  */
 export async function advanceVendorShopOrderStatus(params: {
   shopOrderId: string;
-  vendorId: string;
+  actor: AdvanceShopOrderActor;
+  /** Required when actor is `vendor` (ownership check). */
+  vendorId?: string;
   note?: string;
   trackingNumber?: string | null;
-}): Promise<{ ok: true; newStatus: VendorShopOrderStatus } | { ok: false; error: string }> {
-  const { shopOrderId, vendorId, note, trackingNumber } = params;
+}): Promise<
+  { ok: true; newStatus: VendorShopOrderStatus } | { ok: false; error: string }
+> {
+  const { shopOrderId, actor, vendorId, note, trackingNumber } = params;
 
-  const row = await prisma.vendorShopOrder.findFirst({
-    where: { id: shopOrderId, vendorId },
+  const row = await prisma.vendorShopOrder.findUnique({
+    where: { id: shopOrderId },
   });
   if (!row) {
     return { ok: false, error: "Not found" };
+  }
+  if (actor === "vendor") {
+    if (!vendorId || row.vendorId !== vendorId) {
+      return { ok: false, error: "Not found" };
+    }
   }
 
   const next = nextShopStatus(row.status);
@@ -31,6 +42,26 @@ export async function advanceVendorShopOrderStatus(params: {
       ok: false,
       error: "No further status transitions allowed from current state",
     };
+  }
+
+  if (actor === "vendor") {
+    if (next === "shipped" || next === "delivered") {
+      return {
+        ok: false,
+        error:
+          "Shipped and delivered are updated by the admin after you mark the order as packed.",
+      };
+    }
+  } else {
+    const okPackedToShipped = row.status === "packed" && next === "shipped";
+    const okShippedToDelivered = row.status === "shipped" && next === "delivered";
+    if (!okPackedToShipped && !okShippedToDelivered) {
+      return {
+        ok: false,
+        error:
+          "Admin can only mark Shipped (after Packed) or Delivered (after Shipped).",
+      };
+    }
   }
 
   const history = appendStatusHistory(row.statusHistory, {
@@ -67,21 +98,34 @@ export async function advanceVendorShopOrderStatus(params: {
   return { ok: true, newStatus: next };
 }
 
-/** Update courier reference after the order is already shipped (no status change). */
+/** Update courier reference while status is `shipped` (admin). */
 export async function updateShippedTrackingOnly(params: {
   shopOrderId: string;
-  vendorId: string;
   trackingNumber: string | null;
+  actor: AdvanceShopOrderActor;
+  vendorId?: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
-  const { shopOrderId, vendorId, trackingNumber } = params;
-  const row = await prisma.vendorShopOrder.findFirst({
-    where: { id: shopOrderId, vendorId },
+  const { shopOrderId, trackingNumber, actor, vendorId } = params;
+  const row = await prisma.vendorShopOrder.findUnique({
+    where: { id: shopOrderId },
   });
   if (!row) {
     return { ok: false, error: "Not found" };
   }
+  if (actor === "vendor") {
+    if (!vendorId || row.vendorId !== vendorId) {
+      return { ok: false, error: "Not found" };
+    }
+    return {
+      ok: false,
+      error: "Tracking updates after shipping are done by the admin.",
+    };
+  }
   if (row.status !== "shipped") {
-    return { ok: false, error: "Tracking can only be edited while status is shipped" };
+    return {
+      ok: false,
+      error: "Tracking can only be edited while status is shipped",
+    };
   }
   const tn =
     trackingNumber === null || trackingNumber === ""
@@ -98,6 +142,7 @@ export async function updateShippedTrackingOnly(params: {
       data: { trackingNumber: tn },
     });
   });
+
   return { ok: true };
 }
 

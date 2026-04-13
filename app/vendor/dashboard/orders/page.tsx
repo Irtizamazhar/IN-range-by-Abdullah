@@ -86,8 +86,8 @@ function VendorOrdersPageInner() {
           Orders
         </h1>
         <p className="mt-1 text-sm text-darkText/70">
-          Bundled checkout per seller — confirm, pack, ship, and mark delivered.
-          Commission is calculated per item at checkout.
+          Confirm through packed on your side; admin marks shipped and
+          delivered. Commission is calculated per item at checkout.
         </p>
       </div>
 

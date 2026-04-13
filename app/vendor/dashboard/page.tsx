@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { VendorShopOrderStatus } from "@prisma/client";
 import { getVendorFromSession } from "@/lib/vendor-auth-server";
 import { prisma } from "@/lib/prisma";
 import { formatPKR } from "@/lib/format";
@@ -85,7 +86,10 @@ export default async function VendorDashboardPage() {
         where: {
           vendorId: v.id,
           status: {
-            in: ["pending", "confirmed", "packed", "shipped"],
+            notIn: [
+              VendorShopOrderStatus.delivered,
+              VendorShopOrderStatus.cancelled,
+            ],
           },
         },
       }),

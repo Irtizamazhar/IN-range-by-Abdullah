@@ -2,28 +2,18 @@
 
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import {
-  SHOP_STATUS_FLOW,
-  nextShopStatus,
-} from "@/lib/vendor-shop-order-helpers";
+import { nextShopStatus } from "@/lib/vendor-shop-order-helpers";
 import type { ShopOrderStatusPill } from "./StatusBadge";
 import { safeParseResponseJson } from "@/lib/parse-fetch-json";
 
-/** Short labels only (no extra Urdu hints — those stay in the help text above). */
-function stepLabel(status: ShopOrderStatusPill): string {
-  switch (status) {
-    case "pending":
-      return "Pending";
-    case "confirmed":
-      return "Confirm order";
-    case "packed":
-      return "Mark packed";
+function stepLabel(next: ShopOrderStatusPill): string {
+  switch (next) {
     case "shipped":
-      return "Shipped";
+      return "Mark shipped";
     case "delivered":
-      return "Delivered";
+      return "Mark delivered";
     default:
-      return status;
+      return next;
   }
 }
 
@@ -33,11 +23,8 @@ type Props = {
   onSuccess: () => void;
 };
 
-/**
- * Vendor: one step at a time through `packed` only. Shipped/delivered are not listed
- * (admin updates those). When current step is `packed`, a message points to admin.
- */
-export function VendorStatusDropdown({
+/** Admin: advance packed→shipped (optional tracking) or shipped→delivered. */
+export function AdminShopStatusDropdown({
   currentStatus,
   statusUrl,
   onSuccess,
@@ -48,46 +35,40 @@ export function VendorStatusDropdown({
 
   const [selected, setSelected] = useState("");
   const [note, setNote] = useState("");
+  const [tracking, setTracking] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const showTracking = allowedNext === "shipped";
 
   useEffect(() => {
     setSelected("");
     setNote("");
+    setTracking("");
   }, [currentStatus]);
 
-  if (!allowedNext) return null;
-
-  if (allowedNext === "shipped" || allowedNext === "delivered") {
-    return (
-      <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4">
-        <p className="text-sm font-bold text-darkText">Status update</p>
-        <p className="mt-2 text-sm text-darkText/75">
-          You have finished packing. <strong>Shipped</strong> and{" "}
-          <strong>delivered</strong> are updated by the marketplace admin from
-          Seller orders.
-        </p>
-      </div>
-    );
+  if (
+    !allowedNext ||
+    (allowedNext !== "shipped" && allowedNext !== "delivered")
+  ) {
+    return null;
   }
-
-  const nextIdx = SHOP_STATUS_FLOW.indexOf(allowedNext);
-  const currentIdx = nextIdx - 1;
 
   async function submit() {
     const next = allowedNext;
     if (!selected || selected !== next) {
-      toast.error("Dropdown se agla status select karein.");
+      toast.error("Select the next status from the dropdown.");
       return;
     }
-    if (!window.confirm(`Order "${next}" status pe move karna hai?`)) {
-      return;
-    }
+    if (!window.confirm(`Move seller order to "${next}"?`)) return;
 
     setBusy(true);
     try {
       const body: Record<string, unknown> = {
         note: note.trim() || undefined,
       };
+      if (next === "shipped") {
+        body.trackingNumber = tracking.trim() || null;
+      }
       const r = await fetch(statusUrl, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -104,7 +85,7 @@ export function VendorStatusDropdown({
         );
         return;
       }
-      toast.success("Status update ho gaya");
+      toast.success("Status updated");
       onSuccess();
     } finally {
       setBusy(false);
@@ -112,15 +93,16 @@ export function VendorStatusDropdown({
   }
 
   return (
-    <div className="rounded-xl border border-borderGray bg-lightGray/20 p-4">
-      <p className="text-sm font-bold text-darkText">Status update</p>
+    <div className="rounded-xl border border-borderGray bg-sky-50/40 p-4">
+      <p className="text-sm font-bold text-darkText">Admin — fulfillment</p>
       <p className="mt-1 text-xs text-darkText/60">
-        Neeche se sirf <strong>agla</strong> step select ho sakta hai — skip ya wapas
-        nahi.
+        After the seller marks <strong>packed</strong>, you mark{" "}
+        <strong>shipped</strong> (optional tracking), then{" "}
+        <strong>delivered</strong>.
       </p>
 
       <label className="mt-4 block text-xs font-bold uppercase text-darkText/50">
-        Naya status
+        New status
       </label>
       <select
         value={selected}
@@ -128,16 +110,7 @@ export function VendorStatusDropdown({
         className="mt-1 w-full max-w-md rounded-lg border border-borderGray bg-white px-3 py-2.5 text-sm font-medium text-darkText"
       >
         <option value="">Select status</option>
-        {SHOP_STATUS_FLOW.map((status, i) => {
-          if (status === "shipped" || status === "delivered") return null;
-          if (i <= currentIdx) return null;
-          const isNext = i === currentIdx + 1;
-          return (
-            <option key={status} value={status} disabled={!isNext}>
-              {stepLabel(status as ShopOrderStatusPill)}
-            </option>
-          );
-        })}
+        <option value={allowedNext}>{stepLabel(allowedNext)}</option>
       </select>
 
       <label className="mt-3 block text-xs font-bold uppercase text-darkText/50">
@@ -147,8 +120,22 @@ export function VendorStatusDropdown({
         value={note}
         onChange={(e) => setNote(e.target.value)}
         className="mt-1 w-full max-w-md rounded-lg border border-borderGray px-3 py-2 text-sm"
-        placeholder="Timeline pe note"
+        placeholder="Internal note"
       />
+
+      {showTracking ? (
+        <>
+          <label className="mt-3 block text-xs font-bold uppercase text-darkText/50">
+            Tracking (optional)
+          </label>
+          <input
+            value={tracking}
+            onChange={(e) => setTracking(e.target.value)}
+            className="mt-1 w-full max-w-md rounded-lg border border-borderGray px-3 py-2 text-sm"
+            placeholder="Courier tracking number"
+          />
+        </>
+      ) : null}
 
       <button
         type="button"
@@ -156,7 +143,7 @@ export function VendorStatusDropdown({
         onClick={() => void submit()}
         className="mt-4 rounded-xl bg-primaryBlue px-5 py-2.5 text-sm font-bold text-white hover:bg-darkBlue disabled:opacity-50"
       >
-        {busy ? "Saving…" : "Status update karein"}
+        {busy ? "Saving…" : "Update order status"}
       </button>
     </div>
   );

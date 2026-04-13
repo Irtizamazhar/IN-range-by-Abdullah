@@ -98,6 +98,8 @@ export function Navbar({ whatsappNumber }: { whatsappNumber: string }) {
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setSearchQuery(urlSearchQuery);
@@ -108,6 +110,10 @@ export function Navbar({ whatsappNumber }: { whatsappNumber: string }) {
       const el = searchRef.current;
       if (el && event.target instanceof Node && !el.contains(event.target)) {
         setShowDropdown(false);
+      }
+      const menuEl = profileMenuRef.current;
+      if (menuEl && event.target instanceof Node && !menuEl.contains(event.target)) {
+        setProfileMenuOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -258,18 +264,61 @@ export function Navbar({ whatsappNumber }: { whatsappNumber: string }) {
                 <span className={utilityBarSepClass} aria-hidden>
                   |
                 </span>
-                <button
-                  type="button"
-                  onClick={() => openProfileModal()}
-                  className="inline-flex max-w-[min(200px,45vw)] items-center gap-2 text-left text-xs sm:text-sm font-medium text-darkText/80 transition-colors hover:text-primaryBlue"
-                >
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primaryBlue text-white">
-                    <User className="h-3.5 w-3.5" aria-hidden />
-                  </span>
-                  <span className="truncate font-semibold text-darkText hover:underline hover:decoration-primaryBlue hover:underline-offset-4">
-                    {session.user?.name || "Profile"}
-                  </span>
-                </button>
+                <div className="relative" ref={profileMenuRef}>
+                  <button
+                    type="button"
+                    onClick={() => setProfileMenuOpen((v) => !v)}
+                    className="inline-flex max-w-[min(220px,48vw)] items-center gap-2 text-left text-xs sm:text-sm font-medium text-darkText/80 transition-colors hover:text-primaryBlue"
+                  >
+                    {session.user?.image ? (
+                      <Image
+                        src={session.user.image}
+                        alt=""
+                        width={28}
+                        height={28}
+                        className="h-7 w-7 shrink-0 rounded-full object-cover ring-2 ring-primaryBlue/20"
+                      />
+                    ) : (
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primaryBlue text-white">
+                        <User className="h-3.5 w-3.5" aria-hidden />
+                      </span>
+                    )}
+                    <span className="truncate font-semibold text-darkText hover:underline hover:decoration-primaryBlue hover:underline-offset-4">
+                      {session.user?.name || "Profile"}
+                    </span>
+                  </button>
+                  {profileMenuOpen ? (
+                    <div className="absolute right-0 top-[calc(100%+8px)] z-50 min-w-[180px] rounded-xl border border-borderGray bg-white p-1.5 shadow-xl">
+                      <button
+                        type="button"
+                        className="w-full rounded-lg px-3 py-2 text-left text-sm text-darkText transition-colors hover:bg-lightGray"
+                        onClick={() => {
+                          setProfileMenuOpen(false);
+                          openProfileModal();
+                        }}
+                      >
+                        Profile
+                      </button>
+                      <Link
+                        href="/track-order"
+                        className="block w-full rounded-lg px-3 py-2 text-left text-sm text-darkText transition-colors hover:bg-lightGray"
+                        onClick={() => setProfileMenuOpen(false)}
+                      >
+                        Orders
+                      </Link>
+                      <button
+                        type="button"
+                        className="w-full rounded-lg px-3 py-2 text-left text-sm text-red-600 transition-colors hover:bg-red-50"
+                        onClick={() => {
+                          setProfileMenuOpen(false);
+                          void signOut({ callbackUrl: "/" });
+                        }}
+                      >
+                        Logout
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
               </>
             )}
           </div>
@@ -597,7 +646,17 @@ export function Navbar({ whatsappNumber }: { whatsappNumber: string }) {
                   openProfileModal();
                 }}
               >
-                <CircleUser className="h-6 w-6" />
+                {session.user?.image ? (
+                  <Image
+                    src={session.user.image}
+                    alt=""
+                    width={24}
+                    height={24}
+                    className="h-6 w-6 shrink-0 rounded-full object-cover"
+                  />
+                ) : (
+                  <CircleUser className="h-6 w-6" />
+                )}
                 Profile ({session.user?.name || "Account"})
               </button>
             )}

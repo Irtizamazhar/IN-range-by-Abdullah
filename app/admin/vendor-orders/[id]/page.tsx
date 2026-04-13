@@ -10,14 +10,17 @@ import {
   type OrderDetailModel,
 } from "@/components/orders/OrderDetail";
 import { StatusBadge, type ShopOrderStatusPill } from "@/components/orders/StatusBadge";
+import { AdminShopStatusDropdown } from "@/components/orders/AdminShopStatusDropdown";
 
-/** Admin read-only detail + force cancel. */
+/** Admin detail: fulfillment (shipped / delivered) + force cancel. */
 export default function AdminVendorOrderDetailPage() {
   const params = useParams();
   const id = typeof params?.id === "string" ? params.id : "";
   const [data, setData] = useState<OrderDetailModel | null>(null);
   const [loading, setLoading] = useState(true);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [trackEdit, setTrackEdit] = useState("");
+  const [trackBusy, setTrackBusy] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -33,7 +36,10 @@ export default function AdminVendorOrderDetailPage() {
         setData(null);
         return;
       }
-      if (j.order) setData(j.order);
+      if (j.order) {
+        setData(j.order);
+        setTrackEdit(j.order.trackingNumber || "");
+      }
     } catch {
       toast.error("Network error");
       setData(null);
@@ -45,6 +51,34 @@ export default function AdminVendorOrderDetailPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  async function saveTrackingOnly() {
+    if (!id) return;
+    setTrackBusy(true);
+    try {
+      const r = await fetch(
+        `/api/orders/admin/shop/${encodeURIComponent(id)}/status`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({
+            updateTrackingOnly: true,
+            trackingNumber: trackEdit.trim() || null,
+          }),
+        }
+      );
+      const j = (await r.json()) as { error?: string };
+      if (!r.ok) {
+        toast.error(j.error || "Could not save tracking");
+        return;
+      }
+      toast.success("Tracking saved");
+      await load();
+    } finally {
+      setTrackBusy(false);
+    }
+  }
 
   async function forceCancel(reason: string) {
     if (!id) return;
@@ -82,6 +116,10 @@ export default function AdminVendorOrderDetailPage() {
   const canCancel =
     data.orderStatus !== "delivered" && data.orderStatus !== "cancelled";
 
+  const canAdminFulfill =
+    canCancel &&
+    (data.orderStatus === "packed" || data.orderStatus === "shipped");
+
   return (
     <div className="mx-auto max-w-3xl p-6 md:p-8">
       <Link
@@ -108,6 +146,39 @@ export default function AdminVendorOrderDetailPage() {
         <div className="mt-8">
           <OrderDetail order={data} showVendorBlock />
         </div>
+
+        {canAdminFulfill ? (
+          <div className="mt-8 space-y-6 border-t border-borderGray pt-6">
+            <AdminShopStatusDropdown
+              currentStatus={data.orderStatus as ShopOrderStatusPill}
+              statusUrl={`/api/orders/admin/shop/${encodeURIComponent(id)}/status`}
+              onSuccess={() => void load()}
+            />
+            {data.orderStatus === "shipped" ? (
+              <div>
+                <p className="mb-2 text-sm font-bold text-darkText">
+                  Update tracking
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <input
+                    value={trackEdit}
+                    onChange={(e) => setTrackEdit(e.target.value)}
+                    className="min-w-[200px] flex-1 rounded-lg border border-borderGray px-3 py-2 text-sm"
+                    placeholder="Courier tracking number"
+                  />
+                  <button
+                    type="button"
+                    disabled={trackBusy}
+                    onClick={() => void saveTrackingOnly()}
+                    className="rounded-xl border border-borderGray bg-white px-4 py-2 text-sm font-bold disabled:opacity-50"
+                  >
+                    Save tracking
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
         {canCancel ? (
           <div className="mt-8 border-t border-borderGray pt-6">

@@ -18,8 +18,6 @@ export default function VendorShopOrderDetailPage() {
   const [data, setData] = useState<OrderDetailModel | null>(null);
   const [loading, setLoading] = useState(true);
   const [cancelOpen, setCancelOpen] = useState(false);
-  const [trackEdit, setTrackEdit] = useState("");
-  const [trackBusy, setTrackBusy] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -36,7 +34,6 @@ export default function VendorShopOrderDetailPage() {
       }
       if (j.order) {
         setData(j.order);
-        setTrackEdit(j.order.trackingNumber || "");
       }
     } catch {
       toast.error("Network error");
@@ -49,34 +46,6 @@ export default function VendorShopOrderDetailPage() {
   useEffect(() => {
     void load();
   }, [load]);
-
-  async function saveTrackingOnly() {
-    if (!id) return;
-    setTrackBusy(true);
-    try {
-      const r = await fetch(
-        `/api/orders/vendor/${encodeURIComponent(id)}/status`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            updateTrackingOnly: true,
-            trackingNumber: trackEdit.trim() || null,
-          }),
-        }
-      );
-      const j = (await r.json()) as { error?: string };
-      if (!r.ok) {
-        toast.error(j.error || "Could not save tracking");
-        return;
-      }
-      toast.success("Tracking saved");
-      await load();
-    } finally {
-      setTrackBusy(false);
-    }
-  }
 
   async function cancel(reason: string) {
     if (!id) return;
@@ -144,30 +113,6 @@ export default function VendorShopOrderDetailPage() {
         <div className="mt-8">
           <OrderDetail order={data} />
         </div>
-
-        {data.orderStatus === "shipped" ? (
-          <div className="mt-8 border-t border-borderGray pt-6">
-            <p className="mb-2 text-sm font-bold text-darkText">
-              Update tracking
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <input
-                value={trackEdit}
-                onChange={(e) => setTrackEdit(e.target.value)}
-                className="min-w-[200px] flex-1 rounded-lg border border-borderGray px-3 py-2 text-sm"
-                placeholder="Courier tracking number"
-              />
-              <button
-                type="button"
-                disabled={trackBusy}
-                onClick={() => void saveTrackingOnly()}
-                className="rounded-xl border border-borderGray bg-white px-4 py-2 text-sm font-bold disabled:opacity-50"
-              >
-                Save tracking
-              </button>
-            </div>
-          </div>
-        ) : null}
 
         {canAct ? (
           <div className="mt-8 space-y-4 border-t border-borderGray pt-6">

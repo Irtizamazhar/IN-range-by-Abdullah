@@ -191,6 +191,7 @@ export function CustomerAuthProvider({
         isOpen={profileOpen && isCustomer}
         onClose={closeProfileModal}
         displayName={session?.user?.name || pfName}
+        avatarUrl={session?.user?.image}
         name={pfName}
         setName={setPfName}
         phone={pfPhone}

@@ -10,7 +10,7 @@ function actionLabel(next: ShopOrderStatusPill): string {
     case "confirmed":
       return "Confirm order";
     case "packed":
-      return "Packed";
+      return "Mark packed";
     case "shipped":
       return "Shipped";
     case "delivered":

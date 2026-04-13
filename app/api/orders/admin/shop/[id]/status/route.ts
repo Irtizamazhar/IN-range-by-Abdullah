@@ -2,8 +2,11 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { requireApprovedVendorApi } from "@/lib/vendor-api-auth";
-import { advanceVendorShopOrderStatus } from "@/lib/vendor-shop-order-service";
+import { getAdminSession } from "@/lib/sessions";
+import {
+  advanceVendorShopOrderStatus,
+  updateShippedTrackingOnly,
+} from "@/lib/vendor-shop-order-service";
 import { runAfterVendorShopOrderStatusChange } from "@/lib/after-vendor-shop-order-status";
 
 const bodySchema = z.object({
@@ -14,11 +17,13 @@ const bodySchema = z.object({
 
 type Ctx = { params: Promise<{ id: string }> };
 
-/** Vendor: next status through packed only (PATCH /api/orders/vendor/:id/status). */
+/** Admin: packed→shipped (optional tracking) or shipped→delivered; or tracking-only while shipped. */
 export async function PATCH(req: NextRequest, ctx: Ctx) {
   try {
-    const auth = await requireApprovedVendorApi();
-    if ("response" in auth) return auth.response;
+    const session = await getAdminSession();
+    if (session?.user?.role !== "admin") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     const { id } = await ctx.params;
 
@@ -40,19 +45,26 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     const { note, trackingNumber, updateTrackingOnly } = parsed.data;
 
     if (updateTrackingOnly) {
-      return NextResponse.json(
-        {
-          error:
-            "Tracking after shipping is updated by the admin. Contact support if you need changes.",
-        },
-        { status: 403 }
-      );
+      if (trackingNumber === undefined) {
+        return NextResponse.json(
+          { error: "trackingNumber is required (string or null to clear)" },
+          { status: 400 }
+        );
+      }
+      const res = await updateShippedTrackingOnly({
+        shopOrderId: id,
+        actor: "admin",
+        trackingNumber,
+      });
+      if (!res.ok) {
+        return NextResponse.json({ error: res.error }, { status: 400 });
+      }
+      return NextResponse.json({ ok: true });
     }
 
     const res = await advanceVendorShopOrderStatus({
       shopOrderId: id,
-      actor: "vendor",
-      vendorId: auth.vendor.id,
+      actor: "admin",
       note,
       trackingNumber,
     });
@@ -67,7 +79,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
     return NextResponse.json({ ok: true, newStatus: res.newStatus });
   } catch (e) {
-    console.error("PATCH /api/orders/vendor/[id]/status", e);
+    console.error("PATCH /api/orders/admin/shop/[id]/status", e);
     return NextResponse.json(
       {
         error:
