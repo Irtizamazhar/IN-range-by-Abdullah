@@ -8,10 +8,21 @@ import { consumeOrReject, createRegisterRateLimiter } from "@/lib/security/rate-
 import { vendorResendBodySchema } from "@/lib/vendor-auth-schemas";
 import { sendVendorVerificationEmail } from "@/lib/vendor-mail";
 import { clientIp } from "@/lib/vendor-ip";
+import { vendorEmailVerificationRequired } from "@/lib/vendor-email-verification-flag";
 
 const limiter = createRegisterRateLimiter();
 
 export async function POST(req: NextRequest) {
+  if (!vendorEmailVerificationRequired()) {
+    return NextResponse.json(
+      {
+        ok: true,
+        message: "Email verification is not used on this site. Sign in after admin approval.",
+      },
+      { status: 200 }
+    );
+  }
+
   const ip = clientIp(req);
   const limited = await consumeOrReject(
     limiter,

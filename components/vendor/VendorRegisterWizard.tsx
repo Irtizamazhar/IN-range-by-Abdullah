@@ -37,6 +37,10 @@ function passwordScore(pw: string): number {
 export function VendorRegisterWizard() {
   const [step, setStep] = useState(1);
   const [done, setDone] = useState(false);
+  const [doneInfo, setDoneInfo] = useState<{
+    requireEmail: boolean;
+    message: string;
+  } | null>(null);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -206,11 +210,22 @@ export function VendorRegisterWizard() {
         method: "POST",
         body: fd,
       });
-      const data = (await res.json()) as { error?: string; message?: string };
+      const data = (await res.json()) as {
+        error?: string;
+        message?: string;
+        requireEmailVerification?: boolean;
+      };
       if (!res.ok) {
         setError(data.error || "Registration failed");
         return;
       }
+      setDoneInfo({
+        requireEmail: data.requireEmailVerification === true,
+        message:
+          typeof data.message === "string" && data.message.trim()
+            ? data.message.trim()
+            : "",
+      });
       setDone(true);
     } catch {
       setError("Network error. Try again.");
@@ -229,12 +244,49 @@ export function VendorRegisterWizard() {
           ✓
         </div>
         <h1 className="mt-6 text-2xl font-extrabold text-neutral-900">
-          Check your email
+          {doneInfo?.requireEmail ? "Check your email" : "Application submitted"}
         </h1>
         <p className="mt-3 text-neutral-600">
-          We sent a verification link to <strong>{email}</strong>. After you
-          verify, our team will review your application.
+          {doneInfo?.requireEmail ? (
+            <>
+              We sent a verification link to <strong>{email}</strong>. Open that
+              link, then wait for admin approval before the dashboard is available.
+            </>
+          ) : (
+            <>
+              {doneInfo?.message ? (
+                doneInfo.message
+              ) : (
+                <>
+                  No email verification step right now. Use the same email and
+                  password after an admin approves your seller account.
+                </>
+              )}
+            </>
+          )}
         </p>
+        {doneInfo?.requireEmail ? (
+          <ul className="mt-4 list-disc space-y-2 pl-5 text-left text-sm text-neutral-600">
+            <li>
+              <strong>Sign in</strong> works only after you verify your email.
+            </li>
+            <li>
+              The <strong>dashboard</strong> opens only after your application is
+              approved.
+            </li>
+          </ul>
+        ) : (
+          <ul className="mt-4 list-disc space-y-2 pl-5 text-left text-sm text-neutral-600">
+            <li>
+              Wait for <strong>admin approval</strong> (you will not need a
+              verification email link for this step).
+            </li>
+            <li>
+              Then <strong>sign in</strong> on the vendor page — you will go to
+              the dashboard automatically.
+            </li>
+          </ul>
+        )}
         <Link
           href="/vendor/login"
           className="mt-8 inline-block font-bold hover:underline"
@@ -385,7 +437,7 @@ export function VendorRegisterWizard() {
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showPassword ? <Eye size={18} /> : <EyeOff size={18} />}
                 </button>
               </div>
               <div className="mt-1 flex gap-1">

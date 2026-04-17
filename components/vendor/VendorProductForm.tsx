@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type ClipboardEvent, type DragEvent } from "react";
 import toast from "react-hot-toast";
@@ -11,6 +12,7 @@ import {
   fetchShopCategoryNameList,
   SHOP_CATEGORY_FALLBACK,
 } from "@/lib/shop-category-names";
+import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 import { parseImagesJson } from "@/lib/vendor-product-schemas";
 
 export type VendorProductFormInitial = {
@@ -425,11 +427,13 @@ export function VendorProductForm({
         <div className="mt-3 flex flex-wrap gap-3">
           {images.map((url, idx) => (
             <div key={`${url}-${idx}`} className="relative">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={url}
                 alt=""
+                width={96}
+                height={96}
                 className="h-24 w-24 rounded-lg border object-cover"
+                unoptimized={shouldUnoptimizeImageSrc(url)}
               />
               <button
                 type="button"

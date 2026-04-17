@@ -1,7 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState, type ClipboardEvent, type FormEvent } from "react";
 import Link from "next/link";
+import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import {
@@ -231,8 +233,14 @@ export default function AddNewArrivalPage() {
             <div className="flex flex-wrap gap-2">
               {images.map((img, i) => (
                 <div key={`${img}-${i}`} className="relative">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={img} alt="" className="h-20 w-20 rounded-lg object-cover" />
+                  <Image
+                    src={img}
+                    alt=""
+                    width={80}
+                    height={80}
+                    className="h-20 w-20 rounded-lg object-cover"
+                    unoptimized={shouldUnoptimizeImageSrc(img)}
+                  />
                   <button
                     type="button"
                     onClick={() => setImages((prev) => prev.filter((_, idx) => idx !== i))}

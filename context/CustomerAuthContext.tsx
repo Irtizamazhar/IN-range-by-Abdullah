@@ -7,10 +7,25 @@ import {
   useMemo,
   useState,
 } from "react";
+import dynamic from "next/dynamic";
 import { signOut, useSession } from "next-auth/react";
 import toast from "react-hot-toast";
-import { AuthModal } from "@/components/user/AuthModal";
-import { CustomerProfileModal } from "@/components/user/CustomerProfileModal";
+
+const AuthModal = dynamic(
+  () =>
+    import("@/components/user/AuthModal").then((mod) => ({
+      default: mod.AuthModal,
+    })),
+  { ssr: false }
+);
+
+const CustomerProfileModal = dynamic(
+  () =>
+    import("@/components/user/CustomerProfileModal").then((mod) => ({
+      default: mod.CustomerProfileModal,
+    })),
+  { ssr: false }
+);
 
 type Tab = "signup" | "login";
 

@@ -1,10 +1,12 @@
 "use client";
 
+import Image from "next/image";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import { formatPKR } from "@/lib/format";
+import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 import {
   Check,
   ChevronRight,
@@ -395,11 +397,15 @@ ${String(order.region || order.province || "")}</div>
             <div className="space-y-4">
               {order.paymentProofUrl || order.paymentScreenshot ? (
                 <div className="relative aspect-video w-full max-h-64 overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     src={String(order.paymentProofUrl || order.paymentScreenshot)}
                     alt="Payment proof"
-                    className="h-full w-full max-h-64 object-contain"
+                    fill
+                    className="object-contain"
+                    sizes="(max-width: 768px) 100vw, 896px"
+                    unoptimized={shouldUnoptimizeImageSrc(
+                      String(order.paymentProofUrl || order.paymentScreenshot)
+                    )}
                   />
                 </div>
               ) : (
@@ -482,11 +488,13 @@ ${String(order.region || order.province || "")}</div>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           {imageUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
+                            <Image
                               src={imageUrl}
                               alt={name}
+                              width={40}
+                              height={40}
                               className="h-10 w-10 rounded-md border border-gray-200 object-cover"
+                              unoptimized={shouldUnoptimizeImageSrc(imageUrl)}
                             />
                           ) : null}
                           <div className="min-w-0">

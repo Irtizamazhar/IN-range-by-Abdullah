@@ -1,6 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
+import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 import toast from "react-hot-toast";
 
 type VendorStatus = "pending" | "approved" | "rejected" | "suspended";
@@ -152,9 +154,9 @@ export default function AdminVendorsPage() {
         <div>
           <h1 className="text-2xl font-black text-darkText">Vendors</h1>
           <p className="text-sm text-darkText/70 mt-1">
-            Approve or reject pending sellers anytime. They must verify email
-            before they can log in, even if already approved. Rejected vendors
-            see your reason on login.
+            Approve or reject pending sellers anytime. Approving also marks email
+            verified so they can sign in immediately. Rejected vendors see your
+            reason on login.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -355,11 +357,13 @@ export default function AdminVendorsPage() {
                                 rel="noopener noreferrer"
                                 className="block"
                               >
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
+                                <Image
                                   src={d.fileUrl}
                                   alt={d.documentType}
+                                  width={200}
+                                  height={144}
                                   className="h-36 w-auto max-w-[200px] rounded-lg border border-borderGray object-cover bg-white"
+                                  unoptimized={shouldUnoptimizeImageSrc(d.fileUrl)}
                                 />
                               </a>
                               <span className="text-xs font-semibold text-darkText/70 capitalize">

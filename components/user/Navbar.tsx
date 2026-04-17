@@ -442,10 +442,18 @@ export function Navbar({ whatsappNumber }: { whatsappNumber: string }) {
                         >
                           <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-lightGray">
                             {product.image ? (
-                              <img
+                              <Image
                                 src={product.image}
                                 alt=""
-                                className="h-full w-full object-cover"
+                                fill
+                                className="object-cover"
+                                sizes="48px"
+                                unoptimized={
+                                  product.image.startsWith("/api/") ||
+                                  product.image.startsWith("/uploads/") ||
+                                  product.image.startsWith("blob:") ||
+                                  product.image.startsWith("data:")
+                                }
                               />
                             ) : (
                               <Package

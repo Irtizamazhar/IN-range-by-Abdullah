@@ -1,7 +1,6 @@
 import type {
   Order,
   OrderItem,
-  Prisma,
   Product,
   ProductImage,
 } from "@prisma/client";

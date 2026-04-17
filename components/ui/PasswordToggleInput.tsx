@@ -30,10 +30,11 @@ export function PasswordToggleInput({
         className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-lg p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800"
         aria-label={show ? "Hide password" : "Show password"}
       >
+        {/* Eye = visible, EyeOff = concealed (icon matches current state) */}
         {show ? (
-          <EyeOff className="h-[18px] w-[18px]" aria-hidden />
-        ) : (
           <Eye className="h-[18px] w-[18px]" aria-hidden />
+        ) : (
+          <EyeOff className="h-[18px] w-[18px]" aria-hidden />
         )}
       </button>
     </div>

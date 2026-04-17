@@ -2,7 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { memo } from "react";
 import { formatPKR } from "@/lib/format";
+import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 
 const DARAZ_ORANGE = "#F57224";
 
@@ -63,7 +65,7 @@ function DarazStyleRatingRow({
   );
 }
 
-export function ProductCard({
+export const ProductCard = memo(function ProductCard({
   product,
   ribbon,
   badgePosition = "left",
@@ -74,9 +76,7 @@ export function ProductCard({
   badgePosition?: "left" | "right";
 }) {
   const img = product.images?.[0];
-  const imgLocal = Boolean(
-    img?.startsWith("/api/") || img?.startsWith("/uploads/")
-  );
+  const imgLocal = Boolean(img && shouldUnoptimizeImageSrc(img));
   const hasDiscount =
     Boolean(product.originalPrice && product.originalPrice > product.price);
   const discountPct =
@@ -147,7 +147,7 @@ export function ProductCard({
       </div>
     </Link>
   );
-}
+});
 
 export function ProductCardSkeleton() {
   return (

@@ -1,6 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import { ClipboardEvent, FormEvent, useEffect, useMemo, useState } from "react";
+import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 import toast from "react-hot-toast";
 
 type Category = {
@@ -270,18 +272,22 @@ export default function AdminCategoriesPage() {
             <p className="mb-2 text-sm font-semibold text-darkText">Preview</p>
             <div className="relative h-20 w-20 overflow-hidden rounded-lg border border-borderGray bg-lightGray">
               {imageFile ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <Image
                   src={filePreviewUrl}
                   alt="Preview"
-                  className="h-full w-full object-cover"
+                  fill
+                  className="object-cover"
+                  sizes="80px"
+                  unoptimized={shouldUnoptimizeImageSrc(filePreviewUrl)}
                 />
               ) : (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <Image
                   src={imageUrl}
                   alt="Preview"
-                  className="h-full w-full object-cover"
+                  fill
+                  className="object-cover"
+                  sizes="80px"
+                  unoptimized={shouldUnoptimizeImageSrc(imageUrl)}
                 />
               )}
             </div>
@@ -340,11 +346,13 @@ export default function AdminCategoriesPage() {
                   >
                     <td className="p-3">
                       <div className="relative h-14 w-14 overflow-hidden rounded-lg bg-lightGray">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
+                        <Image
                           src={category.image}
                           alt={category.name}
-                          className="h-full w-full object-cover"
+                          fill
+                          className="object-cover"
+                          sizes="56px"
+                          unoptimized={shouldUnoptimizeImageSrc(category.image)}
                         />
                       </div>
                     </td>

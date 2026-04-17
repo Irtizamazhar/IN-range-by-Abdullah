@@ -1,9 +1,5 @@
-/** Folder key for customer review photos (`public/uploads/reviews`). Requires customer session. */
-export const REVIEW_PHOTO_FOLDER = "inrange-reviews";
-
 /**
- * Upload via POST /api/upload — bytes stored in MySQL (ProductImage / PaymentProofStaging),
- * or on disk for categories / review photos.
+ * Upload via POST /api/upload — bytes stored in MySQL (ProductImage / PaymentProofStaging).
  */
 export async function uploadImageWithId(
   file: File,

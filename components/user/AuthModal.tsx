@@ -417,9 +417,9 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
                           }
                         >
                           {showPassword ? (
-                            <EyeOff className="h-[18px] w-[18px]" />
-                          ) : (
                             <Eye className="h-[18px] w-[18px]" />
+                          ) : (
+                            <EyeOff className="h-[18px] w-[18px]" />
                           )}
                         </button>
                       </AuthField>
@@ -572,9 +572,9 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
                           }
                         >
                           {showPassword ? (
-                            <EyeOff className="h-[18px] w-[18px]" />
-                          ) : (
                             <Eye className="h-[18px] w-[18px]" />
+                          ) : (
+                            <EyeOff className="h-[18px] w-[18px]" />
                           )}
                         </button>
                       </AuthField>

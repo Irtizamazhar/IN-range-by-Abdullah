@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { clearVendorLoginRememberPrefs } from "@/lib/vendor-login-remember-prefs";
 
 export function VendorLogoutButton() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export function VendorLogoutButton() {
         method: "POST",
         credentials: "include",
       });
+      clearVendorLoginRememberPrefs();
       router.replace("/vendor/login");
       router.refresh();
     } finally {

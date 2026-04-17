@@ -95,6 +95,11 @@ export function Footer({
               </Link>
             </li>
             <li>
+              <Link href="/terms-and-conditions" className="hover:text-white">
+                Terms & Conditions
+              </Link>
+            </li>
+            <li>
               <Link href="/cart" className="hover:text-white">
                 Cart
               </Link>
@@ -125,10 +130,11 @@ export function Footer({
                 key={method.alt}
                 className="flex h-9 w-16 items-center justify-center rounded-md bg-white px-3 py-1.5 shadow-md transition-transform duration-200 hover:scale-105 motion-reduce:transform-none"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element -- static public payment badges */}
-                <img
+                <Image
                   src={method.src}
                   alt={method.alt}
+                  width={64}
+                  height={36}
                   className="h-full w-full object-contain"
                 />
               </div>

@@ -11,6 +11,7 @@ import { vendorRegisterFormFieldsSchema } from "@/lib/vendor-auth-schemas";
 import { sendVendorVerificationEmail } from "@/lib/vendor-mail";
 import { clientIp } from "@/lib/vendor-ip";
 import { saveVendorDocumentBuffer } from "@/lib/vendor-doc-upload";
+import { vendorEmailVerificationRequired } from "@/lib/vendor-email-verification-flag";
 
 const registerLimiter = createRegisterRateLimiter();
 
@@ -139,7 +140,10 @@ export async function POST(req: NextRequest) {
   }
 
   const passwordHash = await bcrypt.hash(raw.password, 12);
-  const emailVerifyToken = randomBytes(32).toString("hex");
+  const requireEmailVerification = vendorEmailVerificationRequired();
+  const emailVerifyToken = requireEmailVerification
+    ? randomBytes(32).toString("hex")
+    : null;
   const businessTypeEnum =
     raw.businessType === "company"
       ? VendorBusinessType.company
@@ -164,6 +168,7 @@ export async function POST(req: NextRequest) {
         accountNumber,
         primaryCategory: category,
         emailVerifyToken,
+        isEmailVerified: !requireEmailVerification,
         status: "pending",
       },
     });
@@ -209,15 +214,21 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  try {
-    await sendVendorVerificationEmail(email, emailVerifyToken);
-  } catch (e) {
-    console.error("vendor verification email", e);
+  if (requireEmailVerification && emailVerifyToken) {
+    try {
+      await sendVendorVerificationEmail(email, emailVerifyToken);
+    } catch (e) {
+      console.error("vendor verification email", e);
+    }
   }
+
+  const message = requireEmailVerification
+    ? "Registration received. Check your email to verify your address. We will review your application after verification."
+    : "Registration received. After an admin approves your application, sign in with your email and password to open the dashboard.";
 
   return NextResponse.json({
     ok: true,
-    message:
-      "Registration received. Check your email to verify your address. We will review your application after verification.",
+    message,
+    requireEmailVerification,
   });
 }

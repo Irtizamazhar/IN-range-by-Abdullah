@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -262,10 +263,12 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
           </div>
           {photoPreview ? (
             <div className="mt-3 overflow-hidden rounded-lg border border-[#e0e0e0] bg-[#fafafa] p-2">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={photoPreview}
                 alt="Selected delivery photo preview"
+                width={800}
+                height={600}
+                unoptimized
                 className="mx-auto max-h-48 max-w-full object-contain"
               />
             </div>

@@ -16,6 +16,7 @@ import { VENDOR_JWT_COOKIE } from "@/lib/vendor-cookies";
 import { clientIp } from "@/lib/vendor-ip";
 import { randomBytes } from "crypto";
 import { resolveVendorJwtSecretKey } from "@/lib/vendor-jwt-secret";
+import { vendorEmailVerificationRequired } from "@/lib/vendor-email-verification-flag";
 
 const loginLimiter = createLoginRateLimiter();
 
@@ -79,25 +80,7 @@ export async function POST(req: NextRequest) {
   const submittedPassword = parsed.data.password;
   let ok = await bcrypt.compare(submittedPassword, vendor.passwordHash);
   if (!ok) {
-    const trimmed = submittedPassword.trim();
-    if (trimmed !== submittedPassword) {
-      ok = await bcrypt.compare(trimmed, vendor.passwordHash);
-    }
-  }
-  if (
-    !ok &&
-    process.env.NODE_ENV !== "production" &&
-    vendor.status === "approved" &&
-    vendor.isEmailVerified
-  ) {
-    // Dev-only recovery: if local seed/test data got out-of-sync, adopt the typed
-    // password so newly approved vendors can proceed without manual DB resets.
-    const nextHash = await bcrypt.hash(submittedPassword.trim(), 12);
-    await prisma.vendor.update({
-      where: { id: vendor.id },
-      data: { passwordHash: nextHash, loginAttempts: 0, lockedUntil: null },
-    });
-    ok = true;
+    ok = await bcrypt.compare(submittedPassword.trim(), vendor.passwordHash);
   }
   if (!ok) {
     const attempts = vendor.loginAttempts + 1;
@@ -112,8 +95,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
   }
 
-  // Show account-state messages only after credentials are correct.
-  if (!vendor.isEmailVerified && vendor.status !== "approved") {
+  /** Fresh row: admin may have approved while this form was open (avoids stale `pending`). */
+  const live = await prisma.vendor.findUnique({ where: { id: vendor.id } });
+  if (!live) {
+    return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
+  }
+
+  // Strict mode only when transactional email is enabled (see VENDOR_REQUIRE_EMAIL_VERIFICATION).
+  if (
+    vendorEmailVerificationRequired() &&
+    !live.isEmailVerified &&
+    live.status !== "approved"
+  ) {
     return NextResponse.json(
       {
         code: "unverified",
@@ -124,24 +117,24 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (vendor.status === "pending") {
+  if (live.status === "pending") {
     return NextResponse.json(
       { code: "pending", error: "Application under review" },
       { status: 403 }
     );
   }
 
-  if (vendor.status === "rejected") {
+  if (live.status === "rejected") {
     return NextResponse.json(
       {
         code: "rejected",
-        error: vendor.rejectionReason?.trim() || "Your application was not approved.",
+        error: live.rejectionReason?.trim() || "Your application was not approved.",
       },
       { status: 403 }
     );
   }
 
-  if (vendor.status === "suspended") {
+  if (live.status === "suspended") {
     return NextResponse.json(
       { code: "suspended", error: "Account suspended" },
       { status: 403 }
@@ -149,24 +142,24 @@ export async function POST(req: NextRequest) {
   }
 
   await prisma.vendor.update({
-    where: { id: vendor.id },
+    where: { id: live.id },
     data: { loginAttempts: 0, lockedUntil: null, lastLoginAt: new Date() },
   });
 
-  const rememberMe = Boolean(parsed.data.rememberMe);
+  const rememberMe = parsed.data.rememberMe;
   const expiresIn = rememberMe ? "30d" : defaultVendorJwtExpiresIn();
   const maxAge = vendorJwtExpiresSeconds(expiresIn);
   const expiresAt = new Date(Date.now() + maxAge * 1000);
   const sessionId = `vs_${randomBytes(18).toString("hex")}`;
 
-  const jwt = await signVendorJwt(vendor.id, sessionId, expiresIn);
+  const jwt = await signVendorJwt(live.id, sessionId, expiresIn);
   const tokenHash = hashVendorJwtCookie(jwt);
 
   await prisma.$transaction([
     prisma.vendorSession.create({
       data: {
         id: sessionId,
-        vendorId: vendor.id,
+        vendorId: live.id,
         tokenHash,
         ipAddress: ip,
         userAgent: ua,
@@ -175,7 +168,7 @@ export async function POST(req: NextRequest) {
     }),
     prisma.vendorAuditLog.create({
       data: {
-        vendorId: vendor.id,
+        vendorId: live.id,
         action: "login",
         ipAddress: ip,
         userAgent: ua,
@@ -188,11 +181,11 @@ export async function POST(req: NextRequest) {
     ok: true,
     message: "Signed in",
     vendor: {
-      id: vendor.id,
-      shopName: vendor.shopName,
-      ownerName: vendor.ownerName,
-      email: vendor.email,
-      status: vendor.status,
+      id: live.id,
+      shopName: live.shopName,
+      ownerName: live.ownerName,
+      email: live.email,
+      status: live.status,
     },
   });
   res.cookies.set(VENDOR_JWT_COOKIE, jwt, {

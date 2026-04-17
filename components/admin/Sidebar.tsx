@@ -81,6 +81,15 @@ const links = [
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
+function isAdminLinkActive(pathname: string | null, href: string): boolean {
+  if (!pathname) return false;
+  // Keep dashboard exact so nested dashboard tools highlight their own links only.
+  if (href === "/admin/dashboard") {
+    return pathname === "/admin/dashboard";
+  }
+  return pathname === href || pathname.startsWith(href + "/");
+}
+
 export function AdminSidebar() {
   const pathname = usePathname();
   const [unreadOrders, setUnreadOrders] = useState(0);
@@ -196,8 +205,7 @@ export function AdminSidebar() {
               key={href}
               href={href}
               className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-base font-medium transition-all duration-200 ${
-                pathname != null &&
-                (pathname === href || pathname.startsWith(href + "/"))
+                isAdminLinkActive(pathname, href)
                   ? "bg-[#1BACE4] font-semibold text-white shadow-sm"
                   : "text-white/80 hover:bg-white/10 hover:text-white"
               }`}

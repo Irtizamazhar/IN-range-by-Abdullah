@@ -1,8 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import { useParams } from "next/navigation";
 import { useEffect, useState, type ClipboardEvent, type FormEvent } from "react";
 import Link from "next/link";
+import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 import toast from "react-hot-toast";
 import { uploadImageWithId } from "@/lib/cloudinary-client-upload";
 import {
@@ -475,11 +477,13 @@ export default function EditProductPage() {
             <div className="flex flex-wrap gap-2 justify-center mt-4">
               {images.map((im) => (
                 <div key={im.id} className="relative group">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     src={im.url}
                     alt=""
+                    width={64}
+                    height={64}
                     className="h-16 w-16 object-cover rounded-lg border border-borderGray"
+                    unoptimized={shouldUnoptimizeImageSrc(im.url)}
                   />
                   <button
                     type="button"

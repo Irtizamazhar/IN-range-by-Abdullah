@@ -8,9 +8,7 @@ export default function AdminLayout({
 }) {
   return (
     <AdminSessionProvider>
-      <div className="font-sans antialiased">
-        <AdminChrome>{children}</AdminChrome>
-      </div>
+      <AdminChrome>{children}</AdminChrome>
     </AdminSessionProvider>
   );
 }

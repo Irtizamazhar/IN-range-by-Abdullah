@@ -315,10 +315,8 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  let totalAmount = subtotal;
-  if (paymentMethod === "cod") {
-    totalAmount += settings.codCharges || 0;
-  }
+  const deliveryCharge = settings.codCharges || 0;
+  const totalAmount = subtotal + deliveryCharge;
 
   const orderNumber = await generateOrderNumber();
 

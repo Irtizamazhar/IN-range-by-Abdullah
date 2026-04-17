@@ -15,6 +15,7 @@ import {
   CircleDollarSign,
 } from "lucide-react";
 import { LogoMark } from "@/components/user/LogoMark";
+import { clearVendorLoginRememberPrefs } from "@/lib/vendor-login-remember-prefs";
 
 /** Pending count last acknowledged on My Orders — badge shows new items since then (clears when you open that page). */
 const VENDOR_PENDING_ACK_KEY = "vendor_pending_badge_ack";
@@ -152,6 +153,7 @@ export function VendorSidebar({
     } catch {
       /* still leave */
     }
+    clearVendorLoginRememberPrefs();
     window.location.href = "/vendor/login";
   }
 

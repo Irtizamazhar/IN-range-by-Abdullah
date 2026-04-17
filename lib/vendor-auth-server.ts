@@ -54,6 +54,18 @@ export async function getVendorFromSession(): Promise<{
   });
 
   if (!session?.vendor) return null;
+  if (session.vendor.status === "suspended") {
+    await prisma.vendorSession.updateMany({
+      where: {
+        id: sid,
+        vendorId: sub,
+        tokenHash,
+        isRevoked: false,
+      },
+      data: { isRevoked: true },
+    });
+    return null;
+  }
   return { vendor: session.vendor };
 }
 

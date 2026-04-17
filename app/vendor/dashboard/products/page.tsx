@@ -1,5 +1,7 @@
+import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 import { getVendorFromSession } from "@/lib/vendor-auth-server";
 import { prisma } from "@/lib/prisma";
 import { syncVendorProductStorefront } from "@/lib/sync-vendor-product-storefront";
@@ -163,13 +165,15 @@ export default async function VendorProductsPage() {
                 </div>
 
                 <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-4">
-                  <div className="flex h-[88px] w-[88px] items-center justify-center overflow-hidden rounded-xl border bg-neutral-50">
+                  <div className="relative flex h-[88px] w-[88px] items-center justify-center overflow-hidden rounded-xl border bg-neutral-50">
                     {img ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      <Image
                         src={img}
                         alt=""
-                        className="h-full w-full object-cover"
+                        fill
+                        className="object-cover"
+                        sizes="88px"
+                        unoptimized={shouldUnoptimizeImageSrc(img)}
                       />
                     ) : (
                       <div className="text-xs text-neutral-500">No image</div>

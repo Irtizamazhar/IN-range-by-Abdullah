@@ -1,9 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PasswordToggleInput } from "@/components/ui/PasswordToggleInput";
 import { LogoMark } from "@/components/user/LogoMark";
+import {
+  clearVendorLoginRememberPrefs,
+  loadVendorLoginRememberPrefs,
+  saveVendorLoginRememberPrefs,
+} from "@/lib/vendor-login-remember-prefs";
 
 const accent = "#F59E0B";
 
@@ -17,6 +22,25 @@ export default function VendorLoginPage() {
   const [appealMessage, setAppealMessage] = useState("");
   const [appealPending, setAppealPending] = useState(false);
   const [appealDone, setAppealDone] = useState(false);
+
+  useEffect(() => {
+    const saved = loadVendorLoginRememberPrefs();
+    if (saved) {
+      setEmail(saved.email);
+      setRememberMe(saved.rememberMe);
+    }
+  }, []);
+
+  useEffect(() => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (rememberMe && normalizedEmail) {
+      saveVendorLoginRememberPrefs(normalizedEmail);
+      return;
+    }
+    if (!rememberMe) {
+      clearVendorLoginRememberPrefs();
+    }
+  }, [email, rememberMe]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -41,6 +65,10 @@ export default function VendorLoginPage() {
           setError(
             `${base} You can resend the link from the verify email page.`
           );
+        } else if (data.code === "pending") {
+          setError(
+            `${base} Your email and password are fine — the seller dashboard opens only after an admin approves your application.`
+          );
         } else if (data.code === "suspended") {
           setError("Account suspended. You can submit an appeal below.");
           setShowAppeal(true);
@@ -48,6 +76,11 @@ export default function VendorLoginPage() {
           setError(base);
         }
         return;
+      }
+      if (rememberMe) {
+        saveVendorLoginRememberPrefs(email);
+      } else {
+        clearVendorLoginRememberPrefs();
       }
       // Full page navigation: cookie from login is always sent on the next load.
       // Client router + immediate refresh() could race (session looks empty once) and

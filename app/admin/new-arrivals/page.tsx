@@ -1,7 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 import toast from "react-hot-toast";
 import { formatPKR } from "@/lib/format";
 
@@ -68,8 +70,14 @@ export default function AdminNewArrivalsPage() {
             {rows.map((p) => (
               <tr key={p.id} className="border-b border-borderGray hover:bg-lightGray/40">
                 <td className="p-3">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={p.image} alt="" className="h-12 w-12 rounded-lg object-cover" />
+                  <Image
+                    src={p.image}
+                    alt=""
+                    width={48}
+                    height={48}
+                    className="h-12 w-12 rounded-lg object-cover"
+                    unoptimized={shouldUnoptimizeImageSrc(p.image)}
+                  />
                 </td>
                 <td className="max-w-[220px] truncate p-3 font-medium">{p.name}</td>
                 <td className="p-3">{formatPKR(p.price)}</td>

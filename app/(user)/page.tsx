@@ -21,6 +21,7 @@ import { pickReviewStat, reviewStatsForProductIds } from "@/lib/review-stats";
 export const dynamic = "force-dynamic";
 
 const NEW_ARRIVALS_PAGE_SIZE = 6;
+const BEST_SELLERS_PAGE_SIZE = 6;
 const FEATURED_PAGE_SIZE = 8;
 
 /** First page only; rest loaded via `/api/products/new-arrivals` when user clicks More. */
@@ -43,23 +44,36 @@ async function getNewArrivalsInitial(): Promise<{
   return { initial, total, stripPrismaIds };
 }
 
-async function fetchBestSellersFromApi(): Promise<ProductCardData[]> {
+/** First page only; rest loaded via `/api/products/bestsellers` when user clicks More. */
+async function getBestSellersInitial(): Promise<{
+  initial: ProductCardData[];
+  total: number;
+}> {
   try {
     const h = headers();
     const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
     const proto = h.get("x-forwarded-proto") ?? "http";
-    const url = `${proto}://${host}/api/products/bestsellers`;
+    const params = new URLSearchParams({
+      offset: "0",
+      limit: String(BEST_SELLERS_PAGE_SIZE),
+    });
+    const url = `${proto}://${host}/api/products/bestsellers?${params.toString()}`;
     const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) {
       console.error("Best Sellers API failed:", res.status, url);
-      return [];
+      return { initial: [], total: 0 };
     }
-    const data = (await res.json()) as { products?: ProductCardData[] };
-    const bestSellers = data.products ?? [];
-    return bestSellers;
+    const data = (await res.json()) as {
+      products?: ProductCardData[];
+      total?: number;
+    };
+    const initial = data.products ?? [];
+    const total =
+      typeof data.total === "number" ? data.total : initial.length;
+    return { initial, total };
   } catch (e) {
-    console.error("fetchBestSellersFromApi", e);
-    return [];
+    console.error("getBestSellersInitial", e);
+    return { initial: [], total: 0 };
   }
 }
 
@@ -119,7 +133,7 @@ async function getFeatured(excludePrismaIds: string[]) {
 
 export default async function HomePage() {
   const categories = (await readCategories()).filter((c) => c.showOnHome === true);
-  const bestSellers = await fetchBestSellersFromApi();
+  const bestSellers = await getBestSellersInitial();
   const newArrivals = await getNewArrivalsInitial();
   const featured = await getFeatured(newArrivals.stripPrismaIds);
 
@@ -127,7 +141,11 @@ export default async function HomePage() {
     <>
       <HeroSection sellNowHref="/vendor/register" />
 
-      <BestSellersSection products={bestSellers} />
+      <BestSellersSection
+        initialProducts={bestSellers.initial}
+        totalCount={bestSellers.total}
+        pageSize={BEST_SELLERS_PAGE_SIZE}
+      />
 
       <section className="bg-[#F5F5F5] py-14">
         <div className="mx-auto max-w-7xl px-4">

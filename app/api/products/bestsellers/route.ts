@@ -1,12 +1,29 @@
 export const dynamic = "force-dynamic";
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { catalogProductSelect } from "@/lib/catalog-product-select";
 import { prisma } from "@/lib/prisma";
 import { serializeProduct } from "@/lib/serialize";
 import { pickReviewStat, reviewStatsForProductIds } from "@/lib/review-stats";
 
-async function loadBestSellerRows() {
+async function countBestSellerRows(): Promise<number> {
+  try {
+    return await prisma.product.count({
+      where: { isBestSeller: true, isActive: true },
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "";
+    if (!msg.includes("isBestSeller")) {
+      throw e;
+    }
+    const rows = await prisma.$queryRaw<Array<{ c: bigint }>>`
+      SELECT COUNT(*) AS c FROM Product WHERE isActive = 1 AND isBestSeller = 1
+    `;
+    return Number(rows[0]?.c ?? 0);
+  }
+}
+
+async function loadBestSellerRows(offset: number, limit: number) {
   try {
     return await prisma.product.findMany({
       where: {
@@ -14,7 +31,8 @@ async function loadBestSellerRows() {
         isActive: true,
       },
       orderBy: { updatedAt: "desc" },
-      take: 24,
+      skip: offset,
+      take: limit,
       select: catalogProductSelect({ take: 1 }),
     });
   } catch (e) {
@@ -22,9 +40,11 @@ async function loadBestSellerRows() {
     if (!msg.includes("isBestSeller")) {
       throw e;
     }
-    const idRows = await prisma.$queryRaw<Array<{ id: string }>>`
-      SELECT id FROM Product WHERE isActive = 1 AND isBestSeller = 1 ORDER BY updatedAt DESC LIMIT 24
-    `;
+    const lim = Number(limit);
+    const off = Number(offset);
+    const idRows = await prisma.$queryRawUnsafe<Array<{ id: string }>>(
+      `SELECT id FROM Product WHERE isActive = 1 AND isBestSeller = 1 ORDER BY updatedAt DESC LIMIT ${lim} OFFSET ${off}`
+    );
     const ids = idRows.map((r) => r.id);
     if (ids.length === 0) {
       return [];
@@ -40,10 +60,20 @@ async function loadBestSellerRows() {
   }
 }
 
-/** Public catalog: active products marked best seller (homepage + clients). */
-export async function GET() {
+/** Query: `limit` (default 6, max 48), `offset` (default 0). Returns ProductCard-shaped items + total count. */
+export async function GET(req: NextRequest) {
   try {
-    const rows = await loadBestSellerRows();
+    const { searchParams } = new URL(req.url);
+    const limit = Math.min(
+      48,
+      Math.max(1, parseInt(searchParams.get("limit") || "6", 10))
+    );
+    const offset = Math.max(0, parseInt(searchParams.get("offset") || "0", 10));
+
+    const [total, rows] = await Promise.all([
+      countBestSellerRows(),
+      loadBestSellerRows(offset, limit),
+    ]);
     const statsMap = await reviewStatsForProductIds(rows.map((p) => p.id));
     const products = rows.map((p) => {
       const base = serializeProduct(p, { forAdmin: false });
@@ -54,9 +84,9 @@ export async function GET() {
         ratingAvg: stat.ratingAvg,
       };
     });
-    return NextResponse.json({ products });
+    return NextResponse.json({ products, total, offset, limit });
   } catch (error) {
     console.error("GET /api/products/bestsellers", error);
-    return NextResponse.json({ products: [] });
+    return NextResponse.json({ products: [], total: 0 });
   }
 }
