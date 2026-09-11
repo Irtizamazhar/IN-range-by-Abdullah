@@ -190,7 +190,7 @@ export default function VendorShopOrderDetailPage() {
             </h1>
             <p className="mt-1 text-sm text-darkText/60">
               Checkout{" "}
-              <span className="font-mono text-sky-600">{data.parentOrderNumber}</span>
+              <span className="font-mono text-brand-dark">{data.parentOrderNumber}</span>
             </p>
           </div>
           <StatusBadge status={data.orderStatus as ShopOrderStatusPill} />
@@ -208,7 +208,7 @@ export default function VendorShopOrderDetailPage() {
             <button
               type="button"
               onClick={() => setShowShippingLabel(true)}
-              className="inline-flex items-center gap-2 rounded-lg bg-primaryBlue px-3 py-2 text-xs font-semibold text-white transition hover:bg-darkBlue"
+              className="inline-flex items-center gap-2 rounded-lg bg-brand-primary px-3 py-2 text-xs font-semibold text-brand-dark transition hover:bg-brand-hover"
             >
               <Printer className="h-4 w-4" />
               Open label
@@ -322,7 +322,7 @@ export default function VendorShopOrderDetailPage() {
               <button
                 type="button"
                 onClick={printShippingLabel}
-                className="inline-flex items-center gap-2 rounded-lg bg-primaryBlue px-4 py-2 text-sm font-semibold text-white hover:bg-darkBlue"
+                className="inline-flex items-center gap-2 rounded-lg bg-brand-primary px-4 py-2 text-sm font-semibold text-brand-dark hover:bg-brand-hover"
               >
                 <Printer className="h-4 w-4" />
                 Print

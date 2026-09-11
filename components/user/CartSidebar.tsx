@@ -140,7 +140,7 @@ export function CartSidebar({
                   router.push("/checkout");
                 }, "signup")
               }
-              className="block w-full rounded-xl bg-primaryBlue py-3 text-center font-semibold text-white hover:bg-darkBlue transition-colors disabled:opacity-40 disabled:pointer-events-none"
+              className="block w-full rounded-xl bg-brand-primary py-3 text-center font-semibold text-brand-dark hover:bg-brand-hover transition-colors disabled:opacity-40 disabled:pointer-events-none"
             >
               Checkout
             </button>

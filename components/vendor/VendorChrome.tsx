@@ -11,7 +11,7 @@ export function VendorChrome({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-screen overflow-hidden bg-[#F8F9FA]">
+    <div className="flex h-screen overflow-hidden bg-brand-background">
       <Suspense
         fallback={
           <aside

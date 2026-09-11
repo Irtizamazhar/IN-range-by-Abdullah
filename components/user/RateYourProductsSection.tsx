@@ -120,7 +120,7 @@ export function RateYourProductsSection({
                 ) : (
                   <Link
                     href={href}
-                    className="mt-2 inline-block rounded-lg bg-[#F57224] px-4 py-2 text-xs font-bold text-white hover:bg-[#e06520]"
+                    className="mt-2 inline-block rounded-lg bg-brand-primary px-4 py-2 text-xs font-bold text-brand-dark hover:bg-brand-hover"
                   >
                     Write a Review
                   </Link>

@@ -120,7 +120,7 @@ export function PublicReviewsSection({
           <input
             type="file"
             accept="image/jpeg,image/png,image/webp"
-            className="mt-2 block w-full text-sm text-darkText file:mr-3 file:rounded-lg file:border-0 file:bg-primaryBlue file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
+            className="mt-2 block w-full text-sm text-darkText file:mr-3 file:rounded-lg file:border-0 file:bg-brand-primary file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
             onChange={(e) => onPickPhoto(e.target.files?.[0] ?? null)}
           />
           {preview ? (
@@ -170,7 +170,7 @@ export function PublicReviewsSection({
                 onClick={() => setRating(n)}
                 className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${
                   rating === n
-                    ? "bg-primaryYellow text-white"
+                    ? "bg-primaryYellow text-brand-dark"
                     : "border border-borderGray text-darkText hover:border-primaryBlue"
                 }`}
               >
@@ -196,7 +196,7 @@ export function PublicReviewsSection({
         <button
           type="submit"
           disabled={submitting}
-          className="w-full rounded-xl bg-primaryBlue py-3.5 font-bold text-white hover:bg-darkBlue disabled:opacity-50 sm:w-auto sm:px-10"
+          className="w-full rounded-xl bg-brand-primary py-3.5 font-bold text-brand-dark hover:bg-brand-hover disabled:opacity-50 sm:w-auto sm:px-10"
         >
           {submitting ? "Sending…" : "Submit review"}
         </button>

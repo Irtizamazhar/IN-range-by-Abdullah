@@ -154,7 +154,7 @@ export function VendorStatusDropdown({
         type="button"
         disabled={busy || !selected}
         onClick={() => void submit()}
-        className="mt-4 rounded-xl bg-primaryBlue px-5 py-2.5 text-sm font-bold text-white hover:bg-darkBlue disabled:opacity-50"
+        className="mt-4 rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-bold text-brand-dark hover:bg-brand-hover disabled:opacity-50"
       >
         {busy ? "Saving…" : "Status update karein"}
       </button>

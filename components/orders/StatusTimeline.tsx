@@ -20,7 +20,7 @@ export function StatusTimeline({
     <ol className="relative border-s border-borderGray ms-3 space-y-4 ps-6">
       {list.map((e, i) => (
         <li key={`${e.updatedAt}-${i}`} className="text-sm">
-          <span className="absolute -start-[5px] mt-1.5 h-2.5 w-2.5 rounded-full bg-primaryBlue ring-4 ring-white" />
+          <span className="absolute -start-[5px] mt-1.5 h-2.5 w-2.5 rounded-full bg-brand-primary ring-4 ring-white" />
           <time className="mb-1 block text-xs text-darkText/50">
             {new Date(e.updatedAt).toLocaleString()}
           </time>

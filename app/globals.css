@@ -3,10 +3,19 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #1a1a1a;
-  /** Admin / vendor dashboards, CTAs — same as `theme.extend.colors.primaryYellow` */
-  --brand-accent: #f59e0b;
+  --brand-primary-rgb: 183 227 58;
+  --brand-hover-rgb: 167 201 87;
+  --brand-dark-rgb: 17 17 17;
+  --brand-background-rgb: 247 248 242;
+  --brand-secondary-rgb: 167 201 87;
+  --brand-soft-rgb: 230 247 195;
+  --background: #F7F8F2;
+  --foreground: #111111;
+  --brand-accent: #B7E33A;
+  --brand-ink: #111111;
+  --brand-hover: #A7C957;
+  --brand-soft: #E6F7C3;
+  --brand-link: #456018;
 
   --font-primary: var(--font-inter), "Inter", -apple-system, BlinkMacSystemFont,
     "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
@@ -38,6 +47,10 @@
 }
 
 @layer base {
+  :where(button, a, input, select, textarea):focus-visible {
+    outline: 2px solid var(--brand-link);
+    outline-offset: 3px;
+  }
   html {
     font-family: var(--font-primary);
     -webkit-font-smoothing: antialiased;
@@ -130,7 +143,7 @@ body {
   height: 100%;
   width: 100%;
   border-radius: 9999px;
-  background: rgba(14, 165, 233, 0.3);
+  background: rgb(var(--brand-primary-rgb) / 0.3);
   animation: scrollTopPulseRing 2s ease-out infinite;
   z-index: 0;
 }
@@ -142,12 +155,25 @@ body {
   height: 8px;
   width: 8px;
   border-radius: 9999px;
-  background: #f59e0b;
-  box-shadow: 0 0 10px rgba(245, 158, 11, 0.8);
+  background: var(--brand-accent);
+  box-shadow: 0 0 10px rgb(var(--brand-primary-rgb) / 0.8);
   animation: scrollTopDotPulse 1.3s ease-in-out infinite;
 }
 
 @layer utilities {
+  /* Keep all existing lime CTA variants readable, including dynamic classes. */
+  .bg-brand-primary,
+  .bg-primaryYellow {
+    color: var(--brand-ink);
+  }
+  .bg-brand-primary:hover,
+  .bg-primaryYellow:hover {
+    background-color: var(--brand-hover);
+  }
+  .bg-brand-primary:active,
+  .bg-primaryYellow:active {
+    background-color: var(--brand-hover);
+  }
   .text-balance {
     text-wrap: balance;
   }

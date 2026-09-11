@@ -93,7 +93,7 @@ export default function AdminOrdersPage() {
             onClick={() => setTab(t)}
             className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold capitalize ${
               tab === t
-                ? "bg-primaryBlue text-white"
+                ? "bg-brand-primary text-brand-dark"
                 : "bg-white border border-borderGray text-darkText"
             }`}
           >

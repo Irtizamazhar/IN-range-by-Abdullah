@@ -77,7 +77,7 @@ export function UpdateStatusBtn({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-xl bg-primaryBlue px-5 py-2.5 text-sm font-bold text-white hover:bg-darkBlue"
+        className="rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-bold text-brand-dark hover:bg-brand-hover"
       >
         {actionLabel(next)}
       </button>
@@ -125,7 +125,7 @@ export function UpdateStatusBtn({
                 type="button"
                 disabled={busy}
                 onClick={() => void confirm()}
-                className="rounded-lg bg-primaryBlue px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+                className="rounded-lg bg-brand-primary px-4 py-2 text-sm font-bold text-brand-dark disabled:opacity-50"
               >
                 {busy ? "Saving…" : "Confirm"}
               </button>

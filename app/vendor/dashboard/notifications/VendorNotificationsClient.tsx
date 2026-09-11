@@ -82,7 +82,7 @@ export function VendorNotificationsClient() {
           <button
             type="button"
             onClick={() => void markAllRead()}
-            className="rounded-xl bg-primaryBlue px-4 py-2 text-sm font-semibold text-white hover:bg-darkBlue"
+            className="rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-brand-dark hover:bg-brand-hover"
           >
             Mark all read
           </button>
@@ -104,7 +104,7 @@ export function VendorNotificationsClient() {
                     if (!n.isRead) void markRead(n.id);
                   }}
                   className={`w-full px-4 py-4 text-left transition-colors hover:bg-lightGray/50 ${
-                    n.isRead ? "bg-white" : "bg-sky-50/80"
+                    n.isRead ? "bg-white" : "bg-brand-soft/80"
                   }`}
                 >
                   <span className="font-semibold text-darkText">{n.title}</span>

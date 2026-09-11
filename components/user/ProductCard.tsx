@@ -6,7 +6,7 @@ import { memo } from "react";
 import { formatPKR } from "@/lib/format";
 import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 
-const DARAZ_ORANGE = "#F57224";
+const DARAZ_ORANGE = "var(--brand-ink)";
 
 export type ProductCardData = {
   _id: string;
@@ -115,7 +115,7 @@ export const ProductCard = memo(function ProductCard({
         )}
         {ribbon ? (
           <span
-            className={`absolute ${badgeAnchor} z-10 max-w-[calc(100%-1rem)] truncate rounded-sm bg-[#F57224] px-1.5 py-0.5 text-tiny font-medium leading-tight text-white`}
+            className={`absolute ${badgeAnchor} z-10 max-w-[calc(100%-1rem)] truncate rounded-sm bg-brand-primary px-1.5 py-0.5 text-tiny font-medium leading-tight text-white`}
           >
             {ribbon}
           </span>

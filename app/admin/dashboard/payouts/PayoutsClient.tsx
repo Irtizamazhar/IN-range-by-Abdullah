@@ -34,7 +34,7 @@ function badge(s: string) {
     case "pending":
       return "bg-amber-100 text-amber-900";
     case "approved":
-      return "bg-blue-100 text-blue-800";
+      return "bg-brand-soft text-brand-dark";
     case "paid":
       return "bg-green-100 text-green-800";
     case "rejected":
@@ -216,7 +216,7 @@ export function PayoutsClient() {
                           type="button"
                           disabled={busy === w.id}
                           onClick={() => void patch(w.id, { action: "approve" })}
-                          className="mr-2 rounded-lg bg-primaryBlue px-3 py-1.5 text-xs font-semibold text-white"
+                          className="mr-2 rounded-lg bg-brand-primary px-3 py-1.5 text-xs font-semibold text-brand-dark"
                         >
                           Approve
                         </button>

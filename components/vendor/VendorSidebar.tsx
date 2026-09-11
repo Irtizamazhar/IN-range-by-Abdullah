@@ -168,7 +168,7 @@ export function VendorSidebar({
       <div className="flex min-h-full flex-col">
       <div className="border-b border-white/10 p-4">
         <div className="min-w-0 flex-1">
-          <LogoMark
+          <LogoMark inverse
             href="/vendor/dashboard"
             className="shrink-0 [&_img]:max-w-[min(100%,260px)]"
           />
@@ -203,7 +203,7 @@ export function VendorSidebar({
               href={href}
               className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-base font-medium transition-all duration-200 ${
                 active
-                  ? "bg-[#1BACE4] font-semibold text-white shadow-sm"
+                  ? "bg-brand-primary font-semibold text-brand-dark shadow-sm"
                   : "text-white/80 hover:bg-white/10 hover:text-white"
               }`}
             >

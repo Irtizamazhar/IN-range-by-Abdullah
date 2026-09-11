@@ -401,7 +401,7 @@ export default function AddProductPage() {
                     toast.error(e instanceof Error ? e.message : "Could not add category");
                   }
                 }}
-                className="rounded-xl bg-primaryBlue px-4 py-2 text-sm font-semibold text-white disabled:opacity-60 sm:w-auto"
+                className="rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-brand-dark disabled:opacity-60 sm:w-auto"
               >
                 Add
               </button>
@@ -488,7 +488,7 @@ export default function AddProductPage() {
           <button
             type="submit"
             disabled={saving}
-            className="rounded-xl bg-primaryBlue px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+            className="rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-semibold text-brand-dark disabled:opacity-60"
           >
             {saving ? "Saving…" : "Save product"}
           </button>

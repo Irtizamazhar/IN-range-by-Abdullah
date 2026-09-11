@@ -46,7 +46,7 @@ type SiteSettings = {
   codCharges?: number;
 };
 
-const DARAZ_ORANGE = "#F57224";
+const DARAZ_ORANGE = "var(--brand-ink)";
 const BUY_NOW_BLUE = "#40C4FF";
 
 function StarRowDaraz({ rating, count }: { rating: number; count: number }) {
@@ -254,11 +254,11 @@ export function ProductDetailClient({
 
   const thumbRing = (active: boolean) =>
     active
-      ? "ring-2 ring-[#F57224] ring-offset-2 ring-offset-white"
+      ? "ring-2 ring-brand-primary ring-offset-2 ring-offset-white"
       : "ring-1 ring-[#e8e8e8] hover:ring-[#ccc]";
 
   return (
-    <div className="min-h-screen bg-[#f5f5f5]">
+    <div className="min-h-screen bg-brand-background">
       <div className="mx-auto mt-8 max-w-[1200px] px-4 py-4 sm:mt-10">
         <div className="flex flex-col gap-4 lg:grid lg:grid-cols-12 lg:gap-5">
           {/* LEFT — gallery ~40% */}
@@ -309,13 +309,13 @@ export function ProductDetailClient({
           <div className="order-2 lg:order-none lg:col-span-4 lg:col-start-6">
             <div className="border border-[#e8e8e8] bg-white p-4 lg:border-0 lg:bg-transparent lg:p-0">
               <nav className="mb-2 text-[12px] text-[#757575]">
-                <Link href="/" className="hover:text-[#0F6AB0]">
+                <Link href="/" className="hover:text-primaryBlue">
                   Home
                 </Link>
                 <span className="mx-1.5">/</span>
                 <Link
                   href={`/products?category=${encodeURIComponent(product.category)}`}
-                  className="hover:text-[#0F6AB0]"
+                  className="hover:text-primaryBlue"
                 >
                   {product.category}
                 </Link>
@@ -337,7 +337,7 @@ export function ProductDetailClient({
 
               <p className="mt-3 text-[13px] text-[#757575]">
                 Brand:{" "}
-                <Link href="/" className="text-[#0F6AB0] hover:underline">
+                <Link href="/" className="text-primaryBlue hover:underline">
                   {shopName}
                 </Link>
               </p>
@@ -393,7 +393,7 @@ export function ProductDetailClient({
                         onClick={() => setVariant(v)}
                         className={`rounded-full border px-3 py-1.5 text-[13px] font-medium transition-colors ${
                           variant === v
-                            ? "border-[#F57224] bg-[#fff8f3] text-[#333]"
+                            ? "border-brand-primary bg-brand-soft text-[#333]"
                             : "border-[#e0e0e0] bg-white text-[#333] hover:border-[#ccc]"
                         }`}
                       >
@@ -415,7 +415,7 @@ export function ProductDetailClient({
                     onClick={() =>
                       setQuantity((q) => Math.max(1, q - 1))
                     }
-                    className="flex w-10 items-center justify-center border-r border-[#e0e0e0] text-[#333] hover:bg-[#f5f5f5] disabled:opacity-40"
+                    className="flex w-10 items-center justify-center border-r border-[#e0e0e0] text-[#333] hover:bg-brand-background disabled:opacity-40"
                     aria-label="Decrease quantity"
                   >
                     <Minus className="h-4 w-4" />
@@ -446,7 +446,7 @@ export function ProductDetailClient({
                         Math.min(product.stock, q + 1)
                       )
                     }
-                    className="flex w-10 items-center justify-center border-l border-[#e0e0e0] text-[#333] hover:bg-[#f5f5f5] disabled:opacity-40"
+                    className="flex w-10 items-center justify-center border-l border-[#e0e0e0] text-[#333] hover:bg-brand-background disabled:opacity-40"
                     aria-label="Increase quantity"
                   >
                     <Plus className="h-4 w-4" />
@@ -474,7 +474,7 @@ export function ProductDetailClient({
                         key={t}
                         className={`flex cursor-pointer items-stretch gap-3 rounded-xl p-4 transition-[border-color,background-color,box-shadow] duration-200 ease-in-out sm:px-4 ${
                           selected
-                            ? "border-2 border-[#3B82F6] bg-[#EFF6FF] shadow-sm"
+                            ? "border-2 border-brand-primary bg-brand-soft shadow-sm"
                             : "border border-[#E5E7EB] bg-white hover:border-[#d1d5db]"
                         } ${disabled ? "cursor-not-allowed opacity-50" : ""}`}
                       >
@@ -578,7 +578,7 @@ export function ProductDetailClient({
                       Pakistan{" "}
                       <button
                         type="button"
-                        className="text-[#0F6AB0] hover:underline"
+                        className="text-primaryBlue hover:underline"
                         onClick={() =>
                           toast("Update delivery location from checkout.")
                         }
@@ -637,7 +637,7 @@ export function ProductDetailClient({
                     {shopName}
                   </span>
                 </div>
-                <span className="mt-2 inline-block rounded bg-[#e3f2fd] px-2 py-0.5 text-[11px] font-semibold text-[#0F6AB0]">
+                <span className="mt-2 inline-block rounded bg-brand-soft px-2 py-0.5 text-[11px] font-semibold text-primaryBlue">
                   Flagship Store
                 </span>
                 <ul className="mt-3 space-y-1.5 text-[11px] text-[#757575]">
@@ -647,7 +647,7 @@ export function ProductDetailClient({
                 </ul>
                 <Link
                   href="/products"
-                  className="mt-3 inline-block text-[12px] font-semibold text-[#0F6AB0] hover:underline"
+                  className="mt-3 inline-block text-[12px] font-semibold text-primaryBlue hover:underline"
                 >
                   GO TO STORE
                 </Link>

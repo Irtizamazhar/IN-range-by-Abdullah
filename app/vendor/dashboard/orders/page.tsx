@@ -114,7 +114,7 @@ function VendorOrdersPageInner() {
               onClick={() => setTab(t)}
               className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold capitalize sm:text-sm ${
                 tab === t
-                  ? "bg-primaryBlue text-white"
+                  ? "bg-brand-primary text-brand-dark"
                   : "border border-borderGray bg-white text-darkText hover:bg-lightGray/40"
               }`}
             >

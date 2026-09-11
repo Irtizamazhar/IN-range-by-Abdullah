@@ -93,7 +93,7 @@ export function AdminShopStatusDropdown({
   }
 
   return (
-    <div className="rounded-xl border border-borderGray bg-sky-50/40 p-4">
+    <div className="rounded-xl border border-borderGray bg-brand-soft/40 p-4">
       <p className="text-sm font-bold text-darkText">Admin — fulfillment</p>
       <p className="mt-1 text-xs text-darkText/60">
         After the seller marks <strong>packed</strong>, you mark{" "}
@@ -141,7 +141,7 @@ export function AdminShopStatusDropdown({
         type="button"
         disabled={busy || !selected}
         onClick={() => void submit()}
-        className="mt-4 rounded-xl bg-primaryBlue px-5 py-2.5 text-sm font-bold text-white hover:bg-darkBlue disabled:opacity-50"
+        className="mt-4 rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-bold text-brand-dark hover:bg-brand-hover disabled:opacity-50"
       >
         {busy ? "Saving…" : "Update order status"}
       </button>

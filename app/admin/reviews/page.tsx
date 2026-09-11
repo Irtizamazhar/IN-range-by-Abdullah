@@ -151,7 +151,7 @@ export default function AdminReviewsPage() {
                   <p className="mt-2 text-sm font-semibold text-primaryBlue">
                     {rev.productName}
                     {rev.scope === "newArrival" ? (
-                      <span className="ml-2 rounded-md bg-sky-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-sky-800">
+                      <span className="ml-2 rounded-md bg-brand-soft px-1.5 py-0.5 text-[10px] font-bold uppercase text-brand-dark">
                         New arrival
                       </span>
                     ) : null}
@@ -172,7 +172,7 @@ export default function AdminReviewsPage() {
                     type="button"
                     disabled={busyId === rev.id}
                     onClick={() => void toggleApproved(rev.id, !rev.approved)}
-                    className="rounded-lg bg-primaryBlue px-3 py-2 text-xs font-bold text-white hover:bg-darkBlue disabled:opacity-50"
+                    className="rounded-lg bg-brand-primary px-3 py-2 text-xs font-bold text-brand-dark hover:bg-brand-hover disabled:opacity-50"
                   >
                     {rev.approved ? "Unapprove" : "Approve"}
                   </button>

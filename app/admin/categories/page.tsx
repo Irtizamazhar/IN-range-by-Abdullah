@@ -298,7 +298,7 @@ export default function AdminCategoriesPage() {
           <button
             type="submit"
             disabled={saving}
-            className="rounded-xl bg-primaryBlue px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+            className="rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-semibold text-brand-dark disabled:opacity-60"
           >
             {saving
               ? mode === "add"

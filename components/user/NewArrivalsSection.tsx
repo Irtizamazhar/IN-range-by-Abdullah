@@ -105,7 +105,7 @@ export function NewArrivalsSection({
               type="button"
               disabled={loading}
               onClick={loadMore}
-              className="inline-flex min-w-[140px] justify-center rounded-xl border-2 border-primaryBlue bg-white px-10 py-3 font-bold text-primaryBlue shadow-sm transition-colors hover:bg-primaryBlue hover:text-white disabled:pointer-events-none disabled:opacity-60"
+              className="inline-flex min-w-[140px] justify-center rounded-xl border-2 border-primaryBlue bg-white px-10 py-3 font-bold text-primaryBlue shadow-sm transition-colors hover:bg-brand-primary hover:text-white disabled:pointer-events-none disabled:opacity-60"
             >
               {loading ? "Loading…" : "More"}
             </button>

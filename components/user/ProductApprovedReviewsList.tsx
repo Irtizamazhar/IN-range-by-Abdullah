@@ -148,7 +148,7 @@ export function ProductApprovedReviewsList({
                 <span className="w-8 shrink-0 text-[#757575]">{row.star} ★</span>
                 <div className="h-2 flex-1 overflow-hidden rounded-full bg-[#f0f0f0]">
                   <div
-                    className="h-full rounded-full bg-[#F57224]"
+                    className="h-full rounded-full bg-brand-primary"
                     style={{ width: `${row.percent}%` }}
                   />
                 </div>
@@ -171,7 +171,7 @@ export function ProductApprovedReviewsList({
           {reviews.map((r) => (
             <li key={r.id} className="flex gap-3 py-4 first:pt-2">
               <div
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f5f5f5] text-sm font-bold text-[#757575]"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-background text-sm font-bold text-[#757575]"
                 aria-hidden
               >
                 {maskName(r.name).slice(0, 1).toUpperCase()}

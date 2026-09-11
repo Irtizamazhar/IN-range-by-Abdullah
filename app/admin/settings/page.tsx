@@ -204,7 +204,7 @@ export default function AdminSettingsPage() {
           <button
             type="button"
             onClick={addBankSlot}
-            className="rounded-lg bg-primaryBlue px-3 py-1.5 text-xs font-semibold text-white"
+            className="rounded-lg bg-brand-primary px-3 py-1.5 text-xs font-semibold text-brand-dark"
           >
             Add bank account
           </button>
@@ -361,7 +361,7 @@ export default function AdminSettingsPage() {
           <button
             type="button"
             onClick={addCity}
-            className="rounded-xl bg-primaryYellow px-4 py-2 font-semibold text-white"
+            className="rounded-xl bg-primaryYellow px-4 py-2 font-semibold text-brand-dark"
           >
             Add
           </button>
@@ -389,7 +389,7 @@ export default function AdminSettingsPage() {
           type="button"
           onClick={save}
           disabled={saving}
-          className="rounded-xl bg-primaryBlue px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+          className="rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-semibold text-brand-dark disabled:opacity-60"
         >
           {saving ? "Saving…" : "Save settings"}
         </button>

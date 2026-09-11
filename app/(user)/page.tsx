@@ -147,7 +147,7 @@ export default async function HomePage() {
         pageSize={BEST_SELLERS_PAGE_SIZE}
       />
 
-      <section className="bg-[#F5F5F5] py-14">
+      <section className="bg-brand-background py-14">
         <div className="mx-auto max-w-7xl px-4">
           <h2 className="mb-8 text-center text-3xl font-black text-gray-900">
             Shop by Category
@@ -178,7 +178,7 @@ export default async function HomePage() {
         <div className="text-center mt-10">
           <LinkNext
             href="/products"
-            className="inline-flex rounded-xl border-2 border-primaryBlue px-8 py-3 font-bold text-primaryBlue hover:bg-primaryBlue hover:text-white transition-colors"
+            className="inline-flex rounded-xl border-2 border-primaryBlue px-8 py-3 font-bold text-primaryBlue hover:bg-brand-primary hover:text-white transition-colors"
           >
             View All Products
           </LinkNext>

@@ -57,18 +57,27 @@ const config: Config = {
         black: "900",
       },
       colors: {
-        primaryBlue: "#29ABE2",
-        /** Brand accent (amber); matches `globals.css` `--brand-accent` */
-        primaryYellow: "#F59E0B",
-        darkBlue: "#1A7FA8",
-        lightGray: "#F8F9FA",
-        darkText: "#1A1A1A",
+        brand: {
+          primary: "rgb(var(--brand-primary-rgb) / <alpha-value>)",
+          hover: "rgb(var(--brand-hover-rgb) / <alpha-value>)",
+          dark: "rgb(var(--brand-dark-rgb) / <alpha-value>)",
+          background: "rgb(var(--brand-background-rgb) / <alpha-value>)",
+          surface: "#FFFFFF",
+          secondary: "rgb(var(--brand-secondary-rgb) / <alpha-value>)",
+          soft: "rgb(var(--brand-soft-rgb) / <alpha-value>)",
+        },
+        // Compatibility aliases for existing components; all use the same theme.
+        primaryBlue: "#456018",
+        primaryYellow: "rgb(var(--brand-primary-rgb) / <alpha-value>)",
+        darkBlue: "#354A12",
+        lightGray: "rgb(var(--brand-background-rgb) / <alpha-value>)",
+        darkText: "rgb(var(--brand-dark-rgb) / <alpha-value>)",
         borderGray: "#E5E7EB",
-        footerDark: "#1A1A1A",
+        footerDark: "rgb(var(--brand-dark-rgb) / <alpha-value>)",
       },
       boxShadow: {
         card: "0 4px 14px rgba(0,0,0,0.06)",
-        cardHover: "0 8px 24px rgba(41,171,226,0.15)",
+        cardHover: "0 8px 24px rgba(17,17,17,0.12)",
       },
       borderRadius: {
         card: "12px",

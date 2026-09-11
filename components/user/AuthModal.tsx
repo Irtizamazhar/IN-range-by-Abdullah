@@ -302,7 +302,7 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
   }
 
   const primaryBtnClass =
-    "flex h-11 w-full items-center justify-center gap-2 rounded-full bg-primaryBlue text-sm font-semibold text-white shadow-sm transition duration-200 hover:bg-darkBlue disabled:pointer-events-none disabled:opacity-55";
+    "flex h-11 w-full items-center justify-center gap-2 rounded-full bg-brand-primary text-sm font-semibold text-brand-dark shadow-sm transition duration-200 hover:bg-brand-hover disabled:pointer-events-none disabled:opacity-55";
   const socialBtnClass =
     "mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-full border border-primaryBlue/25 bg-white text-sm font-semibold text-primaryBlue shadow-sm transition duration-200 hover:bg-primaryBlue/5 disabled:pointer-events-none disabled:opacity-55";
 

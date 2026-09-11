@@ -96,7 +96,7 @@ export function VendorNotificationBell() {
               <button
                 type="button"
                 onClick={() => void markAllRead()}
-                className="text-xs font-medium text-primaryYellow hover:underline"
+                className="text-xs font-medium text-primaryBlue hover:underline"
               >
                 Mark all read
               </button>

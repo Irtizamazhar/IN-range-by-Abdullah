@@ -7,7 +7,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { LogoMark } from "@/components/user/LogoMark";
 import { fetchShopCategoryNameList } from "@/lib/shop-category-names";
 
-const accent = "#F59E0B";
+const accent = "var(--brand-accent)";
 
 type DocSlot = "cnic_front" | "cnic_back" | "license";
 
@@ -290,7 +290,7 @@ export function VendorRegisterWizard() {
         <Link
           href="/vendor/login"
           className="mt-8 inline-block font-bold hover:underline"
-          style={{ color: accent }}
+          style={{ color: "var(--brand-link)" }}
         >
           Back to sign in
         </Link>
@@ -300,19 +300,19 @@ export function VendorRegisterWizard() {
 
   const pct = step === 1 ? 33 : step === 2 ? 66 : 100;
   const inputClass =
-    "mt-1 h-9 w-full rounded-lg border-[1.5px] border-gray-200 bg-white px-3 py-1.5 text-sm text-neutral-900 outline-none transition-all duration-200 focus:border-[1.5px] focus:border-orange-500 focus:bg-orange-50/40 focus:shadow-[0_0_0_3px_rgba(249,115,22,0.15)]";
+    "mt-1 h-9 w-full rounded-lg border-[1.5px] border-gray-200 bg-white px-3 py-1.5 text-sm text-neutral-900 outline-none transition-all duration-200 focus:border-[1.5px] focus:border-brand-secondary focus:bg-brand-soft/40 focus:shadow-[0_0_0_3px_rgba(17,17,17,0.15)]";
   const inputErrorClass =
     "border-[1.5px] border-red-500 shadow-[0_0_0_3px_rgba(239,68,68,0.1)]";
   const textareaClass =
-    "mt-1 h-12 w-full resize-none rounded-lg border-[1.5px] border-gray-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none transition-all duration-200 focus:border-[1.5px] focus:border-orange-500 focus:bg-orange-50/40 focus:shadow-[0_0_0_3px_rgba(249,115,22,0.15)]";
+    "mt-1 h-12 w-full resize-none rounded-lg border-[1.5px] border-gray-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none transition-all duration-200 focus:border-[1.5px] focus:border-brand-secondary focus:bg-brand-soft/40 focus:shadow-[0_0_0_3px_rgba(17,17,17,0.15)]";
   const primaryBtnClass =
-    "h-11 w-full rounded-[10px] border-0 bg-[linear-gradient(135deg,#f97316_0%,#f59e0b_100%)] px-3 text-[15px] font-semibold text-white shadow-[0_4px_15px_rgba(249,115,22,0.35)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_25px_rgba(249,115,22,0.5)] active:translate-y-0 active:shadow-[0_4px_12px_rgba(249,115,22,0.3)] disabled:cursor-not-allowed disabled:opacity-40";
+    "h-11 w-full rounded-[10px] border-0 bg-brand-primary px-3 text-[15px] font-semibold text-brand-dark shadow-[0_4px_15px_rgba(17,17,17,0.35)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_25px_rgba(17,17,17,0.5)] active:translate-y-0 active:shadow-[0_4px_12px_rgba(17,17,17,0.3)] disabled:cursor-not-allowed disabled:opacity-40";
   const emailErrorClass =
     "mt-0.5 flex items-center gap-1 text-[11px] font-medium text-red-500";
 
   return (
     <div className="vendor-reg-shell flex h-screen overflow-hidden bg-white">
-      <aside className="relative hidden w-1/2 flex-col items-center justify-center overflow-hidden bg-[linear-gradient(160deg,#f97316_0%,#ea580c_40%,#c2410c_100%)] p-6 md:flex">
+      <aside className="relative hidden w-1/2 flex-col items-center justify-center overflow-hidden bg-brand-dark p-6 md:flex">
         <div className="pointer-events-none absolute -left-12 -top-12 h-64 w-64 rounded-full bg-white/10 vendor-float-1" />
         <div className="pointer-events-none absolute -bottom-10 -right-10 h-48 w-48 rounded-full bg-white/10 vendor-float-2" />
         <div className="pointer-events-none absolute left-1/2 top-1/2 h-32 w-32 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/10 vendor-float-3" />
@@ -359,7 +359,7 @@ export function VendorRegisterWizard() {
         <div className="relative z-10 px-8 pb-0 pt-4">
           <Link
             href="/vendor/login"
-            className="inline-block text-xs font-semibold text-orange-500 hover:text-orange-600"
+            className="inline-block text-xs font-semibold text-primaryBlue hover:text-primaryBlue"
           >
             ← Back to sign in
           </Link>
@@ -376,7 +376,7 @@ export function VendorRegisterWizard() {
 
           <div className="mb-3 h-1 w-full overflow-hidden rounded-full bg-slate-100">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-300 transition-all duration-300"
+              className="h-full rounded-full bg-gradient-to-r from-brand-secondary to-brand-secondary transition-all duration-300"
               style={{ width: `${pct}%` }}
             />
           </div>
@@ -429,7 +429,7 @@ export function VendorRegisterWizard() {
                   autoComplete="new-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-9 w-full rounded-lg border-[1.5px] border-gray-200 bg-white py-1.5 pl-3 pr-10 text-sm text-neutral-900 outline-none transition-all duration-200 focus:border-[1.5px] focus:border-orange-500 focus:bg-orange-50/40 focus:shadow-[0_0_0_3px_rgba(249,115,22,0.15)]"
+                  className="h-9 w-full rounded-lg border-[1.5px] border-gray-200 bg-white py-1.5 pl-3 pr-10 text-sm text-neutral-900 outline-none transition-all duration-200 focus:border-[1.5px] focus:border-brand-secondary focus:bg-brand-soft/40 focus:shadow-[0_0_0_3px_rgba(17,17,17,0.15)]"
                 />
                 <button
                   type="button"
@@ -546,7 +546,7 @@ export function VendorRegisterWizard() {
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
                 disabled={!shopCategories.length}
-                className="mt-1 h-9 w-full rounded-lg border-[1.5px] border-gray-200 px-3 text-sm text-neutral-900 outline-none transition focus:border-orange-500 disabled:cursor-not-allowed disabled:bg-neutral-100"
+                className="mt-1 h-9 w-full rounded-lg border-[1.5px] border-gray-200 px-3 text-sm text-neutral-900 outline-none transition focus:border-brand-secondary disabled:cursor-not-allowed disabled:bg-neutral-100"
               >
                 {!shopCategories.length ? (
                   <option value="">Loading categories…</option>
@@ -571,7 +571,7 @@ export function VendorRegisterWizard() {
                 type="button"
                 disabled={!canAdvanceFrom2()}
                 onClick={() => setStep(3)}
-                className="h-10 flex-1 rounded-[10px] bg-[linear-gradient(135deg,#f97316,#f59e0b)] px-3 text-sm font-semibold text-white shadow-[0_4px_15px_rgba(249,115,22,0.4)] transition-all duration-200 hover:-translate-y-px hover:shadow-[0_6px_20px_rgba(249,115,22,0.5)] disabled:cursor-not-allowed disabled:opacity-40"
+                className="h-10 flex-1 rounded-[10px] bg-brand-primary px-3 text-sm font-semibold text-brand-dark shadow-[0_4px_15px_rgba(17,17,17,0.4)] transition-all duration-200 hover:-translate-y-px hover:shadow-[0_6px_20px_rgba(17,17,17,0.5)] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Continue
               </button>
@@ -652,7 +652,7 @@ export function VendorRegisterWizard() {
                 type="button"
                 disabled={pending || !docsValid()}
                 onClick={() => void submit()}
-                className="h-10 flex-1 rounded-[10px] bg-[linear-gradient(135deg,#f97316,#f59e0b)] px-3 text-sm font-semibold text-white shadow-[0_4px_15px_rgba(249,115,22,0.4)] transition-all duration-200 hover:-translate-y-px hover:shadow-[0_6px_20px_rgba(249,115,22,0.5)] disabled:cursor-not-allowed disabled:opacity-40"
+                className="h-10 flex-1 rounded-[10px] bg-brand-primary px-3 text-sm font-semibold text-brand-dark shadow-[0_4px_15px_rgba(17,17,17,0.4)] transition-all duration-200 hover:-translate-y-px hover:shadow-[0_6px_20px_rgba(17,17,17,0.5)] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {pending ? "Submitting…" : "Submit application"}
               </button>

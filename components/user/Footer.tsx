@@ -17,19 +17,19 @@ export function Footer({
 }: {
   settings: Pick<ISettings, "whatsappNumber" | "shopName">;
 }) {
-  const { whatsappNumber, shopName } = settings;
+  const { whatsappNumber } = settings;
 
   return (
     <footer className="bg-footerDark text-white mt-auto">
       <div className="mx-auto max-w-7xl px-4 py-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
         <div>
-          <div className="mb-3">
+          <div className="mb-3 inline-block rounded-2xl bg-white px-3 py-2">
             <Image
-              src="/logo.png"
-              alt={shopName}
-              width={200}
-              height={120}
-              className="h-20 md:h-24 w-auto max-w-[220px] object-contain object-left"
+              src="/joro-logo.svg"
+              alt="joro.pk"
+              width={300}
+              height={80}
+              className="h-12 w-auto max-w-[220px] object-contain object-left"
             />
           </div>
           <p className="text-sm font-normal text-white/70">
@@ -38,11 +38,11 @@ export function Footer({
           <div className="flex gap-4 mt-4">
             <WhatsAppIconLink
               number={whatsappNumber}
-              className="text-primaryBlue hover:text-primaryYellow"
+              className="text-brand-primary hover:text-primaryYellow"
             />
             <a
               href="#"
-              className="text-primaryBlue hover:text-primaryYellow inline-flex"
+              className="text-brand-primary hover:text-primaryYellow inline-flex"
               aria-label="Instagram"
             >
               <svg
@@ -56,7 +56,7 @@ export function Footer({
             </a>
             <a
               href="#"
-              className="text-primaryBlue hover:text-primaryYellow inline-flex"
+              className="text-brand-primary hover:text-primaryYellow inline-flex"
               aria-label="Facebook"
             >
               <svg
@@ -113,7 +113,7 @@ export function Footer({
             WhatsApp:{" "}
             <a
               href={`https://wa.me/${whatsappNumber.replace(/\D/g, "")}`}
-              className="text-primaryBlue hover:underline"
+              className="text-brand-primary hover:underline"
             >
               {whatsappNumber}
             </a>
@@ -163,7 +163,7 @@ export function Footer({
       </div>
 
       <div className="border-t border-white/10 py-4 text-center text-xs font-normal text-white/50">
-        © {new Date().getFullYear()} In Range By Abdullah. All rights reserved.
+        © {new Date().getFullYear()} joro.pk. All rights reserved.
       </div>
     </footer>
   );

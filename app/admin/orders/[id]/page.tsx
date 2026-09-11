@@ -124,7 +124,7 @@ export default function AdminOrderDetailPage() {
         ? "bg-amber-500"
         : status === "cancelled"
           ? "bg-red-500"
-          : "bg-blue-500";
+          : "bg-brand-primary";
   const paymentDotClass =
     payStatus === "received"
       ? "bg-green-500"
@@ -243,7 +243,7 @@ export default function AdminOrderDetailPage() {
         <nav className="flex items-center gap-2 text-sm text-gray-500">
           <Link
             href="/admin/orders"
-            className="font-medium text-indigo-600 transition hover:text-indigo-700"
+            className="font-medium text-brand-dark transition hover:text-brand-dark"
           >
             Orders
           </Link>
@@ -256,7 +256,7 @@ export default function AdminOrderDetailPage() {
             <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 md:text-4xl">
               #{orderNumber}
             </h1>
-            <span className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-indigo-700">
+            <span className="inline-flex items-center rounded-full border border-brand-secondary bg-brand-soft px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-dark">
               Order record
             </span>
           </div>
@@ -267,12 +267,12 @@ export default function AdminOrderDetailPage() {
             </span>
             <span className="hidden h-4 w-px bg-gray-200 sm:block" />
             <span className="inline-flex items-center gap-2">
-              <Phone className="h-4 w-4 text-indigo-500" />
+              <Phone className="h-4 w-4 text-brand-dark" />
               {String(order.customerPhone)}
             </span>
             <span className="hidden h-4 w-px bg-gray-200 sm:block" />
             <span className="inline-flex items-center gap-2">
-              <Mail className="h-4 w-4 text-indigo-500" />
+              <Mail className="h-4 w-4 text-brand-dark" />
               {String(order.customerEmail)}
             </span>
           </div>
@@ -302,7 +302,7 @@ export default function AdminOrderDetailPage() {
                   <select
                     value={status}
                     onChange={(e) => setStatus(e.target.value)}
-                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-semibold capitalize text-gray-700 transition hover:border-indigo-300 focus:border-indigo-400 focus:outline-none"
+                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-semibold capitalize text-gray-700 transition hover:border-brand-secondary focus:border-brand-secondary focus:outline-none"
                   >
                     {[
                       "pending",
@@ -334,7 +334,7 @@ export default function AdminOrderDetailPage() {
                 <select
                   value={payStatus}
                   onChange={(e) => setPayStatus(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-semibold capitalize text-gray-700 transition hover:border-indigo-300 focus:border-indigo-400 focus:outline-none"
+                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-semibold capitalize text-gray-700 transition hover:border-brand-secondary focus:border-brand-secondary focus:outline-none"
                 >
                   {["pending", "received", "failed", "rejected"].map((s) => (
                     <option key={s} value={s}>
@@ -370,7 +370,7 @@ export default function AdminOrderDetailPage() {
                 type="button"
                 onClick={saveStatus}
                 disabled={savingStatus}
-                className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-60"
+                className="rounded-lg bg-brand-primary px-4 py-2.5 text-sm font-semibold text-brand-dark transition hover:bg-brand-primary disabled:opacity-60"
               >
                 {savingStatus ? "Saving…" : "Save changes"}
               </button>
@@ -438,7 +438,7 @@ export default function AdminOrderDetailPage() {
             </table>
           </div>
           <div className="mt-4 border-t border-gray-200 pt-4 text-right">
-            <p className="text-lg font-extrabold text-blue-600">
+            <p className="text-lg font-extrabold text-brand-dark">
               Total {formatPKR(Number(order.totalAmount))}
             </p>
           </div>
@@ -446,8 +446,8 @@ export default function AdminOrderDetailPage() {
 
         <div className={cardClass}>
           <div className="mb-3 flex items-center gap-2 border-b border-gray-100 pb-3">
-            <MapPin className="h-4 w-4 text-indigo-600" />
-            <h2 className="text-sm font-bold uppercase tracking-wide text-indigo-700">Address</h2>
+            <MapPin className="h-4 w-4 text-brand-dark" />
+            <h2 className="text-sm font-bold uppercase tracking-wide text-brand-dark">Address</h2>
           </div>
           <div className="space-y-1 text-sm leading-6 font-medium text-gray-700">
             <p>{String(order.customerAddress || "N/A")}</p>
@@ -458,13 +458,13 @@ export default function AdminOrderDetailPage() {
 
         <div className={`${cardClass} mt-6`}>
           <div className="mb-3 flex items-center justify-between border-b border-gray-100 pb-3">
-            <h2 className="text-sm font-bold uppercase tracking-wide text-indigo-700">
+            <h2 className="text-sm font-bold uppercase tracking-wide text-brand-dark">
               Shipping Label
             </h2>
             <button
               type="button"
               onClick={() => setShowShippingLabel(true)}
-              className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-indigo-700"
+              className="inline-flex items-center gap-2 rounded-lg bg-brand-primary px-3 py-2 text-xs font-semibold text-brand-dark transition hover:bg-brand-primary"
             >
               <Printer className="h-4 w-4" />
               Open label
@@ -553,7 +553,7 @@ export default function AdminOrderDetailPage() {
                 <button
                   type="button"
                   onClick={downloadShippingLabel}
-                  className="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100"
+                  className="inline-flex items-center gap-2 rounded-lg border border-brand-secondary bg-brand-soft px-4 py-2 text-sm font-semibold text-brand-dark hover:bg-brand-soft"
                 >
                   <Download className="h-4 w-4" />
                   Download
@@ -561,7 +561,7 @@ export default function AdminOrderDetailPage() {
                 <button
                   type="button"
                   onClick={printShippingLabel}
-                  className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+                  className="inline-flex items-center gap-2 rounded-lg bg-brand-primary px-4 py-2 text-sm font-semibold text-brand-dark hover:bg-brand-primary"
                 >
                   <Printer className="h-4 w-4" />
                   Print

@@ -31,7 +31,7 @@ export function OrderDetail({ order, showVendorBlock }: Props) {
   return (
     <div className="space-y-8">
       {showVendorBlock && v ? (
-        <section className="rounded-card border border-borderGray bg-sky-50/50 p-4">
+        <section className="rounded-card border border-borderGray bg-brand-soft/50 p-4">
           <h2 className="text-xs font-bold uppercase text-darkText/50">
             Vendor
           </h2>

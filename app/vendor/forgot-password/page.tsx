@@ -1,6 +1,5 @@
 import Link from "next/link";
 
-const accent = "#F59E0B";
 
 export const metadata = {
   title: "Forgot password | Vendor",
@@ -21,7 +20,7 @@ export default function VendorForgotPasswordPage() {
         <Link
           href="/vendor/login"
           className="mt-8 inline-block font-bold hover:underline"
-          style={{ color: accent }}
+          style={{ color: "var(--brand-link)" }}
         >
           ← Back to sign in
         </Link>

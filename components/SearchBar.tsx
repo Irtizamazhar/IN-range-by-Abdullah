@@ -136,7 +136,7 @@ export function SearchBar() {
         style={{
           borderWidth: "1.5px",
           borderStyle: "solid",
-          borderColor: borderFocused ? "#F57224" : "#e0e0e0",
+          borderColor: borderFocused ? "var(--brand-accent)" : "#e0e0e0",
         }}
       >
         {/* Category — desktop only (1024px+) */}
@@ -190,17 +190,17 @@ export function SearchBar() {
         <button
           type="button"
           onClick={navigateSearch}
-          className="hidden h-10 shrink-0 items-center justify-center border-0 text-sm font-semibold text-white transition-colors md:flex"
+          className="hidden h-10 shrink-0 items-center justify-center border-0 text-sm font-semibold text-brand-dark transition-colors md:flex"
           style={{
             width: 80,
-            backgroundColor: "#F57224",
+            backgroundColor: "var(--brand-accent)",
             borderRadius: "0 4px 4px 0",
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = "#e5621a";
+            e.currentTarget.style.backgroundColor = "var(--brand-hover)";
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = "#F57224";
+            e.currentTarget.style.backgroundColor = "var(--brand-accent)";
           }}
         >
           SEARCH
@@ -210,17 +210,17 @@ export function SearchBar() {
         <button
           type="button"
           onClick={navigateSearch}
-          className="flex h-10 w-10 shrink-0 items-center justify-center border-0 text-white transition-colors md:hidden"
+          className="flex h-10 w-10 shrink-0 items-center justify-center border-0 text-brand-dark transition-colors md:hidden"
           style={{
-            backgroundColor: "#F57224",
+            backgroundColor: "var(--brand-accent)",
             borderRadius: "0 4px 4px 0",
           }}
           aria-label="Search"
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = "#e5621a";
+            e.currentTarget.style.backgroundColor = "var(--brand-hover)";
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = "#F57224";
+            e.currentTarget.style.backgroundColor = "var(--brand-accent)";
           }}
         >
           <Search className="h-5 w-5" strokeWidth={2.5} />
@@ -246,7 +246,7 @@ export function SearchBar() {
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => handleSuggestionPick(text)}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = "#fff8f4";
+                e.currentTarget.style.backgroundColor = "var(--brand-soft)";
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = "#ffffff";
@@ -275,7 +275,7 @@ export function SearchBar() {
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => handleSuggestionPick(text)}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = "#fff8f4";
+                e.currentTarget.style.backgroundColor = "var(--brand-soft)";
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = "#ffffff";

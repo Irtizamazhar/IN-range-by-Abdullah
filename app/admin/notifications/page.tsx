@@ -114,7 +114,7 @@ export default function AdminNotificationsPage() {
                   </div>
                 </div>
 
-                <div className="mt-3 rounded-lg bg-[#F8F9FA] p-3 text-sm text-darkText/85">
+                <div className="mt-3 rounded-lg bg-brand-background p-3 text-sm text-darkText/85">
                   <p>
                     <span className="font-semibold">Appeal Type:</span>{" "}
                     {reasonLabel(n.reasonType)}

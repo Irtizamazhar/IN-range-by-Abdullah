@@ -29,7 +29,7 @@ function badgeClass(status: string) {
   const s = status.toLowerCase();
   if (s === "paid") return "bg-green-100 text-green-800";
   if (s === "pending") return "bg-amber-100 text-amber-900";
-  if (s === "cleared") return "bg-sky-100 text-sky-800";
+  if (s === "cleared") return "bg-brand-soft text-brand-dark";
   return "bg-neutral-100 text-neutral-700";
 }
 
@@ -227,7 +227,7 @@ export function EarningsClient({
               !bank
             }
             onClick={() => setModal(true)}
-            className="rounded-xl bg-primaryBlue px-6 py-2.5 font-semibold text-white disabled:pointer-events-none disabled:opacity-50 hover:bg-darkBlue"
+            className="rounded-xl bg-brand-primary px-6 py-2.5 font-semibold text-brand-dark disabled:pointer-events-none disabled:opacity-50 hover:bg-brand-hover"
           >
             Request withdrawal
           </button>
@@ -372,7 +372,7 @@ export function EarningsClient({
                 type="button"
                 disabled={submitting}
                 onClick={() => void submitWithdrawal()}
-                className="rounded-xl bg-primaryYellow px-4 py-2 font-semibold text-white disabled:opacity-50"
+                className="rounded-xl bg-primaryYellow px-4 py-2 font-semibold text-brand-dark disabled:opacity-50"
               >
                 {submitting ? "Submitting…" : "Confirm"}
               </button>

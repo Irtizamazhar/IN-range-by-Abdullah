@@ -10,7 +10,7 @@ export default function ReturnPolicyPage() {
       </p>
 
       <div className="mt-8 space-y-6">
-        <section className="rounded-xl border border-sky-100 bg-white p-6 shadow-card">
+        <section className="rounded-xl border border-brand-secondary bg-white p-6 shadow-card">
           <h2 className="text-lg font-bold text-darkText">General policy</h2>
           <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-relaxed text-darkText/80">
             <li>
@@ -28,7 +28,7 @@ export default function ReturnPolicyPage() {
           </ul>
         </section>
 
-        <section className="rounded-xl border border-sky-100 bg-white p-6 shadow-card">
+        <section className="rounded-xl border border-brand-secondary bg-white p-6 shadow-card">
           <h2 className="text-lg font-bold text-darkText">Return process</h2>
           <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-relaxed text-darkText/80">
             <li>
@@ -46,7 +46,7 @@ export default function ReturnPolicyPage() {
           </ul>
         </section>
 
-        <section className="rounded-xl border border-sky-100 bg-white p-6 shadow-card">
+        <section className="rounded-xl border border-brand-secondary bg-white p-6 shadow-card">
           <h2 className="text-lg font-bold text-darkText">Valid situations</h2>
           <p className="mt-2 text-sm text-darkText/80">
             Return/exchange sirf in surton mein consider hota hai:
@@ -65,7 +65,7 @@ export default function ReturnPolicyPage() {
           </p>
         </section>
 
-        <section className="rounded-xl border border-sky-100 border-t-4 border-t-yellow-400 bg-white p-6 shadow-card">
+        <section className="rounded-xl border border-brand-secondary border-t-4 border-t-yellow-400 bg-white p-6 shadow-card">
           <h2 className="text-lg font-bold text-darkText">How to return</h2>
           <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm leading-relaxed text-darkText/80">
             <li>
@@ -83,12 +83,12 @@ export default function ReturnPolicyPage() {
           <p className="mt-4 text-sm">
             <Link
               href="/track-order"
-              className="font-semibold text-sky-600 underline-offset-2 hover:underline"
+              className="font-semibold text-brand-dark underline-offset-2 hover:underline"
             >
               Track Order
             </Link>
             {" · "}
-            <Link href="/faq" className="font-semibold text-sky-600 underline-offset-2 hover:underline">
+            <Link href="/faq" className="font-semibold text-brand-dark underline-offset-2 hover:underline">
               FAQ
             </Link>
           </p>

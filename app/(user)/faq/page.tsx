@@ -38,7 +38,7 @@ export default function FaqPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
-      <h1 className="text-3xl font-extrabold text-yellow-400">Frequently Asked Questions</h1>
+      <h1 className="text-3xl font-extrabold text-brand-primary">Frequently Asked Questions</h1>
       <p className="mt-2 text-sm text-darkText/60">
         Sawalat par click karein, neeche detailed jawab open ho jayega.
       </p>
@@ -49,7 +49,7 @@ export default function FaqPage() {
           return (
             <div
               key={item.q}
-              className="overflow-hidden rounded-xl border border-sky-100 bg-white shadow-card"
+              className="overflow-hidden rounded-xl border border-brand-secondary bg-white shadow-card"
             >
               <button
                 type="button"
@@ -57,10 +57,10 @@ export default function FaqPage() {
                 className="flex w-full items-center justify-between px-4 py-3 text-left"
               >
                 <span className="font-semibold text-darkText">{item.q}</span>
-                <span className="ml-4 text-sky-500">{open ? "−" : "+"}</span>
+                <span className="ml-4 text-brand-dark">{open ? "−" : "+"}</span>
               </button>
               {open ? (
-                <div className="border-t border-sky-100 px-4 py-3 text-sm leading-6 text-darkText/80">
+                <div className="border-t border-brand-secondary px-4 py-3 text-sm leading-6 text-darkText/80">
                   {item.a}
                 </div>
               ) : null}

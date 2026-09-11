@@ -22,7 +22,7 @@ export function OrderTable({
   return (
     <div className="hidden overflow-x-auto rounded-card border border-borderGray bg-white shadow-card md:block">
       <table className="w-full text-left text-sm">
-        <thead className="border-b border-primaryYellow bg-primaryYellow text-white">
+        <thead className="border-b border-primaryYellow bg-primaryYellow text-brand-dark">
           <tr>
             <th className="p-3">Order ID</th>
             {showVendorColumn ? (
@@ -50,9 +50,9 @@ export function OrderTable({
             rows.map((r) => (
               <tr
                 key={r.id}
-                className="border-b border-borderGray odd:bg-white even:bg-sky-50/60"
+                className="border-b border-borderGray odd:bg-white even:bg-brand-soft/60"
               >
-                <td className="p-3 font-mono text-sky-600">{r.shopOrderNumber}</td>
+                <td className="p-3 font-mono text-brand-dark">{r.shopOrderNumber}</td>
                 {showVendorColumn ? (
                   <td className="p-3 text-sm">
                     {r.vendor?.shopName ?? "—"}

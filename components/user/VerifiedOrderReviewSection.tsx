@@ -81,7 +81,7 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
 
   if (!isCustomer) {
     return (
-      <section className="mb-6 rounded-xl border border-[#F57224]/40 bg-orange-50/50 p-5 shadow-sm">
+      <section className="mb-6 rounded-xl border border-brand-primary/40 bg-brand-soft/50 p-5 shadow-sm">
         <h2 className="text-[16px] font-semibold text-[#333]">Review this purchase</h2>
         <p className="mt-2 text-sm text-[#555]">
           Sign in with the account that matches your order email to submit a review.
@@ -89,7 +89,7 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
         <button
           type="button"
           onClick={() => openAuthModal("login")}
-          className="mt-4 rounded-lg bg-[#F57224] px-5 py-2.5 text-sm font-bold text-white hover:bg-[#e06520]"
+          className="mt-4 rounded-lg bg-brand-primary px-5 py-2.5 text-sm font-bold text-brand-dark hover:bg-brand-hover"
         >
           Sign in
         </button>
@@ -220,7 +220,7 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
                 key={n}
                 type="button"
                 onClick={() => setRating(n)}
-                className={`rounded p-0.5 text-[28px] leading-none transition-colors hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F57224] ${
+                className={`rounded p-0.5 text-[28px] leading-none transition-colors hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary ${
                   n <= rating ? "text-[#FFC400]" : "text-[#e0e0e0]"
                 }`}
                 aria-label={`Set rating to ${n} of 5 stars`}

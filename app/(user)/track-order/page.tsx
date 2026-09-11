@@ -124,7 +124,7 @@ export default function TrackOrderPage() {
         <button
           type="submit"
           disabled={loading}
-          className="rounded-xl bg-primaryBlue px-6 py-2.5 text-base font-semibold text-white disabled:opacity-50"
+          className="rounded-xl bg-brand-primary px-6 py-2.5 text-base font-semibold text-brand-dark disabled:opacity-50"
         >
           {loading ? "…" : "Track"}
         </button>
@@ -142,7 +142,7 @@ export default function TrackOrderPage() {
                   className="flex flex-col gap-2 border-b border-borderGray p-3 transition-colors hover:bg-yellow-50 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div>
-                    <p className="text-base font-bold text-sky-500">{id}</p>
+                    <p className="text-base font-bold text-brand-dark">{id}</p>
                     <p className="text-xs font-normal text-darkText/60 capitalize">
                       Status: {String(o.orderStatus || "pending")}
                     </p>
@@ -170,11 +170,11 @@ export default function TrackOrderPage() {
       {order ? (
         <div
           ref={detailRef}
-          className="space-y-6 rounded-card border border-sky-100 border-t-4 border-t-yellow-400 bg-white p-6 shadow-card"
+          className="space-y-6 rounded-card border border-brand-secondary border-t-4 border-t-yellow-400 bg-white p-6 shadow-card"
         >
           <div>
             <p className="text-xs uppercase tracking-wide text-darkText/60">Order</p>
-            <p className="text-2xl font-bold text-sky-500">
+            <p className="text-2xl font-bold text-brand-dark">
               {String(order.orderNumber)}
             </p>
             <p className="mt-2 text-sm">
@@ -200,7 +200,7 @@ export default function TrackOrderPage() {
                       key={s}
                       className={`relative flex items-center gap-3 py-1 pl-6 text-sm ${
                         current
-                          ? "font-bold text-sky-600"
+                          ? "font-bold text-brand-dark"
                           : active
                             ? "font-semibold text-black"
                             : "text-gray-400"
@@ -209,7 +209,7 @@ export default function TrackOrderPage() {
                       <span
                         className={`absolute -left-[7px] h-3 w-3 shrink-0 rounded-full ${
                           current
-                            ? "animate-pulse bg-sky-400"
+                            ? "animate-pulse bg-brand-primary"
                             : active
                               ? "bg-yellow-400"
                               : "bg-gray-300"

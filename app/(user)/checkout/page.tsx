@@ -244,7 +244,7 @@ export default function CheckoutPage() {
           <button
             type="button"
             onClick={() => openAuthModal("signup")}
-            className="w-full rounded-xl bg-primaryYellow py-3 font-bold text-white mb-3"
+            className="w-full rounded-xl bg-primaryYellow py-3 font-bold text-brand-dark mb-3"
           >
             Sign up / Login
           </button>
@@ -293,7 +293,7 @@ export default function CheckoutPage() {
             </button>
             <Link
               href={`/track-order?order=${encodeURIComponent(doneOrder.orderNumber)}`}
-              className="rounded-xl bg-primaryBlue py-2.5 text-sm font-semibold text-white hover:bg-darkBlue"
+              className="rounded-xl bg-brand-primary py-2.5 text-sm font-semibold text-brand-dark hover:bg-brand-hover"
             >
               Track this order
             </Link>
@@ -305,7 +305,7 @@ export default function CheckoutPage() {
           />
           <Link
             href="/products"
-            className="mb-4 block w-full rounded-xl bg-primaryBlue py-3 text-center text-sm font-bold text-white hover:bg-darkBlue"
+            className="mb-4 block w-full rounded-xl bg-brand-primary py-3 text-center text-sm font-bold text-brand-dark hover:bg-brand-hover"
           >
             Continue shopping
           </Link>
@@ -318,8 +318,8 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="bg-[#f8f9fb] pb-12">
-      <div className="bg-[#0f6ab0] py-2 text-xs font-semibold tracking-wide text-white">
+    <div className="bg-brand-background pb-12">
+      <div className="bg-brand-primary py-2 text-xs font-semibold tracking-wide text-brand-dark">
         <div className="overflow-hidden whitespace-nowrap">
           <p className="inline-block min-w-full animate-[checkoutMarquee_18s_linear_infinite]">
             ENJOY FREE DELIVERY ON ORDERS ABOVE Rs.1,000 | CASH ON DELIVERY
@@ -447,7 +447,7 @@ export default function CheckoutPage() {
             <section className="space-y-6 rounded-card border border-borderGray bg-white p-6 shadow-card">
               <div>
                 <h2 className="text-lg font-bold text-darkText">Shipping method</h2>
-                <div className="mt-3 rounded-md border border-[#2a6df2] bg-[#f4f7ff] px-4 py-3">
+                <div className="mt-3 rounded-md border border-brand-primary bg-brand-soft px-4 py-3">
                   <div className="flex items-center justify-between gap-3">
                     <span className="font-medium text-darkText">Cash on Delivery</span>
                     <span className="font-semibold text-darkText">
@@ -461,8 +461,8 @@ export default function CheckoutPage() {
               <p className="-mt-3 text-sm text-darkText/70">
                 All transactions are secure and encrypted.
               </p>
-              <div className="overflow-hidden rounded-[8px] border border-[#2f6df6] bg-[#f4f7ff]">
-                <div className="border-b border-[#2f6df6] bg-[#f4f7ff] px-4 py-3 text-base font-semibold text-darkText">
+              <div className="overflow-hidden rounded-[8px] border border-brand-primary bg-brand-soft">
+                <div className="border-b border-brand-primary bg-brand-soft px-4 py-3 text-base font-semibold text-darkText">
                   Cash on Delivery (COD)
                 </div>
                 <p className="bg-white px-4 py-3 text-center text-sm text-darkText/80">
@@ -472,7 +472,7 @@ export default function CheckoutPage() {
               <div className="space-y-3">
                 <h3 className="text-lg font-bold text-darkText">Billing address</h3>
                 <div className="overflow-hidden rounded-md border border-borderGray">
-                  <label className="flex cursor-pointer items-center gap-3 border-b border-borderGray bg-[#f4f7ff] px-4 py-3 text-darkText">
+                  <label className="flex cursor-pointer items-center gap-3 border-b border-borderGray bg-brand-soft px-4 py-3 text-darkText">
                     <input
                       type="radio"
                       name="billingAddress"
@@ -562,7 +562,7 @@ export default function CheckoutPage() {
                 <button
                   type="submit"
                   disabled={placeOrderDisabled}
-                  className="w-full rounded-[8px] bg-[#f5a623] py-3 text-sm font-bold text-white disabled:opacity-50 sm:text-base"
+                  className="w-full rounded-[8px] bg-brand-primary py-3 text-sm font-bold text-brand-dark disabled:opacity-50 sm:text-base"
                 >
                   {loading ? "Processing…" : "Complete order"}
                 </button>

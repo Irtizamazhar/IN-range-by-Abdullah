@@ -137,7 +137,7 @@ export default function AdminVendorOrderDetailPage() {
             </h1>
             <p className="mt-1 text-sm text-darkText/60">
               Checkout{" "}
-              <span className="font-mono text-sky-600">{data.parentOrderNumber}</span>
+              <span className="font-mono text-brand-dark">{data.parentOrderNumber}</span>
             </p>
           </div>
           <StatusBadge status={data.orderStatus as ShopOrderStatusPill} />

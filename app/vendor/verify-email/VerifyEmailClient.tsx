@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
-const accent = "#F59E0B";
+const accent = "var(--brand-accent)";
 
 export function VerifyEmailClient({
   initialStatus,
@@ -62,7 +62,7 @@ export function VerifyEmailClient({
             <Link
               href="/vendor/login"
               className="mt-8 inline-block font-bold hover:underline"
-              style={{ color: accent }}
+              style={{ color: "var(--brand-link)" }}
             >
               Go to sign in
             </Link>

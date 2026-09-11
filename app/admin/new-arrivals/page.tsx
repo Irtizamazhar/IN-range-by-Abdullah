@@ -49,7 +49,7 @@ export default function AdminNewArrivalsPage() {
         <h1 className="text-2xl font-bold text-darkText">New Arrivals</h1>
         <Link
           href="/admin/new-arrivals/add"
-          className="rounded-xl bg-primaryYellow px-5 py-2.5 font-semibold text-white"
+          className="rounded-xl bg-primaryYellow px-5 py-2.5 font-semibold text-brand-dark"
         >
           Add New Product
         </Link>

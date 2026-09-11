@@ -148,7 +148,7 @@ export default async function VendorProductsPage() {
                 className="rounded-xl border border-neutral-200 border-l-4 border-l-amber-500 bg-white p-4 shadow-sm transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-md"
               >
                 <div className="mb-3 flex items-center justify-between gap-2">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-orange-500 to-amber-400 px-3 py-1 text-xs font-semibold text-white shadow-sm">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-brand-secondary to-amber-400 px-3 py-1 text-xs font-semibold text-white shadow-sm">
                     <span aria-hidden>🏪</span>
                     <span>{v.shopName}</span>
                   </span>
@@ -158,7 +158,7 @@ export default async function VendorProductsPage() {
                     </span>
                   ) : null}
                   {isFeaturedNow ? (
-                    <span className="rounded-full bg-gradient-to-r from-blue-500 to-violet-500 px-2.5 py-1 text-xs font-bold text-white">
+                    <span className="rounded-full bg-gradient-to-r from-brand-primary to-violet-500 px-2.5 py-1 text-xs font-bold text-white">
                       Featured ⭐
                     </span>
                   ) : null}
@@ -216,7 +216,7 @@ export default async function VendorProductsPage() {
                         <>
                           <div className="mt-1 h-2.5 w-full overflow-hidden rounded-full bg-neutral-200">
                             <div
-                              className="h-full rounded-full bg-orange-400 transition-all duration-300"
+                              className="h-full rounded-full bg-brand-soft transition-all duration-300"
                               style={{ width: `${progressPct}%` }}
                             />
                           </div>

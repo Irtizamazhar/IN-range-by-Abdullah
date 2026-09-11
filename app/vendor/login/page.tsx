@@ -10,7 +10,7 @@ import {
   saveVendorLoginRememberPrefs,
 } from "@/lib/vendor-login-remember-prefs";
 
-const accent = "#F59E0B";
+const accent = "var(--brand-accent)";
 
 export default function VendorLoginPage() {
   const [email, setEmail] = useState("");
@@ -155,7 +155,7 @@ export default function VendorLoginPage() {
 
   return (
     <div className="flex min-h-screen overflow-hidden bg-white">
-      <aside className="relative hidden w-1/2 flex-col items-center justify-center overflow-hidden bg-[linear-gradient(160deg,#f97316_0%,#ea580c_40%,#c2410c_100%)] p-6 md:flex">
+      <aside className="relative hidden w-1/2 flex-col items-center justify-center overflow-hidden bg-brand-dark p-6 md:flex">
         <div className="vendor-float-1 pointer-events-none absolute -left-12 -top-12 h-64 w-64 rounded-full bg-white/10" />
         <div className="vendor-float-2 pointer-events-none absolute -bottom-10 -right-10 h-48 w-48 rounded-full bg-white/10" />
         <div className="vendor-float-3 pointer-events-none absolute left-1/2 top-1/2 h-32 w-32 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/10" />
@@ -202,7 +202,7 @@ export default function VendorLoginPage() {
         <div className="px-8 pt-4">
           <Link
             href="/"
-            className="inline-block text-xs font-semibold text-orange-500 hover:text-orange-600"
+            className="inline-block text-xs font-semibold text-primaryBlue hover:text-primaryBlue"
           >
             ← Store home
           </Link>
@@ -359,7 +359,7 @@ export default function VendorLoginPage() {
                 <Link
                   href="/vendor/forgot-password"
                   className="text-sm font-semibold hover:underline"
-                  style={{ color: accent }}
+                  style={{ color: "var(--brand-link)" }}
                 >
                   Forgot password?
                 </Link>
@@ -379,7 +379,7 @@ export default function VendorLoginPage() {
               <Link
                 href="/vendor/register"
                 className="font-bold hover:underline"
-                style={{ color: accent }}
+                style={{ color: "var(--brand-link)" }}
               >
                 Create an account
               </Link>

@@ -35,10 +35,10 @@ function statusBadgeClass(status: string) {
   if (s === "delivered") return "bg-green-100 text-green-700";
   if (s === "pending") return "bg-amber-100 text-amber-800";
   if (s === "cancelled") return "bg-red-100 text-red-700";
-  if (s === "shipped") return "bg-orange-100 text-orange-800";
-  if (s === "confirmed") return "bg-blue-100 text-blue-800";
-  if (s === "packed") return "bg-purple-100 text-purple-800";
-  return "bg-sky-100 text-sky-700";
+  if (s === "shipped") return "bg-brand-soft text-primaryBlue";
+  if (s === "confirmed") return "bg-brand-soft text-brand-dark";
+  if (s === "packed") return "bg-brand-soft text-brand-dark";
+  return "bg-brand-soft text-brand-dark";
 }
 
 export default async function VendorDashboardPage() {
@@ -130,7 +130,7 @@ export default async function VendorDashboardPage() {
           <div className="flex flex-wrap gap-2">
             <Link
               href="/vendor/dashboard/products/new"
-              className="rounded-xl bg-primaryBlue px-5 py-2.5 font-semibold text-white hover:bg-darkBlue"
+              className="rounded-xl bg-brand-primary px-5 py-2.5 font-semibold text-brand-dark hover:bg-brand-hover"
             >
               + Add product
             </Link>
@@ -185,10 +185,10 @@ export default async function VendorDashboardPage() {
             </Link>
             <Link
               href="/vendor/dashboard/orders?status=shipped"
-              className="rounded-card border border-borderGray bg-orange-50 p-4 shadow-card transition hover:ring-2 hover:ring-orange-300"
+              className="rounded-card border border-borderGray bg-brand-soft p-4 shadow-card transition hover:ring-2 hover:ring-brand-secondary"
             >
-              <p className="text-xs uppercase text-orange-700">Shipped</p>
-              <p className="mt-1 text-3xl font-extrabold text-orange-700">
+              <p className="text-xs uppercase text-primaryBlue">Shipped</p>
+              <p className="mt-1 text-3xl font-extrabold text-primaryBlue">
                 {shopStats.shipped}
               </p>
               <p className="mt-1 text-xs text-darkText/60">With courier</p>
@@ -216,19 +216,19 @@ export default async function VendorDashboardPage() {
           <div
             key={label}
             className={`rounded-card border border-borderGray p-4 shadow-card ${
-              idx === 0 ? "bg-sky-50" : idx === 1 ? "bg-amber-50" : "bg-sky-50"
+              idx === 0 ? "bg-brand-soft" : idx === 1 ? "bg-amber-50" : "bg-brand-soft"
             }`}
           >
             <p
               className={`text-xs uppercase ${
-                idx === 1 ? "text-amber-700" : "text-sky-500"
+                idx === 1 ? "text-amber-700" : "text-brand-dark"
               }`}
             >
               {label}
             </p>
             <p
               className={`mt-1 text-3xl font-extrabold ${
-                idx === 1 ? "text-amber-700" : "text-sky-500"
+                idx === 1 ? "text-amber-700" : "text-brand-dark"
               }`}
             >
               {val}
@@ -249,7 +249,7 @@ export default async function VendorDashboardPage() {
       </h2>
       <div className="overflow-x-auto rounded-card border border-borderGray bg-white shadow-card">
         <table className="w-full text-left text-sm">
-          <thead className="border-b border-primaryYellow bg-primaryYellow text-white">
+          <thead className="border-b border-primaryYellow bg-primaryYellow text-brand-dark">
             <tr>
               <th className="p-3">Order#</th>
               <th className="p-3">Customer</th>
@@ -274,9 +274,9 @@ export default async function VendorDashboardPage() {
               recent.map((row) => (
                 <tr
                   key={row.id}
-                  className="border-b border-borderGray odd:bg-white even:bg-sky-50 hover:bg-amber-50"
+                  className="border-b border-borderGray odd:bg-white even:bg-brand-soft hover:bg-amber-50"
                 >
-                  <td className="p-3 font-semibold text-sky-500">
+                  <td className="p-3 font-semibold text-brand-dark">
                     <Link
                       href={`/vendor/dashboard/orders/${row.id}`}
                       className="hover:underline"

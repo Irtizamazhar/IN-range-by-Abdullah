@@ -11,12 +11,11 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "In Range By Abdullah | Online Shopping Pakistan",
+  title: "joro.pk | Online Shopping Pakistan",
   description:
     "Shop quality products with cash on delivery and bank transfer across Pakistan.",
   icons: {
-    icon: "/logo.png",
-    apple: "/logo.png",
+    icon: "/icon.svg",
   },
 };
 

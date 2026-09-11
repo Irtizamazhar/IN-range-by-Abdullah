@@ -74,14 +74,14 @@ const nav: NavItem[] = [
 ];
 
 const utilityBarSepClass =
-  "px-2.5 sm:px-3 text-[10px] sm:text-xs text-darkText/30 select-none tabular-nums";
+  "px-2.5 sm:px-3 text-[10px] sm:text-xs text-white/30 select-none tabular-nums";
 
 function utilityLinkClass(active: boolean) {
   return [
-    "text-xs sm:text-sm font-medium text-darkText/80 transition-colors hover:text-primaryBlue",
-    "hover:underline hover:decoration-primaryBlue hover:underline-offset-4",
+    "text-xs sm:text-sm font-medium text-white/80 transition-colors hover:text-brand-primary",
+    "hover:underline hover:decoration-brand-primary hover:underline-offset-4",
     active
-      ? "font-semibold text-primaryBlue underline decoration-primaryBlue underline-offset-4"
+      ? "font-semibold text-brand-primary underline decoration-brand-primary underline-offset-4"
       : "",
   ]
     .filter(Boolean)
@@ -237,7 +237,7 @@ export function Navbar({ whatsappNumber }: { whatsappNumber: string }) {
     <>
       <header className="sticky top-8 z-40 shadow-sm">
         {/* ROW 1 — utility nav (Daraz-style thin bar; announcement bar stays above in UserRouteShell) */}
-        <div className="border-b border-borderGray/80 bg-white">
+        <div className="border-b border-white/10 bg-brand-dark">
           <div className="mx-auto flex w-full max-w-[min(100%,90rem)] flex-wrap items-center justify-end gap-x-0.5 gap-y-1.5 px-4 py-2 md:px-8">
             {nav.map((item, i) => {
               const { href, label, activePrefix, whatsappSell, openInNewTab } =
@@ -290,7 +290,7 @@ export function Navbar({ whatsappNumber }: { whatsappNumber: string }) {
                 <button
                   type="button"
                   onClick={() => openAuthModal("login")}
-                  className="text-xs sm:text-sm font-medium text-darkText/80 transition-colors hover:text-primaryBlue hover:underline hover:decoration-primaryBlue hover:underline-offset-4"
+                  className="text-xs sm:text-sm font-medium text-white/80 transition-colors hover:text-brand-primary hover:underline hover:decoration-primaryBlue hover:underline-offset-4"
                 >
                   Log in
                 </button>
@@ -300,7 +300,7 @@ export function Navbar({ whatsappNumber }: { whatsappNumber: string }) {
                 <button
                   type="button"
                   onClick={() => openAuthModal("signup")}
-                  className="text-xs sm:text-sm font-bold uppercase tracking-wide text-primaryYellow transition-colors hover:text-primaryBlue hover:underline hover:decoration-primaryBlue hover:underline-offset-4"
+                  className="text-xs sm:text-sm font-bold uppercase tracking-wide text-primaryYellow transition-colors hover:text-brand-primary hover:underline hover:decoration-primaryBlue hover:underline-offset-4"
                 >
                   Sign up
                 </button>
@@ -313,7 +313,7 @@ export function Navbar({ whatsappNumber }: { whatsappNumber: string }) {
                 <button
                   type="button"
                   onClick={() => signOut({ callbackUrl: "/" })}
-                  className="text-xs sm:text-sm font-medium text-darkText/80 transition-colors hover:text-primaryBlue hover:underline hover:decoration-primaryBlue hover:underline-offset-4"
+                  className="text-xs sm:text-sm font-medium text-white/80 transition-colors hover:text-brand-primary hover:underline hover:decoration-primaryBlue hover:underline-offset-4"
                 >
                   Logout
                 </button>
@@ -327,7 +327,7 @@ export function Navbar({ whatsappNumber }: { whatsappNumber: string }) {
                   <button
                     type="button"
                     onClick={() => setProfileMenuOpen((v) => !v)}
-                    className="inline-flex max-w-[min(220px,48vw)] items-center gap-2 text-left text-xs sm:text-sm font-medium text-darkText/80 transition-colors hover:text-primaryBlue"
+                    className="inline-flex max-w-[min(220px,48vw)] items-center gap-2 text-left text-xs sm:text-sm font-medium text-white/80 transition-colors hover:text-brand-primary"
                   >
                     {session.user?.image ? (
                       <Image
@@ -338,11 +338,11 @@ export function Navbar({ whatsappNumber }: { whatsappNumber: string }) {
                         className="h-7 w-7 shrink-0 rounded-full object-cover ring-2 ring-primaryBlue/20"
                       />
                     ) : (
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primaryBlue text-white">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-primary text-brand-dark">
                         <User className="h-3.5 w-3.5" aria-hidden />
                       </span>
                     )}
-                    <span className="truncate font-semibold text-darkText hover:underline hover:decoration-primaryBlue hover:underline-offset-4">
+                    <span className="truncate font-semibold text-white hover:underline hover:decoration-primaryBlue hover:underline-offset-4">
                       {session.user?.name || "Profile"}
                     </span>
                   </button>
@@ -404,7 +404,7 @@ export function Navbar({ whatsappNumber }: { whatsappNumber: string }) {
             />
           </div>
         ) : isCheckoutPage ? (
-          <div className="border-b border-borderGray bg-white md:hidden">
+          <div className="border-b border-white/10 bg-brand-dark md:hidden">
             <div className="flex items-center gap-3 px-4 py-3">
               <button
                 type="button"
@@ -414,25 +414,25 @@ export function Navbar({ whatsappNumber }: { whatsappNumber: string }) {
               >
                 <Menu className="h-5 w-5" />
               </button>
-              <span className="text-sm font-semibold text-darkText">
+              <span className="text-sm font-semibold text-white">
                 Checkout
               </span>
             </div>
           </div>
         ) : (
-          <div className="border-b border-borderGray bg-white">
+          <div className="border-b border-white/10 bg-brand-dark">
             <div className="flex w-full justify-center px-4 py-3 md:px-5">
               <div className="inline-flex max-w-full flex-wrap items-center justify-center gap-2 sm:gap-3 md:gap-4">
                 <div className="flex shrink-0 items-center gap-2">
                   <button
                     type="button"
-                    className="shrink-0 rounded-full border border-primaryBlue/40 p-2 text-primaryBlue md:hidden"
+                    className="shrink-0 rounded-full border border-primaryBlue/40 p-2 text-brand-primary md:hidden"
                     onClick={() => setMobileOpen(true)}
                     aria-label="Open menu"
                   >
                     <Menu className="h-5 w-5" />
                   </button>
-                  <LogoMark href="/" className="shrink-0" />
+                  <LogoMark inverse href="/" className="shrink-0" />
                 </div>
 
                 <div
@@ -449,7 +449,7 @@ export function Navbar({ whatsappNumber }: { whatsappNumber: string }) {
                       saveRecentSearch(searchQuery);
                     }}
                   >
-                    <div className="flex min-w-0 w-full overflow-hidden rounded-md border border-borderGray bg-white shadow-sm focus-within:border-[#EAB308] focus-within:ring-2 focus-within:ring-[#EAB308]/25">
+                    <div className="flex min-w-0 w-full overflow-hidden rounded-md border border-borderGray bg-white shadow-sm focus-within:border-brand-primary focus-within:ring-2 focus-within:ring-brand-primary/25">
                       <input
                         type="search"
                         name="search"
@@ -464,7 +464,7 @@ export function Navbar({ whatsappNumber }: { whatsappNumber: string }) {
                       />
                       <button
                         type="submit"
-                        className="shrink-0 border-l border-yellow-600/25 bg-[#EAB308] px-4 text-black transition-colors hover:bg-yellow-600"
+                        className="shrink-0 border-l border-brand-secondary/25 bg-brand-primary px-4 text-black transition-colors hover:bg-brand-hover"
                         aria-label="Search"
                       >
                         <Search className="h-5 w-5 text-black" aria-hidden />
@@ -632,12 +632,12 @@ export function Navbar({ whatsappNumber }: { whatsappNumber: string }) {
                   <button
                     type="button"
                     onClick={() => setCartOpen(true)}
-                    className="relative inline-flex items-center justify-center rounded-lg p-1.5 text-primaryBlue transition-colors hover:bg-primaryBlue/5"
+                    className="relative inline-flex items-center justify-center rounded-lg p-1.5 text-brand-primary transition-colors hover:bg-primaryBlue/5"
                     aria-label="Open cart"
                   >
                     <ShoppingCart className="h-7 w-7" aria-hidden />
                     {totalQty > 0 ? (
-                      <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primaryBlue px-1 text-[10px] font-bold text-white tabular-nums">
+                      <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-primary px-1 text-[10px] font-bold text-brand-dark tabular-nums">
                         {totalQty > 99 ? "99+" : totalQty}
                       </span>
                     ) : null}
@@ -650,7 +650,7 @@ export function Navbar({ whatsappNumber }: { whatsappNumber: string }) {
       </header>
 
       {mobileOpen ? (
-        <div className="fixed inset-0 z-[60] flex flex-col bg-primaryBlue text-white md:hidden">
+        <div className="fixed inset-0 z-[60] flex flex-col bg-brand-dark text-white md:hidden">
           <div className="flex items-center justify-between border-b border-white/20 p-4">
             <span className="text-xl font-bold">Menu</span>
             <button
@@ -679,7 +679,7 @@ export function Navbar({ whatsappNumber }: { whatsappNumber: string }) {
                   (pathname === href ||
                     (!!activePrefix &&
                       (pathname?.startsWith(activePrefix) ?? false)));
-                const itemClass = `flex items-center gap-3 ${active ? "font-semibold underline decoration-white underline-offset-4" : ""}`;
+                const itemClass = `flex items-center gap-3 ${active ? "font-semibold underline decoration-brand-primary underline-offset-4" : ""}`;
                 if (whatsappSell) {
                   return (
                     <a

@@ -141,7 +141,7 @@ export function SettingsClient() {
         <button
           type="submit"
           disabled={saving}
-          className="rounded-xl bg-primaryBlue px-6 py-2.5 font-semibold text-white hover:bg-darkBlue disabled:opacity-50"
+          className="rounded-xl bg-brand-primary px-6 py-2.5 font-semibold text-brand-dark hover:bg-brand-hover disabled:opacity-50"
         >
           {saving ? "Saving…" : "Save bank details"}
         </button>

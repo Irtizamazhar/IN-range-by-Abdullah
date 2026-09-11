@@ -12,9 +12,9 @@ export type ShopOrderStatusPill =
 /** Color-coded pill for vendor shop-order lifecycle (Daraz-style). */
 const STYLES: Record<ShopOrderStatusPill, string> = {
   pending: "bg-amber-100 text-amber-900 ring-amber-200",
-  confirmed: "bg-blue-100 text-blue-800 ring-blue-200",
-  packed: "bg-purple-100 text-purple-800 ring-purple-200",
-  shipped: "bg-orange-100 text-orange-900 ring-orange-200",
+  confirmed: "bg-brand-soft text-brand-dark ring-brand-secondary",
+  packed: "bg-brand-soft text-brand-dark ring-brand-secondary",
+  shipped: "bg-brand-soft text-primaryBlue ring-brand-secondary",
   delivered: "bg-green-100 text-green-800 ring-green-200",
   cancelled: "bg-red-100 text-red-800 ring-red-200",
 };

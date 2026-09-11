@@ -338,7 +338,7 @@ export default function AdminVendorsPage() {
                         onClick={() =>
                           void patch(v.id, { action: "approve" })
                         }
-                        className="rounded-lg bg-primaryBlue px-3 py-2 text-sm font-bold text-white hover:bg-darkBlue disabled:opacity-50"
+                        className="rounded-lg bg-brand-primary px-3 py-2 text-sm font-bold text-brand-dark hover:bg-brand-hover disabled:opacity-50"
                       >
                         Approve again
                       </button>
@@ -356,7 +356,7 @@ export default function AdminVendorsPage() {
                 ) : null}
 
                 {open ? (
-                  <div className="border-t border-borderGray bg-[#F8F9FA] p-4 space-y-4 text-sm">
+                  <div className="border-t border-borderGray bg-brand-background p-4 space-y-4 text-sm">
                     <div className="grid gap-3 md:grid-cols-2">
                       <div>
                         <p className="font-bold text-darkText">Address</p>

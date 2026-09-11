@@ -303,7 +303,7 @@ export default function EditNewArrivalPage() {
         <button
           type="submit"
           disabled={saving || uploading}
-          className="rounded-xl bg-primaryBlue px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+          className="rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-semibold text-brand-dark disabled:opacity-50"
         >
           {saving ? "Saving…" : "Save"}
         </button>

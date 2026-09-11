@@ -64,7 +64,7 @@ export default async function VendorAccountStatusPage() {
           </ul>
           <a
             href="/vendor/login"
-            className="mt-4 inline-block rounded-lg bg-primaryBlue px-4 py-2 text-sm font-bold text-white hover:bg-darkBlue"
+            className="mt-4 inline-block rounded-lg bg-brand-primary px-4 py-2 text-sm font-bold text-brand-dark hover:bg-brand-hover"
           >
             Open Vendor Login / Appeal
           </a>

@@ -201,8 +201,8 @@ export function AdminSidebar() {
     <aside className="sticky top-0 h-screen w-64 shrink-0 overflow-y-auto bg-footerDark text-white">
       <div className="flex min-h-full flex-col">
       <div className="p-4 border-b border-white/10">
-        {/* Same /logo.png and default sizing as customer Navbar */}
-        <LogoMark
+        {/* Shared brand mark and sizing with the customer navbar. */}
+        <LogoMark inverse
           href="/admin/dashboard"
           className="shrink-0 [&_img]:max-w-[min(100%,260px)]"
         />
@@ -240,7 +240,7 @@ export function AdminSidebar() {
               href={href}
               className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-base font-medium transition-all duration-200 ${
                 isAdminLinkActive(pathname, href)
-                  ? "bg-[#1BACE4] font-semibold text-white shadow-sm"
+                  ? "bg-brand-primary font-semibold text-brand-dark shadow-sm"
                   : "text-white/80 hover:bg-white/10 hover:text-white"
               }`}
             >

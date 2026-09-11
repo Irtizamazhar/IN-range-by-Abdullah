@@ -10,7 +10,7 @@ function AdminChromeInner({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
   return (
-    <div className="flex h-screen overflow-hidden bg-[#F8F9FA]">
+    <div className="flex h-screen overflow-hidden bg-brand-background">
       <AdminSidebar />
       <div className="flex-1 overflow-y-auto">{children}</div>
     </div>
@@ -21,7 +21,7 @@ export function AdminChrome({ children }: { children: React.ReactNode }) {
   return (
     <Suspense
       fallback={
-        <div className="h-screen bg-[#F8F9FA]">
+        <div className="h-screen bg-brand-background">
           <div className="flex h-screen overflow-hidden">
             <aside className="w-64 shrink-0 bg-footerDark" aria-hidden />
             <div className="flex-1 overflow-y-auto">{children}</div>

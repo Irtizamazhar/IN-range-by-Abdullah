@@ -3,42 +3,33 @@ import Link from "next/link";
 
 export function LogoMark({
   className = "",
-  withText = false,
   compact = false,
+  inverse = false,
   /** Set to `null` to render logo without a link (e.g. admin login). */
   href = "/",
 }: {
   className?: string;
   withText?: boolean;
   compact?: boolean;
+  inverse?: boolean;
   href?: string | null;
 }) {
-  const width = compact ? 152 : 216;
-  const height = compact ? 91 : 130;
+  const width = 300;
+  const height = 80;
   const sizeClass = compact
-    ? "h-12 max-h-12 sm:h-14 sm:max-h-14"
-    : "h-14 sm:h-16 md:h-[4.25rem] max-h-[4.25rem]";
+    ? "h-9 sm:h-10"
+    : "h-10 sm:h-12";
 
   const inner = (
     <>
       <Image
-        src="/logo.png"
-        alt="In Range By Abdullah"
+        src={inverse ? "/joro-logo-inverse.svg" : "/joro-logo.svg"}
+        alt="joro.pk"
         width={width}
         height={height}
         className={`${sizeClass} w-auto shrink-0 object-contain object-left`}
         priority
       />
-      {withText && (
-        <span className="leading-tight text-left hidden sm:block min-w-0">
-          <span className="text-primaryBlue font-bold text-sm md:text-base block">
-            In Range By
-          </span>
-          <span className="text-primaryYellow font-extrabold text-sm md:text-base tracking-wide block">
-            ABDULLAH
-          </span>
-        </span>
-      )}
     </>
   );
 

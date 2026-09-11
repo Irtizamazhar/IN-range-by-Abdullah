@@ -105,7 +105,7 @@ export default function AdminProductsPage() {
           </label>
           <Link
             href="/admin/products/add"
-            className="shrink-0 rounded-xl bg-primaryYellow px-5 py-2.5 text-center font-semibold text-white"
+            className="shrink-0 rounded-xl bg-primaryYellow px-5 py-2.5 text-center font-semibold text-brand-dark"
           >
             Add Product
           </Link>

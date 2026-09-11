@@ -175,7 +175,7 @@ export function CustomerProfileModal({
                     type="button"
                     disabled={saving || !name.trim()}
                     onClick={() => void onSave()}
-                    className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-primaryBlue text-sm font-semibold text-white shadow-sm transition duration-200 hover:bg-darkBlue disabled:pointer-events-none disabled:opacity-50"
+                    className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-brand-primary text-sm font-semibold text-brand-dark shadow-sm transition duration-200 hover:bg-brand-hover disabled:pointer-events-none disabled:opacity-50"
                   >
                     {saving ? (
                       <Loader2 className="h-5 w-5 animate-spin" aria-hidden />

@@ -121,14 +121,14 @@ export default function AdminDashboardPage() {
         {unread > 0 ? (
           <Link
             href="/admin/orders"
-            className="rounded-full bg-primaryYellow px-4 py-1.5 text-sm font-bold text-white hover:brightness-110"
+            className="rounded-full bg-primaryYellow px-4 py-1.5 text-sm font-bold text-brand-dark hover:brightness-110"
           >
             🔔 {unread} New Orders
           </Link>
         ) : null}
         <Link
           href="/admin/products/add"
-          className="rounded-xl bg-primaryBlue px-5 py-2.5 font-semibold text-white hover:bg-darkBlue"
+          className="rounded-xl bg-brand-primary px-5 py-2.5 font-semibold text-brand-dark hover:bg-brand-hover"
         >
           + Quick Add Product
         </Link>
@@ -147,10 +147,10 @@ export default function AdminDashboardPage() {
               idx === 0
                 ? "bg-amber-50"
                 : idx === 1
-                  ? "bg-sky-50"
+                  ? "bg-brand-soft"
                   : idx === 2
                     ? "bg-amber-50"
-                    : "bg-sky-50"
+                    : "bg-brand-soft"
             }`}
           >
             <p
@@ -158,10 +158,10 @@ export default function AdminDashboardPage() {
                 idx === 0
                   ? "text-amber-600"
                   : idx === 1
-                    ? "text-sky-400"
+                    ? "text-brand-dark"
                     : idx === 2
                       ? "text-amber-600"
-                      : "text-sky-500"
+                      : "text-brand-dark"
               }`}
             >
               {label}
@@ -171,10 +171,10 @@ export default function AdminDashboardPage() {
                 idx === 0
                   ? "text-amber-700"
                   : idx === 1
-                    ? "text-sky-500"
+                    ? "text-brand-dark"
                     : idx === 2
                       ? "text-amber-700"
-                      : "text-sky-500"
+                      : "text-brand-dark"
               }`}
             >
               {val}
@@ -187,7 +187,7 @@ export default function AdminDashboardPage() {
       <h2 className="mb-4 text-lg font-bold text-darkText">Recent orders</h2>
       <div className="rounded-card border border-borderGray bg-white overflow-x-auto shadow-card">
         <table className="w-full text-sm text-left">
-          <thead className="border-b border-primaryYellow bg-primaryYellow text-white">
+          <thead className="border-b border-primaryYellow bg-primaryYellow text-brand-dark">
             <tr>
               <th className="p-3">Order#</th>
               <th className="p-3">Customer</th>
@@ -202,7 +202,7 @@ export default function AdminDashboardPage() {
               return (
               <tr
                 key={oid || String(row.orderNumber)}
-                className="cursor-pointer border-b border-borderGray odd:bg-white even:bg-sky-50 hover:bg-amber-50"
+                className="cursor-pointer border-b border-borderGray odd:bg-white even:bg-brand-soft hover:bg-amber-50"
                 onClick={() => {
                   if (oid) router.push(`/admin/orders/${oid}`);
                 }}
@@ -212,12 +212,12 @@ export default function AdminDashboardPage() {
                     <Link
                       href={`/admin/orders/${oid}`}
                       onClick={(e) => e.stopPropagation()}
-                      className="font-semibold text-sky-500 hover:underline"
+                      className="font-semibold text-brand-dark hover:underline"
                     >
                       {String(row.orderNumber)}
                     </Link>
                   ) : (
-                    <span className="font-semibold text-sky-500">
+                    <span className="font-semibold text-brand-dark">
                       {String(row.orderNumber)}
                     </span>
                   )}
@@ -236,7 +236,7 @@ export default function AdminDashboardPage() {
                           ? "bg-amber-100 text-amber-800"
                           : String(row.orderStatus).toLowerCase() === "cancelled"
                             ? "bg-red-100 text-red-700"
-                            : "bg-sky-100 text-sky-700"
+                            : "bg-brand-soft text-brand-dark"
                     }`}
                   >
                     {String(row.orderStatus)}

@@ -52,8 +52,8 @@ export function HeroSection({ sellNowHref }: { sellNowHref: string }) {
   }, [currentWord, isDeleting, isPaused, wordIndex]);
 
   return (
-    <section className="relative isolate w-full max-w-[100vw] overflow-hidden bg-[#16213e] text-white">
-      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden bg-[#16213e]">
+    <section className="relative isolate w-full max-w-[100vw] overflow-hidden bg-brand-dark text-white">
+      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden bg-brand-dark">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <video
           src="/videos/mixkit-delivering-a-package-to-a-woman-at-home-42130-full-hd.mp4"
@@ -62,7 +62,7 @@ export function HeroSection({ sellNowHref }: { sellNowHref: string }) {
           loop
           playsInline
           preload="auto"
-          className="h-full w-full max-w-full object-cover bg-[#16213e]"
+          className="h-full w-full max-w-full object-cover bg-brand-dark"
         />
       </div>
 
@@ -77,10 +77,10 @@ export function HeroSection({ sellNowHref }: { sellNowHref: string }) {
           </h1>
 
           <div className="mt-1 flex items-center justify-center min-h-[3.25rem] md:min-h-[4.5rem]">
-            <h2 className="text-5xl font-extrabold text-yellow-300">
+            <h2 className="text-5xl font-extrabold text-brand-primary">
               {currentWord}
             </h2>
-            <span className="ml-1 animate-pulse text-5xl font-light text-yellow-300">
+            <span className="ml-1 animate-pulse text-5xl font-light text-brand-primary">
               |
             </span>
           </div>
@@ -92,7 +92,7 @@ export function HeroSection({ sellNowHref }: { sellNowHref: string }) {
           <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
             <Link
               href="/products"
-              className="inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-yellow-400 to-orange-500 px-10 py-4 text-md font-semibold text-gray-900 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-orange-500/40"
+              className="inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-brand-primary to-brand-secondary px-10 py-4 text-md font-semibold text-gray-900 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-brand-primary/40"
             >
               <ShoppingBag className="h-6 w-6" />
               Shop Now

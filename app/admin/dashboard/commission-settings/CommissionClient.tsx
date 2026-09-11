@@ -170,7 +170,7 @@ export function CommissionClient() {
                     type="button"
                     disabled={busy === c.id}
                     onClick={() => void saveCategory(c.id)}
-                    className="rounded-lg bg-primaryYellow px-4 py-1.5 text-xs font-semibold text-white"
+                    className="rounded-lg bg-primaryYellow px-4 py-1.5 text-xs font-semibold text-brand-dark"
                   >
                     Save
                   </button>
@@ -237,7 +237,7 @@ export function CommissionClient() {
                       type="button"
                       disabled={busy === `v-${v.id}`}
                       onClick={() => void saveVendorCommission(v.id)}
-                      className="rounded-lg bg-primaryBlue px-4 py-1.5 text-xs font-semibold text-white"
+                      className="rounded-lg bg-brand-primary px-4 py-1.5 text-xs font-semibold text-brand-dark"
                     >
                       Save
                     </button>

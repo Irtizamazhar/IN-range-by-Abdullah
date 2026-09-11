@@ -122,7 +122,7 @@ export default function CartPage() {
             className={`block w-full rounded-xl py-3.5 text-center font-bold text-white transition-colors ${
               items.length === 0
                 ? "bg-darkText/30 cursor-not-allowed"
-                : "bg-primaryBlue hover:bg-darkBlue"
+                : "bg-brand-primary hover:bg-brand-hover"
             }`}
           >
             Proceed to Checkout

@@ -14,7 +14,7 @@ function MessageRow() {
         <span key={`${message}-${idx}`} className="inline-flex items-center">
           <span>{message}</span>
           {idx < MESSAGES.length - 1 ? (
-            <span className="mx-4 text-white/90">•</span>
+            <span className="mx-4 text-brand-dark/60">•</span>
           ) : null}
         </span>
       ))}
@@ -24,7 +24,7 @@ function MessageRow() {
 
 export function AnnouncementBar() {
   return (
-    <div className="fixed inset-x-0 top-0 z-50 h-8 w-full max-w-[100vw] overflow-hidden bg-[#F2AB22] text-white">
+    <div className="fixed inset-x-0 top-0 z-50 h-8 w-full max-w-[100vw] overflow-hidden bg-brand-primary text-brand-dark">
       <div className="marquee-track flex h-full w-max items-center whitespace-nowrap text-xs font-medium uppercase tracking-[0.08em]">
         <div className="inline-flex items-center pr-8">
           <MessageRow />

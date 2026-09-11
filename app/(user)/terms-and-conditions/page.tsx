@@ -9,7 +9,7 @@ export default function TermsAndConditionsPage() {
       </p>
 
       <div className="mt-8 space-y-6">
-        <section className="rounded-xl border border-sky-100 bg-white p-6 shadow-card">
+        <section className="rounded-xl border border-brand-secondary bg-white p-6 shadow-card">
           <h2 className="text-lg font-bold text-darkText">1) Order acceptance</h2>
           <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-relaxed text-darkText/80">
             <li>Order place hona final dispatch guarantee nahi hota.</li>
@@ -21,7 +21,7 @@ export default function TermsAndConditionsPage() {
           </ul>
         </section>
 
-        <section className="rounded-xl border border-sky-100 bg-white p-6 shadow-card">
+        <section className="rounded-xl border border-brand-secondary bg-white p-6 shadow-card">
           <h2 className="text-lg font-bold text-darkText">2) Pricing and payments</h2>
           <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-relaxed text-darkText/80">
             <li>Prices bina prior notice update ho sakte hain.</li>
@@ -33,7 +33,7 @@ export default function TermsAndConditionsPage() {
           </ul>
         </section>
 
-        <section className="rounded-xl border border-sky-100 bg-white p-6 shadow-card">
+        <section className="rounded-xl border border-brand-secondary bg-white p-6 shadow-card">
           <h2 className="text-lg font-bold text-darkText">3) Shipping and delivery</h2>
           <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-relaxed text-darkText/80">
             <li>Estimated delivery time city aur courier conditions par depend karti hai.</li>
@@ -45,7 +45,7 @@ export default function TermsAndConditionsPage() {
           </ul>
         </section>
 
-        <section className="rounded-xl border border-sky-100 bg-white p-6 shadow-card">
+        <section className="rounded-xl border border-brand-secondary bg-white p-6 shadow-card">
           <h2 className="text-lg font-bold text-darkText">4) Returns and claims</h2>
           <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-relaxed text-darkText/80">
             <li>Return/exchange policy separate page ke mutabiq process hoti hai.</li>
@@ -56,7 +56,7 @@ export default function TermsAndConditionsPage() {
           </ul>
         </section>
 
-        <section className="rounded-xl border border-sky-100 bg-white p-6 shadow-card">
+        <section className="rounded-xl border border-brand-secondary bg-white p-6 shadow-card">
           <h2 className="text-lg font-bold text-darkText">5) Account and conduct</h2>
           <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-relaxed text-darkText/80">
             <li>Fake information ya misuse ki surat mein account restrict/suspend kiya ja sakta hai.</li>
@@ -65,27 +65,27 @@ export default function TermsAndConditionsPage() {
           </ul>
         </section>
 
-        <section className="rounded-xl border border-sky-100 border-t-4 border-t-yellow-400 bg-white p-6 shadow-card">
+        <section className="rounded-xl border border-brand-secondary border-t-4 border-t-yellow-400 bg-white p-6 shadow-card">
           <h2 className="text-lg font-bold text-darkText">6) Contact and updates</h2>
           <p className="mt-3 text-sm leading-relaxed text-darkText/80">
             Yeh terms time to time update ho sakti hain. Latest version hamesha isi page par available hogi.
             Kisi bhi query ke liye support se contact karein.
           </p>
           <p className="mt-4 text-sm">
-            <Link href="/faq" className="font-semibold text-sky-600 underline-offset-2 hover:underline">
+            <Link href="/faq" className="font-semibold text-brand-dark underline-offset-2 hover:underline">
               FAQ
             </Link>
             {" · "}
             <Link
               href="/return-policy"
-              className="font-semibold text-sky-600 underline-offset-2 hover:underline"
+              className="font-semibold text-brand-dark underline-offset-2 hover:underline"
             >
               Return Policy
             </Link>
             {" · "}
             <Link
               href="/track-order"
-              className="font-semibold text-sky-600 underline-offset-2 hover:underline"
+              className="font-semibold text-brand-dark underline-offset-2 hover:underline"
             >
               Track Order
             </Link>
