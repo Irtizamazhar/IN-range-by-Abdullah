@@ -12,19 +12,42 @@ export async function GET() {
   }
 
   try {
-    const [pendingVendors, pendingSellerOrders] = await Promise.all([
+    const [pendingVendors, pendingSellerOrders, pendingAppealsRaw] = await Promise.all([
       prisma.vendor.count({ where: { status: "pending" } }),
       prisma.vendorShopOrder.count({ where: { status: "pending" } }),
+      prisma.vendorAuditLog.findMany({
+        where: { action: "vendor_appeal", vendor: { status: "suspended" } },
+        select: { details: true, vendorId: true, createdAt: true },
+        orderBy: { createdAt: "desc" },
+        take: 500,
+      }),
     ]);
+    const pendingAppealsSet = new Set<string>();
+    for (const row of pendingAppealsRaw) {
+      const d =
+        row.details && typeof row.details === "object"
+          ? (row.details as Record<string, unknown>)
+          : {};
+      if (d.resolved === true) continue;
+      if (!row.vendorId) continue;
+      pendingAppealsSet.add(row.vendorId);
+    }
+    const pendingAppeals = pendingAppealsSet.size;
 
     return NextResponse.json({
       pendingVendors,
       pendingSellerOrders,
+      pendingAppeals,
     });
   } catch (e) {
     console.error("GET /api/admin/sidebar-badges", e);
     return NextResponse.json(
-      { error: "Failed to load counts", pendingVendors: 0, pendingSellerOrders: 0 },
+      {
+        error: "Failed to load counts",
+        pendingVendors: 0,
+        pendingSellerOrders: 0,
+        pendingAppeals: 0,
+      },
       { status: 500 }
     );
   }

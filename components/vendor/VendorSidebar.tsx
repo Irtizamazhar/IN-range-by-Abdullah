@@ -13,6 +13,7 @@ import {
   Settings,
   Bell,
   CircleDollarSign,
+  ShieldAlert,
 } from "lucide-react";
 import { LogoMark } from "@/components/user/LogoMark";
 import { clearVendorLoginRememberPrefs } from "@/lib/vendor-login-remember-prefs";
@@ -75,6 +76,11 @@ const links: {
     href: "/vendor/dashboard/notifications",
     label: "Notifications",
     icon: Bell,
+  },
+  {
+    href: "/vendor/dashboard/account-status",
+    label: "Account Status",
+    icon: ShieldAlert,
   },
   {
     href: "/vendor/dashboard/settings",
@@ -158,7 +164,8 @@ export function VendorSidebar({
   }
 
   return (
-    <aside className="flex min-h-screen w-64 shrink-0 flex-col bg-footerDark text-white">
+    <aside className="sticky top-0 h-screen w-64 shrink-0 overflow-y-auto bg-footerDark text-white">
+      <div className="flex min-h-full flex-col">
       <div className="border-b border-white/10 p-4">
         <div className="min-w-0 flex-1">
           <LogoMark
@@ -223,6 +230,7 @@ export function VendorSidebar({
           <LogOut className="h-4 w-4 shrink-0" />
           Logout
         </button>
+      </div>
       </div>
     </aside>
   );

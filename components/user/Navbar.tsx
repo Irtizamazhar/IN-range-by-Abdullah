@@ -36,6 +36,16 @@ type SearchSuggestion = {
   image: string | null;
 };
 
+const POPULAR_SEARCH_TERMS = [
+  "wireless earbuds",
+  "smart watch",
+  "nike shoes",
+  "iphone case",
+  "laptop bag",
+  "face cream",
+];
+const RECENT_SEARCH_KEY = "inrange_recent_searches";
+
 type NavItem = {
   href: string;
   label: string;
@@ -96,6 +106,8 @@ export function Navbar({ whatsappNumber }: { whatsappNumber: string }) {
 
   const [searchQuery, setSearchQuery] = useState(urlSearchQuery);
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
+  const [keywordSuggestions, setKeywordSuggestions] = useState<string[]>([]);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -104,6 +116,21 @@ export function Navbar({ whatsappNumber }: { whatsappNumber: string }) {
   useEffect(() => {
     setSearchQuery(urlSearchQuery);
   }, [urlSearchQuery]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(RECENT_SEARCH_KEY);
+      if (!raw) return;
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) {
+        setRecentSearches(
+          arr.filter((x): x is string => typeof x === "string").slice(0, 6)
+        );
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -140,7 +167,7 @@ export function Navbar({ whatsappNumber }: { whatsappNumber: string }) {
     const q = searchQuery.trim();
     if (q.length < 2) {
       setSuggestions([]);
-      setShowDropdown(false);
+      setKeywordSuggestions([]);
       setLoading(false);
       return;
     }
@@ -157,9 +184,25 @@ export function Navbar({ whatsappNumber }: { whatsappNumber: string }) {
         );
         const data = (await res.json()) as { products?: SearchSuggestion[] };
         if (ac.signal.aborted) return;
-        setSuggestions(Array.isArray(data.products) ? data.products : []);
+        const products = Array.isArray(data.products) ? data.products : [];
+        setSuggestions(products);
+        const qLower = q.toLowerCase();
+        const names = products
+          .map((p) => p.name.trim())
+          .filter((n) => n.toLowerCase().includes(qLower));
+        const merged = Array.from(
+          new Set(
+            [...names, ...POPULAR_SEARCH_TERMS.filter((s) => s.includes(qLower))].map((s) =>
+              s.trim()
+            )
+          )
+        ).slice(0, 6);
+        setKeywordSuggestions(merged);
       } catch {
-        if (!ac.signal.aborted) setSuggestions([]);
+        if (!ac.signal.aborted) {
+          setSuggestions([]);
+          setKeywordSuggestions([]);
+        }
       } finally {
         if (!ac.signal.aborted) setLoading(false);
       }
@@ -173,6 +216,22 @@ export function Navbar({ whatsappNumber }: { whatsappNumber: string }) {
 
   const isTrackOrderPage = pathname?.startsWith("/track-order");
   const isCheckoutPage = pathname === "/checkout";
+  const trimmedSearch = searchQuery.trim();
+
+  function saveRecentSearch(term: string) {
+    const t = term.trim();
+    if (!t) return;
+    const next = [t, ...recentSearches.filter((x) => x.toLowerCase() !== t.toLowerCase())].slice(
+      0,
+      6
+    );
+    setRecentSearches(next);
+    try {
+      localStorage.setItem(RECENT_SEARCH_KEY, JSON.stringify(next));
+    } catch {
+      /* ignore */
+    }
+  }
 
   return (
     <>
@@ -387,6 +446,7 @@ export function Navbar({ whatsappNumber }: { whatsappNumber: string }) {
                     role="search"
                     onSubmit={() => {
                       setShowDropdown(false);
+                      saveRecentSearch(searchQuery);
                     }}
                   >
                     <div className="flex min-w-0 w-full overflow-hidden rounded-md border border-borderGray bg-white shadow-sm focus-within:border-[#EAB308] focus-within:ring-2 focus-within:ring-[#EAB308]/25">
@@ -396,7 +456,7 @@ export function Navbar({ whatsappNumber }: { whatsappNumber: string }) {
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         onFocus={() => {
-                          if (searchQuery.trim().length >= 2) setShowDropdown(true);
+                          setShowDropdown(true);
                         }}
                         placeholder="Search products…"
                         autoComplete="off"
@@ -412,22 +472,44 @@ export function Navbar({ whatsappNumber }: { whatsappNumber: string }) {
                     </div>
                   </form>
 
-                  {showDropdown && searchQuery.trim().length >= 2 ? (
+                  {showDropdown ? (
                     <div
                       className="animate-search-suggest-in absolute left-0 right-0 top-full z-50 mt-1.5 max-h-[min(24rem,70vh)] overflow-y-auto rounded-xl border border-borderGray bg-white shadow-xl"
                       aria-label="Search suggestions"
                     >
-                      {loading ? (
+                      {trimmedSearch.length >= 2 && loading ? (
                         <p className="border-b border-borderGray p-3 text-sm text-darkText/50">
                           Searching…
                         </p>
                       ) : null}
 
-                      {!loading && suggestions.length === 0 ? (
+                      {trimmedSearch.length >= 2 &&
+                      !loading &&
+                      suggestions.length === 0 &&
+                      keywordSuggestions.length === 0 ? (
                         <p className="border-b border-borderGray p-3 text-sm text-darkText/60">
                           No products found.
                         </p>
                       ) : null}
+
+                      {trimmedSearch.length >= 2
+                        ? keywordSuggestions.map((term, idx) => (
+                            <button
+                              key={`kw-${term}-${idx}`}
+                              type="button"
+                              onClick={() => {
+                                setSearchQuery(term);
+                                saveRecentSearch(term);
+                                router.push(`/products?search=${encodeURIComponent(term)}`);
+                                setShowDropdown(false);
+                              }}
+                              className="flex w-full cursor-pointer items-center gap-3 border-b border-borderGray p-3 text-left last:border-b-0 hover:bg-lightGray/60"
+                            >
+                              <Search className="h-4 w-4 text-darkText/50" />
+                              <span className="text-sm text-darkText">{term}</span>
+                            </button>
+                          ))
+                        : null}
 
                       {suggestions.map((product) => (
                         <button
@@ -436,7 +518,8 @@ export function Navbar({ whatsappNumber }: { whatsappNumber: string }) {
                           onClick={() => {
                             router.push(`/products/${product.id}`);
                             setShowDropdown(false);
-                            setSearchQuery("");
+                            setSearchQuery(product.name);
+                            saveRecentSearch(product.name);
                           }}
                           className="flex w-full cursor-pointer items-center gap-3 border-b border-borderGray p-3 text-left last:border-b-0 hover:bg-lightGray/60 motion-reduce:transition-none"
                         >
@@ -476,19 +559,71 @@ export function Navbar({ whatsappNumber }: { whatsappNumber: string }) {
                         </button>
                       ))}
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const q = searchQuery.trim();
-                          router.push(
-                            `/products?search=${encodeURIComponent(q)}`
-                          );
-                          setShowDropdown(false);
-                        }}
-                        className="w-full cursor-pointer border-t border-borderGray p-3 text-center text-sm font-semibold text-primaryBlue transition-colors hover:bg-lightGray/60"
-                      >
-                        View all results for &quot;{searchQuery.trim()}&quot;
-                      </button>
+                      {trimmedSearch.length < 2 ? (
+                        <>
+                          {recentSearches.length ? (
+                            <div className="border-b border-borderGray p-3">
+                              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-darkText/50">
+                                Recent searches
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                {recentSearches.map((term) => (
+                                  <button
+                                    key={`recent-${term}`}
+                                    type="button"
+                                    onClick={() => {
+                                      setSearchQuery(term);
+                                      saveRecentSearch(term);
+                                      router.push(`/products?search=${encodeURIComponent(term)}`);
+                                      setShowDropdown(false);
+                                    }}
+                                    className="rounded-full border border-borderGray px-3 py-1 text-xs text-darkText hover:bg-lightGray"
+                                  >
+                                    {term}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ) : null}
+                          <div className="p-3">
+                            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-darkText/50">
+                              Popular searches
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {POPULAR_SEARCH_TERMS.map((term) => (
+                                <button
+                                  key={`pop-${term}`}
+                                  type="button"
+                                  onClick={() => {
+                                    setSearchQuery(term);
+                                    saveRecentSearch(term);
+                                    router.push(`/products?search=${encodeURIComponent(term)}`);
+                                    setShowDropdown(false);
+                                  }}
+                                  className="rounded-full bg-lightGray px-3 py-1 text-xs text-darkText hover:bg-lightGray/70"
+                                >
+                                  {term}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const q = trimmedSearch;
+                            saveRecentSearch(q);
+                            router.push(
+                              `/products?search=${encodeURIComponent(q)}`
+                            );
+                            setShowDropdown(false);
+                          }}
+                          className="w-full cursor-pointer border-t border-borderGray p-3 text-center text-sm font-semibold text-primaryBlue transition-colors hover:bg-lightGray/60"
+                        >
+                          View all results for &quot;{trimmedSearch}&quot;
+                        </button>
+                      )}
                     </div>
                   ) : null}
                 </div>

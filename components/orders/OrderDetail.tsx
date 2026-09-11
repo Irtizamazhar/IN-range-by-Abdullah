@@ -1,11 +1,19 @@
 "use client";
 
+import Image from "next/image";
 import { formatPKR } from "@/lib/format";
 import type { ShopOrderJson } from "@/lib/vendor-shop-order-helpers";
 import { StatusTimeline } from "./StatusTimeline";
 
 export type OrderDetailModel = ShopOrderJson & {
   paymentMethodLabel: string;
+  deliveryCharge?: string;
+  checkoutTotalAmount?: string;
+  labelItems?: Array<{
+    name: string;
+    image: string | null;
+    quantity: number;
+  }>;
 };
 
 type Props = {
@@ -55,16 +63,35 @@ export function OrderDetail({ order, showVendorBlock }: Props) {
           {order.items.map((it, idx) => (
             <li
               key={`${it.productId}-${idx}`}
-              className="flex flex-wrap justify-between gap-2 p-3 text-sm"
+              className="flex flex-wrap justify-between gap-3 p-3 text-sm"
             >
-              <div>
-                <span className="font-medium text-darkText">
-                  {it.productName}
-                </span>
-                {it.variant ? (
-                  <span className="text-darkText/60"> · {it.variant}</span>
-                ) : null}
-                <span className="text-darkText/60"> × {it.quantity}</span>
+              <div className="flex items-start gap-3">
+                <div className="h-12 w-12 shrink-0 overflow-hidden rounded-md border border-borderGray bg-lightGray">
+                  {it.image ? (
+                    <Image
+                      src={it.image}
+                      alt={it.productName}
+                      width={48}
+                      height={48}
+                      unoptimized
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-xs font-semibold uppercase text-darkText/50">
+                      IMG
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <span className="font-medium text-darkText">
+                    {it.productName}
+                  </span>
+                  {it.variant ? (
+                    <span className="text-darkText/60"> · {it.variant}</span>
+                  ) : null}
+                  <span className="text-darkText/60"> × {it.quantity}</span>
+                </div>
               </div>
               <div className="text-right">
                 <div className="text-darkText/60">

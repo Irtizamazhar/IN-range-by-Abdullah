@@ -17,6 +17,7 @@ import { clientIp } from "@/lib/vendor-ip";
 import { randomBytes } from "crypto";
 import { resolveVendorJwtSecretKey } from "@/lib/vendor-jwt-secret";
 import { vendorEmailVerificationRequired } from "@/lib/vendor-email-verification-flag";
+import { signVendorAppealToken, VENDOR_APPEAL_COOKIE } from "@/lib/vendor-appeal-auth";
 
 const loginLimiter = createLoginRateLimiter();
 
@@ -65,7 +66,21 @@ export async function POST(req: NextRequest) {
   const email = sanitizePlainText(parsed.data.email, 255).toLowerCase();
   const ua = req.headers.get("user-agent")?.slice(0, 2000) ?? null;
 
-  const vendor = await prisma.vendor.findUnique({ where: { email } });
+  const vendor = await prisma.vendor.findUnique({
+    where: { email },
+    select: {
+      id: true,
+      email: true,
+      shopName: true,
+      ownerName: true,
+      passwordHash: true,
+      status: true,
+      loginAttempts: true,
+      lockedUntil: true,
+      isEmailVerified: true,
+      rejectionReason: true,
+    },
+  });
   if (!vendor) {
     return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
   }
@@ -91,12 +106,24 @@ export async function POST(req: NextRequest) {
     await prisma.vendor.update({
       where: { id: vendor.id },
       data: lock,
+      select: { id: true },
     });
     return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
   }
 
   /** Fresh row: admin may have approved while this form was open (avoids stale `pending`). */
-  const live = await prisma.vendor.findUnique({ where: { id: vendor.id } });
+  const live = await prisma.vendor.findUnique({
+    where: { id: vendor.id },
+    select: {
+      id: true,
+      email: true,
+      shopName: true,
+      ownerName: true,
+      status: true,
+      isEmailVerified: true,
+      rejectionReason: true,
+    },
+  });
   if (!live) {
     return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
   }
@@ -135,15 +162,22 @@ export async function POST(req: NextRequest) {
   }
 
   if (live.status === "suspended") {
-    return NextResponse.json(
+    const res = NextResponse.json(
       { code: "suspended", error: "Account suspended" },
       { status: 403 }
     );
+    res.cookies.set(VENDOR_APPEAL_COOKIE, await signVendorAppealToken(live.id), {
+      ...cookieBase(),
+      path: "/api/vendor/appeal",
+      maxAge: 30 * 60,
+    });
+    return res;
   }
 
   await prisma.vendor.update({
     where: { id: live.id },
     data: { loginAttempts: 0, lockedUntil: null, lastLoginAt: new Date() },
+    select: { id: true },
   });
 
   const rememberMe = parsed.data.rememberMe;

@@ -250,6 +250,11 @@ model Vendor {
   profileImage          String?             @db.Text
   shopLogo              String?             @db.Text
   specialCommissionRate Decimal?            @db.Decimal(5, 2)
+  suspendedAt           DateTime?
+  suspensionReason      String?             @db.Text
+  suspendedBy           String?
+  suspensionUntil       DateTime?
+  suspensionCount       Int                 @default(0)
   totalSales            Decimal             @default(0) @db.Decimal(14, 2)
   totalOrders           Int                 @default(0)
   loginAttempts         Int                 @default(0)

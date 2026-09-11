@@ -41,6 +41,8 @@ type AdminVendorRow = {
   documents: VendorDoc[];
 };
 
+type RiskMini = { riskLevel: "GREEN" | "YELLOW" | "RED"; riskScore: number };
+
 const STATUS_OPTIONS: { value: "" | VendorStatus; label: string }[] = [
   { value: "", label: "All" },
   { value: "pending", label: "Pending review" },
@@ -80,6 +82,7 @@ export default function AdminVendorsPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [rejectFor, setRejectFor] = useState<AdminVendorRow | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [riskByVendor, setRiskByVendor] = useState<Record<string, RiskMini>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -109,6 +112,41 @@ export default function AdminVendorsPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!rows.length) {
+        setRiskByVendor({});
+        return;
+      }
+      const entries = await Promise.all(
+        rows.map(async (r) => {
+          try {
+            const res = await fetch(
+              `/api/admin/vendors/${encodeURIComponent(r.id)}/risk-score`
+            );
+            const json = (await res.json()) as
+              | { riskLevel: "GREEN" | "YELLOW" | "RED"; riskScore: number }
+              | { error?: string };
+            if (!res.ok || !("riskLevel" in json)) return [r.id, null] as const;
+            return [r.id, json] as const;
+          } catch {
+            return [r.id, null] as const;
+          }
+        })
+      );
+      if (cancelled) return;
+      const next: Record<string, RiskMini> = {};
+      for (const [id, risk] of entries) {
+        if (risk) next[id] = risk;
+      }
+      setRiskByVendor(next);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [rows]);
 
   async function patch(
     id: string,
@@ -219,8 +257,34 @@ export default function AdminVendorsPage() {
                       Applied {formatDate(v.createdAt)} · {v.city} ·{" "}
                       {v.primaryCategory}
                     </p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="text-xs font-semibold text-darkText/70">
+                        Risk:
+                      </span>
+                      {riskByVendor[v.id] ? (
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                            riskByVendor[v.id].riskLevel === "GREEN"
+                              ? "bg-green-100 text-green-700"
+                              : riskByVendor[v.id].riskLevel === "YELLOW"
+                                ? "bg-yellow-100 text-yellow-700"
+                                : "bg-red-100 text-red-700"
+                          }`}
+                        >
+                          {riskByVendor[v.id].riskLevel} ({riskByVendor[v.id].riskScore})
+                        </span>
+                      ) : (
+                        <span className="text-xs text-darkText/50">—</span>
+                      )}
+                    </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
+                    <a
+                      href={`/admin/vendors/${encodeURIComponent(v.id)}/suspension`}
+                      className="rounded-lg border border-primaryBlue px-3 py-2 text-sm font-semibold text-primaryBlue hover:bg-primaryBlue/10"
+                    >
+                      View Risk Profile
+                    </a>
                     <button
                       type="button"
                       onClick={() =>

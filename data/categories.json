@@ -57,7 +57,7 @@
     "id": 12,
     "name": "weqw",
     "image": "/uploads/categories/1775207975702-img-3.jpg",
-    "showOnHome": false
+    "showOnHome": true
   },
   {
     "id": 13,
@@ -70,5 +70,17 @@
     "name": "wsa",
     "image": "/uploads/categories/1775208043171-newplot.png",
     "showOnHome": false
+  },
+  {
+    "id": 15,
+    "name": "kksd",
+    "image": "/uploads/categories/1787329870757-screenshot-2026-03-30-010217.png",
+    "showOnHome": true
+  },
+  {
+    "id": 16,
+    "name": "65644",
+    "image": "/uploads/categories/1787329880390-e4212d22-d3c8-4373-8b94-ba35b71d02ed.png",
+    "showOnHome": true
   }
 ]

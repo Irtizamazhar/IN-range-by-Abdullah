@@ -1,5 +1,22 @@
 [
   {
+    "id": 10,
+    "name": "uewyi",
+    "price": 22231,
+    "originalPrice": 32323424,
+    "category": "Kitchen Accessories",
+    "image": "/uploads/products/1787329787355-f88f6c72-61bf-4417-af19-8d33befcc6f5.png",
+    "images": [
+      "/uploads/products/1787329787355-f88f6c72-61bf-4417-af19-8d33befcc6f5.png"
+    ],
+    "description": "hello",
+    "isNew": true,
+    "stock": 3122,
+    "inStock": true,
+    "isFeatured": false,
+    "createdAt": "2026-08-21"
+  },
+  {
     "id": 9,
     "name": "3e",
     "price": 432243,

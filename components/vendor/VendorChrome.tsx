@@ -11,7 +11,7 @@ export function VendorChrome({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen bg-[#F8F9FA]">
+    <div className="flex h-screen overflow-hidden bg-[#F8F9FA]">
       <Suspense
         fallback={
           <aside
@@ -22,8 +22,8 @@ export function VendorChrome({
       >
         <VendorSidebar shopName={shopName} />
       </Suspense>
-      <div className="min-w-0 flex-1 overflow-auto">
-        <div className="min-h-screen">{children}</div>
+      <div className="min-w-0 flex-1 overflow-y-auto">
+        <div className="min-h-full">{children}</div>
       </div>
     </div>
   );

@@ -41,6 +41,7 @@ export type MarketplacePrisma = {
     update(args: {
       where: { id: string };
       data: Record<string, unknown>;
+      select?: Record<string, unknown>;
     }): Promise<unknown>;
   };
 };

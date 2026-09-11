@@ -8,15 +8,13 @@ import toast from "react-hot-toast";
 import { formatPKR } from "@/lib/format";
 import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 import {
-  Check,
   ChevronRight,
   Clipboard,
-  CreditCard,
+  Download,
   Mail,
   MapPin,
   Phone,
   Printer,
-  Upload,
   User,
   X,
 } from "lucide-react";
@@ -28,9 +26,8 @@ export default function AdminOrderDetailPage() {
   const [status, setStatus] = useState("");
   const [payStatus, setPayStatus] = useState("");
   const [tracking, setTracking] = useState("");
-  const [rejectReason, setRejectReason] = useState("");
-  const [showReject, setShowReject] = useState(false);
   const [savingStatus, setSavingStatus] = useState(false);
+  const [showShippingLabel, setShowShippingLabel] = useState(false);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/orders/${id}?admin=1`);
@@ -77,43 +74,6 @@ export default function AdminOrderDetailPage() {
     }
   }
 
-  async function markPaymentReceived() {
-    const res = await fetch(`/api/orders/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ paymentStatus: "received" }),
-    });
-    if (!res.ok) {
-      toast.error("Failed");
-      return;
-    }
-    toast.success("Payment marked received");
-    setPayStatus("received");
-    load();
-  }
-
-  async function markPaymentRejected() {
-    if (!rejectReason.trim()) {
-      toast.error("Reason likhein");
-      return;
-    }
-    const res = await fetch(`/api/orders/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        paymentStatus: "rejected",
-        paymentRejectedReason: rejectReason.trim(),
-      }),
-    });
-    if (!res.ok) {
-      toast.error("Failed");
-      return;
-    }
-    toast.success("Payment rejected — customer ko email gayi");
-    setShowReject(false);
-    load();
-  }
-
   if (!order) {
     return (
       <div className="p-8 text-darkText/50">
@@ -126,6 +86,7 @@ export default function AdminOrderDetailPage() {
   }
 
   const products = (order.products as Record<string, unknown>[]) || [];
+  const totalAmount = Number(order.totalAmount || 0);
   const orderNumber = String(order.orderNumber || id).toUpperCase();
   const createdAt = order.createdAt ? new Date(String(order.createdAt)) : null;
   const formattedDate = createdAt
@@ -191,57 +152,89 @@ export default function AdminOrderDetailPage() {
       toast.error("Order not loaded");
       return;
     }
-    const labelHtml = `
-      <html>
-        <head>
-          <title>Shipping Label - ${orderNumber}</title>
-          <style>
-            body { font-family: "Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif; margin: 20px; color: #111827; letter-spacing: -0.5px; }
-            .label { border: 2px solid #111827; border-radius: 12px; padding: 16px; max-width: 520px; }
-            .top { display: flex; justify-content: space-between; margin-bottom: 10px; }
-            .title { font-size: 22px; font-weight: 800; }
-            .meta { font-size: 12px; color: #4b5563; }
-            .row { margin: 8px 0; }
-            .name { font-size: 20px; font-weight: 800; margin: 4px 0; }
-            .phone { font-size: 18px; font-weight: 700; }
-            .address { white-space: pre-wrap; line-height: 1.45; }
-            .track { margin-top: 12px; border-top: 1px dashed #9ca3af; padding-top: 10px; font-size: 14px; }
-            .track strong { font-size: 18px; }
-          </style>
-        </head>
-        <body>
-          <div class="label">
-            <div class="top">
-              <div class="title">In Range By Abdullah</div>
-              <div class="meta">Order: ${orderNumber}</div>
-            </div>
-            <div class="row">
-              <div class="meta">Buyer</div>
-              <div class="name">${String(order.customerName || "")}</div>
-              <div class="phone">${String(order.customerPhone || "")}</div>
-            </div>
-            <div class="row">
-              <div class="meta">Delivery Address</div>
-              <div class="address">${String(order.customerAddress || "")}
-${String(order.city || "")}
-${String(order.region || order.province || "")}</div>
-            </div>
-            <div class="track">
-              Tracking Number: <strong>${tracking.trim() || "Not assigned"}</strong>
-            </div>
-          </div>
-          <script>window.print();</script>
-        </body>
-      </html>
-    `;
-    const win = window.open("", "_blank", "width=800,height=600");
-    if (!win) {
-      toast.error("Could not open print window");
+    window.print();
+  }
+
+  async function downloadShippingLabel() {
+    if (!order) {
+      toast.error("Order not loaded");
       return;
     }
-    win.document.open();
-    win.document.write(labelHtml);
-    win.document.close();
+    const source = document.getElementById("shipping-label-print-area");
+    if (!source) {
+      toast.error("Label not found");
+      return;
+    }
+
+    try {
+      const rect = source.getBoundingClientRect();
+      const clone = source.cloneNode(true) as HTMLElement;
+      clone.setAttribute(
+        "style",
+        [
+          "margin:0",
+          "padding:16px",
+          "width:100%",
+          "box-sizing:border-box",
+          "background:#ffffff",
+        ].join(";")
+      );
+
+      const inlineStyles = (srcEl: Element, targetEl: Element) => {
+        const srcHtml = srcEl as HTMLElement;
+        const targetHtml = targetEl as HTMLElement;
+        const style = window.getComputedStyle(srcHtml);
+        const inline = Array.from(style)
+          .map((prop) => `${prop}:${style.getPropertyValue(prop)};`)
+          .join("");
+        targetHtml.setAttribute("style", inline);
+        const srcChildren = Array.from(srcEl.children);
+        const targetChildren = Array.from(targetEl.children);
+        srcChildren.forEach((child, idx) => {
+          if (targetChildren[idx]) inlineStyles(child, targetChildren[idx]!);
+        });
+      };
+      inlineStyles(source, clone);
+
+      const serializer = new XMLSerializer();
+      const html = serializer.serializeToString(clone);
+      const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="${Math.ceil(rect.width)}" height="${Math.ceil(rect.height)}">
+          <foreignObject width="100%" height="100%">${html}</foreignObject>
+        </svg>
+      `;
+      const svgUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+
+      const image = new window.Image();
+      image.crossOrigin = "anonymous";
+      image.src = svgUrl;
+      await new Promise<void>((resolve, reject) => {
+        image.onload = () => resolve();
+        image.onerror = () => reject(new Error("Could not render label"));
+      });
+
+      const scale = 2;
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.ceil(rect.width * scale));
+      canvas.height = Math.max(1, Math.ceil(rect.height * scale));
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        toast.error("Could not prepare download");
+        return;
+      }
+      ctx.scale(scale, scale);
+      ctx.drawImage(image, 0, 0, rect.width, rect.height);
+
+      const a = document.createElement("a");
+      a.href = canvas.toDataURL("image/png");
+      a.download = `shipping-label-${orderNumber}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      toast.success("Label image downloaded");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Download failed");
+    }
   }
 
   return (
@@ -384,78 +377,6 @@ ${String(order.region || order.province || "")}</div>
             </div>
           </div>
 
-          <div className={cardClass}>
-            <div className="mb-4 flex items-center justify-between border-b border-gray-100 pb-3">
-              <div className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-indigo-500" />
-                <h2 className="text-lg font-bold text-gray-900">Payment</h2>
-              </div>
-              <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-gray-700">
-                {String(order.paymentMethod)}
-              </span>
-            </div>
-            <div className="space-y-4">
-              {order.paymentProofUrl || order.paymentScreenshot ? (
-                <div className="relative aspect-video w-full max-h-64 overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
-                  <Image
-                    src={String(order.paymentProofUrl || order.paymentScreenshot)}
-                    alt="Payment proof"
-                    fill
-                    className="object-contain"
-                    sizes="(max-width: 768px) 100vw, 896px"
-                    unoptimized={shouldUnoptimizeImageSrc(
-                      String(order.paymentProofUrl || order.paymentScreenshot)
-                    )}
-                  />
-                </div>
-              ) : (
-                <div className="flex items-center gap-3 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-sm text-gray-500">
-                  <Upload className="h-4 w-4" />
-                  <span>No payment proof uploaded</span>
-                </div>
-              )}
-              <div className="flex flex-wrap gap-3 pt-1">
-                <button
-                  type="button"
-                  onClick={markPaymentReceived}
-                  className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-700"
-                >
-                  <Check className="h-4 w-4" />
-                  Mark payment received
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowReject(true)}
-                  className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
-                >
-                  <X className="h-4 w-4" />
-                  Mark payment rejected
-                </button>
-              </div>
-              {showReject ? (
-                <div className="space-y-2 border-t border-gray-100 pt-3">
-                  <textarea
-                    className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm transition focus:border-red-300 focus:outline-none"
-                    placeholder="Rejection reason (customer ko email jayegi)"
-                    value={rejectReason}
-                    onChange={(e) => setRejectReason(e.target.value)}
-                  />
-                  <button
-                    type="button"
-                    onClick={markPaymentRejected}
-                    className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
-                  >
-                    Confirm reject
-                  </button>
-                </div>
-              ) : null}
-              {order.paymentRejectedReason ? (
-                <p className="text-sm font-medium text-red-600">
-                  Rejected: {String(order.paymentRejectedReason)}
-                </p>
-              ) : null}
-            </div>
-          </div>
         </div>
 
         <div className={`${cardClass} mb-6`}>
@@ -542,11 +463,11 @@ ${String(order.region || order.province || "")}</div>
             </h2>
             <button
               type="button"
-              onClick={printShippingLabel}
-              className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-700 transition"
+              onClick={() => setShowShippingLabel(true)}
+              className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-indigo-700"
             >
               <Printer className="h-4 w-4" />
-              Print label
+              Open label
             </button>
           </div>
           <div className="rounded-xl border border-dashed border-gray-300 p-4 text-sm text-gray-700 space-y-2">
@@ -566,9 +487,113 @@ ${String(order.region || order.province || "")}</div>
               <span className="font-semibold">Tracking:</span>{" "}
               {tracking.trim() || "Not assigned"}
             </p>
+            <p>
+              <span className="font-semibold">Grand Total:</span> {formatPKR(totalAmount)}
+            </p>
           </div>
         </div>
+
+        {showShippingLabel ? (
+          <div className="fixed inset-0 z-50">
+            <button
+              type="button"
+              onClick={() => setShowShippingLabel(false)}
+              className="absolute inset-0 bg-black/35"
+              aria-label="Close shipping label panel"
+            />
+            <aside className="absolute right-0 top-0 h-full w-full max-w-[560px] overflow-y-auto bg-white p-5 shadow-2xl sm:p-6">
+              <div className="mb-4 flex items-center justify-between border-b border-gray-200 pb-3">
+                <h3 className="text-base font-bold text-gray-900">
+                  Shipping Label
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowShippingLabel(false)}
+                  className="rounded-md p-1.5 text-gray-600 hover:bg-gray-100"
+                  aria-label="Close"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div id="shipping-label-print-area" className="space-y-4">
+                <div className="rounded-xl border-2 border-gray-900 bg-white p-4 text-gray-900">
+                  <div className="mb-3 flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[11px] font-bold uppercase tracking-wide text-gray-500">
+                        Courier Label
+                      </p>
+                      <p className="text-lg font-extrabold">In Range By Abdullah</p>
+                    </div>
+                    <p className="text-xs font-semibold text-gray-600">
+                      Order ID: {orderNumber}
+                    </p>
+                  </div>
+
+                  <div className="space-y-1 border-t border-dashed border-gray-300 pt-3">
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-gray-500">
+                      Ship To
+                    </p>
+                    <p className="text-xl font-extrabold text-gray-900">
+                      {String(order.customerName || "N/A")}
+                    </p>
+                    <p className="text-lg font-bold">{String(order.customerPhone || "N/A")}</p>
+                    <p className="pt-1 text-sm font-medium leading-6">
+                      {String(order.customerAddress || "N/A")}
+                    </p>
+                    <p className="text-sm font-medium">{String(order.city || "N/A")}</p>
+                    <p className="border-t border-dashed border-gray-300 pt-2 text-sm font-extrabold">
+                      Grand Total: {formatPKR(totalAmount)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="shipping-label-actions mt-5 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={downloadShippingLabel}
+                  className="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100"
+                >
+                  <Download className="h-4 w-4" />
+                  Download
+                </button>
+                <button
+                  type="button"
+                  onClick={printShippingLabel}
+                  className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+                >
+                  <Printer className="h-4 w-4" />
+                  Print
+                </button>
+              </div>
+            </aside>
+          </div>
+        ) : null}
       </div>
+      <style jsx global>{`
+        @media print {
+          body * {
+            visibility: hidden !important;
+          }
+          #shipping-label-print-area,
+          #shipping-label-print-area * {
+            visibility: visible !important;
+          }
+          #shipping-label-print-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            margin: 0;
+            padding: 12px;
+            background: #fff;
+          }
+          .shipping-label-actions {
+            display: none !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

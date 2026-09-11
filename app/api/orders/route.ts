@@ -13,8 +13,7 @@ import {
   WHERE_PARENT_ORDER_ONLY,
 } from "@/lib/prisma-order-includes";
 import { prisma } from "@/lib/prisma";
-import { sanitizePlainText } from "@/lib/security/sanitize";
-import { notifyAdminNewOrder, notifyAdminScreenshotUploaded } from "@/lib/order-emails";
+import { notifyAdminNewOrder } from "@/lib/order-emails";
 import { createVendorNotification } from "@/lib/vendor-notifications";
 import { primaryProductImageUrl, serializeOrder } from "@/lib/serialize";
 import { resolveCommissionPercent } from "@/lib/vendor-commission";
@@ -92,6 +91,9 @@ export async function POST(req: NextRequest) {
   let body: Record<string, unknown>;
   try {
     body = (await req.json()) as Record<string, unknown>;
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+    }
   } catch {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
@@ -110,10 +112,6 @@ export async function POST(req: NextRequest) {
     city,
     products: rawLines,
     paymentMethod,
-    bankAccount,
-    paymentScreenshot,
-    paymentProofStagingId,
-    cardPaymentMeta,
   } = body as {
     customerName?: string;
     customerPhone?: string;
@@ -122,14 +120,6 @@ export async function POST(req: NextRequest) {
     city?: string;
     products?: CartLine[];
     paymentMethod?: string;
-    bankAccount?: string;
-    paymentScreenshot?: string;
-    paymentProofStagingId?: string;
-    cardPaymentMeta?: {
-      last4?: string;
-      expiry?: string;
-      holderName?: string;
-    };
   };
 
   const lineItems: CartLine[] = Array.isArray(rawLines) ? rawLines : [];
@@ -140,51 +130,24 @@ export async function POST(req: NextRequest) {
   if (!customerName || !customerPhone || !customerEmail || !customerAddress || !city) {
     return NextResponse.json({ error: "Missing customer fields" }, { status: 400 });
   }
-  if (
-    paymentMethod !== "bank_transfer" &&
-    paymentMethod !== "cod" &&
-    paymentMethod !== "card"
-  ) {
-    return NextResponse.json({ error: "Invalid payment method" }, { status: 400 });
+  if (paymentMethod && paymentMethod !== "cod") {
+    return NextResponse.json(
+      { error: "Only Cash on Delivery (COD) is available" },
+      { status: 400 }
+    );
   }
 
   const settings = await getOrCreateSettings();
-
-  let orderNotes: string | null = null;
-  if (paymentMethod === "card") {
-    const meta = cardPaymentMeta;
-    const last4 = String(meta?.last4 || "").replace(/\D/g, "").slice(0, 4);
-    const expiryRaw = String(meta?.expiry || "").trim();
-    const expDigits = expiryRaw.replace(/\D/g, "").slice(0, 4);
-    const exp =
-      expDigits.length === 4
-        ? `${expDigits.slice(0, 2)}/${expDigits.slice(2)}`
-        : "";
-    const holder = sanitizePlainText(String(meta?.holderName || ""), 120);
-    const mm = parseInt(expDigits.slice(0, 2), 10);
-    if (last4.length !== 4 || exp.length !== 5 || !holder.length) {
-      return NextResponse.json(
-        { error: "Please complete all card fields (last 4 digits required)" },
-        { status: 400 }
-      );
-    }
-    if (!Number.isFinite(mm) || mm < 1 || mm > 12) {
-      return NextResponse.json({ error: "Invalid card expiry month" }, { status: 400 });
-    }
-    orderNotes = `Card payment (manual verification): •••• ${last4} | Exp ${exp} | ${holder}`;
-  }
-
-  if (paymentMethod === "cod") {
-    const allowed = settings.codAvailableCities.some(
-      (cityName: string) =>
-        cityName.toLowerCase() === String(city).trim().toLowerCase()
+  const effectivePaymentMethod = "cod";
+  const allowed = settings.codAvailableCities.some(
+    (cityName: string) =>
+      cityName.toLowerCase() === String(city).trim().toLowerCase()
+  );
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "COD is not available in this city" },
+      { status: 400 }
     );
-    if (!allowed) {
-      return NextResponse.json(
-        { error: "COD is not available in this city" },
-        { status: 400 }
-      );
-    }
   }
 
   try {
@@ -209,6 +172,13 @@ export async function POST(req: NextRequest) {
   }> = [];
 
   for (const line of lineItems) {
+    if (
+      !line || typeof line !== "object" ||
+      (typeof line.quantity !== "number" && typeof line.quantity !== "string") ||
+      !Number.isSafeInteger(Number(line.quantity)) || Number(line.quantity) < 1
+    ) {
+      return NextResponse.json({ error: "Invalid product quantity" }, { status: 400 });
+    }
     const lineProductId = String(line.productId || "");
     if (lineProductId.startsWith("na-")) {
       const naId = Number(lineProductId.slice(3));
@@ -273,7 +243,15 @@ export async function POST(req: NextRequest) {
         publishedProductId: p.id,
         status: "active",
       },
-      include: { vendor: true },
+      include: {
+        vendor: {
+          select: {
+            id: true,
+            status: true,
+            specialCommissionRate: true,
+          },
+        },
+      },
     });
 
     let vendorSlice: VendorSlice | undefined;
@@ -330,28 +308,6 @@ export async function POST(req: NextRequest) {
 
     const mp = getMarketplaceTx(tx);
 
-    let paymentProofData: Uint8Array<ArrayBuffer> | undefined;
-    let paymentProofMime: string | undefined;
-    let paymentShot: string | null = null;
-
-    if (paymentMethod === "bank_transfer") {
-      if (paymentProofStagingId) {
-        const st = await tx.paymentProofStaging.findUnique({
-          where: { id: String(paymentProofStagingId) },
-        });
-        if (st) {
-          const raw = new Uint8Array(st.data);
-          const copy = new Uint8Array(raw.byteLength);
-          copy.set(raw);
-          paymentProofData = copy as Uint8Array<ArrayBuffer>;
-          paymentProofMime = st.mimeType;
-          await tx.paymentProofStaging.delete({ where: { id: st.id } });
-        }
-      } else if (paymentScreenshot) {
-        paymentShot = String(paymentScreenshot);
-      }
-    }
-
     const o = await tx.order.create({
       data: {
         orderNumber,
@@ -361,17 +317,14 @@ export async function POST(req: NextRequest) {
         customerAddress: String(customerAddress).trim(),
         city: String(city).trim(),
         totalAmount,
-        paymentMethod,
-        bankAccount:
-          paymentMethod === "bank_transfer" ? String(bankAccount || "") : null,
-        paymentScreenshot:
-          paymentMethod === "bank_transfer" && paymentShot ? paymentShot : null,
-        paymentProofData,
-        paymentProofMime,
-        notes: orderNotes,
-        paymentStatus:
-          paymentMethod === "cod" ? "received" : "pending",
-        orderStatus: paymentMethod === "cod" ? "confirmed" : "pending",
+        paymentMethod: effectivePaymentMethod,
+        bankAccount: null,
+        paymentScreenshot: null,
+        paymentProofData: null,
+        paymentProofMime: null,
+        notes: null,
+        paymentStatus: "received",
+        orderStatus: "confirmed",
         isRead: false,
         orderItems: {
           create: resolvedProducts.map((r) => ({
@@ -407,6 +360,7 @@ export async function POST(req: NextRequest) {
       type ItemSnap = {
         productId: string | null;
         productName: string;
+        image: string;
         quantity: number;
         price: number;
         subtotal: number;
@@ -437,6 +391,7 @@ export async function POST(req: NextRequest) {
         items.push({
           productId: line.orderItemProductId ?? line.productId,
           productName: line.name,
+          image: line.image,
           quantity: line.quantity,
           price: line.price,
           subtotal: saleAmount,
@@ -469,7 +424,7 @@ export async function POST(req: NextRequest) {
           totalAmount: new Prisma.Decimal(totalSale.toFixed(2)),
           commissionAmount: new Prisma.Decimal(totalComm.toFixed(2)),
           netAmount: new Prisma.Decimal(totalNet.toFixed(2)),
-          paymentMethod: paymentMethod,
+          paymentMethod: effectivePaymentMethod,
           paymentStatus: o.paymentStatus,
           status: "pending",
           statusHistory,
@@ -508,13 +463,14 @@ export async function POST(req: NextRequest) {
           },
         });
 
-        await mp.vendorProduct.update({
-          where: { id: vs.vendorProductId },
+        const vendorStock = await tx.vendorProduct.updateMany({
+          where: { id: vs.vendorProductId, stock: { gte: line.quantity } },
           data: {
             stock: { decrement: line.quantity },
             totalSold: { increment: line.quantity },
           },
         });
+        if (vendorStock.count !== 1) throw new Error("Insufficient stock");
 
         await mp.vendor.update({
           where: { id: vs.vendorId },
@@ -522,16 +478,19 @@ export async function POST(req: NextRequest) {
             totalOrders: { increment: 1 },
             totalSales: { increment: new Prisma.Decimal(saleAmount.toFixed(2)) },
           },
+          // Avoid selecting full Vendor row because some DBs still miss newly-added columns.
+          select: { id: true },
         });
       }
     }
 
     for (const line of resolvedProducts) {
       if (!line.decrementFromPrisma) continue;
-      await tx.product.update({
-        where: { id: line.productId },
+      const productStock = await tx.product.updateMany({
+        where: { id: line.productId, stock: { gte: line.quantity } },
         data: { stock: { decrement: line.quantity } },
       });
+      if (productStock.count !== 1) throw new Error("Insufficient stock");
     }
 
     return o;
@@ -559,22 +518,6 @@ export async function POST(req: NextRequest) {
     console.error("notifyAdminNewOrder", e);
   }
 
-  if (
-    paymentMethod === "bank_transfer" &&
-    (out.paymentScreenshot || order.paymentProofData)
-  ) {
-    try {
-      await notifyAdminScreenshotUploaded({
-        orderNumber: out.orderNumber,
-        customerName: out.customerName,
-        customerEmail: out.customerEmail,
-        totalAmount: out.totalAmount,
-      });
-    } catch (e) {
-      console.error("notifyAdminScreenshotUploaded", e);
-    }
-  }
-
   try {
     const bundles = await prisma.vendorShopOrder.findMany({
       where: { orderId: order.id },
@@ -599,6 +542,12 @@ export async function POST(req: NextRequest) {
   return NextResponse.json(out);
   } catch (e) {
     console.error("POST /api/orders", e);
+    if (e instanceof Error && e.message === "Insufficient stock") {
+      return NextResponse.json(
+        { error: "Stock changed during checkout. Please refresh your cart." },
+        { status: 409 }
+      );
+    }
     const message =
       e instanceof Error ? e.message : "Could not place order";
     const code =

@@ -102,6 +102,7 @@ export type ShopOrderJson = {
   items: Array<{
     productId: string | null;
     productName: string;
+    image?: string | null;
     quantity: number;
     price: number;
     subtotal: number;
@@ -139,6 +140,10 @@ function normalizeItems(raw: unknown): ShopOrderJson["items"] {
           ? String(o.productId)
           : null,
       productName: String(o.productName ?? "Item"),
+      image:
+        o.image != null && String(o.image).trim() !== ""
+          ? String(o.image)
+          : null,
       quantity: Math.max(0, Number(o.quantity) || 0),
       price: Number(o.price) || 0,
       subtotal: Number(o.subtotal) || 0,

@@ -20,6 +20,9 @@ export default function VendorLoginPage() {
   const [pending, setPending] = useState(false);
   const [showAppeal, setShowAppeal] = useState(false);
   const [appealMessage, setAppealMessage] = useState("");
+  const [appealReason, setAppealReason] = useState("general");
+  const [appealProofUrl, setAppealProofUrl] = useState<string | null>(null);
+  const [appealUploading, setAppealUploading] = useState(false);
   const [appealPending, setAppealPending] = useState(false);
   const [appealDone, setAppealDone] = useState(false);
 
@@ -105,7 +108,12 @@ export default function VendorLoginPage() {
       const res = await fetch("/api/vendor/appeal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, message: msg }),
+        body: JSON.stringify({
+          email,
+          message: msg,
+          reasonType: appealReason,
+          paymentProofUrl: appealProofUrl,
+        }),
       });
       const data = (await res.json()) as { error?: string; message?: string };
       if (!res.ok) {
@@ -118,6 +126,30 @@ export default function VendorLoginPage() {
       setError("Network error while submitting appeal.");
     } finally {
       setAppealPending(false);
+    }
+  }
+
+  async function uploadAppealProof(file: File) {
+    setError(null);
+    setAppealUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("email", email.trim().toLowerCase());
+      fd.append("file", file);
+      const res = await fetch("/api/vendor/appeal/upload", {
+        method: "POST",
+        body: fd,
+      });
+      const data = (await res.json()) as { error?: string; url?: string };
+      if (!res.ok || !data.url) {
+        setError(data.error || "Could not upload screenshot.");
+        return;
+      }
+      setAppealProofUrl(data.url);
+    } catch {
+      setError("Network error while uploading screenshot.");
+    } finally {
+      setAppealUploading(false);
     }
   }
 
@@ -198,6 +230,28 @@ export default function VendorLoginPage() {
                 <p className="text-xs font-semibold text-amber-900">
                   Appeal for account reactivation
                 </p>
+                <div className="mt-2 rounded-lg border border-amber-300/70 bg-white/80 p-3 text-xs text-amber-900">
+                  <p className="font-bold">Why an account can be suspended</p>
+                  <ul className="mt-1 list-disc space-y-1 pl-4">
+                    <li>Policy violations (fake/replica/prohibited listings)</li>
+                    <li>Repeated order issues (late shipment, cancellations)</li>
+                    <li>Customer complaints with unresolved disputes</li>
+                    <li>Pricing misuse (fake discounts, manipulation)</li>
+                    <li>Account or identity compliance issues</li>
+                  </ul>
+
+                  <p className="mt-3 font-bold">How to submit an effective appeal</p>
+                  <ol className="mt-1 list-decimal space-y-1 pl-4">
+                    <li>Explain what happened clearly and honestly</li>
+                    <li>Mention corrective actions you already took</li>
+                    <li>Commit to policy compliance going forward</li>
+                    <li>Include any useful reference/order details</li>
+                  </ol>
+                  <p className="mt-2 text-[11px] text-amber-800/90">
+                    Admin team reviews appeals manually. If approved, your account
+                    is reactivated and you can sign in again.
+                  </p>
+                </div>
                 <textarea
                   rows={3}
                   value={appealMessage}
@@ -205,9 +259,46 @@ export default function VendorLoginPage() {
                   className="mt-2 w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-amber-500"
                   placeholder="Explain why your account should be reviewed again..."
                 />
+                <div className="mt-2">
+                  <label className="block text-[11px] font-semibold text-amber-900">
+                    Appeal type
+                  </label>
+                  <select
+                    value={appealReason}
+                    onChange={(e) => setAppealReason(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs text-neutral-900 outline-none focus:border-amber-500"
+                  >
+                    <option value="general">General account review</option>
+                    <option value="payment_pending">Pending payment/dues issue</option>
+                    <option value="policy_misunderstanding">Policy misunderstanding</option>
+                  </select>
+                </div>
+                <div className="mt-2">
+                  <label className="block text-[11px] font-semibold text-amber-900">
+                    Upload screenshot (optional)
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/webp"
+                    className="mt-1 w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs text-neutral-900 outline-none focus:border-amber-500"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      void uploadAppealProof(file);
+                    }}
+                  />
+                  {appealUploading ? (
+                    <p className="mt-1 text-[11px] text-amber-700">Uploading...</p>
+                  ) : null}
+                  {appealProofUrl ? (
+                    <p className="mt-1 text-[11px] text-emerald-700">
+                      Screenshot uploaded successfully.
+                    </p>
+                  ) : null}
+                </div>
                 <button
                   type="button"
-                  disabled={appealPending}
+                  disabled={appealPending || appealUploading}
                   onClick={() => void submitAppeal()}
                   className="mt-2 rounded-lg bg-amber-500 px-3 py-2 text-xs font-bold text-white hover:bg-amber-600 disabled:opacity-50"
                 >

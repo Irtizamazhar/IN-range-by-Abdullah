@@ -16,11 +16,13 @@ import {
   Truck,
   Wallet,
   Percent,
+  Bell,
 } from "lucide-react";
 import { LogoMark } from "@/components/user/LogoMark";
 
 const ADMIN_VENDORS_ACK_KEY = "admin_sidebar_vendors_ack";
 const ADMIN_SELLER_ORDERS_ACK_KEY = "admin_sidebar_seller_orders_ack";
+const ADMIN_APPEALS_ACK_KEY = "admin_sidebar_appeals_ack";
 
 function readAck(key: string): number | null {
   if (typeof window === "undefined") return null;
@@ -55,6 +57,11 @@ function isAdminSellerOrdersPath(pathname: string | null): boolean {
   );
 }
 
+function isAdminNotificationsPath(pathname: string | null): boolean {
+  if (!pathname) return false;
+  return pathname === "/admin/notifications" || pathname.startsWith("/admin/notifications/");
+}
+
 const links = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/products", label: "Products", icon: Package },
@@ -77,6 +84,7 @@ const links = [
     label: "Commission",
     icon: Percent,
   },
+  { href: "/admin/notifications", label: "Notifications", icon: Bell },
   { href: "/admin/reviews", label: "Reviews", icon: Star },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
@@ -95,11 +103,15 @@ export function AdminSidebar() {
   const [unreadOrders, setUnreadOrders] = useState(0);
   const [pendingVendors, setPendingVendors] = useState(0);
   const [pendingSellerOrders, setPendingSellerOrders] = useState(0);
+  const [pendingAppeals, setPendingAppeals] = useState(0);
   const [vendorsAck, setVendorsAck] = useState<number | null>(() =>
     typeof window !== "undefined" ? readAck(ADMIN_VENDORS_ACK_KEY) : null
   );
   const [sellerOrdersAck, setSellerOrdersAck] = useState<number | null>(() =>
     typeof window !== "undefined" ? readAck(ADMIN_SELLER_ORDERS_ACK_KEY) : null
+  );
+  const [appealsAck, setAppealsAck] = useState<number | null>(() =>
+    typeof window !== "undefined" ? readAck(ADMIN_APPEALS_ACK_KEY) : null
   );
 
   useEffect(() => {
@@ -115,8 +127,10 @@ export function AdminSidebar() {
     let cancelled = false;
     let vAck = readAck(ADMIN_VENDORS_ACK_KEY);
     let sAck = readAck(ADMIN_SELLER_ORDERS_ACK_KEY);
+    let aAck = readAck(ADMIN_APPEALS_ACK_KEY);
     setVendorsAck(vAck);
     setSellerOrdersAck(sAck);
+    setAppealsAck(aAck);
 
     fetch("/api/admin/sidebar-badges", { credentials: "same-origin" })
       .then((r) =>
@@ -126,12 +140,15 @@ export function AdminSidebar() {
         (data: {
           pendingVendors?: number;
           pendingSellerOrders?: number;
+          pendingAppeals?: number;
         }) => {
           if (cancelled) return;
           const pv = Number(data.pendingVendors ?? 0);
           const pso = Number(data.pendingSellerOrders ?? 0);
+          const pa = Number(data.pendingAppeals ?? 0);
           const vendors = Number.isFinite(pv) ? pv : 0;
           const sellerOrds = Number.isFinite(pso) ? pso : 0;
+          const appeals = Number.isFinite(pa) ? pa : 0;
 
           if (vAck != null && vendors < vAck) {
             vAck = vendors;
@@ -150,17 +167,28 @@ export function AdminSidebar() {
             sAck = sellerOrds;
             writeAck(ADMIN_SELLER_ORDERS_ACK_KEY, sellerOrds);
           }
+          if (aAck != null && appeals < aAck) {
+            aAck = appeals;
+            writeAck(ADMIN_APPEALS_ACK_KEY, appeals);
+          }
+          if (isAdminNotificationsPath(pathname)) {
+            aAck = appeals;
+            writeAck(ADMIN_APPEALS_ACK_KEY, appeals);
+          }
 
           setPendingVendors(vendors);
           setPendingSellerOrders(sellerOrds);
+          setPendingAppeals(appeals);
           setVendorsAck(vAck);
           setSellerOrdersAck(sAck);
+          setAppealsAck(aAck);
         }
       )
       .catch(() => {
         if (!cancelled) {
           setPendingVendors(0);
           setPendingSellerOrders(0);
+          setPendingAppeals(0);
         }
       });
 
@@ -170,7 +198,8 @@ export function AdminSidebar() {
   }, [pathname]);
 
   return (
-    <aside className="w-64 shrink-0 bg-footerDark text-white min-h-screen flex flex-col">
+    <aside className="sticky top-0 h-screen w-64 shrink-0 overflow-y-auto bg-footerDark text-white">
+      <div className="flex min-h-full flex-col">
       <div className="p-4 border-b border-white/10">
         {/* Same /logo.png and default sizing as customer Navbar */}
         <LogoMark
@@ -199,6 +228,11 @@ export function AdminSidebar() {
             href === "/admin/vendor-orders" &&
             sellerOrdersNew > 0 &&
             !onSellerOrders;
+          const onNotifications = isAdminNotificationsPath(pathname);
+          const appealsNew =
+            appealsAck == null ? pendingAppeals : Math.max(0, pendingAppeals - appealsAck);
+          const showAppealsBadge =
+            href === "/admin/notifications" && appealsNew > 0 && !onNotifications;
 
           return (
             <Link
@@ -233,6 +267,14 @@ export function AdminSidebar() {
                   {sellerOrdersNew > 99 ? "99+" : sellerOrdersNew}
                 </span>
               ) : null}
+              {showAppealsBadge ? (
+                <span
+                  className="ml-auto min-w-[1.25rem] rounded-full bg-red-500 px-2 py-0.5 text-center text-[11px] font-bold text-white tabular-nums"
+                  title={`${appealsNew} unresolved appeal(s)`}
+                >
+                  {appealsNew > 99 ? "99+" : appealsNew}
+                </span>
+              ) : null}
             </Link>
           );
         })}
@@ -248,6 +290,7 @@ export function AdminSidebar() {
           <LogOut className="h-4 w-4" />
           Log out
         </button>
+      </div>
       </div>
     </aside>
   );
