@@ -1,23 +1,47 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { Suspense } from "react";
+
 import "./globals.css";
 import { Providers } from "./providers";
 
 const inter = Inter({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700", "800", "900"],
+  weight: [
+    "300",
+    "400",
+    "500",
+    "600",
+    "700",
+    "800",
+    "900",
+  ],
   display: "swap",
   variable: "--font-inter",
 });
 
 export const metadata: Metadata = {
-  title: "joro.pk | Online Shopping Pakistan",
+  title: {
+    default: "JORO.pk | Pakistan Marketplace",
+    template: "%s | JORO.pk",
+  },
+
   description:
-    "Shop quality products with cash on delivery and bank transfer across Pakistan.",
+    "JORO.pk connects customers, products and sellers across Pakistan. Shop products, post your wants and discover trusted marketplace sellers.",
+
   icons: {
     icon: "/icon.svg",
   },
 };
+
+function AppLoadingFallback() {
+  return (
+    <div
+      className="min-h-screen w-full bg-[#F7F8F2]"
+      aria-hidden="true"
+    />
+  );
+}
 
 export default function RootLayout({
   children,
@@ -25,11 +49,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={inter.variable}>
-      <body className="w-full overflow-x-hidden font-sans antialiased">
-        <div className="w-full overflow-x-hidden">
-          <Providers>{children}</Providers>
-        </div>
+    <html
+      lang="en"
+      className={inter.variable}
+      suppressHydrationWarning
+    >
+      <body className="min-h-screen w-full overflow-x-hidden bg-[#F7F8F2] font-sans text-[#111111] antialiased">
+        <Providers>
+          <Suspense fallback={<AppLoadingFallback />}>
+            {children}
+          </Suspense>
+        </Providers>
       </body>
     </html>
   );

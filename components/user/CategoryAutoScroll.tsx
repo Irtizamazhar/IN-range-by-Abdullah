@@ -1,8 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef } from "react";
 import Link from "next/link";
+import { useEffect, useRef } from "react";
+
 import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 
 type CategoryItem = {
@@ -11,66 +12,121 @@ type CategoryItem = {
   image: string;
 };
 
-export function CategoryAutoScroll({ categories }: { categories: CategoryItem[] }) {
-  const ref = useRef<HTMLDivElement | null>(null);
-  const AUTO_SCROLL_MIN_ITEMS = 11;
-  const autoScrollEnabled = categories.length >= AUTO_SCROLL_MIN_ITEMS;
+export function CategoryAutoScroll({
+  categories,
+}: {
+  categories: CategoryItem[];
+}) {
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  const AUTO_SCROLL_MIN_ITEMS = 10;
+  const autoScrollEnabled =
+    categories.length >= AUTO_SCROLL_MIN_ITEMS;
 
   useEffect(() => {
-    const el = ref.current;
-    if (!el || !autoScrollEnabled) return;
+    const scrollContainer = scrollRef.current;
 
-    let rafId = 0;
-    let lastTs = 0;
-    const pixelsPerSecond = 40;
+    if (!scrollContainer || !autoScrollEnabled) {
+      return;
+    }
 
-    const tick = (ts: number) => {
-      if (!lastTs) lastTs = ts;
-      const dt = (ts - lastTs) / 1000;
-      lastTs = ts;
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
 
-      const maxScroll = Math.max(0, el.scrollWidth - el.clientWidth);
-      if (maxScroll <= 1) {
-        rafId = window.requestAnimationFrame(tick);
-        return;
+    if (prefersReducedMotion) {
+      return;
+    }
+
+    let animationFrameId = 0;
+    let previousTimestamp = 0;
+
+    const pixelsPerSecond = 24;
+
+    const tick = (timestamp: number) => {
+      if (previousTimestamp === 0) {
+        previousTimestamp = timestamp;
       }
 
-      const next = el.scrollLeft + pixelsPerSecond * dt;
-      el.scrollLeft = next >= maxScroll ? 0 : next;
+      const deltaSeconds =
+        (timestamp - previousTimestamp) / 1000;
 
-      rafId = window.requestAnimationFrame(tick);
+      previousTimestamp = timestamp;
+
+      const maxScrollLeft = Math.max(
+        0,
+        scrollContainer.scrollWidth -
+          scrollContainer.clientWidth
+      );
+
+      if (maxScrollLeft > 1) {
+        const nextScrollLeft =
+          scrollContainer.scrollLeft +
+          pixelsPerSecond * deltaSeconds;
+
+        if (nextScrollLeft >= maxScrollLeft) {
+          scrollContainer.scrollLeft = 0;
+        } else {
+          scrollContainer.scrollLeft =
+            nextScrollLeft;
+        }
+      }
+
+      animationFrameId =
+        window.requestAnimationFrame(tick);
     };
 
-    rafId = window.requestAnimationFrame(tick);
-    return () => window.cancelAnimationFrame(rafId);
+    animationFrameId =
+      window.requestAnimationFrame(tick);
+
+    return () => {
+      window.cancelAnimationFrame(
+        animationFrameId
+      );
+    };
   }, [autoScrollEnabled]);
+
+  if (categories.length === 0) {
+    return (
+      <div className="flex min-h-[120px] w-full items-center justify-center rounded-[18px] border border-dashed border-black/10 bg-white">
+        <p className="text-[11px] font-semibold text-black/40">
+          No categories available.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div
-      ref={ref}
-      className={`flex w-full gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
-        autoScrollEnabled ? "justify-start" : "justify-center"
-      }`}
+      ref={scrollRef}
+      className="hide-scrollbar flex w-full gap-2.5 overflow-x-auto pb-2"
     >
       {categories.map((category) => (
         <Link
           key={category.id}
-          href={`/products?category=${encodeURIComponent(category.name)}`}
-          className="group shrink-0"
+          href={`/products?category=${encodeURIComponent(
+            category.name
+          )}`}
+          className="group w-[100px] shrink-0 sm:w-[112px]"
         >
-          <div className="relative mx-auto h-[92px] w-[92px] overflow-hidden rounded-full shadow-md transition-transform duration-300 group-hover:scale-105 sm:h-[100px] sm:w-[100px]">
-            <Image
-              src={category.image}
-              alt={category.name}
-              fill
-              className="object-cover"
-              sizes="(max-width: 640px) 92px, 100px"
-              unoptimized={shouldUnoptimizeImageSrc(category.image)}
-            />
+          <div className="rounded-[18px] border border-black/[0.055] bg-white p-2.5 text-center shadow-[0_4px_16px_rgba(17,17,17,.035)] transition-all duration-300 group-hover:-translate-y-1 group-hover:border-brand-primary/45 group-hover:shadow-[0_12px_28px_rgba(17,17,17,.08)]">
+            <div className="relative mx-auto h-[62px] w-full overflow-hidden rounded-[13px] bg-brand-background">
+              <Image
+                src={category.image}
+                alt={category.name}
+                fill
+                sizes="112px"
+                unoptimized={shouldUnoptimizeImageSrc(
+                  category.image
+                )}
+                className="object-contain p-1.5 transition-transform duration-300 group-hover:scale-105"
+              />
+            </div>
+
+            <p className="mt-2 line-clamp-2 min-h-[28px] text-center text-[9px] font-black leading-[14px] text-brand-dark sm:text-[10px]">
+              {category.name}
+            </p>
           </div>
-          <p className="mt-2 max-w-[100px] text-center text-xs font-bold leading-snug text-gray-900 sm:max-w-[108px] sm:text-sm">
-            {category.name}
-          </p>
         </Link>
       ))}
     </div>

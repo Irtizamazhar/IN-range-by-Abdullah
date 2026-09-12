@@ -3,10 +3,15 @@
 import Image from "next/image";
 import Link from "next/link";
 import { memo } from "react";
+import {
+  ArrowRight,
+  ShoppingCart,
+  Star,
+} from "lucide-react";
+
+import { useCart } from "@/context/CartContext";
 import { formatPKR } from "@/lib/format";
 import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
-
-const DARAZ_ORANGE = "var(--brand-ink)";
 
 export type ProductCardData = {
   _id: string;
@@ -19,46 +24,32 @@ export type ProductCardData = {
   href?: string;
   ratingAvg?: number;
   reviewCount?: number;
-  /** For Add to Cart max quantity; omit only when stock is unknown */
   stock?: number;
-  /** When stock is 0/unknown, still allow add if true (e.g. legacy new-arrival rows) */
   inStock?: boolean;
   variants?: string[];
 };
 
-/** Daraz PLP-style: tight yellow ★ row + (review count) only, under price. */
-function DarazStyleRatingRow({
+function ProductRating({
   rating,
   count,
 }: {
   rating: number;
   count: number;
 }) {
-  const avg = Math.min(5, Math.max(0, Number(rating) || 0));
-  const filled = Math.min(5, Math.max(0, Math.round(avg)));
-  const aria = `Average ${avg.toFixed(1)} of 5 stars, ${count} reviews`;
+  const safeRating = Math.max(
+    0,
+    Math.min(5, Number(rating) || 0)
+  );
 
   return (
-    <div className="mt-1 flex items-center gap-1" aria-label={aria}>
-      <span
-        className="inline-flex shrink-0 items-center text-[13px] leading-none"
-        style={{ letterSpacing: "-0.14em" }}
-        aria-hidden
-      >
-        {([0, 1, 2, 3, 4] as const).map((i) => (
-          <span
-            key={i}
-            className={
-              i < filled
-                ? "text-[#FFC400] drop-shadow-[0_0_0.5px_rgba(255,183,0,0.35)]"
-                : "text-[#e5e5e5]"
-            }
-          >
-            ★
-          </span>
-        ))}
+    <div className="flex items-center gap-1">
+      <Star className="h-3 w-3 fill-[#F5A623] text-[#F5A623]" />
+
+      <span className="text-[10px] font-bold text-brand-dark">
+        {safeRating.toFixed(1)}
       </span>
-      <span className="text-[12px] font-normal leading-none text-[#9e9e9e]">
+
+      <span className="text-[9px] font-medium text-black/35">
         ({count})
       </span>
     </div>
@@ -68,96 +59,306 @@ function DarazStyleRatingRow({
 export const ProductCard = memo(function ProductCard({
   product,
   ribbon,
-  badgePosition = "left",
 }: {
   product: ProductCardData;
-  /** Small label on image, e.g. &quot;NEW&quot; / &quot;Pack of 2&quot; */
   ribbon?: string;
   badgePosition?: "left" | "right";
 }) {
-  const img = product.images?.[0];
-  const imgLocal = Boolean(img && shouldUnoptimizeImageSrc(img));
-  const hasDiscount =
-    Boolean(product.originalPrice && product.originalPrice > product.price);
-  const discountPct =
-    product.discountPercent ??
-    (hasDiscount && product.originalPrice
-      ? Math.round((1 - product.price / product.originalPrice) * 100)
-      : 0);
-  const detailHref = product.href || `/products/${product._id}`;
-  const reviews = Math.max(0, Math.floor(Number(product.reviewCount) || 0));
-  const ratingAvg = Number(product.ratingAvg) || 0;
-  /** Approved reviews only (API); show Daraz-style row whenever count > 0. */
-  const showReviews = reviews > 0;
+  const { items, addItem } = useCart();
 
-  const badgeAnchor =
-    badgePosition === "right" ? "right-2 top-2" : "left-2 top-2";
+  const image =
+    product.images?.[0];
+
+  const imageLocal =
+    Boolean(
+      image &&
+        shouldUnoptimizeImageSrc(
+          image
+        )
+    );
+
+  const detailHref =
+    product.href ||
+    `/products/${product._id}`;
+
+  const hasDiscount =
+    Boolean(
+      product.originalPrice &&
+        product.originalPrice >
+          product.price
+    );
+
+  const discountPercent =
+    product.discountPercent ??
+    (hasDiscount &&
+    product.originalPrice
+      ? Math.round(
+          (1 -
+            product.price /
+              product.originalPrice) *
+            100
+        )
+      : 0);
+
+  const reviews = Math.max(
+    0,
+    Math.floor(
+      Number(
+        product.reviewCount
+      ) || 0
+    )
+  );
+
+  const rating =
+    Number(
+      product.ratingAvg
+    ) || 0;
+
+  const stockKnown =
+    typeof product.stock ===
+    "number";
+
+  const maxStock =
+    stockKnown
+      ? Math.max(
+          0,
+          Number(
+            product.stock
+          )
+        )
+      : 99;
+
+  const canAdd =
+    stockKnown
+      ? maxStock > 0
+      : product.inStock !==
+        false;
+
+  const variants =
+    Array.isArray(
+      product.variants
+    )
+      ? product.variants.filter(
+          Boolean
+        )
+      : [];
+
+  const requiresVariant =
+    variants.length > 1;
+
+  const variant =
+    variants.length === 1
+      ? variants[0]
+      : undefined;
+
+  const existing =
+    items.find(
+      (line) =>
+        line.productId ===
+          String(
+            product._id
+          ) &&
+        (line.variant || "") ===
+          (variant || "")
+    );
+
+  function handleAddToCart() {
+    if (
+      !canAdd ||
+      requiresVariant
+    ) {
+      return;
+    }
+
+    const currentQuantity =
+      existing?.quantity ||
+      0;
+
+    addItem({
+      productId:
+        String(
+          product._id
+        ),
+
+      name:
+        product.name,
+
+      price:
+        product.price,
+
+      image:
+        image ||
+        "/logo.png",
+
+      maxStock,
+
+      variant,
+
+      quantity:
+        Math.min(
+          currentQuantity +
+            1,
+          maxStock
+        ),
+    });
+  }
 
   return (
-    <Link
-      href={detailHref}
-      className="flex min-w-0 flex-col overflow-hidden rounded-[4px] border-[0.5px] border-[#e8e8e8] bg-white transition-shadow duration-200 outline-none hover:shadow-[0_2px_8px_rgba(0,0,0,0.1)]"
-    >
-      <div className="relative aspect-square w-full bg-white">
-        {img ? (
-          <Image
-            src={img}
-            alt={product.name || "Product"}
-            fill
-            unoptimized={imgLocal}
-            className="object-cover"
-            sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1280px) 25vw, 16vw"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center bg-white text-sm text-[#999]">
-            No image
-          </div>
-        )}
-        {ribbon ? (
-          <span
-            className={`absolute ${badgeAnchor} z-10 max-w-[calc(100%-1rem)] truncate rounded-sm bg-brand-primary px-1.5 py-0.5 text-tiny font-medium leading-tight text-white`}
-          >
-            {ribbon}
-          </span>
-        ) : null}
-      </div>
-      <div className="min-w-0 flex-1 px-[10px] pb-2 pt-2">
-        <h3 className="line-clamp-2 min-h-[2.5rem] text-sm font-medium leading-snug text-[#333]">
-          {product.name}
-        </h3>
-        <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-          <span
-            className="text-lg font-bold leading-tight"
-            style={{ color: DARAZ_ORANGE }}
-          >
-            {formatPKR(product.price)}
-          </span>
-          {hasDiscount && discountPct > 0 ? (
-            <span
-              className="text-[11px] font-bold leading-tight"
-              style={{ color: DARAZ_ORANGE }}
-            >
-              -{discountPct}%
+    <article className="group flex min-w-0 flex-col overflow-hidden rounded-[16px] border border-black/[0.06] bg-white shadow-xs transition-all duration-250 hover:-translate-y-0.5 hover:border-brand-primary/40 hover:shadow-cardHover">
+      {/* IMAGE */}
+
+      <Link
+        href={detailHref}
+        className="block"
+      >
+        <div className="relative h-[145px] overflow-hidden bg-gradient-to-b from-[#FBFCF9] to-[#F5F7F1] sm:h-[155px]">
+          {image ? (
+            <Image
+              src={image}
+              alt={
+                product.name
+              }
+              fill
+              unoptimized={
+                imageLocal
+              }
+              sizes="(max-width:640px) 50vw, (max-width:1024px) 33vw, 18vw"
+              className="object-contain p-3 transition-transform duration-300 group-hover:scale-[1.05]"
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center text-[10px] font-semibold text-black/25">
+              Product image
+            </div>
+          )}
+
+          {discountPercent >
+          0 ? (
+            <span className="absolute left-2 top-2 rounded-full bg-brand-primary px-2 py-1 text-[9px] font-black text-brand-dark">
+              -
+              {
+                discountPercent
+              }
+              %
+            </span>
+          ) : ribbon ? (
+            <span className="absolute left-2 top-2 rounded-full bg-brand-primary px-2 py-1 text-[9px] font-black text-brand-dark">
+              {ribbon}
             </span>
           ) : null}
         </div>
-        {showReviews ? (
-          <DarazStyleRatingRow rating={ratingAvg} count={reviews} />
-        ) : null}
+      </Link>
+
+      {/* CONTENT */}
+
+      <div className="flex flex-1 flex-col p-3">
+        <p className="truncate text-[9px] font-bold uppercase tracking-[0.07em] text-brand-link/70">
+          {product.category ||
+            "Marketplace"}
+        </p>
+
+        <Link
+          href={
+            detailHref
+          }
+        >
+          <h3 className="mt-1 line-clamp-2 min-h-[34px] text-[12px] font-bold leading-[17px] text-brand-dark transition group-hover:text-brand-link">
+            {
+              product.name
+            }
+          </h3>
+        </Link>
+
+        <div className="mt-1.5 flex flex-wrap items-baseline gap-1.5">
+          <span className="text-[16px] font-black leading-none text-brand-dark">
+            {formatPKR(
+              product.price
+            )}
+          </span>
+
+          {hasDiscount &&
+          product.originalPrice ? (
+            <span className="text-[9px] font-medium text-black/30 line-through">
+              {formatPKR(
+                product.originalPrice
+              )}
+            </span>
+          ) : null}
+        </div>
+
+        <div className="mt-1.5 min-h-[16px]">
+          {reviews > 0 ? (
+            <ProductRating
+              rating={
+                rating
+              }
+              count={
+                reviews
+              }
+            />
+          ) : (
+            <span className="text-[9px] font-medium text-black/35">
+              Available now
+            </span>
+          )}
+        </div>
+
+        <div className="mt-2">
+          {requiresVariant ? (
+            <Link
+              href={
+                detailHref
+              }
+              className="flex h-8 w-full items-center justify-center gap-1 rounded-lg bg-brand-dark text-[10px] font-bold text-white transition hover:bg-brand-primary hover:text-brand-dark"
+            >
+              View Options
+
+              <ArrowRight className="h-3 w-3" />
+            </Link>
+          ) : (
+            <button
+              type="button"
+              disabled={
+                !canAdd
+              }
+              onClick={
+                handleAddToCart
+              }
+              className="flex h-8 w-full items-center justify-center gap-1.5 rounded-lg bg-brand-primary text-[10px] font-bold text-brand-dark transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-black/[0.06] disabled:text-black/30"
+            >
+              <ShoppingCart className="h-3.5 w-3.5" />
+
+              {canAdd
+                ? "Add to Cart"
+                : "Out of Stock"}
+            </button>
+          )}
+        </div>
       </div>
-    </Link>
+    </article>
   );
 });
 
+/* =========================================================
+   COMPACT SKELETON
+========================================================= */
+
 export function ProductCardSkeleton() {
   return (
-    <div className="overflow-hidden rounded-[4px] border-[0.5px] border-[#e8e8e8] bg-white animate-pulse">
-      <div className="aspect-square w-full bg-[#f0f0f0]" />
-      <div className="space-y-2 px-[10px] py-2">
-        <div className="h-3.5 rounded-sm bg-[#e8e8e8]" />
-        <div className="h-3.5 w-4/5 rounded-sm bg-[#e8e8e8]" />
-        <div className="h-4 w-1/2 rounded-sm bg-[#e8e8e8]" />
-        <div className="h-3 w-1/3 rounded-sm bg-[#e8e8e8]" />
+    <div className="overflow-hidden rounded-[16px] border border-black/[0.055] bg-white shadow-xs">
+      <div className="h-[145px] animate-pulse bg-[#F3F4F0] sm:h-[155px]" />
+
+      <div className="space-y-2 p-3">
+        <div className="h-2 w-1/3 animate-pulse rounded-full bg-black/[0.06]" />
+
+        <div className="h-3 animate-pulse rounded-full bg-black/[0.07]" />
+
+        <div className="h-3 w-4/5 animate-pulse rounded-full bg-black/[0.07]" />
+
+        <div className="h-4 w-1/2 animate-pulse rounded-full bg-black/[0.08]" />
+
+        <div className="h-3 w-1/3 animate-pulse rounded-full bg-black/[0.05]" />
+
+        <div className="h-8 animate-pulse rounded-lg bg-black/[0.06]" />
       </div>
     </div>
   );

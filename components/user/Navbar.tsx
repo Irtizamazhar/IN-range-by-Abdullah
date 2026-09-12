@@ -2,31 +2,44 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ShoppingCart,
-  Search,
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  ChevronDown,
+  Heart,
   Menu,
-  X,
-  Home,
   Package,
-  MapPin,
-  FileText,
-  CircleHelp,
-  CircleUser,
-  User,
+  Search,
+  ShoppingCart,
   Store,
+  User,
+  X,
 } from "lucide-react";
+import {
+  signOut,
+  useSession,
+} from "next-auth/react";
+
 import { CartSidebar } from "./CartSidebar";
-import { LogoMark } from "@/components/user/LogoMark";
+import { LogoMark } from "./LogoMark";
 
 import { useCart } from "@/context/CartContext";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
-import { useSession, signOut } from "next-auth/react";
-import type { LucideIcon } from "lucide-react";
-import { sellOnWhatsappUrl } from "@/lib/whatsapp-sell";
+
 import { formatPKR } from "@/lib/format";
+
+/* =========================================================
+   TYPES
+========================================================= */
 
 type SearchSuggestion = {
   id: string;
@@ -36,778 +49,1060 @@ type SearchSuggestion = {
   image: string | null;
 };
 
-const POPULAR_SEARCH_TERMS = [
-  "wireless earbuds",
-  "smart watch",
-  "nike shoes",
-  "iphone case",
-  "laptop bag",
-  "face cream",
-];
-const RECENT_SEARCH_KEY = "inrange_recent_searches";
+/* =========================================================
+   SECOND NAV CATEGORIES
+========================================================= */
 
-type NavItem = {
-  href: string;
-  label: string;
-  icon: LucideIcon;
-  /** Highlight when pathname starts with this (e.g. /products for nested pages) */
-  activePrefix?: string;
-  /** Opens WhatsApp with a pre-filled message (uses site WhatsApp number). */
-  whatsappSell?: boolean;
-  /** Open link in a new browser tab (e.g. vendor registration). */
-  openInNewTab?: boolean;
-};
-
-const nav: NavItem[] = [
-  { href: "/", label: "Home", icon: Home },
-  { href: "/products", label: "All product", icon: Package },
-  {
-    href: "/vendor/register",
-    label: "Sell Now",
-    icon: Store,
-    activePrefix: "/vendor",
-    openInNewTab: true,
-  },
-  { href: "/track-order", label: "Track Order", icon: MapPin },
-  { href: "/return-policy", label: "Return Policy", icon: FileText },
-  { href: "/faq", label: "FAQ", icon: CircleHelp },
+const navCategories = [
+  "Mobiles",
+  "Computers",
+  "Fashion",
+  "Home & Living",
+  "Beauty",
+  "Groceries",
+  "Sports",
+  "Automotive",
 ];
 
-const utilityBarSepClass =
-  "px-2.5 sm:px-3 text-[10px] sm:text-xs text-white/30 select-none tabular-nums";
+/* =========================================================
+   NAVBAR
+========================================================= */
 
-function utilityLinkClass(active: boolean) {
-  return [
-    "text-xs sm:text-sm font-medium text-white/80 transition-colors hover:text-brand-primary",
-    "hover:underline hover:decoration-brand-primary hover:underline-offset-4",
-    active
-      ? "font-semibold text-brand-primary underline decoration-brand-primary underline-offset-4"
-      : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-}
-
-export function Navbar({ whatsappNumber }: { whatsappNumber: string }) {
+export function Navbar({
+  whatsappNumber,
+}: {
+  whatsappNumber: string;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const searchRef = useRef<HTMLDivElement | null>(null);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [cartOpen, setCartOpen] = useState(false);
+
+  const searchRef =
+    useRef<HTMLDivElement | null>(null);
+
+  const profileRef =
+    useRef<HTMLDivElement | null>(null);
+
+  /* =======================================================
+     STATE
+  ======================================================= */
+
+  const [
+    mobileOpen,
+    setMobileOpen,
+  ] = useState(false);
+
+  const [
+    cartOpen,
+    setCartOpen,
+  ] = useState(false);
+
+  const [
+    profileOpen,
+    setProfileOpen,
+  ] = useState(false);
+
+  const [
+    searchQuery,
+    setSearchQuery,
+  ] = useState("");
+
+  const [
+    suggestions,
+    setSuggestions,
+  ] = useState<SearchSuggestion[]>([]);
+
+  const [
+    showDropdown,
+    setShowDropdown,
+  ] = useState(false);
+
+  const [
+    loading,
+    setLoading,
+  ] = useState(false);
+
+  /* =======================================================
+     CONTEXT
+  ======================================================= */
+
   const { totalQty } = useCart();
-  const { openAuthModal, openProfileModal } = useCustomerAuth();
-  const { data: session } = useSession();
 
-  const urlSearchQuery = useMemo(() => {
-    if (!pathname?.startsWith("/products")) return "";
-    return (searchParams?.get("search") || "").trim();
-  }, [pathname, searchParams]);
+  const {
+    openAuthModal,
+    openProfileModal,
+  } = useCustomerAuth();
 
-  const [searchQuery, setSearchQuery] = useState(urlSearchQuery);
-  const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
-  const [keywordSuggestions, setKeywordSuggestions] = useState<string[]>([]);
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const profileMenuRef = useRef<HTMLDivElement | null>(null);
+  const { data: session } =
+    useSession();
+
+  /* =======================================================
+     CURRENT SEARCH QUERY
+  ======================================================= */
+
+  const urlSearchQuery =
+    useMemo(() => {
+      if (
+        !pathname?.startsWith(
+          "/products"
+        )
+      ) {
+        return "";
+      }
+
+      return (
+        searchParams?.get(
+          "search"
+        ) || ""
+      ).trim();
+    }, [
+      pathname,
+      searchParams,
+    ]);
 
   useEffect(() => {
-    setSearchQuery(urlSearchQuery);
+    setSearchQuery(
+      urlSearchQuery
+    );
   }, [urlSearchQuery]);
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(RECENT_SEARCH_KEY);
-      if (!raw) return;
-      const arr = JSON.parse(raw);
-      if (Array.isArray(arr)) {
-        setRecentSearches(
-          arr.filter((x): x is string => typeof x === "string").slice(0, 6)
-        );
-      }
-    } catch {
-      /* ignore */
-    }
-  }, []);
+  /* =======================================================
+     CLOSE DROPDOWNS ON OUTSIDE CLICK
+  ======================================================= */
 
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      const el = searchRef.current;
-      if (el && event.target instanceof Node && !el.contains(event.target)) {
+    function handleOutsideClick(
+      event: MouseEvent
+    ) {
+      if (
+        searchRef.current &&
+        event.target instanceof
+          Node &&
+        !searchRef.current.contains(
+          event.target
+        )
+      ) {
         setShowDropdown(false);
       }
-      const menuEl = profileMenuRef.current;
-      if (menuEl && event.target instanceof Node && !menuEl.contains(event.target)) {
-        setProfileMenuOpen(false);
+
+      if (
+        profileRef.current &&
+        event.target instanceof
+          Node &&
+        !profileRef.current.contains(
+          event.target
+        )
+      ) {
+        setProfileOpen(false);
       }
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
-  useEffect(() => {
-    if (!showDropdown) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setShowDropdown(false);
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [showDropdown]);
-
-  useEffect(() => {
-    if (pathname?.startsWith("/track-order")) {
-      setSuggestions([]);
-      setShowDropdown(false);
-      setLoading(false);
-      return;
-    }
-
-    const q = searchQuery.trim();
-    if (q.length < 2) {
-      setSuggestions([]);
-      setKeywordSuggestions([]);
-      setLoading(false);
-      return;
-    }
-
-    const ac = new AbortController();
-    const timer = setTimeout(async () => {
-      setSuggestions([]);
-      setLoading(true);
-      setShowDropdown(true);
-      try {
-        const res = await fetch(
-          `/api/products/search?q=${encodeURIComponent(q)}&limit=6`,
-          { signal: ac.signal }
-        );
-        const data = (await res.json()) as { products?: SearchSuggestion[] };
-        if (ac.signal.aborted) return;
-        const products = Array.isArray(data.products) ? data.products : [];
-        setSuggestions(products);
-        const qLower = q.toLowerCase();
-        const names = products
-          .map((p) => p.name.trim())
-          .filter((n) => n.toLowerCase().includes(qLower));
-        const merged = Array.from(
-          new Set(
-            [...names, ...POPULAR_SEARCH_TERMS.filter((s) => s.includes(qLower))].map((s) =>
-              s.trim()
-            )
-          )
-        ).slice(0, 6);
-        setKeywordSuggestions(merged);
-      } catch {
-        if (!ac.signal.aborted) {
-          setSuggestions([]);
-          setKeywordSuggestions([]);
-        }
-      } finally {
-        if (!ac.signal.aborted) setLoading(false);
-      }
-    }, 300);
+    document.addEventListener(
+      "mousedown",
+      handleOutsideClick
+    );
 
     return () => {
-      clearTimeout(timer);
-      ac.abort();
+      document.removeEventListener(
+        "mousedown",
+        handleOutsideClick
+      );
     };
-  }, [searchQuery, pathname]);
+  }, []);
 
-  const isTrackOrderPage = pathname?.startsWith("/track-order");
-  const isCheckoutPage = pathname === "/checkout";
-  const trimmedSearch = searchQuery.trim();
+  /* =======================================================
+     ESC KEY
+  ======================================================= */
 
-  function saveRecentSearch(term: string) {
-    const t = term.trim();
-    if (!t) return;
-    const next = [t, ...recentSearches.filter((x) => x.toLowerCase() !== t.toLowerCase())].slice(
-      0,
-      6
-    );
-    setRecentSearches(next);
-    try {
-      localStorage.setItem(RECENT_SEARCH_KEY, JSON.stringify(next));
-    } catch {
-      /* ignore */
+  useEffect(() => {
+    function handleEscape(
+      event: KeyboardEvent
+    ) {
+      if (
+        event.key === "Escape"
+      ) {
+        setShowDropdown(false);
+        setProfileOpen(false);
+        setMobileOpen(false);
+      }
     }
+
+    document.addEventListener(
+      "keydown",
+      handleEscape
+    );
+
+    return () => {
+      document.removeEventListener(
+        "keydown",
+        handleEscape
+      );
+    };
+  }, []);
+
+  /* =======================================================
+     LIVE PRODUCT SEARCH
+  ======================================================= */
+
+  useEffect(() => {
+    const query =
+      searchQuery.trim();
+
+    if (
+      query.length < 2 ||
+      pathname?.startsWith(
+        "/track-order"
+      )
+    ) {
+      setSuggestions([]);
+      setLoading(false);
+
+      return;
+    }
+
+    const controller =
+      new AbortController();
+
+    const timer =
+      window.setTimeout(
+        async () => {
+          setLoading(true);
+          setShowDropdown(true);
+
+          try {
+            const response =
+              await fetch(
+                `/api/products/search?q=${encodeURIComponent(
+                  query
+                )}&limit=6`,
+                {
+                  signal:
+                    controller.signal,
+                }
+              );
+
+            if (!response.ok) {
+              throw new Error(
+                "Search failed"
+              );
+            }
+
+            const data =
+              (await response.json()) as {
+                products?: SearchSuggestion[];
+              };
+
+            if (
+              controller.signal
+                .aborted
+            ) {
+              return;
+            }
+
+            setSuggestions(
+              Array.isArray(
+                data.products
+              )
+                ? data.products
+                : []
+            );
+          } catch {
+            if (
+              !controller.signal
+                .aborted
+            ) {
+              setSuggestions([]);
+            }
+          } finally {
+            if (
+              !controller.signal
+                .aborted
+            ) {
+              setLoading(false);
+            }
+          }
+        },
+        280
+      );
+
+    return () => {
+      window.clearTimeout(
+        timer
+      );
+
+      controller.abort();
+    };
+  }, [
+    searchQuery,
+    pathname,
+  ]);
+
+  /* =======================================================
+     SEARCH SUBMIT
+  ======================================================= */
+
+  function submitSearch() {
+    const query =
+      searchQuery.trim();
+
+    if (!query) {
+      return;
+    }
+
+    router.push(
+      `/products?search=${encodeURIComponent(
+        query
+      )}`
+    );
+
+    setShowDropdown(false);
   }
+
+  /* =======================================================
+     CHECKOUT NAV
+  ======================================================= */
+
+  if (
+    pathname === "/checkout"
+  ) {
+    return (
+      <>
+        <header className="sticky top-8 z-40 border-b border-black/[0.06] bg-white shadow-sm">
+          <div className="mx-auto flex min-h-[64px] max-w-7xl items-center justify-between px-4 sm:px-6">
+            <LogoMark compact />
+
+            <div className="flex items-center gap-3">
+              <span className="text-[9px] font-black uppercase tracking-[0.13em] text-black/40">
+                Secure Checkout
+              </span>
+
+              {session ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    openProfileModal()
+                  }
+                  className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-soft text-brand-link transition hover:bg-brand-primary hover:text-brand-dark"
+                  aria-label="Open profile"
+                >
+                  <User className="h-4 w-4" />
+                </button>
+              ) : null}
+            </div>
+          </div>
+        </header>
+
+        <CartSidebar
+          open={cartOpen}
+          onClose={() =>
+            setCartOpen(false)
+          }
+        />
+      </>
+    );
+  }
+
+  /* =======================================================
+     MAIN NAVBAR
+  ======================================================= */
 
   return (
     <>
-      <header className="sticky top-8 z-40 shadow-sm">
-        {/* ROW 1 — utility nav (Daraz-style thin bar; announcement bar stays above in UserRouteShell) */}
-        <div className="border-b border-white/10 bg-brand-dark">
-          <div className="mx-auto flex w-full max-w-[min(100%,90rem)] flex-wrap items-center justify-end gap-x-0.5 gap-y-1.5 px-4 py-2 md:px-8">
-            {nav.map((item, i) => {
-              const { href, label, activePrefix, whatsappSell, openInNewTab } =
-                item;
-              const rowKey = whatsappSell ? "nav-sell-now" : href;
-              const active =
-                !whatsappSell &&
-                !openInNewTab &&
-                (pathname === href ||
-                  (!!activePrefix && !!pathname?.startsWith(activePrefix)));
-              return (
-                <span key={rowKey} className="inline-flex items-center">
-                  {i > 0 ? (
-                    <span className={utilityBarSepClass} aria-hidden>
-                      |
-                    </span>
-                  ) : null}
-                  {whatsappSell ? (
-                    <a
-                      href={sellOnWhatsappUrl(whatsappNumber)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={utilityLinkClass(false)}
-                    >
-                      {label}
-                    </a>
-                  ) : openInNewTab ? (
-                    <a
-                      href={href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={utilityLinkClass(false)}
-                    >
-                      {label}
-                    </a>
-                  ) : (
-                    <Link href={href} className={utilityLinkClass(active)}>
-                      {label}
-                    </Link>
-                  )}
-                </span>
-              );
-            })}
+      <header className="sticky top-8 z-40 w-full bg-white shadow-[0_5px_22px_rgba(17,17,17,0.055)]">
+        {/* =================================================
+            MAIN ROW
+        ================================================= */}
 
-            {!session ? (
-              <>
-                <span className={utilityBarSepClass} aria-hidden>
-                  |
-                </span>
-                <button
-                  type="button"
-                  onClick={() => openAuthModal("login")}
-                  className="text-xs sm:text-sm font-medium text-white/80 transition-colors hover:text-brand-primary hover:underline hover:decoration-primaryBlue hover:underline-offset-4"
-                >
-                  Log in
-                </button>
-                <span className={utilityBarSepClass} aria-hidden>
-                  |
-                </span>
-                <button
-                  type="button"
-                  onClick={() => openAuthModal("signup")}
-                  className="text-xs sm:text-sm font-bold uppercase tracking-wide text-primaryYellow transition-colors hover:text-brand-primary hover:underline hover:decoration-primaryBlue hover:underline-offset-4"
-                >
-                  Sign up
-                </button>
-              </>
-            ) : session.user?.role === "admin" ? (
-              <>
-                <span className={utilityBarSepClass} aria-hidden>
-                  |
-                </span>
-                <button
-                  type="button"
-                  onClick={() => signOut({ callbackUrl: "/" })}
-                  className="text-xs sm:text-sm font-medium text-white/80 transition-colors hover:text-brand-primary hover:underline hover:decoration-primaryBlue hover:underline-offset-4"
-                >
-                  Logout
-                </button>
-              </>
-            ) : (
-              <>
-                <span className={utilityBarSepClass} aria-hidden>
-                  |
-                </span>
-                <div className="relative" ref={profileMenuRef}>
-                  <button
-                    type="button"
-                    onClick={() => setProfileMenuOpen((v) => !v)}
-                    className="inline-flex max-w-[min(220px,48vw)] items-center gap-2 text-left text-xs sm:text-sm font-medium text-white/80 transition-colors hover:text-brand-primary"
-                  >
-                    {session.user?.image ? (
-                      <Image
-                        src={session.user.image}
-                        alt=""
-                        width={28}
-                        height={28}
-                        className="h-7 w-7 shrink-0 rounded-full object-cover ring-2 ring-primaryBlue/20"
-                      />
-                    ) : (
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-primary text-brand-dark">
-                        <User className="h-3.5 w-3.5" aria-hidden />
-                      </span>
-                    )}
-                    <span className="truncate font-semibold text-white hover:underline hover:decoration-primaryBlue hover:underline-offset-4">
-                      {session.user?.name || "Profile"}
-                    </span>
-                  </button>
-                  {profileMenuOpen ? (
-                    <div className="absolute right-0 top-[calc(100%+8px)] z-50 min-w-[180px] rounded-xl border border-borderGray bg-white p-1.5 shadow-xl">
-                      <button
-                        type="button"
-                        className="w-full rounded-lg px-3 py-2 text-left text-sm text-darkText transition-colors hover:bg-lightGray"
-                        onClick={() => {
-                          setProfileMenuOpen(false);
-                          openProfileModal();
-                        }}
-                      >
-                        Profile
-                      </button>
-                      <Link
-                        href="/track-order"
-                        className="block w-full rounded-lg px-3 py-2 text-left text-sm text-darkText transition-colors hover:bg-lightGray"
-                        onClick={() => setProfileMenuOpen(false)}
-                      >
-                        Orders
-                      </Link>
-                      <button
-                        type="button"
-                        className="w-full rounded-lg px-3 py-2 text-left text-sm text-red-600 transition-colors hover:bg-red-50"
-                        onClick={() => {
-                          setProfileMenuOpen(false);
-                          void signOut({ callbackUrl: "/" });
-                        }}
-                      >
-                        Logout
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
-              </>
-            )}
-          </div>
-        </div>
+        <div className="border-b border-black/[0.06] bg-white">
+          <div className="mx-auto max-w-7xl px-4 py-2.5 sm:px-6">
+            <div className="flex flex-wrap items-center gap-3 lg:flex-nowrap lg:gap-4">
+              {/* MOBILE MENU */}
 
-        {/* ROW 2 — Track Order: banner. Checkout: no logo/search/cart; mobile menu only. Else: logo + search + cart. */}
-        {isTrackOrderPage ? (
-          <div className="relative border-b border-borderGray bg-neutral-100">
-            <button
-              type="button"
-              className="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-full border border-white/90 bg-white/95 p-2 text-primaryBlue shadow-md md:hidden"
-              onClick={() => setMobileOpen(true)}
-              aria-label="Open menu"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-            <Image
-              src="/track-order-banner.png"
-              alt="Track and trace your order with ease"
-              width={1920}
-              height={480}
-              className="h-auto w-full object-cover object-center max-h-[200px] sm:max-h-[260px] md:max-h-[320px]"
-              priority
-            />
-          </div>
-        ) : isCheckoutPage ? (
-          <div className="border-b border-white/10 bg-brand-dark md:hidden">
-            <div className="flex items-center gap-3 px-4 py-3">
               <button
                 type="button"
-                className="shrink-0 rounded-full border border-primaryBlue/40 p-2 text-primaryBlue"
-                onClick={() => setMobileOpen(true)}
+                onClick={() =>
+                  setMobileOpen(true)
+                }
+                className="order-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-black/[0.08] bg-white text-brand-dark shadow-sm transition hover:bg-brand-soft lg:hidden"
                 aria-label="Open menu"
               >
-                <Menu className="h-5 w-5" />
+                <Menu className="h-[18px] w-[18px]" />
               </button>
-              <span className="text-sm font-semibold text-white">
-                Checkout
-              </span>
-            </div>
-          </div>
-        ) : (
-          <div className="border-b border-white/10 bg-brand-dark">
-            <div className="flex w-full justify-center px-4 py-3 md:px-5">
-              <div className="inline-flex max-w-full flex-wrap items-center justify-center gap-2 sm:gap-3 md:gap-4">
-                <div className="flex shrink-0 items-center gap-2">
-                  <button
-                    type="button"
-                    className="shrink-0 rounded-full border border-primaryBlue/40 p-2 text-brand-primary md:hidden"
-                    onClick={() => setMobileOpen(true)}
-                    aria-label="Open menu"
-                  >
-                    <Menu className="h-5 w-5" />
-                  </button>
-                  <LogoMark inverse href="/" className="shrink-0" />
-                </div>
 
-                <div
-                  ref={searchRef}
-                  className="relative z-50 min-w-0 w-[min(92vw,42rem)] max-w-2xl shrink-0"
+              {/* =================================================
+                  LOGO
+              ================================================= */}
+
+              <div className="order-2 shrink-0">
+                <LogoMark href="/" />
+
+                <p className="mt-0.5 hidden text-[6px] font-bold uppercase tracking-[0.075em] text-black/40 xl:block">
+                  People • Products • Vendors • Together
+                </p>
+              </div>
+
+              {/* =================================================
+                  SEARCH
+              ================================================= */}
+
+              <div
+                ref={searchRef}
+                className="order-4 relative z-50 w-full lg:order-3 lg:min-w-0 lg:flex-1"
+              >
+                <form
+                  action="/products"
+                  method="get"
+                  role="search"
+                  onSubmit={(
+                    event
+                  ) => {
+                    event.preventDefault();
+                    submitSearch();
+                  }}
                 >
-                  <form
-                    action="/products"
-                    method="get"
-                    className="flex min-w-0 w-full items-stretch"
-                    role="search"
-                    onSubmit={() => {
-                      setShowDropdown(false);
-                      saveRecentSearch(searchQuery);
-                    }}
-                  >
-                    <div className="flex min-w-0 w-full overflow-hidden rounded-md border border-borderGray bg-white shadow-sm focus-within:border-brand-primary focus-within:ring-2 focus-within:ring-brand-primary/25">
-                      <input
-                        type="search"
-                        name="search"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        onFocus={() => {
-                          setShowDropdown(true);
-                        }}
-                        placeholder="Search products…"
-                        autoComplete="off"
-                        className="min-h-[44px] w-full min-w-0 flex-1 border-0 bg-transparent px-4 py-2 text-sm text-darkText outline-none placeholder:text-darkText/45 focus:outline-none focus:ring-0"
-                      />
-                      <button
-                        type="submit"
-                        className="shrink-0 border-l border-brand-secondary/25 bg-brand-primary px-4 text-black transition-colors hover:bg-brand-hover"
-                        aria-label="Search"
-                      >
-                        <Search className="h-5 w-5 text-black" aria-hidden />
-                      </button>
-                    </div>
-                  </form>
+                  <div className="flex h-[44px] overflow-hidden rounded-xl border border-black/[0.09] bg-white shadow-[0_3px_14px_rgba(17,17,17,0.045)] transition duration-200 focus-within:border-brand-primary focus-within:ring-2 focus-within:ring-brand-primary/20">
+                    <input
+                      type="search"
+                      name="search"
+                      value={
+                        searchQuery
+                      }
+                      onChange={(
+                        event
+                      ) =>
+                        setSearchQuery(
+                          event.target
+                            .value
+                        )
+                      }
+                      onFocus={() => {
+                        if (
+                          searchQuery.trim()
+                            .length >=
+                          2
+                        ) {
+                          setShowDropdown(
+                            true
+                          );
+                        }
+                      }}
+                      placeholder="Search products, brands or your want..."
+                      autoComplete="off"
+                      className="min-w-0 flex-1 border-0 bg-transparent px-4 text-[11px] font-medium text-brand-dark outline-none placeholder:text-black/35 sm:text-[12px]"
+                    />
 
-                  {showDropdown ? (
-                    <div
-                      className="animate-search-suggest-in absolute left-0 right-0 top-full z-50 mt-1.5 max-h-[min(24rem,70vh)] overflow-y-auto rounded-xl border border-borderGray bg-white shadow-xl"
-                      aria-label="Search suggestions"
+                    <button
+                      type="submit"
+                      aria-label="Search products"
+                      className="flex w-[50px] shrink-0 items-center justify-center bg-brand-primary text-brand-dark transition hover:bg-brand-hover"
                     >
-                      {trimmedSearch.length >= 2 && loading ? (
-                        <p className="border-b border-borderGray p-3 text-sm text-darkText/50">
-                          Searching…
+                      <Search className="h-[19px] w-[19px]" />
+                    </button>
+                  </div>
+                </form>
+
+                {/* SEARCH DROPDOWN */}
+
+                {showDropdown &&
+                searchQuery.trim()
+                  .length >= 2 ? (
+                  <div className="animate-search-suggest-in absolute left-0 right-0 top-[calc(100%+7px)] max-h-[390px] overflow-y-auto rounded-2xl border border-black/[0.08] bg-white p-1.5 text-brand-dark shadow-[0_20px_55px_rgba(0,0,0,0.15)]">
+                    {loading ? (
+                      <div className="px-4 py-4 text-[10px] font-semibold text-black/40">
+                        Searching…
+                      </div>
+                    ) : null}
+
+                    {!loading &&
+                    suggestions.length ===
+                      0 ? (
+                      <div className="p-4">
+                        <p className="text-[12px] font-black text-brand-dark">
+                          Product nahi mila?
                         </p>
-                      ) : null}
 
-                      {trimmedSearch.length >= 2 &&
-                      !loading &&
-                      suggestions.length === 0 &&
-                      keywordSuggestions.length === 0 ? (
-                        <p className="border-b border-borderGray p-3 text-sm text-darkText/60">
-                          No products found.
+                        <p className="mt-1 text-[9px] font-medium text-black/45">
+                          Apni Want post karo aur sellers ko batao kya chahiye.
                         </p>
-                      ) : null}
 
-                      {trimmedSearch.length >= 2
-                        ? keywordSuggestions.map((term, idx) => (
-                            <button
-                              key={`kw-${term}-${idx}`}
-                              type="button"
-                              onClick={() => {
-                                setSearchQuery(term);
-                                saveRecentSearch(term);
-                                router.push(`/products?search=${encodeURIComponent(term)}`);
-                                setShowDropdown(false);
-                              }}
-                              className="flex w-full cursor-pointer items-center gap-3 border-b border-borderGray p-3 text-left last:border-b-0 hover:bg-lightGray/60"
-                            >
-                              <Search className="h-4 w-4 text-darkText/50" />
-                              <span className="text-sm text-darkText">{term}</span>
-                            </button>
-                          ))
-                        : null}
+                        <Link
+                          href="/#wants"
+                          onClick={() =>
+                            setShowDropdown(
+                              false
+                            )
+                          }
+                          className="mt-3 inline-flex h-9 items-center rounded-lg bg-brand-primary px-3 text-[9px] font-black text-brand-dark transition hover:bg-brand-hover"
+                        >
+                          Want Post Karo
+                        </Link>
+                      </div>
+                    ) : null}
 
-                      {suggestions.map((product) => (
+                    {suggestions.map(
+                      (product) => (
                         <button
-                          key={product.id}
+                          key={
+                            product.id
+                          }
                           type="button"
                           onClick={() => {
-                            router.push(`/products/${product.id}`);
-                            setShowDropdown(false);
-                            setSearchQuery(product.name);
-                            saveRecentSearch(product.name);
+                            router.push(
+                              `/products/${product.id}`
+                            );
+
+                            setShowDropdown(
+                              false
+                            );
                           }}
-                          className="flex w-full cursor-pointer items-center gap-3 border-b border-borderGray p-3 text-left last:border-b-0 hover:bg-lightGray/60 motion-reduce:transition-none"
+                          className="flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition hover:bg-brand-soft/70"
                         >
-                          <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-lightGray">
+                          <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl bg-brand-background">
                             {product.image ? (
                               <Image
-                                src={product.image}
-                                alt=""
+                                src={
+                                  product.image
+                                }
+                                alt={
+                                  product.name
+                                }
                                 fill
-                                className="object-cover"
-                                sizes="48px"
+                                sizes="44px"
+                                className="object-contain p-1"
                                 unoptimized={
-                                  product.image.startsWith("/api/") ||
-                                  product.image.startsWith("/uploads/") ||
-                                  product.image.startsWith("blob:") ||
-                                  product.image.startsWith("data:")
+                                  product.image.startsWith(
+                                    "/api/"
+                                  ) ||
+                                  product.image.startsWith(
+                                    "/uploads/"
+                                  ) ||
+                                  product.image.startsWith(
+                                    "blob:"
+                                  ) ||
+                                  product.image.startsWith(
+                                    "data:"
+                                  )
                                 }
                               />
                             ) : (
-                              <Package
-                                className="absolute inset-0 m-auto h-6 w-6 text-darkText/25"
-                                aria-hidden
-                              />
+                              <Package className="absolute inset-0 m-auto h-4 w-4 text-black/20" />
                             )}
                           </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium text-darkText">
-                              {product.name}
-                            </p>
-                            <p className="truncate text-xs text-darkText/55">
-                              {product.category}
-                            </p>
-                          </div>
-                          <p className="shrink-0 text-sm font-bold text-primaryBlue">
-                            {formatPKR(product.price)}
-                          </p>
-                        </button>
-                      ))}
 
-                      {trimmedSearch.length < 2 ? (
-                        <>
-                          {recentSearches.length ? (
-                            <div className="border-b border-borderGray p-3">
-                              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-darkText/50">
-                                Recent searches
-                              </p>
-                              <div className="flex flex-wrap gap-2">
-                                {recentSearches.map((term) => (
-                                  <button
-                                    key={`recent-${term}`}
-                                    type="button"
-                                    onClick={() => {
-                                      setSearchQuery(term);
-                                      saveRecentSearch(term);
-                                      router.push(`/products?search=${encodeURIComponent(term)}`);
-                                      setShowDropdown(false);
-                                    }}
-                                    className="rounded-full border border-borderGray px-3 py-1 text-xs text-darkText hover:bg-lightGray"
-                                  >
-                                    {term}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          ) : null}
-                          <div className="p-3">
-                            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-darkText/50">
-                              Popular searches
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-[10px] font-black text-brand-dark">
+                              {
+                                product.name
+                              }
                             </p>
-                            <div className="flex flex-wrap gap-2">
-                              {POPULAR_SEARCH_TERMS.map((term) => (
-                                <button
-                                  key={`pop-${term}`}
-                                  type="button"
-                                  onClick={() => {
-                                    setSearchQuery(term);
-                                    saveRecentSearch(term);
-                                    router.push(`/products?search=${encodeURIComponent(term)}`);
-                                    setShowDropdown(false);
-                                  }}
-                                  className="rounded-full bg-lightGray px-3 py-1 text-xs text-darkText hover:bg-lightGray/70"
-                                >
-                                  {term}
-                                </button>
-                              ))}
-                            </div>
+
+                            <p className="mt-0.5 truncate text-[8px] font-medium text-black/35">
+                              {
+                                product.category
+                              }
+                            </p>
                           </div>
-                        </>
+
+                          <span className="shrink-0 text-[10px] font-black text-brand-link">
+                            {formatPKR(
+                              product.price
+                            )}
+                          </span>
+                        </button>
+                      )
+                    )}
+
+                    {suggestions.length >
+                    0 ? (
+                      <button
+                        type="button"
+                        onClick={
+                          submitSearch
+                        }
+                        className="mt-1 flex h-9 w-full items-center justify-center rounded-xl bg-brand-dark text-[9px] font-black text-white transition hover:bg-black"
+                      >
+                        View All Results
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+
+              {/* =================================================
+                  RIGHT ACTIONS
+                  Pakistan location removed
+              ================================================= */}
+
+              <div className="order-3 ml-auto flex shrink-0 items-center gap-0.5 lg:order-4 lg:ml-0">
+                {/* WANTS */}
+
+                <Link
+                  href="/#wants"
+                  className="group relative flex h-10 items-center gap-1.5 rounded-xl px-2.5 text-brand-dark transition hover:bg-brand-soft"
+                  aria-label="Wants"
+                >
+                  <Heart className="h-[19px] w-[19px] transition-transform group-hover:scale-105" />
+
+                  <span className="hidden text-[8px] font-black xl:inline">
+                    Wants
+                  </span>
+
+                  <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-brand-primary shadow-[0_0_7px_rgba(183,227,58,0.8)]" />
+                </Link>
+
+                {/* ACCOUNT */}
+
+                {!session ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      openAuthModal(
+                        "login"
+                      )
+                    }
+                    className="group flex h-10 items-center gap-1.5 rounded-xl px-2.5 text-brand-dark transition hover:bg-brand-soft"
+                    aria-label="Account"
+                  >
+                    <User className="h-[19px] w-[19px] transition-transform group-hover:scale-105" />
+
+                    <span className="hidden text-[8px] font-black xl:inline">
+                      Account
+                    </span>
+                  </button>
+                ) : (
+                  <div
+                    ref={profileRef}
+                    className="relative"
+                  >
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setProfileOpen(
+                          (value) =>
+                            !value
+                        )
+                      }
+                      className="flex h-10 items-center gap-1.5 rounded-xl px-2.5 text-brand-dark transition hover:bg-brand-soft"
+                      aria-label="Account menu"
+                    >
+                      {session.user
+                        ?.image ? (
+                        <Image
+                          src={
+                            session
+                              .user
+                              .image
+                          }
+                          alt={
+                            session.user
+                              ?.name ||
+                            "Profile"
+                          }
+                          width={28}
+                          height={28}
+                          className="h-7 w-7 rounded-full object-cover ring-2 ring-brand-primary/30"
+                        />
                       ) : (
+                        <User className="h-[19px] w-[19px]" />
+                      )}
+
+                      <span className="hidden max-w-[68px] truncate text-[8px] font-black xl:inline">
+                        {session.user
+                          ?.name ||
+                          "Account"}
+                      </span>
+                    </button>
+
+                    {profileOpen ? (
+                      <div className="absolute right-0 top-[calc(100%+7px)] z-50 min-w-[175px] rounded-xl border border-black/[0.08] bg-white p-2 text-brand-dark shadow-[0_18px_45px_rgba(0,0,0,0.14)]">
+                        {session.user
+                          ?.role !==
+                        "admin" ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setProfileOpen(
+                                false
+                              );
+
+                              openProfileModal();
+                            }}
+                            className="w-full rounded-lg px-3 py-2.5 text-left text-[10px] font-bold transition hover:bg-brand-soft"
+                          >
+                            My Profile
+                          </button>
+                        ) : null}
+
+                        <Link
+                          href="/track-order"
+                          onClick={() =>
+                            setProfileOpen(
+                              false
+                            )
+                          }
+                          className="block rounded-lg px-3 py-2.5 text-[10px] font-bold transition hover:bg-brand-soft"
+                        >
+                          My Orders
+                        </Link>
+
                         <button
                           type="button"
                           onClick={() => {
-                            const q = trimmedSearch;
-                            saveRecentSearch(q);
-                            router.push(
-                              `/products?search=${encodeURIComponent(q)}`
+                            setProfileOpen(
+                              false
                             );
-                            setShowDropdown(false);
-                          }}
-                          className="w-full cursor-pointer border-t border-borderGray p-3 text-center text-sm font-semibold text-primaryBlue transition-colors hover:bg-lightGray/60"
-                        >
-                          View all results for &quot;{trimmedSearch}&quot;
-                        </button>
-                      )}
-                    </div>
-                  ) : null}
-                </div>
 
-                <div className="flex shrink-0 items-center">
-                  <button
-                    type="button"
-                    onClick={() => setCartOpen(true)}
-                    className="relative inline-flex items-center justify-center rounded-lg p-1.5 text-brand-primary transition-colors hover:bg-primaryBlue/5"
-                    aria-label="Open cart"
-                  >
-                    <ShoppingCart className="h-7 w-7" aria-hidden />
-                    {totalQty > 0 ? (
-                      <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-primary px-1 text-[10px] font-bold text-brand-dark tabular-nums">
-                        {totalQty > 99 ? "99+" : totalQty}
-                      </span>
+                            void signOut({
+                              callbackUrl:
+                                "/",
+                            });
+                          }}
+                          className="w-full rounded-lg px-3 py-2.5 text-left text-[10px] font-bold text-red-600 transition hover:bg-red-50"
+                        >
+                          Logout
+                        </button>
+                      </div>
                     ) : null}
-                  </button>
-                </div>
+                  </div>
+                )}
+
+                {/* CART */}
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCartOpen(true)
+                  }
+                  className="group relative flex h-10 items-center gap-1.5 rounded-xl px-2.5 text-brand-dark transition hover:bg-brand-soft"
+                  aria-label="Open cart"
+                >
+                  <ShoppingCart className="h-[20px] w-[20px] transition-transform group-hover:scale-105" />
+
+                  <span className="hidden text-[8px] font-black xl:inline">
+                    Cart
+                  </span>
+
+                  {totalQty > 0 ? (
+                    <span className="absolute right-0 top-0 flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-brand-primary px-1 text-[7px] font-black text-brand-dark ring-2 ring-white">
+                      {totalQty > 99
+                        ? "99+"
+                        : totalQty}
+                    </span>
+                  ) : null}
+                </button>
+
+                {/* SELLER CTA */}
+
+                <Link
+                  href="/vendor/register"
+                  className="ml-1 hidden h-10 items-center justify-center rounded-xl bg-brand-primary px-4 text-[8px] font-black text-brand-dark shadow-[0_6px_18px_rgba(183,227,58,0.18)] transition duration-200 hover:-translate-y-0.5 hover:bg-brand-hover md:flex"
+                >
+                  Seller Bano
+                </Link>
               </div>
             </div>
           </div>
-        )}
+        </div>
+
+        {/* =================================================
+            CATEGORY / SECOND NAV
+        ================================================= */}
+
+        <div className="border-b border-black/[0.055] bg-[#fafbf7]">
+          <div className="mx-auto flex max-w-7xl items-center px-4 sm:px-6">
+            <Link
+              href="/products"
+              className="flex h-9 shrink-0 items-center gap-2 border-r border-black/[0.08] pr-4 text-[9px] font-black text-brand-dark transition hover:text-brand-link"
+            >
+              <Menu className="h-3.5 w-3.5" />
+
+              Categories
+
+              <ChevronDown className="h-3 w-3 text-black/35" />
+            </Link>
+
+            <nav className="hide-scrollbar flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto pl-2">
+              {navCategories.map(
+                (category) => (
+                  <Link
+                    key={
+                      category
+                    }
+                    href={`/products?category=${encodeURIComponent(
+                      category
+                    )}`}
+                    className="shrink-0 rounded-lg px-3 py-2 text-[8px] font-bold text-black/58 transition hover:bg-brand-soft hover:text-brand-link"
+                  >
+                    {category}
+                  </Link>
+                )
+              )}
+            </nav>
+
+            <Link
+              href="/#trending-wants"
+              className="ml-2 hidden shrink-0 items-center rounded-lg bg-brand-soft px-3 py-1.5 text-[8px] font-black text-brand-link transition hover:bg-brand-primary hover:text-brand-dark lg:inline-flex"
+            >
+              Trending Wants
+            </Link>
+          </div>
+        </div>
       </header>
 
+      {/* ===================================================
+          MOBILE MENU
+      =================================================== */}
+
       {mobileOpen ? (
-        <div className="fixed inset-0 z-[60] flex flex-col bg-brand-dark text-white md:hidden">
-          <div className="flex items-center justify-between border-b border-white/20 p-4">
-            <span className="text-xl font-bold">Menu</span>
+        <div className="fixed inset-0 z-[90] bg-white text-brand-dark lg:hidden">
+          {/* HEADER */}
+
+          <div className="flex items-center justify-between border-b border-black/[0.08] px-5 py-4">
+            <div>
+              <LogoMark compact />
+
+              <p className="mt-1 text-[6px] font-bold uppercase tracking-[0.08em] text-black/35">
+                People • Products • Vendors • Together
+              </p>
+            </div>
+
             <button
               type="button"
-              onClick={() => setMobileOpen(false)}
-              className="rounded-full p-2 hover:bg-white/10"
+              onClick={() =>
+                setMobileOpen(false)
+              }
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-black/[0.04] text-brand-dark"
               aria-label="Close menu"
             >
-              <X className="h-6 w-6" />
+              <X className="h-[18px] w-[18px]" />
             </button>
           </div>
-          <nav className="flex flex-col gap-6 p-6 text-base font-medium">
-            {nav.map(
-              ({
-                href,
-                label,
-                icon: Icon,
-                activePrefix,
-                whatsappSell,
-                openInNewTab,
-              }) => {
-                const rowKey = whatsappSell ? "nav-sell-now" : href;
-                const active =
-                  !whatsappSell &&
-                  !openInNewTab &&
-                  (pathname === href ||
-                    (!!activePrefix &&
-                      (pathname?.startsWith(activePrefix) ?? false)));
-                const itemClass = `flex items-center gap-3 ${active ? "font-semibold underline decoration-brand-primary underline-offset-4" : ""}`;
-                if (whatsappSell) {
-                  return (
-                    <a
-                      key={rowKey}
-                      href={sellOnWhatsappUrl(whatsappNumber)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={itemClass}
-                      onClick={() => setMobileOpen(false)}
-                    >
-                      <Icon className="h-6 w-6" />
-                      {label}
-                    </a>
-                  );
+
+          {/* MENU BODY */}
+
+          <div className="h-[calc(100vh-78px)] overflow-y-auto p-5">
+            <p className="mb-3 text-[8px] font-black uppercase tracking-[0.15em] text-brand-link">
+              JORO Marketplace
+            </p>
+
+            <div className="space-y-2">
+              <Link
+                href="/products"
+                onClick={() =>
+                  setMobileOpen(
+                    false
+                  )
                 }
-                if (openInNewTab) {
-                  return (
-                    <a
-                      key={rowKey}
-                      href={href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={itemClass}
-                      onClick={() => setMobileOpen(false)}
-                    >
-                      <Icon className="h-6 w-6" />
-                      {label}
-                    </a>
-                  );
+                className="flex items-center gap-3 rounded-xl bg-brand-background px-4 py-3.5 text-[12px] font-black"
+              >
+                <ShoppingCart className="h-4 w-4 text-brand-link" />
+
+                Shop Products
+              </Link>
+
+              <Link
+                href="/#wants"
+                onClick={() =>
+                  setMobileOpen(
+                    false
+                  )
                 }
-                return (
+                className="flex items-center justify-between rounded-xl bg-brand-primary px-4 py-3.5 text-[12px] font-black text-brand-dark"
+              >
+                <span className="flex items-center gap-3">
+                  <Heart className="h-4 w-4" />
+
+                  Want Post Karo
+                </span>
+
+                <span className="rounded-full bg-brand-dark px-2 py-1 text-[6px] font-black uppercase tracking-wider text-brand-primary">
+                  Hot
+                </span>
+              </Link>
+
+              <Link
+                href="/#trending-wants"
+                onClick={() =>
+                  setMobileOpen(
+                    false
+                  )
+                }
+                className="block rounded-xl bg-brand-soft px-4 py-3.5 text-[12px] font-black text-brand-link"
+              >
+                Trending Wants
+              </Link>
+
+              <Link
+                href="/vendor/register"
+                onClick={() =>
+                  setMobileOpen(
+                    false
+                  )
+                }
+                className="flex items-center gap-3 rounded-xl bg-brand-dark px-4 py-3.5 text-[12px] font-black text-white"
+              >
+                <Store className="h-4 w-4 text-brand-primary" />
+
+                Seller Bano
+              </Link>
+            </div>
+
+            {/* CATEGORIES */}
+
+            <div className="my-5 h-px bg-black/[0.07]" />
+
+            <p className="mb-3 text-[8px] font-black uppercase tracking-[0.15em] text-black/35">
+              Categories
+            </p>
+
+            <div className="grid grid-cols-2 gap-2">
+              {navCategories.map(
+                (category) => (
                   <Link
-                    key={rowKey}
-                    href={href}
-                    className={itemClass}
-                    onClick={() => setMobileOpen(false)}
+                    key={
+                      category
+                    }
+                    href={`/products?category=${encodeURIComponent(
+                      category
+                    )}`}
+                    onClick={() =>
+                      setMobileOpen(
+                        false
+                      )
+                    }
+                    className="rounded-xl border border-black/[0.06] bg-white px-3 py-3 text-[10px] font-bold shadow-sm transition hover:bg-brand-soft"
                   >
-                    <Icon className="h-6 w-6" />
-                    {label}
+                    {category}
                   </Link>
-                );
-              }
-            )}
-            {!isCheckoutPage ? (
-              <button
-                type="button"
-                className="flex items-center gap-3 text-left"
-                onClick={() => {
-                  setMobileOpen(false);
-                  setCartOpen(true);
-                }}
+                )
+              )}
+            </div>
+
+            {/* HELP */}
+
+            <div className="my-5 h-px bg-black/[0.07]" />
+
+            <div className="space-y-1">
+              <Link
+                href="/track-order"
+                onClick={() =>
+                  setMobileOpen(
+                    false
+                  )
+                }
+                className="block rounded-xl px-3 py-3 text-[11px] font-bold text-black/60 transition hover:bg-brand-background"
               >
-                <ShoppingCart className="h-6 w-6" />
-                Cart {totalQty > 0 ? `(${totalQty})` : ""}
-              </button>
-            ) : null}
-            <a
-              href={`https://wa.me/${whatsappNumber.replace(/\D/g, "")}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3"
-              onClick={() => setMobileOpen(false)}
-            >
-              WhatsApp
-            </a>
+                Track Order
+              </Link>
+
+              <a
+                href={`https://wa.me/${whatsappNumber.replace(
+                  /\D/g,
+                  ""
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() =>
+                  setMobileOpen(
+                    false
+                  )
+                }
+                className="block rounded-xl px-3 py-3 text-[11px] font-bold text-black/60 transition hover:bg-brand-background"
+              >
+                WhatsApp Support
+              </a>
+            </div>
+
+            {/* ACCOUNT */}
+
+            <div className="my-5 h-px bg-black/[0.07]" />
+
             {!session ? (
-              <>
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  className="flex w-full items-center gap-3 text-left"
                   onClick={() => {
-                    setMobileOpen(false);
-                    openAuthModal("login");
+                    setMobileOpen(
+                      false
+                    );
+
+                    openAuthModal(
+                      "login"
+                    );
                   }}
+                  className="rounded-xl border border-black/[0.1] px-4 py-3 text-[11px] font-black text-brand-dark"
                 >
-                  <User className="h-6 w-6" />
-                  Log in
+                  Login
                 </button>
+
                 <button
                   type="button"
-                  className="flex w-full items-center gap-3 text-left font-bold uppercase tracking-wide"
                   onClick={() => {
-                    setMobileOpen(false);
-                    openAuthModal("signup");
+                    setMobileOpen(
+                      false
+                    );
+
+                    openAuthModal(
+                      "signup"
+                    );
                   }}
+                  className="rounded-xl bg-brand-primary px-4 py-3 text-[11px] font-black text-brand-dark"
                 >
-                  Sign up
+                  Sign Up
                 </button>
-              </>
-            ) : session.user?.role === "admin" ? (
-              <button
-                type="button"
-                className="flex w-full items-center gap-3 text-left"
-                onClick={() => {
-                  setMobileOpen(false);
-                  signOut({ callbackUrl: "/" });
-                }}
-              >
-                Logout
-              </button>
+              </div>
             ) : (
-              <button
-                type="button"
-                className="flex w-full items-center gap-3 text-left"
-                onClick={() => {
-                  setMobileOpen(false);
-                  openProfileModal();
-                }}
-              >
-                {session.user?.image ? (
-                  <Image
-                    src={session.user.image}
-                    alt=""
-                    width={24}
-                    height={24}
-                    className="h-6 w-6 shrink-0 rounded-full object-cover"
-                  />
-                ) : (
-                  <CircleUser className="h-6 w-6" />
-                )}
-                Profile ({session.user?.name || "Account"})
-              </button>
+              <div className="space-y-2">
+                {session.user
+                  ?.role !==
+                "admin" ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileOpen(
+                        false
+                      );
+
+                      openProfileModal();
+                    }}
+                    className="w-full rounded-xl bg-brand-background px-4 py-3 text-left text-[11px] font-black text-brand-dark"
+                  >
+                    My Profile
+                  </button>
+                ) : null}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileOpen(
+                      false
+                    );
+
+                    void signOut({
+                      callbackUrl:
+                        "/",
+                    });
+                  }}
+                  className="w-full rounded-xl px-4 py-3 text-left text-[11px] font-black text-red-600"
+                >
+                  Logout
+                </button>
+              </div>
             )}
-          </nav>
+          </div>
         </div>
       ) : null}
 
-      <CartSidebar open={cartOpen} onClose={() => setCartOpen(false)} />
+      {/* ===================================================
+          CART SIDEBAR
+      =================================================== */}
+
+      <CartSidebar
+        open={cartOpen}
+        onClose={() =>
+          setCartOpen(false)
+        }
+      />
     </>
   );
 }

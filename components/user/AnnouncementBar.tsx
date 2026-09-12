@@ -1,20 +1,23 @@
 "use client";
 
 const MESSAGES = [
-  "🚚 Enjoy FREE Delivery on Orders Above Rs.3,000",
-  "⭐ Pakistan's #1 Budget Shop",
-  "✅ Cash on Delivery Available",
-  "🔄 Easy Returns & Exchanges",
+  "A Stronger Pakistan Together",
+  "Support Local",
+  "Shop Pakistani",
+  "Grow Together",
+  "Nationwide Delivery",
+  "Secure Payments",
+  "Verified Sellers",
 ];
 
 function MessageRow() {
   return (
     <>
-      {MESSAGES.map((message, idx) => (
-        <span key={`${message}-${idx}`} className="inline-flex items-center">
+      {MESSAGES.map((message, index) => (
+        <span key={`${message}-${index}`} className="inline-flex items-center">
           <span>{message}</span>
-          {idx < MESSAGES.length - 1 ? (
-            <span className="mx-4 text-brand-dark/60">•</span>
+          {index < MESSAGES.length - 1 ? (
+            <span className="mx-5 h-1 w-1 rounded-full bg-white/45" />
           ) : null}
         </span>
       ))}
@@ -24,12 +27,13 @@ function MessageRow() {
 
 export function AnnouncementBar() {
   return (
-    <div className="fixed inset-x-0 top-0 z-50 h-8 w-full max-w-[100vw] overflow-hidden bg-brand-primary text-brand-dark">
-      <div className="marquee-track flex h-full w-max items-center whitespace-nowrap text-xs font-medium uppercase tracking-[0.08em]">
-        <div className="inline-flex items-center pr-8">
+    <div className="fixed inset-x-0 top-0 z-50 h-8 overflow-hidden bg-[#123d27] text-white">
+      <div className="marquee-track flex h-full w-max items-center whitespace-nowrap text-[9px] font-extrabold uppercase tracking-[0.08em] sm:text-[10px]">
+        <div className="inline-flex items-center pr-10">
           <MessageRow />
         </div>
-        <div className="inline-flex items-center pr-8" aria-hidden="true">
+
+        <div className="inline-flex items-center pr-10" aria-hidden="true">
           <MessageRow />
         </div>
       </div>
