@@ -368,7 +368,7 @@ export function Navbar({
   ) {
     return (
       <>
-        <header className="sticky top-8 z-40 border-b border-black/[0.06] bg-white shadow-sm">
+        <header className="sticky top-10 z-40 border-b border-black/[0.06] bg-white shadow-sm">
           <div className="mx-auto flex min-h-[64px] max-w-7xl items-center justify-between px-4 sm:px-6">
             <LogoMark compact />
 
@@ -409,7 +409,7 @@ export function Navbar({
 
   return (
     <>
-      <header className="sticky top-8 z-40 w-full bg-white shadow-[0_5px_22px_rgba(17,17,17,0.055)]">
+      <header className="sticky top-10 z-40 w-full bg-white shadow-[0_5px_22px_rgba(17,17,17,0.055)]">
         {/* =================================================
             MAIN ROW
         ================================================= */}

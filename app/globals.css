@@ -187,6 +187,54 @@
   animation-play-state: paused;
 }
 
+/* Fixed image zones physically contain the center-only marquee. */
+.joro-topstrip-space { height: 40px; flex-shrink: 0; }
+.joro-topstrip-space ~ header { top: 40px; }
+.joro-topstrip {
+  position: fixed; inset: 0 0 auto; z-index: 50; height: 40px;
+  display: grid; grid-template-columns: 52px minmax(0, 1fr) 52px;
+  background: linear-gradient(100deg, #062c20, #104631 50%, #062c20);
+  border-bottom: 1px solid rgba(183, 227, 58, .22); color: white;
+}
+.joro-topstrip-corner {
+  display: flex; align-items: center; justify-content: center;
+  position: relative; z-index: 1; min-width: 0;
+}
+.joro-topstrip-corner img {
+  width: 34px; height: 34px; object-fit: contain;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .45));
+}
+.joro-topstrip-window {
+  overflow: hidden; min-width: 0;
+  mask-image: linear-gradient(90deg, transparent, black 12px, black calc(100% - 12px), transparent);
+}
+.joro-topstrip-track {
+  display: flex; width: max-content; height: 100%;
+  animation: joro-topstrip-loop 28s linear infinite;
+}
+.joro-topstrip-group {
+  display: flex; align-items: center; justify-content: space-around;
+  flex-shrink: 0; min-width: calc(100vw - 104px);
+}
+.joro-topstrip-item {
+  display: inline-flex; flex-shrink: 0; align-items: center; gap: 7px;
+  padding: 0 19px; border-right: 1px solid rgba(255,255,255,.2);
+  white-space: nowrap; font-size: 12px; font-weight: 700; line-height: 16px;
+  letter-spacing: .025em;
+}
+.joro-topstrip:hover .joro-topstrip-track { animation-play-state: paused; }
+@keyframes joro-topstrip-loop { to { transform: translateX(-50%); } }
+@media (min-width: 768px) {
+  .joro-topstrip { grid-template-columns: 64px minmax(0, 1fr) 64px; }
+  .joro-topstrip-corner img { width: 38px; height: 38px; }
+  .joro-topstrip-group { min-width: calc(100vw - 128px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .joro-topstrip-track { animation: none; }
+  .joro-topstrip-group[aria-hidden="true"] { display: none; }
+  .joro-topstrip-window { overflow-x: auto; scrollbar-width: none; }
+}
+
 /* =========================================================
    SEARCH SUGGESTION
 ========================================================= */
@@ -623,30 +671,26 @@
 
 .joro-v4-hero {
   position: relative;
-
   width: 100%;
-
-  background:
-    radial-gradient(
-      circle at 78% 46%,
-      rgba(183, 227, 58, 0.18),
-      transparent 28%
-    ),
-    radial-gradient(
-      circle at 13% 90%,
-      rgba(90, 145, 75, 0.16),
-      transparent 30%
-    ),
-    linear-gradient(
-      112deg,
-      #082619 0%,
-      #103d27 48%,
-      #1b4826 100%
-    );
-
-  border-bottom:
-    1px solid
-    rgba(183, 227, 58, 0.12);
+  background-color: #032317;
+  background-image:
+    linear-gradient(90deg, rgba(3,35,23,.95) 0%, rgba(3,35,23,.83) 38%, rgba(3,35,23,.36) 72%, rgba(3,35,23,.16) 100%),
+    url("/branding/hero/joro-premium-hero-bg.png");
+  background-size: cover;
+  background-position: right center;
+  background-repeat: no-repeat;
+  border-bottom: 1px solid rgba(183,227,58,.12);
+}
+@media (max-width: 1023px) {
+  /* Below the lg breakpoint the hero grid stacks to one column (text above, visual below),
+     so the darkening needs to run top-to-bottom -- not left-to-right -- everywhere the layout
+     is still stacked, not just on phones. */
+  .joro-v4-hero {
+    background-image:
+      linear-gradient(180deg, rgba(3,35,23,.94) 0%, rgba(3,35,23,.88) 44%, rgba(3,35,23,.48) 100%),
+      url("/branding/hero/joro-premium-hero-bg.png");
+    background-position: 78% center;
+  }
 }
 
 /* subtle grid */

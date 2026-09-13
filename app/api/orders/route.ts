@@ -183,7 +183,7 @@ export async function POST(req: NextRequest) {
 
   try {
   const quoteId = typeof body.quoteId === "string" ? body.quoteId : null;
-  const quote = quoteId ? await checkoutQuote(prisma, quoteId, session.user.email || "", String(city)) : null;
+  const quote = quoteId ? await checkoutQuote(prisma, quoteId, session.user.id, String(city)) : null;
   if (quote?.orderId) {
     const previous = await prisma.order.findUnique({ where: { id: quote.orderId }, include: ORDER_INCLUDE_SERIALIZE });
     if (!previous) throw new ApiError(409, "Please refresh your order history.");
@@ -323,7 +323,7 @@ export async function POST(req: NextRequest) {
 
     const mp = getMarketplaceTx(tx);
 
-    if (quoteId) { const currentQuote = await checkoutQuote(tx, quoteId, session.user.email || "", String(city)); if (currentQuote.orderId) throw new ApiError(409, "Quote already checked out. Refresh your orders."); }
+    if (quoteId) { const currentQuote = await checkoutQuote(tx, quoteId, session.user.id, String(city)); if (currentQuote.orderId) throw new ApiError(409, "Quote already checked out. Refresh your orders."); }
     for (const service of services) {
       const current = await resolveServiceAddon(tx, service.productId, service.serviceId, service.quantity, String(city));
       if (!current.price.equals(service.price) || !current.commissionAmount.equals(service.commissionAmount)) throw new ApiError(409, "Service terms changed. Refresh checkout before ordering.");

@@ -28,7 +28,7 @@ export function UserRouteShell({
           <Suspense
             fallback={
               <header
-                className="sticky top-0 z-50 h-16 w-full shrink-0 border-b border-neutral-200 bg-white"
+                className="sticky top-10 z-40 h-16 w-full shrink-0 border-b border-neutral-200 bg-white"
                 aria-hidden
               />
             }
