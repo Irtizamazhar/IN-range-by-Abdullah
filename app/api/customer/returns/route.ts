@@ -4,7 +4,7 @@ import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireCustomerApi } from "@/lib/customer-api-auth";
-import { isPrismaUniqueError, RETURN_INCLUDE, serializeReturn } from "@/lib/after-sales";
+import { isPrismaUniqueError, RETURN_INCLUDE, serializeCustomerReturn } from "@/lib/after-sales";
 import { prisma } from "@/lib/prisma";
 
 const createSchema = z.object({
@@ -23,7 +23,7 @@ export async function GET() {
     orderBy: { requestedAt: "desc" },
     include: RETURN_INCLUDE,
   });
-  return NextResponse.json({ returns: rows.map(serializeReturn) });
+  return NextResponse.json({ returns: rows.map(serializeCustomerReturn) });
 }
 
 export async function POST(req: NextRequest) {
@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
     );
-    return NextResponse.json({ return: serializeReturn(result) }, { status: 201 });
+    return NextResponse.json({ return: serializeCustomerReturn(result) }, { status: 201 });
   } catch (error) {
     if (isPrismaUniqueError(error)) {
       return NextResponse.json(

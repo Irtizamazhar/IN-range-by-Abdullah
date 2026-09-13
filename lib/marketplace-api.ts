@@ -8,8 +8,8 @@ export class ApiError extends Error {
 }
 export async function customerActor() {
   const session = await getCustomerSession();
-  if (session?.user?.role !== "customer" || !session.user.email) throw new ApiError(401, "Please sign in as a customer.");
-  const customer = await prisma.customer.findUnique({ where: { email: session.user.email.trim().toLowerCase() }, select: { id: true, name: true, email: true } });
+  if (session?.user?.role !== "customer" || !session.user.id) throw new ApiError(401, "Please sign in as a customer.");
+  const customer = await prisma.customer.findUnique({ where: { id: session.user.id, isActive: true }, select: { id: true, name: true, email: true } });
   if (!customer) throw new ApiError(401, "Please sign in again.");
   return customer;
 }

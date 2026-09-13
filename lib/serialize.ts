@@ -4,6 +4,7 @@ import type {
   Product,
   ProductImage,
 } from "@prisma/client";
+import { canCustomerCancelOrder } from "@/lib/customer-account-policy";
 import { resolveCustomerOrderTrackStatus } from "@/lib/order-track-status";
 
 /** DB row shape for serialization (includes vendor listing URLs when present). */
@@ -150,9 +151,10 @@ export function serializeOrder(
       : {}),
     bankAccount: order.bankAccount,
     orderStatus,
+    canCancel: canCustomerCancelOrder({ ...order, vendorShopOrders: order.vendorShopOrders || [] }),
     isRead: order.isRead,
     trackingNumber: order.trackingNumber,
-    notes: order.notes,
+    ...(opts?.forAdmin ? { notes: order.notes } : {}),
     createdAt: order.createdAt,
     updatedAt: order.updatedAt,
     products: order.orderItems.map((i) => ({

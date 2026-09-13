@@ -1,16 +1,6 @@
-export const dynamic = "force-dynamic";
-
-import { NextResponse } from "next/server";
-import { requireCustomerApi } from "@/lib/customer-api-auth";
 import { prisma } from "@/lib/prisma";
-
-type Ctx = { params: { productId: string } };
-
-export async function DELETE(_request: Request, context: Ctx) {
-  const auth = await requireCustomerApi();
-  if ("response" in auth) return auth.response;
-  await prisma.savedProduct.deleteMany({
-    where: { customerId: auth.customer.id, productId: context.params.productId },
-  });
-  return NextResponse.json({ ok: true });
-}
+import { api, customerActor, sameOrigin } from "@/lib/marketplace-api";
+export const dynamic = "force-dynamic";
+export async function DELETE(request: Request, { params }: { params: { productId: string } }) { return api(async () => {
+  sameOrigin(request); const c = await customerActor(); await prisma.savedProduct.deleteMany({ where: { customerId: c.id, productId: params.productId } }); return { ok: true, saved: false };
+}); }

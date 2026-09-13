@@ -1,71 +1,21 @@
-export const dynamic = "force-dynamic";
-
-import { NextResponse } from "next/server";
-import { requireCustomerApi } from "@/lib/customer-api-auth";
-import { catalogProductSelect } from "@/lib/catalog-product-select";
-import { ORDER_INCLUDE_SERIALIZE } from "@/lib/prisma-order-includes";
 import { prisma } from "@/lib/prisma";
-import { serializeOrder, serializeProduct } from "@/lib/serialize";
-
-export async function GET() {
-  const auth = await requireCustomerApi();
-  if ("response" in auth) return auth.response;
-  const [profile, orders, addresses, saved, follows, wants] = await Promise.all([
-    prisma.customer.findUnique({
-      where: { id: auth.customer.id },
-      select: { id: true, name: true, email: true, phone: true, image: true, createdAt: true },
-    }),
-    prisma.order.findMany({
-      where: { customerId: auth.customer.id },
-      orderBy: { createdAt: "desc" },
-      take: 30,
-      include: ORDER_INCLUDE_SERIALIZE,
-    }),
-    prisma.customerAddress.findMany({
-      where: { customerId: auth.customer.id },
-      orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }],
-    }),
-    prisma.savedProduct.findMany({
-      where: { customerId: auth.customer.id, product: { isActive: true } },
-      orderBy: { createdAt: "desc" },
-      include: { product: { select: catalogProductSelect() } },
-    }),
-    prisma.storeFollow.findMany({
-      where: { customerId: auth.customer.id, vendor: { status: "approved" } },
-      orderBy: { createdAt: "desc" },
-      include: {
-        vendor: {
-          select: {
-            id: true,
-            shopName: true,
-            storeSlug: true,
-            primaryCategory: true,
-            city: true,
-            _count: { select: { followers: true, products: true } },
-          },
-        },
-      },
-    }),
-    prisma.want.findMany({
-      where: { customerId: auth.customer.id },
-      orderBy: { createdAt: "desc" },
-      take: 30,
-      include: { _count: { select: { offers: true } } },
-    }),
+import { api, customerActor } from "@/lib/marketplace-api";
+import { customerSavedProducts } from "@/lib/customer-saved-products";
+import { addressSelect } from "@/lib/customer-address-service";
+import { canCustomerCancelOrder } from "@/lib/customer-account-policy";
+import { resolveCustomerOrderTrackStatus } from "@/lib/order-track-status";
+export const dynamic = "force-dynamic";
+export async function GET(request: Request) { return api(async () => {
+  const c = await customerActor(); const q = new URL(request.url).searchParams; const page = Math.max(1, Math.min(100000, Number.parseInt(q.get("page") || "1",10) || 1)); const pageSize = 20;
+  const [profile, orders, addresses, savedProducts, follows, wants, orderCount, wantCount, offerCount, unreadCount, returnCount, serviceCount] = await Promise.all([
+    prisma.customer.findUnique({ where: { id: c.id }, select: { name: true, email: true, phone: true, image: true, createdAt: true } }),
+    prisma.order.findMany({ where: { customerId: c.id }, select: { id: true, orderNumber: true, orderStatus: true, paymentStatus: true, totalAmount: true, createdAt: true, orderItems: { select: { id: true, name: true, quantity: true } }, vendorShopOrders: { select: { status: true } } }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: pageSize, skip: (page-1)*pageSize }),
+    prisma.customerAddress.findMany({ where: { customerId: c.id }, select: addressSelect, orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }] }),
+    customerSavedProducts(c.id),
+    prisma.storeFollow.findMany({ where: { customerId: c.id }, select: { vendor: { select: { id: true, shopName: true, shopLogo: true, storeSlug: true, primaryCategory: true, city: true, status: true, _count: { select: { followers: true } } } } }, orderBy: { createdAt: "desc" } }),
+    prisma.want.findMany({ where: { customerId: c.id }, select: { id: true, title: true, status: true, category: true, city: true, createdAt: true, expiresAt: true, _count: { select: { offers: true, interests: true } } }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: pageSize, skip: (page-1)*pageSize }),
+    prisma.order.count({ where: { customerId: c.id } }), prisma.want.count({ where: { customerId: c.id } }), prisma.wantOffer.count({ where: { want: { customerId: c.id } } }),
+    prisma.customerNotification.count({ where: { customerId: c.id, isRead: false } }), prisma.returnRequest.count({ where: { customerId: c.id } }), prisma.orderService.count({ where: { order: { customerId: c.id } } }),
   ]);
-  if (!profile) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json({
-    profile,
-    orders: orders.map((order) => serializeOrder(order)),
-    addresses,
-    savedProducts: saved.map((row) => serializeProduct(row.product)),
-    followedStores: follows.map((row) => row.vendor),
-    wants: wants.map((want) => ({
-      ...want,
-      budgetMin: want.budgetMin == null ? null : Number(want.budgetMin),
-      budgetMax: want.budgetMax == null ? null : Number(want.budgetMax),
-      offerCount: want._count.offers,
-      _count: undefined,
-    })),
-  });
-}
+  return { profile, orders: orders.map(o => ({ id: o.id, orderNumber: o.orderNumber, orderStatus: resolveCustomerOrderTrackStatus(o.orderStatus, o.vendorShopOrders), paymentStatus: o.paymentStatus, totalAmount: Number(o.totalAmount), createdAt: o.createdAt, items: o.orderItems, canCancel: canCustomerCancelOrder(o), hasDeliveredItems: o.orderStatus === "delivered" || o.vendorShopOrders.some(s => s.status === "delivered") })), addresses, savedProducts, followedStores: follows.map(f => f.vendor), wants: wants.map(w => ({ id: w.id, title: w.title, status: w.status, category: w.category, city: w.city, createdAt: w.createdAt, expiresAt: w.expiresAt, offerCount: w._count.offers, interestCount: w._count.interests })), counts: { orders: orderCount, wants: wantCount, offers: offerCount, saved: savedProducts.length, following: follows.length, unread: unreadCount, returns: returnCount, services: serviceCount }, pagination: { page, pageSize, orderPages: Math.ceil(orderCount/pageSize), wantPages: Math.ceil(wantCount/pageSize) } };
+}); }

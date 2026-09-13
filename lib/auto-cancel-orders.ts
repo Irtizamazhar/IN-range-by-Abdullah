@@ -2,10 +2,11 @@ import { prisma } from "@/lib/prisma";
 import { cancelParentOrder } from "@/lib/order-cancellation-service";
 
 /** Auto-cancel bank-transfer orders older than 24h without proof. */
-export async function autoCancelStaleBankOrders(): Promise<void> {
+export async function autoCancelStaleBankOrders(customerId?: string): Promise<void> {
   const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const stale = await prisma.order.findMany({
     where: {
+      ...(customerId ? { customerId } : {}),
       paymentMethod: "bank_transfer",
       paymentStatus: "pending",
       orderStatus: { in: ["pending", "confirmed", "processing", "packed"] },

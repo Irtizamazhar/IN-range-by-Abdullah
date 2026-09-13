@@ -102,9 +102,7 @@ export default function TrackOrderPage() {
   }
 
   const status = order ? String(order.orderStatus) : "";
-  const canCancel =
-    order &&
-    ["pending", "confirmed", "processing"].includes(status);
+  const canCancel = order?.canCancel === true;
   const blockedMsg =
     order &&
     ["packing", "shipped", "delivered", "cancelled"].includes(status);

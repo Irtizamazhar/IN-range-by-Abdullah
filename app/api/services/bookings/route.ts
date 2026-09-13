@@ -1,3 +1,4 @@
+import { customerServiceSnapshot } from "@/lib/customer-service-policy";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { api, ApiError, adminActor, customerActor, sameOrigin } from "@/lib/marketplace-api";
@@ -7,18 +8,18 @@ export async function GET(request: Request) { return api(async () => {
   const role = new URL(request.url).searchParams.get("role"); let where = {};
   if (role === "admin") await adminActor();
   else if (role === "vendor") { const s = await getVendorFromSession(); if (!s) throw new ApiError(401, "Vendor sign-in required."); where = { vendorId: s.vendor.id }; }
-  else { const c = await customerActor(); where = { order: { customerEmail: c.email } }; }
-  return { bookings: await prisma.orderService.findMany({ where, select: { id: true, status: true, scheduledAt: true, snapshot: true, refundStatus: true, order: { select: { orderNumber: true } }, events: { select: { id: true, status: true, note: true, createdAt: true }, orderBy: { createdAt: "desc" } } }, orderBy: { createdAt: "desc" }, take: 100 }) };
+  else { const c = await customerActor(); where = { order: { customerId: c.id } }; }
+  const bookings = await prisma.orderService.findMany({ where, select: { id: true, status: true, scheduledAt: true, snapshot: true, refundStatus: true, order: { select: { orderNumber: true } }, events: { select: { id: true, status: true, note: true, createdAt: true }, orderBy: { createdAt: "desc" } } }, orderBy: { createdAt: "desc" }, take: 100 }); return { bookings: role === "admin" || role === "vendor" ? bookings : bookings.map(b => ({ ...b, snapshot: customerServiceSnapshot(b.snapshot), events: b.events.map(({ id, status, createdAt }) => ({ id, status, createdAt })) })) };
 }); }
 export async function PATCH(request: Request) { return api(async () => {
   sameOrigin(request); const input = z.object({ id: z.string(), role: z.enum(["customer", "vendor", "admin"]), status: z.enum(["CONFIRMED", "SCHEDULE_REQUIRED", "SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED", "FAILED"]), scheduledAt: z.string().datetime().optional(), note: z.string().trim().min(3).max(2000) }).parse(await request.json());
-  let actor: string; let vendorId: string | undefined; let customerEmail: string | undefined;
+  let actor: string; let vendorId: string | undefined; let customerId: string | undefined;
   if (input.role === "admin") actor = await adminActor();
   else if (input.role === "vendor") { const s = await getVendorFromSession(); if (!s || s.vendor.status !== "approved") throw new ApiError(403, "Approved vendor required."); vendorId = s.vendor.id; actor = `vendor:${vendorId}`; }
-  else { const c = await customerActor(); customerEmail = c.email; actor = `customer:${c.id}`; }
+  else { const c = await customerActor(); customerId = c.id; actor = `customer:${c.id}`; }
   return prisma.$transaction(async tx => {
-    const job = await tx.orderService.findUnique({ where: { id: input.id }, include: { order: { select: { customerEmail: true, orderStatus: true, paymentStatus: true, vendorShopOrders: { select: { vendorId: true, status: true } } } } } });
-    if (!job || (vendorId && vendorId !== job.vendorId) || (customerEmail && customerEmail !== job.order.customerEmail.toLowerCase())) throw new ApiError(404, "Booking not found.");
+    const job = await tx.orderService.findUnique({ where: { id: input.id }, include: { order: { select: { customerId: true, orderStatus: true, paymentStatus: true, vendorShopOrders: { select: { vendorId: true, status: true } } } } } });
+    if (!job || (vendorId && vendorId !== job.vendorId) || (customerId && customerId !== job.order.customerId)) throw new ApiError(404, "Booking not found.");
     if (job.status === input.status && !input.scheduledAt) return { success: true };
     if (["COMPLETED","CANCELLED","FAILED"].includes(job.status)) throw new ApiError(409, "Booking is closed.");
     if (input.role === "customer" && input.status !== "SCHEDULE_REQUIRED") throw new ApiError(403, "Contact support for cancellation or completion confirmation.");

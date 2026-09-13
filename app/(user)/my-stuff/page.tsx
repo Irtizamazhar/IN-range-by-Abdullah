@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import { FileText, PackageCheck, RotateCcw, Scale, X } from "lucide-react";
@@ -15,8 +16,8 @@ type DisputeRow = { id: string; orderNumber: string; type: string; message: stri
 const tabs = ["purchases", "returns", "disputes"] as const;
 
 export default function MyStuffPage() {
-  const { openAuthModal } = useCustomerAuth();
-  const [tab, setTab] = useState<(typeof tabs)[number]>("purchases");
+  const { openAuthModal } = useCustomerAuth(); const search = useSearchParams(); const [errorMessage, setErrorMessage] = useState("");
+  const [tab, setTab] = useState<(typeof tabs)[number]>(search?.get("tab") === "returns" ? "returns" : search?.get("tab") === "disputes" ? "disputes" : "purchases");
   const [items, setItems] = useState<StuffItem[]>([]);
   const [returns, setReturns] = useState<ReturnRow[]>([]);
   const [disputes, setDisputes] = useState<DisputeRow[]>([]);
@@ -26,7 +27,7 @@ export default function MyStuffPage() {
   const [disputeOrder, setDisputeOrder] = useState<{ orderId: string; returnRequestId?: string } | null>(null);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    setLoading(true); setErrorMessage("");
     try {
       const [stuffRes, returnsRes, disputesRes] = await Promise.all([
         fetch("/api/customer/my-stuff"),
@@ -46,15 +47,17 @@ export default function MyStuffPage() {
       setDisputes(disputesData.disputes ?? []);
       setUnauthorized(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not load My Stuff");
+      setErrorMessage(error instanceof Error ? error.message : "Could not load My Stuff");
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => { const value = search?.get("tab"); setTab(value === "returns" || value === "disputes" ? value : "purchases"); }, [search]);
 
   async function requestReturn(event: FormEvent<HTMLFormElement>) {
+    try {
     event.preventDefault();
     if (!returnItem) return;
     const form = new FormData(event.currentTarget);
@@ -65,27 +68,33 @@ export default function MyStuffPage() {
     const data = await response.json();
     if (!response.ok) return toast.error(data.error || "Could not request return");
     toast.success("Return request submitted"); setReturnItem(null); setTab("returns"); await load();
+    } catch { toast.error("Could not reach the server. Please try again."); }
   }
 
   async function addTracking(id: string) {
+    try {
     const customerTracking = window.prompt("Enter the courier tracking/reference number");
     if (!customerTracking) return;
     const response = await fetch(`/api/customer/returns/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ customerTracking }) });
     const data = await response.json();
     if (!response.ok) return toast.error(data.error || "Could not save tracking");
     toast.success("Return shipment recorded"); await load();
+    } catch { toast.error("Could not reach the server. Please try again."); }
   }
 
   async function openDispute(event: FormEvent<HTMLFormElement>) {
+    try {
     event.preventDefault(); if (!disputeOrder) return;
     const form = new FormData(event.currentTarget);
     const response = await fetch("/api/customer/disputes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...disputeOrder, type: String(form.get("type")), message: String(form.get("message")) }) });
     const data = await response.json();
     if (!response.ok) return toast.error(data.error || "Could not open dispute");
     toast.success("Dispute opened for admin review"); setDisputeOrder(null); setTab("disputes"); await load();
+    } catch { toast.error("Could not reach the server. Please try again."); }
   }
 
   if (loading) return <main className="mx-auto max-w-7xl px-4 py-20 text-center text-darkText/55">Loading My Stuff…</main>;
+  if (errorMessage) return <main className="mx-auto max-w-xl p-8"><h1 className="text-3xl font-bold">My Stuff</h1><p className="my-4" role="alert">{errorMessage}</p><button className="rounded-xl bg-brand-primary p-3" onClick={() => void load()}>Try again</button></main>;
   if (unauthorized) return <main className="mx-auto max-w-lg px-4 py-20 text-center"><section className="rounded-2xl border border-borderGray bg-white p-8 shadow-card"><h1 className="text-2xl font-black text-brand-dark">Sign in to view My Stuff</h1><p className="mt-2 text-sm text-darkText/60">Purchases, invoices, returns and disputes are private.</p><button onClick={() => openAuthModal("login")} className="mt-6 w-full rounded-xl bg-brand-primary px-4 py-3 font-black text-brand-dark">Sign in</button></section></main>;
 
   return (

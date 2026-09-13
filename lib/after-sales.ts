@@ -92,3 +92,9 @@ export function isPrismaUniqueError(error: unknown): boolean {
       String((error as { code: unknown }).code) === "P2002"
   );
 }
+
+/** Customer responses exclude staff notes and payment processing references. */
+export function serializeCustomerReturn(row: ReturnWithDetails) {
+  const serialized = serializeReturn(row); const { refund } = serialized; const publicReturn = Object.fromEntries(Object.entries(serialized).filter(([key]) => !["adminNote", "vendorNote", "refund"].includes(key)));
+  return { ...publicReturn, refund: refund ? { id: refund.id, amount: refund.amount, method: refund.method, status: refund.status, processedAt: refund.processedAt } : null };
+}

@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireCustomerApi } from "@/lib/customer-api-auth";
-import { RETURN_INCLUDE, serializeReturn } from "@/lib/after-sales";
+import { RETURN_INCLUDE, serializeCustomerReturn } from "@/lib/after-sales";
 import { prisma } from "@/lib/prisma";
 
 const trackingSchema = z.object({
@@ -42,5 +42,5 @@ export async function PATCH(
     where: { id: params.id },
     include: RETURN_INCLUDE,
   });
-  return NextResponse.json({ return: serializeReturn(row) });
+  return NextResponse.json({ return: serializeCustomerReturn(row) });
 }

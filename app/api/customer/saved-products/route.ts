@@ -1,50 +1,16 @@
-export const dynamic = "force-dynamic";
-
-import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { requireCustomerApi } from "@/lib/customer-api-auth";
-import { catalogProductSelect } from "@/lib/catalog-product-select";
 import { prisma } from "@/lib/prisma";
-import { serializeProduct } from "@/lib/serialize";
-
-export async function GET() {
-  const auth = await requireCustomerApi();
-  if ("response" in auth) return auth.response;
-  const rows = await prisma.savedProduct.findMany({
-    where: { customerId: auth.customer.id, product: { isActive: true } },
-    orderBy: { createdAt: "desc" },
-    include: { product: { select: catalogProductSelect() } },
-  });
-  return NextResponse.json({
-    products: rows.map((row) => serializeProduct(row.product)),
-  });
-}
-
-export async function POST(req: NextRequest) {
-  const auth = await requireCustomerApi();
-  if ("response" in auth) return auth.response;
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
-  }
-  const parsed = z.object({ productId: z.string().min(1).max(191) }).safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: "Invalid product" }, { status: 400 });
-  const product = await prisma.product.findFirst({
-    where: { id: parsed.data.productId, isActive: true },
-    select: { id: true },
-  });
-  if (!product) return NextResponse.json({ error: "Product not found" }, { status: 404 });
-  await prisma.savedProduct.upsert({
-    where: {
-      customerId_productId: {
-        customerId: auth.customer.id,
-        productId: product.id,
-      },
-    },
-    create: { customerId: auth.customer.id, productId: product.id },
-    update: {},
-  });
-  return NextResponse.json({ ok: true }, { status: 201 });
-}
+import { api, ApiError, customerActor, sameOrigin } from "@/lib/marketplace-api";
+import { customerSavedProducts } from "@/lib/customer-saved-products";
+export const dynamic = "force-dynamic";
+export async function GET(request: Request) { return api(async () => {
+  const c = await customerActor();
+  if (new URL(request.url).searchParams.get("idsOnly") === "1") return { ids: (await prisma.savedProduct.findMany({ where: { customerId: c.id }, select: { productId: true } })).map(p => p.productId) };
+  return { products: await customerSavedProducts(c.id) };
+}); }
+export async function POST(request: Request) { return api(async () => {
+  sameOrigin(request); const c = await customerActor(); const { productId } = z.object({ productId: z.string().min(1).max(191) }).parse(await request.json());
+  const product = await prisma.product.findFirst({ where: { id: productId, isActive: true, OR: [{ vendorPublication: null }, { vendorPublication: { status: "active", vendor: { status: "approved" } } }] }, select: { id: true } });
+  if (!product) throw new ApiError(404, "Product is unavailable.");
+  await prisma.savedProduct.createMany({ data: [{ customerId: c.id, productId }], skipDuplicates: true }); return { ok: true, saved: true };
+}); }

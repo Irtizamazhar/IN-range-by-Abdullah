@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { memo, useState } from "react";
+import { memo } from "react";
 import {
   ArrowRight,
   Heart,
@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 
 import { useCart } from "@/context/CartContext";
-import { useCustomerAuth } from "@/context/CustomerAuthContext";
+import { useSavedProducts } from "@/lib/use-saved-products";
 import { formatPKR } from "@/lib/format";
 import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 
@@ -67,9 +67,8 @@ export const ProductCard = memo(function ProductCard({
   badgePosition?: "left" | "right";
 }) {
   const { items, addItem } = useCart();
-  const { openAuthModal } = useCustomerAuth();
-  const [saved, setSaved] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const { ids, toggle, saving, loading: savedLoading } = useSavedProducts();
+  const saved = ids.includes(String(product._id));
 
   const image =
     product.images?.[0];
@@ -208,24 +207,7 @@ export const ProductCard = memo(function ProductCard({
     });
   }
 
-  async function saveProduct() {
-    if (saving) return;
-    setSaving(true);
-    try {
-      const response = await fetch(`/api/customer/saved-products${saved ? `/${product._id}` : ""}`, {
-        method: saved ? "DELETE" : "POST",
-        headers: saved ? undefined : { "Content-Type": "application/json" },
-        body: saved ? undefined : JSON.stringify({ productId: String(product._id) }),
-      });
-      if (response.status === 401) {
-        openAuthModal("login");
-        return;
-      }
-      if (response.ok) setSaved((value) => !value);
-    } finally {
-      setSaving(false);
-    }
-  }
+  async function saveProduct() { await toggle(String(product._id)); }
 
   return (
     <article className="group flex min-w-0 flex-col overflow-hidden rounded-[16px] border border-black/[0.06] bg-white shadow-xs transition-all duration-250 hover:-translate-y-0.5 hover:border-brand-primary/40 hover:shadow-cardHover">
@@ -243,7 +225,7 @@ export const ProductCard = memo(function ProductCard({
               event.stopPropagation();
               void saveProduct();
             }}
-            disabled={saving}
+            disabled={saving || savedLoading}
             aria-label={saved ? `Remove ${product.name} from saved products` : `Save ${product.name}`}
             aria-pressed={saved}
             className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/95 text-brand-link shadow-sm transition hover:bg-brand-soft disabled:opacity-60"

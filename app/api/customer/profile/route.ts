@@ -1,47 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getCustomerSession } from "@/lib/sessions";
 import { prisma } from "@/lib/prisma";
-
-export async function GET() {
-  const session = await getCustomerSession();
-  if (!session?.user?.id || session.user.role !== "customer") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  const customer = await prisma.customer.findUnique({
-    where: { id: session.user.id },
-    select: { name: true, email: true, phone: true, createdAt: true },
-  });
-  if (!customer) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
-  const { createdAt, ...rest } = customer;
-  return NextResponse.json({
-    ...rest,
-    image: session.user.image ?? null,
-    createdAt: createdAt.toISOString(),
-  });
-}
-
-export async function PATCH(req: NextRequest) {
-  const session = await getCustomerSession();
-  if (!session?.user?.id || session.user.role !== "customer") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  let body: { name?: string; phone?: string };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-  }
-  const name = typeof body.name === "string" ? body.name.trim() : "";
-  const phone = typeof body.phone === "string" ? body.phone.trim() : "";
-  if (!name) {
-    return NextResponse.json({ error: "Name is required" }, { status: 400 });
-  }
-  const updated = await prisma.customer.update({
-    where: { id: session.user.id },
-    data: { name, phone },
-    select: { name: true, email: true, phone: true },
-  });
-  return NextResponse.json(updated);
-}
+import { api, customerActor, sameOrigin } from "@/lib/marketplace-api";
+import { profileSchema } from "@/lib/customer-address-schema";
+export const dynamic = "force-dynamic";
+export async function GET() { return api(async () => { const c = await customerActor(); return prisma.customer.findUnique({ where: { id: c.id }, select: { name: true, email: true, phone: true, image: true, createdAt: true } }); }); }
+export async function PATCH(request: Request) { return api(async () => {
+  sameOrigin(request); const c = await customerActor(); const data = profileSchema.parse(await request.json());
+  return prisma.customer.update({ where: { id: c.id }, data, select: { name: true, email: true, phone: true } });
+}); }

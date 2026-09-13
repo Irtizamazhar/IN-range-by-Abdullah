@@ -1,154 +1,60 @@
 "use client";
-
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import toast from "react-hot-toast";
-import { Heart, MapPin, Package, Plus, Store, UserRound, X } from "lucide-react";
+import Image from "next/image";
 import { ProductCard, type ProductCardData } from "@/components/user/ProductCard";
+import { accountDestinations } from "@/components/user/AccountNavigation";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
+import { useSavedProducts } from "@/lib/use-saved-products";
 import { formatPKR } from "@/lib/format";
-import { PAKISTANI_CITIES } from "@/lib/pakistani-cities";
-
-type AccountData = {
+type Address = { id: string; label: string; recipientName: string; phone: string; address: string; city: string; postalCode: string | null; isDefault: boolean };
+type Account = {
   profile: { name: string; email: string; phone: string; createdAt: string };
-  orders: Array<{ id: string; orderNumber: string; orderStatus: string; paymentStatus: string; totalAmount: number; createdAt: string }>;
-  addresses: Array<{ id: string; label: string; recipientName: string; phone: string; address: string; city: string; postalCode: string | null; isDefault: boolean }>;
-  savedProducts: ProductCardData[];
-  followedStores: Array<{ id: string; shopName: string; storeSlug: string | null; primaryCategory: string; city: string; _count: { followers: number; products: number } }>;
-  wants: Array<{ id: string; title: string; status: string; offerCount: number; city: string; createdAt: string }>;
+  orders: { id: string; orderNumber: string; orderStatus: string; paymentStatus: string; totalAmount: number; createdAt: string; canCancel: boolean; hasDeliveredItems: boolean; items: { id: string; name: string; quantity: number }[] }[];
+  wants: { id: string; title: string; status: string; category: string; city: string; createdAt: string; expiresAt: string; interestCount: number; offerCount: number }[];
+  savedProducts: (ProductCardData & { available: boolean })[];
+  followedStores: { id: string; shopName: string; shopLogo: string | null; storeSlug: string | null; primaryCategory: string; city: string; status: string; _count: { followers: number } }[];
+  addresses: Address[]; counts: Record<string,number>; pagination: { page: number; pageSize: number; orderPages: number; wantPages: number };
 };
-
-const tabs = [
-  ["orders", "Orders", Package],
-  ["saved", "Saved", Heart],
-  ["addresses", "Addresses", MapPin],
-  ["wants", "My Wants", Plus],
-  ["stores", "Following", Store],
-  ["profile", "Profile", UserRound],
-] as const;
-
+const fieldClass = "mt-1 block w-full min-w-0 rounded-xl border border-borderGray bg-white px-3 py-2.5 font-normal";
+function Empty({ title, children }: { title: string; children: React.ReactNode }) { return <div className="rounded-2xl border border-dashed border-borderGray bg-white p-8 text-center"><h2 className="text-lg font-bold">{title}</h2><p className="mt-2 text-base text-darkText/65">{children}</p></div>; }
 export default function AccountPage() {
-  const { openAuthModal, openProfileModal } = useCustomerAuth();
-  const [data, setData] = useState<AccountData | null>(null);
-  const [unauthorized, setUnauthorized] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<(typeof tabs)[number][0]>("orders");
-  const [addressOpen, setAddressOpen] = useState(false);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await fetch("/api/customer/account");
-      if (response.status === 401) {
-        setUnauthorized(true);
-        return;
-      }
-      if (!response.ok) throw new Error("Could not load account");
-      setData((await response.json()) as AccountData);
-      setUnauthorized(false);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not load account");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    const requested = new URLSearchParams(window.location.search).get("tab");
-    if (tabs.some(([id]) => id === requested)) setTab(requested as typeof tab);
-    void load();
-  }, [load]);
-
-  async function addAddress(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const response = await fetch("/api/customer/addresses", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        label: String(form.get("label") || "Home"),
-        recipientName: String(form.get("recipientName") || ""),
-        phone: String(form.get("phone") || ""),
-        address: String(form.get("address") || ""),
-        city: String(form.get("city") || ""),
-        postalCode: String(form.get("postalCode") || "") || null,
-        isDefault: form.get("isDefault") === "on",
-      }),
-    });
-    const result = (await response.json()) as { error?: string };
-    if (!response.ok) return toast.error(result.error || "Could not save address");
-    toast.success("Address saved");
-    setAddressOpen(false);
-    await load();
+  const { data: session, status, update } = useSession(); const { openAuthModal } = useCustomerAuth(); const saved = useSavedProducts(); const search = useSearchParams();
+  const requestedTab = search?.get("tab") || "overview"; const tab = ["overview","orders","wants","saved","stores","addresses","profile"].includes(requestedTab) ? requestedTab : "overview"; const page = Math.max(1, Number.parseInt(search?.get("page") || "1",10) || 1);
+  const customerId = session?.user?.role === "customer" ? session.user.id : "";
+  const [data, setData] = useState<Account | null>(null); const [ownerId, setOwnerId] = useState(""); const [loading, setLoading] = useState(false); const [error, setError] = useState(""); const [message, setMessage] = useState(""); const [busy, setBusy] = useState(false); const [editing, setEditing] = useState<Address | "new" | null>(null);
+  const load = useCallback(async (signal?: AbortSignal) => {
+    if (!customerId) return; setLoading(true); setError("");
+    try { const r = await fetch(`/api/customer/account?page=${page}`, { signal, cache: "no-store" }); const d = await r.json(); if (!r.ok) throw new Error(d.error || "Could not load account."); if (!signal?.aborted) { setData(d); setOwnerId(customerId); } }
+    catch(e) { if (!signal?.aborted) setError(e instanceof Error ? e.message : "Could not load account."); } finally { if (!signal?.aborted) setLoading(false); }
+  }, [customerId,page]);
+  useEffect(() => { setData(null); setEditing(null); const controller = new AbortController(); void load(controller.signal); const refresh = () => { void load(controller.signal); }; window.addEventListener("customer-saved-products-changed",refresh); return () => { controller.abort(); window.removeEventListener("customer-saved-products-changed",refresh); }; }, [load]);
+  async function mutate(url: string, method: string, body?: unknown) {
+    setBusy(true); setError(""); setMessage("");
+    try { const r = await fetch(url, { method, headers: { "Content-Type": "application/json" }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) }); const d = await r.json(); if (!r.ok) throw new Error(d.error || "Could not save changes."); setMessage("Changes saved."); setEditing(null); await load(); return true; }
+    catch(e) { setError(e instanceof Error ? e.message : "Could not save changes."); return false; } finally { setBusy(false); }
   }
-
-  async function removeAddress(id: string) {
-    const response = await fetch(`/api/customer/addresses/${id}`, { method: "DELETE" });
-    if (!response.ok) return toast.error("Could not remove address");
-    setData((current) => current ? { ...current, addresses: current.addresses.filter((item) => item.id !== id) } : current);
+  async function saveAddress(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault(); const f = new FormData(e.currentTarget); const current = editing && editing !== "new" ? editing : null;
+    await mutate(`/api/customer/addresses${current ? `/${current.id}` : ""}`, current ? "PATCH" : "POST", { label: f.get("label"), recipientName: f.get("recipientName"), phone: f.get("phone"), address: f.get("address"), city: f.get("city"), postalCode: f.get("postalCode") || null, isDefault: f.get("isDefault") === "on" });
   }
-
-  if (loading && !data) {
-    return <main className="mx-auto max-w-7xl px-4 py-20 text-center text-darkText/55">Loading your account…</main>;
-  }
-  if (unauthorized) {
-    return (
-      <main className="mx-auto max-w-lg px-4 py-20 text-center">
-        <section className="rounded-2xl border border-borderGray bg-white p-8 shadow-card">
-          <h1 className="text-2xl font-black text-brand-dark">Sign in to view your account</h1>
-          <p className="mt-2 text-sm text-darkText/60">Orders, saved products, addresses, followed stores, and Wants are private.</p>
-          <button onClick={() => openAuthModal("login")} className="mt-6 w-full rounded-xl bg-brand-primary px-4 py-3 font-black text-brand-dark">Sign in</button>
-        </section>
-      </main>
-    );
-  }
-  if (!data) return null;
-
-  const empty = (title: string, text: string) => (
-    <div className="rounded-2xl border border-dashed border-borderGray bg-white p-10 text-center">
-      <h3 className="font-bold text-brand-dark">{title}</h3><p className="mt-1 text-sm text-darkText/55">{text}</p>
-    </div>
-  );
-
-  return (
-    <main className="mx-auto max-w-7xl px-4 py-9 sm:px-6">
-      <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-        <div><p className="text-sm font-black uppercase tracking-wider text-brand-link">Customer account</p><h1 className="text-3xl font-black text-brand-dark">Hello, {data.profile.name}</h1></div>
-        <div className="flex flex-wrap gap-3">
-          <Link href="/my-stuff" className="rounded-xl bg-brand-soft px-4 py-2.5 text-sm font-black text-brand-link">My Stuff & Returns</Link>
-          <Link href="/products" className="rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-black text-brand-dark">Continue shopping</Link>
-        </div>
-      </div>
-      <nav className="mt-5 flex flex-wrap gap-3 text-sm font-bold text-brand-link">
-        <Link href="/account/offers" className="rounded-xl border border-borderGray bg-white px-3 py-2 hover:bg-brand-soft">Received Offers</Link>
-        <Link href="/account/together" className="rounded-xl border border-borderGray bg-white px-3 py-2 hover:bg-brand-soft">Family rooms</Link>
-        <Link href="/account/services" className="rounded-xl border border-borderGray bg-white px-3 py-2 hover:bg-brand-soft">Services</Link>
-        <Link href="/account/notifications" className="rounded-xl border border-borderGray bg-white px-3 py-2 hover:bg-brand-soft">Notifications</Link>
-      </nav>
-      <div className="mt-7 flex gap-2 overflow-x-auto border-b border-borderGray pb-3">
-        {tabs.map(([id, label, Icon]) => (
-          <button key={id} onClick={() => setTab(id)} className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold ${tab === id ? "bg-brand-primary text-brand-dark" : "bg-white text-darkText/65 hover:bg-brand-soft"}`}>
-            <Icon className="h-4 w-4" />{label}
-          </button>
-        ))}
-      </div>
-      <section className="mt-6">
-        {tab === "orders" && (data.orders.length ? (
-          <div className="space-y-3">{data.orders.map((order) => <Link key={order.id} href={`/track-order?order=${encodeURIComponent(order.orderNumber)}`} className="flex flex-col gap-3 rounded-2xl border border-borderGray bg-white p-5 shadow-card sm:flex-row sm:items-center sm:justify-between"><div><p className="font-black text-brand-dark">{order.orderNumber}</p><p className="mt-1 text-xs text-darkText/50">{new Date(order.createdAt).toLocaleString("en-PK")}</p></div><div className="flex items-center gap-4"><span className="rounded-full bg-brand-soft px-3 py-1 text-xs font-bold capitalize text-brand-link">{order.orderStatus}</span><span className="font-black text-brand-dark">{formatPKR(order.totalAmount)}</span></div></Link>)}</div>
-        ) : empty("No orders yet", "Your completed checkouts will appear here."))}
-
-        {tab === "saved" && (data.savedProducts.length ? <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">{data.savedProducts.map((product) => <ProductCard key={product._id} product={product} />)}</div> : empty("Nothing saved", "Use the heart on a product card to keep it here."))}
-
-        {tab === "addresses" && <><div className="mb-4 flex justify-end"><button onClick={() => setAddressOpen(true)} className="inline-flex items-center gap-2 rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-bold text-brand-dark"><Plus className="h-4 w-4" />Add address</button></div>{data.addresses.length ? <div className="grid gap-4 md:grid-cols-2">{data.addresses.map((address) => <article key={address.id} className="relative rounded-2xl border border-borderGray bg-white p-5 shadow-card"><button aria-label="Remove address" onClick={() => void removeAddress(address.id)} className="absolute right-3 top-3 rounded-lg p-1.5 text-darkText/35 hover:bg-red-50 hover:text-red-600"><X className="h-4 w-4" /></button><div className="flex items-center gap-2"><h3 className="font-black text-brand-dark">{address.label}</h3>{address.isDefault && <span className="rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-bold text-brand-link">Default</span>}</div><p className="mt-3 text-sm font-semibold text-darkText">{address.recipientName} · {address.phone}</p><p className="mt-1 pr-7 text-sm leading-5 text-darkText/60">{address.address}, {address.city}{address.postalCode ? ` ${address.postalCode}` : ""}</p></article>)}</div> : empty("No saved addresses", "Save delivery details for faster checkout.")}</>}
-
-        {tab === "wants" && <><div className="mb-4 flex justify-end"><Link href="/wants/new" className="rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-bold text-brand-dark">Post a Want</Link></div>{data.wants.length ? <div className="space-y-3">{data.wants.map((want) => <Link key={want.id} href={`/wants/${want.id}`} className="flex items-center justify-between rounded-2xl border border-borderGray bg-white p-5 shadow-card"><div><h3 className="font-black text-brand-dark">{want.title}</h3><p className="mt-1 text-xs text-darkText/50">{want.city} · {want.offerCount} offers</p></div><span className="rounded-full bg-brand-soft px-3 py-1 text-xs font-bold capitalize text-brand-link">{want.status}</span></Link>)}</div> : empty("No Wants yet", "Post a need and approved sellers can respond after moderation.")}</>}
-
-        {tab === "stores" && (data.followedStores.length ? <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">{data.followedStores.map((store) => <Link key={store.id} href={`/stores/${store.storeSlug || store.id}`} className="rounded-2xl border border-borderGray bg-white p-5 shadow-card"><h3 className="font-black text-brand-dark">{store.shopName}</h3><p className="mt-1 text-sm font-semibold text-brand-link">{store.primaryCategory}</p><p className="mt-3 text-xs text-darkText/50">{store.city} · {store._count.products} products · {store._count.followers} followers</p></Link>)}</div> : empty("No followed stores", "Follow an approved store to keep it here."))}
-
-        {tab === "profile" && <div className="max-w-xl rounded-2xl border border-borderGray bg-white p-6 shadow-card"><h2 className="text-xl font-black text-brand-dark">Profile details</h2><dl className="mt-5 space-y-3 text-sm"><div><dt className="font-bold text-darkText/45">Name</dt><dd className="text-darkText">{data.profile.name}</dd></div><div><dt className="font-bold text-darkText/45">Email</dt><dd className="text-darkText">{data.profile.email}</dd></div><div><dt className="font-bold text-darkText/45">Phone</dt><dd className="text-darkText">{data.profile.phone || "Not added"}</dd></div></dl><button onClick={openProfileModal} className="mt-6 rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-bold text-brand-dark">Edit profile</button></div>}
-      </section>
-
-      {addressOpen && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 p-4"><form onSubmit={addAddress} className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl"><div className="flex items-center justify-between"><h2 className="text-xl font-black text-brand-dark">Add delivery address</h2><button type="button" onClick={() => setAddressOpen(false)} aria-label="Close"><X className="h-5 w-5" /></button></div><div className="mt-5 grid gap-4 sm:grid-cols-2">{[["label","Label"],["recipientName","Recipient name"],["phone","Phone"],["postalCode","Postal code (optional)"]].map(([name,label]) => <label key={name} className="text-sm font-bold text-darkText">{label}<input required={name !== "postalCode"} name={name} className="mt-1 w-full rounded-xl border border-borderGray px-3 py-2.5" /></label>)}<label className="text-sm font-bold text-darkText sm:col-span-2">Address<textarea required minLength={5} name="address" rows={3} className="mt-1 w-full rounded-xl border border-borderGray px-3 py-2.5" /></label><label className="text-sm font-bold text-darkText">City<select required name="city" className="mt-1 w-full rounded-xl border border-borderGray px-3 py-2.5"><option value="">Select city</option>{PAKISTANI_CITIES.map((city) => <option key={city}>{city}</option>)}</select></label><label className="flex items-end gap-2 pb-3 text-sm font-bold text-darkText"><input type="checkbox" name="isDefault" />Make default</label></div><button className="mt-5 w-full rounded-xl bg-brand-primary px-4 py-3 font-black text-brand-dark">Save address</button></form></div>}
-    </main>
-  );
+  async function saveProfile(e: React.FormEvent<HTMLFormElement>) { e.preventDefault(); const f = new FormData(e.currentTarget); const name = String(f.get("name")); const phone = String(f.get("phone")); if (await mutate("/api/customer/profile","PATCH",{ name,phone })) { try { const response = await fetch("/api/customer/profile", { cache: "no-store" }); if (!response.ok) throw new Error("Session refresh failed"); const result = await response.json(); await update({ name: result.name, phone: result.phone }); } catch { setMessage("Profile saved. Refresh to update your session display."); } } }
+  if (status === "loading") return <div className="p-10 text-center" role="status">Loading your account…</div>;
+  if (!customerId) return <main className="mx-auto max-w-xl px-4 py-12 text-center"><h1 className="text-3xl font-bold">My JORO</h1><p className="my-4">Sign in to view your private account, orders, and saved items.</p><button onClick={() => openAuthModal("login")} className="rounded-xl bg-brand-primary px-6 py-3 font-bold">Sign in</button></main>;
+  const current = ownerId === customerId ? data : null;
+  if (!current) return <main className="mx-auto max-w-3xl p-8"><h1 className="text-3xl font-bold">My JORO</h1><p className="my-4" role={error ? "alert" : "status"}>{error || "Loading your account…"}</p>{error && <button onClick={() => void load()} className="rounded-xl bg-brand-primary p-3">Try again</button>}</main>;
+  const title = accountDestinations.find(([id]) => id === tab)?.[1] || "Overview";
+  const address = editing && editing !== "new" ? editing : null;
+  const pages = tab === "orders" ? current.pagination.orderPages : tab === "wants" ? current.pagination.wantPages : 0;
+  return <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6"><p className="text-sm font-bold text-brand-link">My JORO</p><h1 className="mt-1 text-3xl font-bold">{title === "Overview" ? `Welcome, ${current.profile.name}` : title}</h1>{error && <p className="my-4 rounded-xl bg-red-50 p-4 text-red-800" role="alert">{error}</p>}{message && <p className="my-4" role="status">{message}</p>}{loading && <p className="my-3 text-sm" role="status">Refreshing…</p>}<section className="mt-6">
+    {tab === "overview" && <><p className="mb-5 text-darkText/65">Your orders, shopping activity, and after-sales support in one place.</p><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{[["orders","Orders","/account?tab=orders"],["wants","My Wants","/account?tab=wants"],["offers","Received Offers","/account/offers"],["saved","Saved Products","/account?tab=saved"],["following","Following Stores","/account?tab=stores"],["unread","Unread Notifications","/account/notifications"],["returns","Return Requests","/my-stuff?tab=returns"],["services","Booked Services","/account/services"]].map(([key,label,href]) => <Link key={key} href={href} className="rounded-2xl border border-borderGray bg-white p-5 shadow-card"><p className="text-base text-darkText/65">{label}</p><p className="mt-2 text-3xl font-bold">{current.counts[key]}</p></Link>)}</div><Link href="/my-stuff" className="mt-6 inline-block rounded-xl bg-brand-soft px-5 py-3 font-bold text-brand-link">My Stuff: purchases, warranties & support</Link></>}
+    {tab === "orders" && (current.orders.length ? <div className="space-y-4">{current.orders.map(o => <article key={o.id} className="rounded-2xl border bg-white p-5 shadow-card"><div className="flex flex-wrap justify-between gap-3"><h2 className="text-lg font-bold">{o.orderNumber}</h2><p className="font-bold">{formatPKR(o.totalAmount)}</p></div><p className="my-2 text-sm text-darkText/65">{new Date(o.createdAt).toLocaleString("en-PK")} · {o.orderStatus.replaceAll("_"," ")} · Payment {o.paymentStatus.replaceAll("_"," ")}</p><ul className="my-4 space-y-1">{o.items.map(i => <li key={i.id}>{i.name} × {i.quantity}</li>)}</ul><div className="flex flex-wrap gap-3 text-sm font-bold text-brand-link"><Link href={`/account/orders/${o.id}`}>Order details</Link><Link href={`/track-order?order=${encodeURIComponent(o.orderNumber)}`}>Track</Link><Link href={`/invoice/${o.id}`}>Invoice</Link>{o.canCancel && <Link href={`/account/orders/${o.id}#cancel`}>Cancel order</Link>}{o.hasDeliveredItems && <Link href="/my-stuff">Returns / After-sales</Link>}</div></article>)}</div> : <Empty title="No orders yet">Your orders will appear after checkout.</Empty>)}
+    {tab === "wants" && <><Link href="/wants/new" className="mb-5 inline-block rounded-xl bg-brand-primary px-4 py-3 font-bold">Post a Want</Link>{current.wants.length ? <div className="grid gap-4 md:grid-cols-2">{current.wants.map(w => <article key={w.id} className="rounded-2xl border bg-white p-5"><Link href={`/wants/${w.id}`} className="text-lg font-bold">{w.title}</Link><p className="my-2">{w.category} · {w.city}</p><p className="text-sm">{w.status.replaceAll("_"," ")} · {w.interestCount} interested · {w.offerCount} offers</p><p className="mt-2 text-sm text-darkText/65">Created {new Date(w.createdAt).toLocaleDateString("en-PK")} · Expires {new Date(w.expiresAt).toLocaleDateString("en-PK")}</p></article>)}</div> : <Empty title="No Wants yet">Your own posted Wants will appear here.</Empty>}</>}
+    {tab === "saved" && <><p className="mb-4 text-sm text-darkText/65">Unavailable listings stay here until you unsave them. Deleted catalog products are removed automatically.</p>{current.savedProducts.length ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{current.savedProducts.map(p => <div key={p._id}>{p.available ? <ProductCard product={p} /> : <article className="rounded-2xl border bg-white p-5"><h2 className="font-bold">{p.name}</h2><p className="my-3">Currently unavailable.</p><button disabled={saved.saving} onClick={() => void saved.toggle(p._id)} className="font-bold text-brand-link underline">Unsave product</button></article>}</div>)}</div> : <Empty title="Nothing saved yet">Use the heart on a product to save it to your account.</Empty>}</>}
+    {tab === "stores" && (current.followedStores.length ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{current.followedStores.map(s => <article key={s.id} className="rounded-2xl border bg-white p-5"><div className="flex items-center gap-3">{s.shopLogo && <Image src={s.shopLogo} alt="" width={48} height={48} unoptimized className="h-12 w-12 rounded-xl object-cover" />}<h2 className="text-lg font-bold">{s.shopName}</h2></div><p className="my-3">{s.primaryCategory} · {s.city}</p><p className="text-sm">{s._count.followers} followers</p><div className="mt-4 flex flex-wrap gap-4 text-sm font-bold text-brand-link">{s.status === "approved" && s.storeSlug ? <Link href={`/stores/${encodeURIComponent(s.storeSlug)}`}>View Store</Link> : <span className="text-darkText/60">Store currently unavailable</span>}<button disabled={busy} onClick={() => void mutate(`/api/stores/${s.id}/follow`,"DELETE")}>Unfollow</button></div></article>)}</div> : <Empty title="No followed stores">Follow a store to keep it here.</Empty>)}
+    {tab === "addresses" && <><button onClick={() => setEditing("new")} className="mb-5 rounded-xl bg-brand-primary px-4 py-3 font-bold">Add address</button>{editing && <form key={address?.id || "new"} onSubmit={e => void saveAddress(e)} className="mb-6 grid gap-4 rounded-2xl border bg-white p-5 sm:grid-cols-2"><h2 className="text-xl font-bold sm:col-span-2">{address ? "Edit" : "Add"} delivery address</h2>{([['label','Label',60],['recipientName','Recipient name',200],['phone','Phone',40],['postalCode','Postal code (optional)',30],['city','City',120]] as const).map(([name,label,max]) => <label key={name}>{label}<input className={fieldClass} name={name} defaultValue={address?.[name] || ""} required={name !== "postalCode"} maxLength={max} /></label>)}<label>Street address<textarea className={fieldClass} name="address" rows={3} defaultValue={address?.address || ""} minLength={5} maxLength={2000} required /></label><label className="flex items-center gap-2"><input name="isDefault" type="checkbox" defaultChecked={address?.isDefault} />Default delivery address</label><p className="text-sm text-darkText/65">Your first address becomes the default. At least one remains default while addresses exist.</p><button disabled={busy} className="rounded-xl bg-brand-primary p-3 font-bold">Save address</button><button type="button" onClick={() => setEditing(null)}>Cancel edit</button></form>}{current.addresses.length ? <div className="grid gap-4 md:grid-cols-2">{current.addresses.map(a => <article key={a.id} className="rounded-2xl border bg-white p-5"><h2 className="text-lg font-bold">{a.label}{a.isDefault ? " · Default" : ""}</h2><p className="my-2">{a.recipientName} · {a.phone}</p><p>{a.address}, {a.city} {a.postalCode}</p><div className="mt-4 flex flex-wrap gap-4 text-sm font-bold text-brand-link"><button disabled={busy} onClick={() => setEditing(a)}>Edit</button>{!a.isDefault && <button disabled={busy} onClick={() => void mutate(`/api/customer/addresses/${a.id}`,"PATCH",{ isDefault: true })}>Make default</button>}<button disabled={busy} onClick={() => void mutate(`/api/customer/addresses/${a.id}`,"DELETE")}>Delete address</button></div></article>)}</div> : <Empty title="No addresses saved">Add a delivery address for future checkout.</Empty>}</>}
+    {tab === "profile" && <form onSubmit={e => void saveProfile(e)} className="max-w-xl space-y-5 rounded-2xl border bg-white p-6"><label className="block">Name<input className={fieldClass} name="name" defaultValue={current.profile.name} maxLength={200} required /></label><label className="block">Phone<input className={fieldClass} name="phone" defaultValue={current.profile.phone} maxLength={40} /></label><div><p className="text-sm text-darkText/65">Email</p><p className="break-all">{current.profile.email}</p></div><p className="text-sm text-darkText/65">Member since {new Date(current.profile.createdAt).toLocaleDateString("en-PK")}</p><button disabled={busy} className="rounded-xl bg-brand-primary px-5 py-3 font-bold">Save profile</button></form>}
+  </section>{pages > 1 && <nav aria-label="Account list pages" className="mt-6 flex flex-wrap items-center gap-4">{page > 1 && <Link href={`/account?tab=${tab}&page=${page-1}`} className="rounded-xl border p-3">Previous</Link>}<span>Page {page} of {pages}</span>{page < pages && <Link href={`/account?tab=${tab}&page=${page+1}`} className="rounded-xl border p-3">Next</Link>}</nav>}</main>;
 }

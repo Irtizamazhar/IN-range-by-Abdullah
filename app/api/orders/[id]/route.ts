@@ -23,13 +23,18 @@ import { createCustomerNotification } from "@/lib/customer-notifications";
 type Ctx = { params: { id: string } };
 
 export async function GET(req: NextRequest, context: Ctx) {
-  await autoCancelStaleBankOrders();
+
   const { id } = context.params;
   const session = await getAdminSession();
   if (session?.user?.role === "admin") {
     const auth = await requireAdminPermission("orders.view");
     if ("response" in auth) return auth.response;
   }
+  const customerSession = session?.user?.role === "admin" ? null : await getCustomerSession();
+  if (session?.user?.role !== "admin" && (customerSession?.user?.role !== "customer" || !customerSession.user.id)) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  await autoCancelStaleBankOrders(customerSession?.user?.id);
   /** Admin panel must pass `?admin=1` so vendor-facing merge is not applied while browsing as admin. */
   const forAdmin =
     session?.user?.role === "admin" &&
@@ -40,7 +45,7 @@ export async function GET(req: NextRequest, context: Ctx) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
   if (session?.user?.role !== "admin") {
-    const customerSession = await getCustomerSession();
+
     if (
       customerSession?.user?.role !== "customer" ||
       !customerSession.user.id ||
@@ -58,7 +63,7 @@ export async function GET(req: NextRequest, context: Ctx) {
 }
 
 export async function PUT(req: NextRequest, context: Ctx) {
-  await autoCancelStaleBankOrders();
+
   const { id } = context.params;
   const session = await getAdminSession();
   const body = await req.json();

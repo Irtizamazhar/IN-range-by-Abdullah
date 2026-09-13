@@ -1,77 +1,23 @@
-export const dynamic = "force-dynamic";
-
-import { Prisma } from "@prisma/client";
-import { NextRequest, NextResponse } from "next/server";
-import { requireCustomerApi } from "@/lib/customer-api-auth";
+import { api, ApiError, customerActor, sameOrigin } from "@/lib/marketplace-api";
 import { addressSchema } from "@/lib/customer-address-schema";
-import { prisma } from "@/lib/prisma";
-import { sanitizePlainText } from "@/lib/security/sanitize";
-
-type Ctx = { params: { id: string } };
-
-export async function PATCH(req: NextRequest, context: Ctx) {
-  const auth = await requireCustomerApi();
-  if ("response" in auth) return auth.response;
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
-  }
-  const parsed = addressSchema.partial().safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: "Check the address fields" }, { status: 400 });
-  const current = await prisma.customerAddress.findFirst({
-    where: { id: context.params.id, customerId: auth.customer.id },
+import { addressSelect, addressTransaction, ensureDefaultAddress } from "@/lib/customer-address-service";
+export const dynamic = "force-dynamic";
+type Context = { params: { id: string } };
+export async function PATCH(request: Request, { params }: Context) { return api(async () => {
+  sameOrigin(request); const c = await customerActor(); const input = addressSchema.partial().parse(await request.json());
+  return addressTransaction(c.id, async tx => {
+    if (!await tx.customerAddress.findFirst({ where: { id: params.id, customerId: c.id }, select: { id: true } })) throw new ApiError(404, "Address not found.");
+    if (input.isDefault) await tx.customerAddress.updateMany({ where: { customerId: c.id, isDefault: true }, data: { isDefault: false } });
+    await tx.customerAddress.update({ where: { id: params.id, customerId: c.id }, data: input });
+    await ensureDefaultAddress(tx, c.id, input.isDefault === false ? params.id : undefined);
+    return { address: await tx.customerAddress.findUnique({ where: { id: params.id }, select: addressSelect }) };
   });
-  if (!current) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-  const address = await prisma.$transaction(
-    async (tx) => {
-      if (parsed.data.isDefault === true) {
-        await tx.customerAddress.updateMany({
-          where: { customerId: auth.customer.id, isDefault: true },
-          data: { isDefault: false },
-        });
-      }
-      const data = parsed.data;
-      return tx.customerAddress.update({
-        where: { id: current.id },
-        data: {
-          ...(data.label !== undefined ? { label: sanitizePlainText(data.label, 60) } : {}),
-          ...(data.recipientName !== undefined
-            ? { recipientName: sanitizePlainText(data.recipientName, 200) }
-            : {}),
-          ...(data.phone !== undefined ? { phone: sanitizePlainText(data.phone, 40) } : {}),
-          ...(data.address !== undefined ? { address: sanitizePlainText(data.address, 2000) } : {}),
-          ...(data.city !== undefined ? { city: sanitizePlainText(data.city, 120) } : {}),
-          ...(data.postalCode !== undefined
-            ? { postalCode: data.postalCode ? sanitizePlainText(data.postalCode, 30) : null }
-            : {}),
-          ...(data.isDefault !== undefined ? { isDefault: data.isDefault } : {}),
-        },
-      });
-    },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
-  );
-  return NextResponse.json({ address });
-}
-
-export async function DELETE(_req: NextRequest, context: Ctx) {
-  const auth = await requireCustomerApi();
-  if ("response" in auth) return auth.response;
-  const current = await prisma.customerAddress.findFirst({
-    where: { id: context.params.id, customerId: auth.customer.id },
+}); }
+export async function DELETE(request: Request, { params }: Context) { return api(async () => {
+  sameOrigin(request); const c = await customerActor();
+  return addressTransaction(c.id, async tx => {
+    const result = await tx.customerAddress.deleteMany({ where: { id: params.id, customerId: c.id } });
+    if (!result.count) throw new ApiError(404, "Address not found.");
+    await ensureDefaultAddress(tx, c.id); return { ok: true };
   });
-  if (!current) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  await prisma.customerAddress.delete({ where: { id: current.id } });
-  if (current.isDefault) {
-    const replacement = await prisma.customerAddress.findFirst({
-      where: { customerId: auth.customer.id },
-      orderBy: { createdAt: "desc" },
-    });
-    if (replacement) {
-      await prisma.customerAddress.update({ where: { id: replacement.id }, data: { isDefault: true } });
-    }
-  }
-  return NextResponse.json({ ok: true });
-}
+}); }
