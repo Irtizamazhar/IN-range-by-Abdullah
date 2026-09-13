@@ -7,6 +7,7 @@ import { requireAdminPermission, writeAdminAudit } from "@/lib/admin-rbac";
 import { prisma } from "@/lib/prisma";
 import { sanitizePlainText } from "@/lib/security/sanitize";
 import { sendVendorApprovedEmail } from "@/lib/vendor-mail";
+import { generateUniqueStoreSlug } from "@/lib/store-slug";
 
 const patchSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("approve") }),
@@ -58,7 +59,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
   const vendor = await prisma.vendor.findUnique({
     where: { id },
-    select: { id: true, email: true, shopName: true, status: true },
+    select: { id: true, email: true, shopName: true, status: true, storeSlug: true },
   });
   if (!vendor) {
     return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
@@ -69,6 +70,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
   try {
     if (parsed.data.action === "approve") {
+      const storeSlug = vendor.storeSlug || (await generateUniqueStoreSlug(prisma, vendor.shopName, vendor.id));
       await prisma.vendor.update({
         where: { id },
         data: {
@@ -76,6 +78,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
           rejectionReason: null,
           isEmailVerified: true,
           emailVerifyToken: null,
+          ...(vendor.storeSlug ? {} : { storeSlug }),
         },
       });
       // Once vendor is approved again, clear pending appeal notifications.

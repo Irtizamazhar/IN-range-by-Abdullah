@@ -328,6 +328,7 @@ export default async function HomePage() {
       select: {
         id: true,
         shopName: true,
+        storeSlug: true,
         primaryCategory: true,
         _count: { select: { followers: true } },
       },
@@ -696,7 +697,7 @@ export default async function HomePage() {
                   ) => (
                     <Link
                       key={store.id}
-                      href={`/stores/${store.id}`}
+                      href={`/stores/${store.storeSlug || store.id}`}
                       className="flex items-center gap-2 rounded-[13px] border border-white/[0.08] bg-white/[0.055] p-2.5 transition duration-200 hover:border-brand-primary/30 hover:bg-white/[0.09]"
                     >
                       {/* STORE INITIALS */}

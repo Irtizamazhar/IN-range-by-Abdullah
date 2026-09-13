@@ -38,6 +38,7 @@ export async function GET() {
           select: {
             id: true,
             shopName: true,
+            storeSlug: true,
             primaryCategory: true,
             city: true,
             _count: { select: { followers: true, products: true } },

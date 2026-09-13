@@ -4,6 +4,8 @@ export const dynamic = "force-dynamic";
 type Context = { params: { id: string } };
 export async function GET(_request: Request, { params }: Context) {
   return api(async () => {
+    const vendor = await prisma.vendor.findFirst({ where: { id: params.id, status: "approved" }, select: { id: true } });
+    if (!vendor) throw new ApiError(404, "Store unavailable.");
     let following = false;
     try { const customer = await customerActor(); following = !!await prisma.storeFollow.findUnique({ where: { customerId_vendorId: { customerId: customer.id, vendorId: params.id } }, select: { id: true } }); } catch { /* anonymous viewer */ }
     const followers = await prisma.storeFollow.count({ where: { vendorId: params.id } });

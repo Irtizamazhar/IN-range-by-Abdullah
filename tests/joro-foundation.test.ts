@@ -11,6 +11,7 @@ import {
   calculateRefundPaymentStatus,
   calculateVendorRefundDebitCents,
 } from "../lib/refund-math";
+import { slugifyStoreName, isReservedOrInvalidSlug } from "../lib/store-slug";
 
 test("payout allocator splits the final earning without overpaying", () => {
   const allocations = allocateExactCents(
@@ -88,4 +89,27 @@ test("refund accounting stays in integer cents", () => {
     }),
     8_500
   );
+});
+
+test("store slugs are URL-safe and derived deterministically from the shop name", () => {
+  assert.equal(slugifyStoreName("Abc Electronics"), "abc-electronics");
+  assert.equal(slugifyStoreName("Hamza's Mobile & Accessories!!"), "hamza-s-mobile-accessories");
+  assert.equal(slugifyStoreName("   leading/trailing   "), "leading-trailing");
+  assert.equal(slugifyStoreName(""), "store");
+  assert.equal(slugifyStoreName("!!!"), "store");
+});
+
+test("reserved and malformed slugs are rejected", () => {
+  assert.equal(isReservedOrInvalidSlug("admin"), true);
+  assert.equal(isReservedOrInvalidSlug("api"), true);
+  assert.equal(isReservedOrInvalidSlug("new"), true);
+  assert.equal(isReservedOrInvalidSlug("checkout"), true);
+  assert.equal(isReservedOrInvalidSlug("ab"), true, "too short");
+  assert.equal(isReservedOrInvalidSlug("a".repeat(81)), true, "too long");
+  assert.equal(isReservedOrInvalidSlug("Has-Capitals"), true, "must be lowercase");
+  assert.equal(isReservedOrInvalidSlug("double--hyphen"), true, "no double hyphens");
+  assert.equal(isReservedOrInvalidSlug("-leading-hyphen"), true);
+  assert.equal(isReservedOrInvalidSlug("trailing-hyphen-"), true);
+  assert.equal(isReservedOrInvalidSlug("abc-electronics"), false);
+  assert.equal(isReservedOrInvalidSlug("hamza-mobile"), false);
 });
