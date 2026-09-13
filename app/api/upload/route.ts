@@ -10,6 +10,8 @@ import { prisma } from "@/lib/prisma";
 const GUEST_FOLDER = "inrange-payments";
 /** Public guest uploads for review photos → `public/uploads/reviews/` */
 const REVIEW_GUEST_FOLDER = "inrange-reviews";
+/** Customer Want photos → `public/uploads/wants/` */
+const WANT_GUEST_FOLDER = "inrange-wants";
 const ADMIN_PRODUCT_FOLDER = "inrange-products";
 const ADMIN_CATEGORY_FOLDER = "categories-local";
 const ADMIN_LOCAL_PRODUCT_FOLDER = "products-local";
@@ -43,15 +45,16 @@ export async function POST(req: NextRequest) {
 
   const isPayment = folderRaw === GUEST_FOLDER;
   const isReviewPhoto = folderRaw === REVIEW_GUEST_FOLDER;
+  const isWantPhoto = folderRaw === WANT_GUEST_FOLDER;
   const isCategoryUpload = folderRaw === ADMIN_CATEGORY_FOLDER;
   const isLocalProductUpload = folderRaw === ADMIN_LOCAL_PRODUCT_FOLDER;
   const customerSession = isPayment ? await getCustomerSession() : null;
 
-  if (isReviewPhoto) {
-    const reviewCustomer = await getCustomerSession();
-    if (reviewCustomer?.user?.role !== "customer") {
+  if (isReviewPhoto || isWantPhoto) {
+    const guestCustomer = await getCustomerSession();
+    if (guestCustomer?.user?.role !== "customer") {
       return NextResponse.json(
-        { error: "Please sign in to upload a review photo" },
+        { error: isWantPhoto ? "Please sign in to upload a Want photo" : "Please sign in to upload a review photo" },
         { status: 401 }
       );
     }
@@ -69,17 +72,19 @@ export async function POST(req: NextRequest) {
       typeof crypto.randomUUID === "function"
         ? crypto.randomUUID().slice(0, 8)
         : Math.random().toString(36).slice(2, 10);
-    const fileName = `rev-${Date.now()}-${random}.${ext}`;
-    const uploadDir = path.join(process.cwd(), "public", "uploads", "reviews");
+    const prefix = isWantPhoto ? "want" : "rev";
+    const folder = isWantPhoto ? "wants" : "reviews";
+    const fileName = `${prefix}-${Date.now()}-${random}.${ext}`;
+    const uploadDir = path.join(process.cwd(), "public", "uploads", folder);
     try {
       await fs.mkdir(uploadDir, { recursive: true });
       await fs.writeFile(path.join(uploadDir, fileName), Buffer.from(buf));
       return NextResponse.json({
         id: fileName,
-        url: `/uploads/reviews/${fileName}`,
+        url: `/uploads/${folder}/${fileName}`,
       });
     } catch (e) {
-      console.error("review upload", e);
+      console.error(isWantPhoto ? "want upload" : "review upload", e);
       return NextResponse.json({ error: "Upload failed" }, { status: 500 });
     }
   }

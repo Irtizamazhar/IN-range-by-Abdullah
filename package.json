@@ -12,6 +12,7 @@
     "start": "next start",
     "lint": "next lint",
     "test:account:e2e": "tsx scripts/test-customer-account.ts",
+    "test:wants:e2e": "tsx scripts/test-wants-demand.ts",
     "test": "tsx --test tests/joro-foundation.test.ts tests/customer-account.test.ts",
     "postinstall": "node scripts/prisma-generate-try.mjs",
     "db:generate": "prisma generate",

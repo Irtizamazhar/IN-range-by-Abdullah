@@ -13,7 +13,7 @@ export async function POST(request: Request) { return api(async () => {
   sameOrigin(request); const customer = await customerActor(); const input = wantInput.parse(await request.json());
   const expiresAt = input.expiresAt ? new Date(input.expiresAt) : new Date(Date.now() + 30 * 86400000);
   if (expiresAt.getTime() <= Date.now() || expiresAt.getTime() > Date.now() + 90 * 86400000) throw new ApiError(400, "Expiry must be within the next 90 days.");
-  const { draft, title, description, ...data } = input;
-  const want = await prisma.want.create({ data: { ...data, title: sanitizePlainText(title, 160), description: description ? sanitizePlainText(description, 5000) : undefined, expiresAt, needBy: input.needBy ? new Date(input.needBy) : null, customerId: customer.id, status: draft ? "DRAFT" : "PENDING_MODERATION" }, select: { id: true, status: true } });
+  const { draft, title, description, category, city, condition, ...data } = input;
+  const want = await prisma.want.create({ data: { ...data, title: sanitizePlainText(title, 160), description: description ? sanitizePlainText(description, 5000) : undefined, category: sanitizePlainText(category, 100), city: sanitizePlainText(city, 100), condition: condition ? sanitizePlainText(condition, 60) : undefined, expiresAt, needBy: input.needBy ? new Date(input.needBy) : null, customerId: customer.id, status: draft ? "DRAFT" : "PENDING_MODERATION" }, select: { id: true, status: true } });
   return { want };
 }); }

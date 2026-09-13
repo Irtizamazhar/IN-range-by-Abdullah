@@ -12,6 +12,8 @@ import {
   calculateVendorRefundDebitCents,
 } from "../lib/refund-math";
 import { slugifyStoreName, isReservedOrInvalidSlug } from "../lib/store-slug";
+import { demandScore } from "../lib/want-ranking";
+import { wantInput } from "../lib/want-schema";
 
 test("payout allocator splits the final earning without overpaying", () => {
   const allocations = allocateExactCents(
@@ -112,4 +114,39 @@ test("reserved and malformed slugs are rejected", () => {
   assert.equal(isReservedOrInvalidSlug("trailing-hyphen-"), true);
   assert.equal(isReservedOrInvalidSlug("abc-electronics"), false);
   assert.equal(isReservedOrInvalidSlug("hamza-mobile"), false);
+});
+
+test("Want demand score rewards recent activity and decays with age, never from offers", () => {
+  const fresh = demandScore(5, 5, 0, 1);
+  const stale = demandScore(5, 0, 0, 60);
+  assert.ok(fresh > stale, "recent interest on a fresh Want should outrank stale interest with no recent activity");
+  const noInterestEvenWithOffers = demandScore(0, 0, 0, 1);
+  assert.equal(noInterestEvenWithOffers, 0, "a Want with zero WantInterest rows must score zero regardless of offer activity");
+  const growing = demandScore(10, 8, 2, 3);
+  const shrinking = demandScore(10, 2, 8, 3);
+  assert.ok(growing > shrinking, "growing recent interest should outrank the same total with declining recent interest");
+});
+
+const baseWant = { title: "Need a gaming laptop", category: "Electronics", city: "Lahore", budgetFlexible: true, budgetMin: null, budgetMax: null, quantity: 1 };
+
+test("Want schema requires a valid budget range unless flexible", () => {
+  assert.equal(wantInput.safeParse({ ...baseWant, budgetFlexible: false, budgetMin: 100, budgetMax: 50 }).success, false);
+  assert.equal(wantInput.safeParse({ ...baseWant, budgetFlexible: false, budgetMin: 50, budgetMax: 100 }).success, true);
+  assert.equal(wantInput.safeParse({ ...baseWant, budgetFlexible: true, budgetMin: null, budgetMax: null }).success, true);
+});
+
+test("Want schema rejects a past or out-of-order need-by date", () => {
+  const past = new Date(Date.now() - 86400000).toISOString();
+  const future = new Date(Date.now() + 5 * 86400000).toISOString();
+  const laterFuture = new Date(Date.now() + 10 * 86400000).toISOString();
+  assert.equal(wantInput.safeParse({ ...baseWant, needBy: past }).success, false, "past need-by must be rejected");
+  assert.equal(wantInput.safeParse({ ...baseWant, needBy: future, expiresAt: past }).success, false);
+  assert.equal(wantInput.safeParse({ ...baseWant, needBy: laterFuture, expiresAt: future }).success, false, "need-by after expiry must be rejected");
+  assert.equal(wantInput.safeParse({ ...baseWant, needBy: future, expiresAt: laterFuture }).success, true);
+});
+
+test("Want schema only accepts photos already uploaded to the Want photo folder", () => {
+  assert.equal(wantInput.safeParse({ ...baseWant, photo: "/uploads/wants/want-123.jpg" }).success, true);
+  assert.equal(wantInput.safeParse({ ...baseWant, photo: "https://evil.example/x.jpg" }).success, false);
+  assert.equal(wantInput.safeParse({ ...baseWant, photo: "/uploads/products/x.jpg" }).success, false);
 });

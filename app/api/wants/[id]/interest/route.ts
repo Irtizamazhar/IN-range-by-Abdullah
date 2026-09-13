@@ -9,8 +9,9 @@ export async function GET(_request: Request, { params }: Context) { return api(a
 async function change(request: Request, wantId: string, joined: boolean) { return api(async () => {
   sameOrigin(request); const customer = await customerActor();
   return prisma.$transaction(async tx => {
-    const want = await tx.want.findFirst({ where: { id: wantId, ...(joined ? { status: "OPEN" as const, expiresAt: { gt: new Date() } } : {}) }, select: { id: true } });
+    const want = await tx.want.findFirst({ where: { id: wantId, ...(joined ? { status: "OPEN" as const, expiresAt: { gt: new Date() } } : {}) }, select: { id: true, customerId: true } });
     if (!want) throw new ApiError(404, "Want unavailable.");
+    if (joined && want.customerId === customer.id) throw new ApiError(400, "You can't express interest in your own Want.");
     if (joined) await tx.wantInterest.createMany({ data: [{ customerId: customer.id, wantId }], skipDuplicates: true });
     else await tx.wantInterest.deleteMany({ where: { customerId: customer.id, wantId } });
     return { joined, count: await tx.wantInterest.count({ where: { wantId } }) };

@@ -5,7 +5,7 @@ import { sanitizePlainText } from "@/lib/security/sanitize";
 export const dynamic = "force-dynamic";
 type Context = { params: { id: string } };
 export async function GET(_request: Request, { params }: Context) { return api(async () => {
-  const want = await prisma.want.findUnique({ where: { id: params.id }, select: { id: true, customerId: true, title: true, category: true, city: true, budgetMin: true, budgetMax: true, budgetFlexible: true, quantity: true, description: true, condition: true, status: true, expiresAt: true, createdAt: true, _count: { select: { interests: true } } } });
+  const want = await prisma.want.findUnique({ where: { id: params.id }, select: { id: true, customerId: true, title: true, category: true, city: true, budgetMin: true, budgetMax: true, budgetFlexible: true, quantity: true, description: true, condition: true, photo: true, needBy: true, status: true, expiresAt: true, createdAt: true, _count: { select: { interests: true } } } });
   if (!want) throw new ApiError(404, "Want not found.");
   let isOwner = false;
   try { const customer = await customerActor(); isOwner = customer.id === want.customerId; } catch { /* anonymous viewer */ }
@@ -27,9 +27,9 @@ export async function PATCH(request: Request, { params }: Context) { return api(
       await tx.wantOffer.updateMany({ where: { wantId: want.id, status: "SUBMITTED" }, data: { status: "REJECTED" } });
       return { want: closed };
     }
-    const { draft, title, description, ...data } = wantInput.parse(body);
+    const { draft, title, description, category, city, condition, needBy, ...data } = wantInput.parse(body);
     const expiresAt = data.expiresAt ? new Date(data.expiresAt) : want.expiresAt;
     if (expiresAt <= new Date() || expiresAt.getTime() > Date.now() + 90 * 86400000) throw new ApiError(400, "Invalid expiry.");
-    return { want: await tx.want.update({ where: { id: want.id }, data: { ...data, title: sanitizePlainText(title, 160), description: description ? sanitizePlainText(description, 5000) : undefined, expiresAt, status: draft ? "DRAFT" : "PENDING_MODERATION", moderationReason: null } }) };
+    return { want: await tx.want.update({ where: { id: want.id }, data: { ...data, title: sanitizePlainText(title, 160), description: description ? sanitizePlainText(description, 5000) : undefined, category: sanitizePlainText(category, 100), city: sanitizePlainText(city, 100), condition: condition ? sanitizePlainText(condition, 60) : undefined, needBy: needBy ? new Date(needBy) : null, expiresAt, status: draft ? "DRAFT" : "PENDING_MODERATION", moderationReason: null } }) };
   }, { isolationLevel: "Serializable" });
 }); }
