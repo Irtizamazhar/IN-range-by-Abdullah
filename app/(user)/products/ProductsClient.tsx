@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ProductCard, ProductCardSkeleton } from "@/components/user/ProductCard";
@@ -235,7 +236,7 @@ export function ProductsClient() {
               : products.map((p) => <ProductCard key={p._id} product={p} />)}
           </div>
           {!loading && products.length === 0 ? (
-            <p className="text-center text-darkText/60 py-12">No products found.</p>
+            <div className="py-12 text-center"><p>No products found.</p><Link href={`/wants/new?title=${encodeURIComponent(search)}`} className="mt-4 inline-block rounded-xl bg-brand-primary p-3 font-bold">Post this as a Want</Link></div>
           ) : null}
           {!loading && page < totalPages ? (
             <div className="mt-10 flex justify-center">

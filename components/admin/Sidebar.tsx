@@ -63,6 +63,9 @@ function isAdminNotificationsPath(pathname: string | null): boolean {
 }
 
 const links = [
+  { href: "/admin/services", label: "Services", icon: ShoppingBag },
+  { href: "/admin/wants", label: "Wants", icon: ShoppingBag },
+  { href: "/admin/vendor-promotions", label: "Vendor Promotions", icon: Store },
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/products", label: "Products", icon: Package },
   { href: "/admin/new-arrivals", label: "New Arrivals", icon: Package },

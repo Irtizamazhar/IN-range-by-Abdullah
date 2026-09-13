@@ -52,6 +52,7 @@ export async function GET(_req: Request, context: Ctx) {
   const reviewed = await orderProductReviewExists(order.id, pid);
 
   return NextResponse.json({
+    review: reviewed ? await prisma.review.findFirst({ where: { productId: pid, customer: { email: sessionEmail } }, select: { rating: true, comment: true } }) : null,
     reviewed,
     eligible: delivered,
   });

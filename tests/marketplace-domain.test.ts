@@ -1,0 +1,16 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { Prisma } from "@prisma/client";
+import { demandScore } from "../lib/want-ranking";
+import { serviceAmounts } from "../lib/service-money";
+import { wantInput } from "../lib/want-schema";
+test("demand ranking gives no demand score to an empty Want", () => { assert.equal(demandScore(0,0,0,0),0); });
+test("recent unique interests and growth improve ranking", () => { assert.ok(demandScore(20,10,2,3) > demandScore(20,2,10,3)); });
+test("old demand decays without fabricating new activity", () => { assert.ok(demandScore(20,2,2,1) > demandScore(20,2,2,60)); });
+test("service commission preserves exact gross = vendor payable + commission", () => { const a = serviceAmounts(new Prisma.Decimal("3500"),1,new Prisma.Decimal(10)); assert.equal(a.commission.toFixed(2),"350.00"); assert.equal(a.payable.toFixed(2),"3150.00"); assert.ok(a.payable.add(a.commission).equals(a.gross)); });
+test("fractional service money rounds once and balances", () => { const a = serviceAmounts(new Prisma.Decimal("10.01"),3,new Prisma.Decimal("7.5")); assert.equal(a.gross.toFixed(2),"30.03"); assert.equal(a.commission.toFixed(2),"2.25"); assert.equal(a.payable.toFixed(2),"27.78"); });
+test("invalid quantities and commission rates cannot create service earnings", () => { assert.throws(() => serviceAmounts(new Prisma.Decimal(100),0,new Prisma.Decimal(10))); assert.throws(() => serviceAmounts(new Prisma.Decimal(100),1,new Prisma.Decimal(101))); });
+const base = { title: "Office chair", category: "Furniture", city: "Lahore", quantity: 1, budgetFlexible: false, budgetMin: 1000, budgetMax: 2000 };
+test("fixed Want budgets must have a valid range", () => { assert.equal(wantInput.safeParse({ ...base, budgetMin: 3000 }).success,false); assert.equal(wantInput.safeParse({ ...base, budgetMax: null }).success,false); });
+test("flexible Want budget does not require invented prices", () => { assert.equal(wantInput.safeParse({ ...base, budgetFlexible: true, budgetMin: null, budgetMax: null }).success,true); });
+test("Want quantity must be an integer and title must be meaningful", () => { assert.equal(wantInput.safeParse({ ...base, quantity: 1.5 }).success,false); assert.equal(wantInput.safeParse({ ...base, title: " " }).success,false); });

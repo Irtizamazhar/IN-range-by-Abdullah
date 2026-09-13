@@ -1,0 +1,11 @@
+import Link from "next/link";
+import { getCustomerSession } from "@/lib/sessions";
+import { prisma } from "@/lib/prisma";
+import { AccountSignIn } from "@/components/user/AccountSignIn";
+export const dynamic = "force-dynamic";
+export default async function MyStuff() {
+  const session = await getCustomerSession();
+  if (session?.user?.role !== "customer" || !session.user.email) return <main className="mx-auto max-w-5xl p-6"><h1 className="text-3xl font-bold">My Stuff</h1><AccountSignIn /></main>;
+  const orders = await prisma.order.findMany({ where: { customerEmail: session.user.email.trim().toLowerCase() }, select: { id: true, orderNumber: true, orderStatus: true, totalAmount: true, createdAt: true, orderItems: { select: { id: true, name: true, productId: true, quantity: true, price: true } } }, orderBy: { createdAt: "desc" }, take: 50 });
+  return <main className="mx-auto max-w-6xl px-4 py-10"><h1 className="text-3xl font-bold">My Stuff</h1><p className="my-3">Your purchases and marketplace activity in one place.</p><nav className="my-6 flex flex-wrap gap-3">{[["/account/wants","My Wants"],["/account/offers","Received Offers"],["/account/following","Following"],["/account/together","Family rooms"],["/account/services","Services"],["/account/notifications","Notifications"],["/return-policy","Returns policy"]].map(([href,label]) => <Link key={href} href={href} className="rounded-xl border bg-white p-3">{label}</Link>)}</nav><h2 className="mb-4 text-2xl font-bold">Orders & products</h2>{orders.map(o => <article key={o.id} className="mb-4 rounded-2xl border bg-white p-5"><div className="flex flex-wrap justify-between gap-3"><h3 className="text-lg font-bold">{o.orderNumber}</h3><p>PKR {Number(o.totalAmount).toLocaleString("en-PK")}</p></div><p className="my-2 text-sm">{o.orderStatus} · {o.createdAt.toLocaleDateString("en-PK")}</p><Link href={`/track-order?order=${encodeURIComponent(o.orderNumber)}`} className="text-brand-link underline">Track order</Link><ul className="mt-4 space-y-3">{o.orderItems.map(i => <li key={i.id}><span>{i.name} × {i.quantity} · PKR {Number(i.price).toLocaleString("en-PK")}</span>{i.productId && <Link href={`/products/${i.productId}?orderId=${o.id}`} className="ml-3 text-sm text-brand-link underline">Product & review</Link>}</li>)}</ul></article>)}{!orders.length && <p>No orders yet.</p>}</main>;
+}

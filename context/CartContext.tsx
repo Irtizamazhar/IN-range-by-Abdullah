@@ -16,6 +16,11 @@ export type CartLine = {
   image: string;
   quantity: number;
   variant?: string;
+  serviceId?: string;
+  serviceName?: string;
+  servicePrice?: number;
+  quoteId?: string;
+  quoteShipping?: number;
   maxStock: number;
 };
 
@@ -67,10 +72,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         );
         if (idx >= 0) {
           const next = [...prev];
-          next[idx] = { ...next[idx], ...line, quantity: capped };
+          next[idx] = { ...next[idx], ...line, serviceId: line.serviceId, serviceName: line.serviceName, servicePrice: line.servicePrice, quoteId: line.quoteId, quoteShipping: line.quoteShipping, quantity: capped };
           return next;
         }
-        return [...prev, { ...line, quantity: capped }];
+        return [...prev, { ...line, serviceId: line.serviceId, serviceName: line.serviceName, servicePrice: line.servicePrice, quoteId: line.quoteId, quoteShipping: line.quoteShipping, quantity: capped }];
       });
     },
     []
@@ -106,7 +111,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     [items]
   );
   const subtotal = useMemo(
-    () => items.reduce((s, i) => s + i.price * i.quantity, 0),
+    () => items.reduce((s, i) => s + (i.price + (i.serviceId ? i.servicePrice || 0 : 0)) * i.quantity, 0),
     [items]
   );
 

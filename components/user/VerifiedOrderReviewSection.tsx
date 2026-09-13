@@ -18,6 +18,7 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
   const { openAuthModal } = useCustomerAuth();
   const router = useRouter();
 
+  const [editing, setEditing] = useState(false);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -52,8 +53,9 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
         );
         if (cancelled) return;
         if (r.ok) {
-          const d = (await r.json()) as { reviewed?: boolean; eligible?: boolean };
+          const d = (await r.json()) as { reviewed?: boolean; eligible?: boolean; review?: { rating: number; comment: string } };
           setAlreadyReviewed(!!d.reviewed);
+          if (d.review) { setRating(d.review.rating); setComment(d.review.comment); }
           setEligible(d.eligible !== false);
         } else {
           setEligible(false);
@@ -97,12 +99,12 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
     );
   }
 
-  if (alreadyReviewed || done) {
+  if ((alreadyReviewed || done) && !editing) {
     return (
       <section className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50/60 p-5 text-center shadow-sm">
         <p className="text-[16px] font-semibold text-emerald-900">
-          Thank you for your review! ✅
-        </p>
+          Your review has been saved.
+        </p><button type="button" onClick={() => { setEditing(true); setAlreadyReviewed(true); }} className="mt-3 font-bold underline">Edit Review</button>
       </section>
     );
   }
@@ -172,7 +174,7 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
       }
 
       const r = await fetch("/api/reviews", {
-        method: "POST",
+        method: alreadyReviewed ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
@@ -191,6 +193,7 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
       toast.success(data.message || "Thank you!");
       clearPhoto();
       setDone(true);
+      setEditing(false);
       router.refresh();
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event(PRODUCT_REVIEWS_UPDATED_EVENT));

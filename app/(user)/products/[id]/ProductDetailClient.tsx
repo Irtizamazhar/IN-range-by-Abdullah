@@ -1,4 +1,5 @@
 "use client";
+import { ProductServices } from "@/components/user/ProductServices";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -564,6 +565,7 @@ export function ProductDetailClient({
             </div>
           </div>
 
+          <div className="order-4 col-span-full"><ProductServices line={{ productId: product._id, name: product.name, price: product.price, image: product.images[0] || "", quantity: totalUnits, maxStock: product.stock, variant }} /></div>
           {/* RIGHT ~25% */}
           <div className="order-3 lg:order-none lg:col-span-3 lg:col-start-10">
             <div className="space-y-3">

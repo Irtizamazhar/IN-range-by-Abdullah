@@ -51,6 +51,10 @@ const links: {
   label: string;
   icon: ComponentType<{ className?: string }>;
 }[] = [
+  { href: "/vendor/dashboard/services", label: "Services", icon: ShoppingBag },
+  { href: "/vendor/dashboard/offers", label: "Offers", icon: ShoppingBag },
+  { href: "/vendor/dashboard/demand", label: "Customer Demand", icon: ShoppingBag },
+  { href: "/vendor/dashboard/followers", label: "Followers", icon: ShoppingBag },
   { href: "/vendor/dashboard", label: "Dashboard", icon: LayoutDashboard },
   {
     href: "/vendor/dashboard/orders",

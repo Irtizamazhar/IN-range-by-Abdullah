@@ -8,60 +8,73 @@ datasource db {
 }
 
 model Customer {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String   @db.VarChar(255)
-  name         String
-  phone        String   @default("")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  notifications   CustomerNotification[]
+  roomMemberships RoomMember[]
+  offerQuotes     OfferQuote[]
+  id              String                 @id @default(cuid())
+  email           String                 @unique
+  passwordHash    String                 @db.VarChar(255)
+  name            String
+  phone           String                 @default("")
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
 
+  storeFollows     StoreFollow[]
+  wants            Want[]
+  wantInterests    WantInterest[]
   vendorReviews    VendorReview[]
   vendorShopOrders VendorShopOrder[]
   productReviews   Review[]
 }
 
 model Product {
-  id              String         @id @default(cuid())
-  name            String
-  description     String         @db.Text
-  price           Decimal        @db.Decimal(12, 2)
-  originalPrice   Decimal?       @db.Decimal(12, 2)
-  discountPercent Int            @default(0)
-  category        String
-  stock           Int            @default(0)
-  variants        Json
-  isActive        Boolean        @default(true)
-  isBestSeller    Boolean        @default(false)
+  serviceAddons     ProductServiceAddon[]
+  roomItems         RoomItem[]
+  offerRevisions    OfferRevision[]
+  id                String                @id @default(cuid())
+  name              String
+  description       String                @db.Text
+  price             Decimal               @db.Decimal(12, 2)
+  originalPrice     Decimal?              @db.Decimal(12, 2)
+  discountPercent   Int                   @default(0)
+  category          String
+  stock             Int                   @default(0)
+  variants          Json
+  isActive          Boolean               @default(true)
+  isBestSeller      Boolean               @default(false)
   /// When set (e.g. vendor uploads), storefront uses these URLs instead of `ProductImage` rows.
-  listingImageUrls Json?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  orderItems      OrderItem[]
-  productImages   ProductImage[]
-  reviews         Review[]
+  listingImageUrls  Json?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  orderItems        OrderItem[]
+  productImages     ProductImage[]
+  reviews           Review[]
   vendorPublication VendorProduct?
 
   @@index([isActive, isBestSeller])
 }
 
 model Review {
-  id        Int      @id @default(autoincrement())
-  name      String
-  email     String
-  rating    Int
-  comment   String   @db.Text
-  imageUrl  String? @db.VarChar(2048)
-  productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  approved  Boolean  @default(false)
+  withdrawn  Boolean   @default(false)
+  id         Int       @id @default(autoincrement())
+  name       String
+  email      String
+  rating     Int
+  comment    String    @db.Text
+  imageUrl   String?   @db.VarChar(2048)
+  productId  String
+  product    Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt  DateTime  @default(now())
+  approved   Boolean   @default(false)
   /// Logged-in purchase review (one per order + product when set).
   customerId String?
   customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
   orderId    String?
   order      Order?    @relation(fields: [orderId], references: [id], onDelete: SetNull)
 
+  updatedAt DateTime @updatedAt
+
+  @@unique([customerId, productId])
   @@unique([orderId, productId])
   @@index([productId])
   @@index([approved, createdAt])
@@ -74,7 +87,7 @@ model NewArrivalReview {
   email        String
   rating       Int
   comment      String   @db.Text
-  imageUrl     String? @db.VarChar(2048)
+  imageUrl     String?  @db.VarChar(2048)
   newArrivalId Int
   createdAt    DateTime @default(now())
   approved     Boolean  @default(false)
@@ -102,28 +115,30 @@ model PaymentProofStaging {
 }
 
 model Order {
-  id                    String      @id @default(cuid())
-  orderNumber           String      @unique
+  services              OrderService[]
+  offerQuote            OfferQuote?
+  id                    String            @id @default(cuid())
+  orderNumber           String            @unique
   customerName          String
   customerPhone         String
   customerEmail         String
-  customerAddress       String      @db.Text
+  customerAddress       String            @db.Text
   city                  String
-  totalAmount           Decimal     @db.Decimal(12, 2)
+  totalAmount           Decimal           @db.Decimal(12, 2)
   paymentMethod         String
-  paymentStatus         String      @default("pending")
-  paymentRejectedReason String?     @db.Text
+  paymentStatus         String            @default("pending")
+  paymentRejectedReason String?           @db.Text
   /// Legacy external URL (optional)
-  paymentScreenshot     String?     @db.Text
-  paymentProofData      Bytes?      @db.MediumBlob
+  paymentScreenshot     String?           @db.Text
+  paymentProofData      Bytes?            @db.MediumBlob
   paymentProofMime      String?
   bankAccount           String?
-  orderStatus           String      @default("pending")
-  isRead                Boolean     @default(false)
+  orderStatus           String            @default("pending")
+  isRead                Boolean           @default(false)
   trackingNumber        String?
-  notes                 String?     @db.Text
-  createdAt             DateTime    @default(now())
-  updatedAt             DateTime    @updatedAt
+  notes                 String?           @db.Text
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
   orderItems            OrderItem[]
   vendorOrders          VendorOrder[]
   vendorShopOrders      VendorShopOrder[]
@@ -140,9 +155,9 @@ model OrderItem {
   productId String?
   product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
   name      String
-  price     Decimal @db.Decimal(12, 2)
+  price     Decimal  @db.Decimal(12, 2)
   quantity  Int
-  image     String  @default("")
+  image     String   @default("")
   variant   String?
 }
 
@@ -162,7 +177,7 @@ model Settings {
   updatedAt          DateTime @updatedAt
 }
 
-// ─── Multi-vendor (additive; does not alter existing shop tables) ───
+// â”€â”€â”€ Multi-vendor (additive; does not alter existing shop tables) â”€â”€â”€
 
 enum VendorAccountStatus {
   pending
@@ -229,6 +244,10 @@ enum VendorCouponStatus {
 }
 
 model Vendor {
+  slugAliases           StoreSlugAlias[]
+  serviceOfferings      ServiceOffering[]
+  orderServices         OrderService[]
+  wantOffers            WantOffer[]
   id                    String              @id @default(cuid())
   shopName              String
   ownerName             String
@@ -243,7 +262,7 @@ model Vendor {
   bankName              String
   accountNumber         String
   accountTitle          String
-  /// Optional IBAN for payouts (PK-…).
+  /// Optional IBAN for payouts (PK-â€¦).
   iban                  String?             @db.VarChar(34)
   status                VendorAccountStatus @default(pending)
   rejectionReason       String?             @db.Text
@@ -264,22 +283,28 @@ model Vendor {
   emailVerifyToken      String?             @db.VarChar(255)
   passwordResetToken    String?             @db.VarChar(255)
   passwordResetExpires  DateTime?
-  /// Used with commission_settings (Clothing, Electronics, …)
+  /// Used with commission_settings (Clothing, Electronics, â€¦)
   primaryCategory       String              @default("Other")
   shopDescription       String?             @db.Text
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
 
-  documents     VendorDocument[]
-  products      VendorProduct[]
-  orders        VendorOrder[]
-  earnings      VendorEarning[]
-  withdrawals   VendorWithdrawal[]
-  reviews       VendorReview[]
-  coupons       VendorCoupon[]
-  notifications VendorNotification[]
-  sessions      VendorSession[]
-  auditLogs     VendorAuditLog[]
+  storeSlug        String?              @unique
+  storeBanner      String?              @db.Text
+  storePolicies    String?              @db.Text
+  serviceCities    Json?
+  storeFollows     StoreFollow[]
+  promotions       VendorPromotion[]
+  documents        VendorDocument[]
+  products         VendorProduct[]
+  orders           VendorOrder[]
+  earnings         VendorEarning[]
+  withdrawals      VendorWithdrawal[]
+  reviews          VendorReview[]
+  coupons          VendorCoupon[]
+  notifications    VendorNotification[]
+  sessions         VendorSession[]
+  auditLogs        VendorAuditLog[]
   vendorShopOrders VendorShopOrder[]
 
   @@index([status])
@@ -297,25 +322,25 @@ model VendorDocument {
 }
 
 model VendorProduct {
-  id          String              @id @default(cuid())
-  vendorId    String
-  vendor      Vendor              @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  productName String
-  description String              @db.Text
-  price       Decimal             @db.Decimal(12, 2)
+  id                 String              @id @default(cuid())
+  vendorId           String
+  vendor             Vendor              @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  productName        String
+  description        String              @db.Text
+  price              Decimal             @db.Decimal(12, 2)
   /// Optional higher "was" price for discount display when above sale price.
-  originalPrice Decimal?          @db.Decimal(12, 2)
-  category    String
-  stock       Int                 @default(0)
-  images      Json
-  status      VendorProductStatus @default(active)
+  originalPrice      Decimal?            @db.Decimal(12, 2)
+  category           String
+  stock              Int                 @default(0)
+  images             Json
+  status             VendorProductStatus @default(active)
   /// Synced storefront `Product.id` when published (customer /products + checkout).
-  publishedProductId String?      @unique
-  publishedProduct   Product?      @relation(fields: [publishedProductId], references: [id], onDelete: SetNull)
-  totalSold   Int                 @default(0)
-  viewsCount  Int                 @default(0)
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
+  publishedProductId String?             @unique
+  publishedProduct   Product?            @relation(fields: [publishedProductId], references: [id], onDelete: SetNull)
+  totalSold          Int                 @default(0)
+  viewsCount         Int                 @default(0)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
 
   orders VendorOrder[]
 
@@ -352,43 +377,43 @@ model VendorOrder {
 }
 
 model VendorShopOrder {
-  id               String                @id @default(cuid())
+  id              String    @id @default(cuid())
   /// Human-friendly id for vendor UI (e.g. IRV-0001).
-  shopOrderNumber  String                @unique
-  orderId          String
-  order            Order                 @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  vendorId         String
-  vendor           Vendor                @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  customerId       String?
-  customer         Customer?             @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  shopOrderNumber String    @unique
+  orderId         String
+  order           Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  vendorId        String
+  vendor          Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  customerId      String?
+  customer        Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
 
-  customerName     String
-  customerPhone    String
-  customerEmail    String
-  customerAddress  String                @db.Text
-  city             String
+  customerName    String
+  customerPhone   String
+  customerEmail   String
+  customerAddress String @db.Text
+  city            String
 
   /// Snapshot: [{ productId, productName, quantity, price, subtotal, vendorProductId?, variant? }]
-  items            Json
+  items Json
 
-  totalAmount      Decimal               @db.Decimal(12, 2)
-  commissionAmount Decimal               @db.Decimal(12, 2)
-  netAmount        Decimal               @db.Decimal(12, 2)
+  totalAmount      Decimal @db.Decimal(12, 2)
+  commissionAmount Decimal @db.Decimal(12, 2)
+  netAmount        Decimal @db.Decimal(12, 2)
 
-  paymentMethod    String
-  paymentStatus    String
+  paymentMethod String
+  paymentStatus String
 
-  status           VendorShopOrderStatus @default(pending)
+  status         VendorShopOrderStatus @default(pending)
   /// [{ status, updatedAt, note }]
-  statusHistory    Json                  @default("[]")
-  cancelReason     String?               @db.Text
-  trackingNumber   String?               @db.VarChar(255)
+  statusHistory  Json                  @default("[]")
+  cancelReason   String?               @db.Text
+  trackingNumber String?               @db.VarChar(255)
 
-  placedAt         DateTime              @default(now())
-  updatedAt        DateTime              @updatedAt
+  placedAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  lineOrders       VendorOrder[]
-  vendorEarning    VendorEarning?
+  lineOrders    VendorOrder[]
+  vendorEarning VendorEarning?
 
   @@index([vendorId])
   @@index([orderId])
@@ -405,24 +430,26 @@ model CommissionSetting {
 }
 
 model VendorEarning {
-  id               String              @id @default(cuid())
-  vendorId         String
-  vendor           Vendor              @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  orderId          String?
-  order            Order?              @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  orderServiceId    String?             @unique
+  orderService      OrderService?       @relation(fields: [orderServiceId], references: [id], onDelete: Restrict)
+  id                String              @id @default(cuid())
+  vendorId          String
+  vendor            Vendor              @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  orderId           String?
+  order             Order?              @relation(fields: [orderId], references: [id], onDelete: SetNull)
   /// One earning row per delivered shop-order bundle (prevents duplicates).
-  vendorShopOrderId String?            @unique
-  vendorShopOrder  VendorShopOrder?    @relation(fields: [vendorShopOrderId], references: [id], onDelete: SetNull)
+  vendorShopOrderId String?             @unique
+  vendorShopOrder   VendorShopOrder?    @relation(fields: [vendorShopOrderId], references: [id], onDelete: SetNull)
   /// Gross sale (sum of line sale amounts) for this bundle.
-  saleAmount       Decimal             @db.Decimal(12, 2)
+  saleAmount        Decimal             @db.Decimal(12, 2)
   /// Weighted average commission % (for display).
-  commissionRate   Decimal             @db.Decimal(5, 2)
-  commissionAmount Decimal             @db.Decimal(12, 2)
-  /// Net to vendor for this bundle (sale − commission).
-  vendorAmount     Decimal             @db.Decimal(12, 2)
-  status           VendorEarningStatus @default(pending)
-  holdReleaseDate  DateTime?
-  createdAt        DateTime            @default(now())
+  commissionRate    Decimal             @db.Decimal(5, 2)
+  commissionAmount  Decimal             @db.Decimal(12, 2)
+  /// Net to vendor for this bundle (sale âˆ’ commission).
+  vendorAmount      Decimal             @db.Decimal(12, 2)
+  status            VendorEarningStatus @default(pending)
+  holdReleaseDate   DateTime?
+  createdAt         DateTime            @default(now())
 
   @@index([vendorId])
   @@index([orderId])
@@ -430,20 +457,20 @@ model VendorEarning {
 }
 
 model VendorWithdrawal {
-  id                String                 @id @default(cuid())
-  vendorId          String
-  vendor            Vendor                 @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  requestedAmount   Decimal                @db.Decimal(12, 2)
-  bankName          String
-  accountTitle      String
-  accountNumber     String
+  id              String                 @id @default(cuid())
+  vendorId        String
+  vendor          Vendor                 @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  requestedAmount Decimal                @db.Decimal(12, 2)
+  bankName        String
+  accountTitle    String
+  accountNumber   String
   /// Optional note from vendor at request time.
-  notes             String?                @db.Text
-  status            VendorWithdrawalStatus @default(pending)
-  rejectionReason   String?                @db.Text
-  adminNote         String?                @db.Text
-  requestedAt       DateTime               @default(now())
-  processedAt       DateTime?
+  notes           String?                @db.Text
+  status          VendorWithdrawalStatus @default(pending)
+  rejectionReason String?                @db.Text
+  adminNote       String?                @db.Text
+  requestedAt     DateTime               @default(now())
+  processedAt     DateTime?
 
   @@index([vendorId])
   @@index([status])
@@ -467,24 +494,26 @@ model VendorReview {
 }
 
 model VendorCoupon {
-  id              String                   @id @default(cuid())
-  vendorId        String
-  vendor          Vendor                   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  couponCode      String
-  discountType    VendorCouponDiscountType
-  discountValue   Decimal                  @db.Decimal(12, 2)
-  minOrderAmount  Decimal                  @default(0) @db.Decimal(12, 2)
-  maxUses         Int?
-  usedCount       Int                      @default(0)
-  expiryDate      DateTime?
-  status          VendorCouponStatus       @default(active)
-  createdAt       DateTime                 @default(now())
+  id             String                   @id @default(cuid())
+  vendorId       String
+  vendor         Vendor                   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  couponCode     String
+  discountType   VendorCouponDiscountType
+  discountValue  Decimal                  @db.Decimal(12, 2)
+  minOrderAmount Decimal                  @default(0) @db.Decimal(12, 2)
+  maxUses        Int?
+  usedCount      Int                      @default(0)
+  expiryDate     DateTime?
+  status         VendorCouponStatus       @default(active)
+  createdAt      DateTime                 @default(now())
 
   @@unique([vendorId, couponCode])
   @@index([vendorId])
 }
 
 model VendorNotification {
+  eventKey  String?  @unique
+  href      String?
   id        String   @id @default(cuid())
   vendorId  String
   vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
@@ -524,4 +553,326 @@ model VendorAuditLog {
 
   @@index([vendorId])
   @@index([createdAt])
+}
+
+model StoreFollow {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  vendorId   String
+  vendor     Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([customerId, vendorId])
+  @@index([vendorId, createdAt])
+}
+
+enum WantStatus {
+  DRAFT
+  SUBMITTED
+  PENDING_MODERATION
+  OPEN
+  FULFILLED
+  CLOSED
+  EXPIRED
+  REJECTED
+}
+
+model Want {
+  offers           WantOffer[]
+  quote            OfferQuote?
+  id               String         @id @default(cuid())
+  customerId       String
+  customer         Customer       @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  title            String         @db.VarChar(160)
+  category         String
+  city             String
+  budgetMin        Decimal?       @db.Decimal(12, 2)
+  budgetMax        Decimal?       @db.Decimal(12, 2)
+  budgetFlexible   Boolean        @default(false)
+  quantity         Int            @default(1)
+  description      String?        @db.Text
+  photo            String?        @db.Text
+  condition        String?
+  needBy           DateTime?
+  expiresAt        DateTime
+  status           WantStatus     @default(PENDING_MODERATION)
+  moderationReason String?        @db.Text
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  interests        WantInterest[]
+
+  @@index([status, expiresAt, createdAt])
+  @@index([customerId, createdAt])
+  @@index([category, city])
+}
+
+model WantInterest {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  wantId     String
+  want       Want     @relation(fields: [wantId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([customerId, wantId])
+  @@index([wantId, createdAt])
+}
+
+model VendorPromotion {
+  id           String   @id @default(cuid())
+  vendorId     String
+  vendor       Vendor   @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+  title        String   @db.VarChar(160)
+  subtitle     String?  @db.VarChar(300)
+  desktopImage String?  @db.Text
+  mobileImage  String?  @db.Text
+  ctaText      String   @default("View Store")
+  placement    String   @default("HOMEPAGE")
+  priority     Int      @default(0)
+  startAt      DateTime
+  endAt        DateTime
+  status       String   @default("DRAFT")
+  isSponsored  Boolean  @default(false)
+  createdBy    String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([status, placement, startAt, endAt])
+}
+
+model MarketplaceAudit {
+  id        String   @id @default(cuid())
+  actor     String
+  action    String
+  target    String
+  reason    String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([target, createdAt])
+}
+
+model WantOffer {
+  id        String          @id @default(cuid())
+  wantId    String
+  want      Want            @relation(fields: [wantId], references: [id], onDelete: Restrict)
+  vendorId  String
+  vendor    Vendor          @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+  status    String          @default("SUBMITTED")
+  version   Int             @default(1)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  revisions OfferRevision[]
+
+  @@unique([wantId, vendorId])
+  @@index([vendorId, status])
+}
+
+model OfferRevision {
+  id             String      @id @default(cuid())
+  offerId        String
+  offer          WantOffer   @relation(fields: [offerId], references: [id], onDelete: Restrict)
+  revisionNumber Int
+  initiator      String
+  productId      String?
+  product        Product?    @relation(fields: [productId], references: [id], onDelete: Restrict)
+  price          Decimal     @db.Decimal(12, 2)
+  quantity       Int
+  shipping       Decimal     @db.Decimal(12, 2)
+  delivery       String      @db.VarChar(300)
+  condition      String      @db.VarChar(100)
+  warranty       String      @db.VarChar(1000)
+  message        String      @db.Text
+  expiresAt      DateTime
+  createdAt      DateTime    @default(now())
+  quote          OfferQuote?
+
+  @@unique([offerId, revisionNumber])
+}
+
+model OfferQuote {
+  id             String        @id @default(cuid())
+  idempotencyKey String        @unique
+  customerId     String
+  customer       Customer      @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  wantId         String        @unique
+  want           Want          @relation(fields: [wantId], references: [id], onDelete: Restrict)
+  revisionId     String        @unique
+  revision       OfferRevision @relation(fields: [revisionId], references: [id], onDelete: Restrict)
+  snapshot       Json
+  expiresAt      DateTime
+  createdAt      DateTime      @default(now())
+  orderId        String?       @unique
+  order          Order?        @relation(fields: [orderId], references: [id], onDelete: Restrict)
+}
+
+model ShoppingRoom {
+  id          String       @id @default(cuid())
+  name        String       @db.VarChar(160)
+  archived    Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  members     RoomMember[]
+  items       RoomItem[]
+  invitations RoomInvite[]
+}
+
+model RoomMember {
+  id         String        @id @default(cuid())
+  roomId     String
+  room       ShoppingRoom  @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  customerId String
+  customer   Customer      @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  role       String        @default("MEMBER")
+  active     Boolean       @default(true)
+  createdAt  DateTime      @default(now())
+  items      RoomItem[]
+  votes      RoomVote[]
+  comments   RoomComment[]
+
+  @@unique([roomId, customerId])
+}
+
+model RoomInvite {
+  id        String       @id @default(cuid())
+  roomId    String
+  room      ShoppingRoom @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  tokenHash String       @unique
+  expiresAt DateTime
+  revoked   Boolean      @default(false)
+  createdAt DateTime     @default(now())
+
+  @@index([roomId])
+}
+
+model RoomItem {
+  id              String        @id @default(cuid())
+  roomId          String
+  room            ShoppingRoom  @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  productId       String
+  product         Product       @relation(fields: [productId], references: [id], onDelete: Restrict)
+  memberId        String
+  member          RoomMember    @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  variant         String        @default("")
+  quantity        Int           @default(1)
+  priceAtAddition Decimal       @db.Decimal(12, 2)
+  createdAt       DateTime      @default(now())
+  votes           RoomVote[]
+  comments        RoomComment[]
+
+  @@index([roomId])
+}
+
+model RoomVote {
+  id       String     @id @default(cuid())
+  itemId   String
+  item     RoomItem   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  memberId String
+  member   RoomMember @relation(fields: [memberId], references: [id], onDelete: Restrict)
+
+  @@unique([memberId, itemId])
+}
+
+model RoomComment {
+  id        String     @id @default(cuid())
+  itemId    String
+  item      RoomItem   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  memberId  String
+  member    RoomMember @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  text      String     @db.VarChar(2000)
+  createdAt DateTime   @default(now())
+
+  @@index([itemId])
+}
+
+model ServiceOffering {
+  id                String                @id @default(cuid())
+  vendorId          String
+  vendor            Vendor                @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+  name              String                @db.VarChar(160)
+  description       String                @db.Text
+  type              String                @db.VarChar(100)
+  price             Decimal               @db.Decimal(12, 2)
+  cities            Json
+  durationMinutes   Int
+  leadDays          Int
+  warranty          String                @db.VarChar(1000)
+  cancellationTerms String                @db.Text
+  active            Boolean               @default(true)
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  products          ProductServiceAddon[]
+  bookings          OrderService[]
+
+  @@index([vendorId, active])
+}
+
+model ProductServiceAddon {
+  id        String          @id @default(cuid())
+  productId String
+  product   Product         @relation(fields: [productId], references: [id], onDelete: Restrict)
+  serviceId String
+  service   ServiceOffering @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  active    Boolean         @default(true)
+
+  @@unique([productId, serviceId])
+}
+
+model OrderService {
+  id               String          @id @default(cuid())
+  orderId          String
+  order            Order           @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  vendorId         String
+  vendor           Vendor          @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+  serviceId        String
+  service          ServiceOffering @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  productId        String
+  snapshot         Json
+  quantity         Int
+  price            Decimal         @db.Decimal(12, 2)
+  commissionRate   Decimal         @db.Decimal(5, 2)
+  commissionAmount Decimal         @db.Decimal(12, 2)
+  vendorPayable    Decimal         @db.Decimal(12, 2)
+  status           String          @default("PENDING")
+  scheduledAt      DateTime?
+  refundStatus     String          @default("NONE")
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  events           ServiceEvent[]
+  earning          VendorEarning?
+
+  @@index([vendorId, status])
+  @@index([orderId])
+}
+
+model ServiceEvent {
+  id             String       @id @default(cuid())
+  orderServiceId String
+  orderService   OrderService @relation(fields: [orderServiceId], references: [id], onDelete: Restrict)
+  actor          String
+  status         String
+  note           String       @db.Text
+  createdAt      DateTime     @default(now())
+
+  @@index([orderServiceId, createdAt])
+}
+
+model StoreSlugAlias {
+  slug      String   @id
+  vendorId  String
+  vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now())
+}
+
+model CustomerNotification {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  eventKey   String   @unique
+  title      String   @db.VarChar(160)
+  message    String   @db.VarChar(1000)
+  href       String
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([customerId, isRead, createdAt])
 }

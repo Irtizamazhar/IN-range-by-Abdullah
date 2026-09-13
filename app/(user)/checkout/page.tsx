@@ -29,7 +29,7 @@ export default function CheckoutPage() {
   const [city, setCity] = useState("");
   const [postalCode, setPostalCode] = useState("");
   const [country, setCountry] = useState("Pakistan");
-  const [marketingOptIn, setMarketingOptIn] = useState(true);
+  const [marketingOptIn, setMarketingOptIn] = useState(false);
   const [saveInfoNextTime, setSaveInfoNextTime] = useState(false);
   const [sameBillingAddress, setSameBillingAddress] = useState(true);
   const [billingCountry, setBillingCountry] = useState("Pakistan");
@@ -115,7 +115,7 @@ export default function CheckoutPage() {
     settings?.codAvailableCities?.some(
       (c) => c.toLowerCase() === city.trim().toLowerCase()
     ) ?? false;
-  const deliveryCharge = subtotal > 1000 ? 0 : 250;
+  const deliveryCharge = items.length === 1 && items[0].quoteId ? Number(items[0].quoteShipping || 0) : Number(settings?.codCharges || 0);
   const totalAmount = subtotal + deliveryCharge;
 
   const infoComplete = useMemo(
@@ -149,7 +149,9 @@ export default function CheckoutPage() {
           customerAddress: [address, apartment].filter(Boolean).join(", "),
           city,
           paymentMethod,
+          quoteId: items.find(i => i.quoteId)?.quoteId,
           products: items.map((i) => ({
+            serviceId: i.serviceId,
             productId: i.productId,
             quantity: i.quantity,
             variant: i.variant,
@@ -322,15 +324,15 @@ export default function CheckoutPage() {
       <div className="bg-brand-primary py-2 text-xs font-semibold tracking-wide text-brand-dark">
         <div className="overflow-hidden whitespace-nowrap">
           <p className="inline-block min-w-full animate-[checkoutMarquee_18s_linear_infinite]">
-            ENJOY FREE DELIVERY ON ORDERS ABOVE Rs.1,000 | CASH ON DELIVERY
-            AVAILABLE | EASY RETURNS & EXCHANGES | PAKISTAN&apos;S #1 BUDGET
+            DELIVERY CHARGES SHOWN AT CHECKOUT | CASH ON DELIVERY
+            AVAILABLE | JORO.pk
             SHOP
           </p>
         </div>
       </div>
 
       <div className="mx-auto max-w-[1120px] px-4 pt-8">
-        <h1 className="mb-6 text-2xl font-bold text-darkText">Checkout</h1>
+<h1 className="mb-6 text-2xl font-bold text-darkText">Checkout</h1><div className="mb-4 space-y-2">{items.filter(i => i.serviceId).map(i => <p className="rounded-xl bg-white p-3 text-sm" key={`${i.productId}:${i.variant || ""}`}>{i.name} — {i.serviceName}: {formatPKR((i.servicePrice || 0) * i.quantity)} service add-on</p>)}</div>
 
         <form
           onSubmit={handleCheckoutSubmit}

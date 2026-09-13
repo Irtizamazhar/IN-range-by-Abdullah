@@ -1,0 +1,2 @@
+import { ServiceBookings } from "@/components/user/ServiceBookings";
+export default function ServicesPage() { return <main className="mx-auto max-w-5xl p-6"><h1 className="text-3xl font-bold">My Services</h1><ServiceBookings /></main>; }

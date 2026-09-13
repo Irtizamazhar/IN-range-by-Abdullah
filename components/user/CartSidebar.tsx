@@ -66,7 +66,7 @@ export function CartSidebar({
                   <p className="font-medium text-darkText line-clamp-2">
                     {line.name}
                   </p>
-                  {line.variant ? (
+                  {line.serviceId && <p className="my-2 rounded-lg bg-brand-soft p-2 text-sm">{line.serviceName} · {formatPKR((line.servicePrice || 0) * line.quantity)} service add-on</p>}{line.quoteId && <p className="my-2 text-sm">Accepted offer · Agreed quantity {line.quantity}</p>}{line.variant ? (
                     <p className="text-xs text-darkText/50">{line.variant}</p>
                   ) : null}
                   <p className="text-primaryBlue font-semibold mt-1">

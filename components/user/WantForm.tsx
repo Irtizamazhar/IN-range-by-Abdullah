@@ -1,0 +1,17 @@
+"use client";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useCustomerAuth } from "@/context/CustomerAuthContext";
+export function WantForm({ categories }: { categories: string[] }) {
+  const router = useRouter(); const { isCustomer, openAuthModal } = useCustomerAuth();
+  const [flexible, setFlexible] = useState(false); const [busy, setBusy] = useState(false); const [error, setError] = useState("");
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault(); if (!isCustomer) { openAuthModal("login"); return; }
+    const data = new FormData(event.currentTarget); setBusy(true); setError("");
+    try {
+      const r = await fetch("/api/wants", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: data.get("title"), category: data.get("category"), city: data.get("city"), quantity: Number(data.get("quantity")), budgetFlexible: flexible, budgetMin: flexible ? null : Number(data.get("min") || 0), budgetMax: flexible ? null : Number(data.get("max")), description: data.get("description"), condition: data.get("condition") }) });
+      const result = await r.json(); if (!r.ok) throw new Error(result.error); router.push(`/wants/${result.want.id}`);
+    } catch (e) { setError(e instanceof Error ? e.message : "Could not post Want."); } finally { setBusy(false); }
+  }
+  return <form onSubmit={submit} className="joro-form space-y-5 rounded-2xl bg-white p-6"><label>What do you need?<input name="title" required minLength={3} maxLength={160} defaultValue={typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("title") || "" : ""} placeholder="Tell vendors what you are looking for" /></label><label>Category<select name="category" required><option value="">Choose category</option>{categories.map(c => <option key={c}>{c}</option>)}</select></label><label>City<input name="city" required maxLength={100} /></label><label>Quantity<input name="quantity" type="number" min={1} max={10000} defaultValue={1} required /></label><label className="flex items-center gap-2"><input type="checkbox" checked={flexible} onChange={e => setFlexible(e.target.checked)} className="!w-auto" />Budget flexible</label>{!flexible && <div className="grid grid-cols-2 gap-4"><label>Minimum PKR<input name="min" type="number" min={0} step="0.01" /></label><label>Maximum PKR<input name="max" type="number" min={1} step="0.01" required /></label></div>}<details><summary className="cursor-pointer font-bold">Add More Details</summary><label className="mt-4">Description<textarea name="description" maxLength={5000} rows={4} /></label><label>Condition<select name="condition"><option>Any</option><option>New</option><option>Used</option><option>Refurbished</option></select></label></details><p className="text-sm text-gray-600">Your Want will be reviewed before it becomes public. Do not include your phone, email, or private address. Wants expire after 30 days.</p>{error && <p role="alert" className="text-red-700">{error}</p>}<button disabled={busy} className="rounded-xl bg-brand-primary px-5 py-3 font-bold disabled:opacity-50">{busy ? "Submitting…" : "Submit Want for review"}</button></form>;
+}

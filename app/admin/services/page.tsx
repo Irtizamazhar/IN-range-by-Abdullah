@@ -1,0 +1,2 @@
+import { ServiceBookings } from "@/components/user/ServiceBookings";
+export default function ServicesPage() { return <main className="p-6"><h1 className="text-3xl font-bold">Service bookings</h1><p className="my-4">Confirm actual completion and payment evidence before releasing earnings. Cancellation flags a refund review; it does not send a refund.</p><ServiceBookings role="admin" /></main>; }

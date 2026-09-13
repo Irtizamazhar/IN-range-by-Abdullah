@@ -33,7 +33,7 @@ async function ensureOauthColumns() {
 }
 
 export const customerAuthOptions: NextAuthOptions = {
-  debug: true,
+  debug: false,
   providers: [
     ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
       ? [
@@ -64,23 +64,7 @@ export const customerAuthOptions: NextAuthOptions = {
           where: { email },
         });
         if (!customer) return null;
-        if (customer.passwordHash === OAUTH_PLACEHOLDER_HASH) {
-          // Allow Google-created accounts to set a local password on first
-          // credentials login attempt.
-          if (password.length < 6) return null;
-          const localHash = await bcrypt.hash(password, 10);
-          await prisma.customer.update({
-            where: { id: customer.id },
-            data: { passwordHash: localHash },
-          });
-          return {
-            id: customer.id,
-            email: customer.email,
-            name: customer.name,
-            phone: customer.phone || "",
-            role: "customer" as const,
-          };
-        }
+        if (customer.passwordHash === OAUTH_PLACEHOLDER_HASH) return null;
         const ok = await bcrypt.compare(password, customer.passwordHash);
         if (!ok) return null;
         return {

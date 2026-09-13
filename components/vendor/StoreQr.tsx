@@ -1,0 +1,13 @@
+"use client";
+import { useEffect, useRef, useState } from "react";
+import QRCode from "qrcode";
+import { jsPDF } from "jspdf";
+export function StoreQr({ url, name }: { url: string; name: string }) {
+  const canvas = useRef<HTMLCanvasElement>(null); const [ready, setReady] = useState(false); const [error, setError] = useState("");
+  useEffect(() => { let active = true; if (!canvas.current) return; QRCode.toCanvas(canvas.current, url, { width: 1200, margin: 4, errorCorrectionLevel: "H", color: { dark: "#111111", light: "#FFFFFF" } }).then(() => {
+    if (!active || !canvas.current) return; const c = canvas.current; const ctx = c.getContext("2d"); if (ctx) { const size = c.width * .12; ctx.fillStyle = "#FFFFFF"; ctx.fillRect((c.width-size)/2,(c.height-size)/2,size,size); ctx.fillStyle = "#111111"; ctx.font = `bold ${Math.round(size*.27)}px sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("JORO",c.width/2,c.height/2); } setReady(true);
+  }).catch(() => { if (active) setError("Could not generate QR."); }); return () => { active = false; }; }, [url]);
+  function png() { try { if (!canvas.current) return; const a = document.createElement("a"); a.href = canvas.current.toDataURL("image/png"); a.download = "joro-store-qr.png"; a.click(); } catch { setError("Could not export PNG."); } }
+  function pdf() { try { if (!canvas.current) return; const doc = new jsPDF(); doc.setFontSize(22); doc.text("JORO.pk",105,30,{align:"center"}); doc.setFontSize(16); doc.text(doc.splitTextToSize(name,170),105,45,{align:"center"}); doc.addImage(canvas.current.toDataURL("image/png"),"PNG",40,65,130,130); doc.setFontSize(14); doc.text("Scan to visit our JORO store",105,210,{align:"center"}); doc.setFontSize(9); doc.text(doc.splitTextToSize(url,175),105,222,{align:"center"}); doc.save("joro-store-qr.pdf"); } catch { setError("Could not export PDF."); } }
+  return <section className="rounded-2xl border bg-white p-6 text-center"><h2 className="text-2xl font-bold">{name}</h2><p className="mt-2">JORO.pk · Scan to visit our JORO store</p><canvas ref={canvas} aria-label={`QR code for ${name}`} className="mx-auto my-5 h-auto w-full max-w-sm" /><p className="break-all text-sm">{url}</p><p className="my-3 text-sm">Store link QR. This is not a payment QR.</p><div className="flex flex-wrap justify-center gap-3"><button disabled={!ready} onClick={png} className="rounded-xl bg-brand-primary p-3 font-bold">Download PNG</button><button disabled={!ready} onClick={pdf} className="rounded-xl border p-3 font-bold">Download print PDF</button></div><p role="alert" className="mt-3">{error}</p></section>;
+}

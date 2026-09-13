@@ -1,0 +1,5 @@
+import Link from "next/link";
+export type WantSummary = { id: string; title: string; city: string; category: string; budgetFlexible: boolean; budgetMin: unknown; budgetMax: unknown; quantity: number; status?: string; _count: { interests: number } };
+export function WantCard({ want }: { want: WantSummary }) {
+  return <Link href={`/wants/${want.id}`} className="block rounded-2xl border bg-white p-5"><p className="text-xs text-brand-link">{want.category} · {want.city}</p><h2 className="my-2 text-lg font-bold">{want.title}</h2><p>{want.budgetFlexible ? "Budget flexible" : `PKR ${Number(want.budgetMin || 0).toLocaleString("en-PK")} – ${Number(want.budgetMax).toLocaleString("en-PK")}`}</p><p className="mt-3 text-sm text-gray-600">Quantity: {want.quantity} · {want._count.interests} interested{want.status ? ` · ${want.status.replaceAll("_", " ")}` : ""}</p></Link>;
+}

@@ -2,6 +2,9 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
+import { checkoutQuote } from "@/lib/offer-checkout-service";
+import { ApiError } from "@/lib/marketplace-api";
+import { resolveServiceAddon } from "@/lib/service-checkout-service";
 import { getCustomerSession, getAdminSession } from "@/lib/sessions";
 import { autoCancelStaleBankOrders } from "@/lib/auto-cancel-orders";
 import { generateOrderNumber } from "@/lib/order-number";
@@ -99,6 +102,7 @@ export async function POST(req: NextRequest) {
   }
 
   type CartLine = {
+    serviceId?: unknown;
     productId?: unknown;
     quantity?: unknown;
     variant?: unknown;
@@ -151,6 +155,14 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+  const quoteId = typeof body.quoteId === "string" ? body.quoteId : null;
+  const quote = quoteId ? await checkoutQuote(prisma, quoteId, session.user.email || "", String(city)) : null;
+  if (quote?.orderId) {
+    const previous = await prisma.order.findUnique({ where: { id: quote.orderId }, include: ORDER_INCLUDE_SERIALIZE });
+    if (!previous) throw new ApiError(409, "Please refresh your order history.");
+    return NextResponse.json(serializeOrder(previous));
+  }
+  if (quote && (lineItems.length !== 1 || String(lineItems[0].productId) !== quote.revision.productId || Number(lineItems[0].quantity) !== quote.revision.quantity)) throw new ApiError(400, "Checkout the accepted quote on its own, with the agreed quantity. Remove other cart items first.");
   let subtotal = 0;
   const newArrivalStore = await readProducts();
   type VendorSlice = {
@@ -277,7 +289,7 @@ export async function POST(req: NextRequest) {
       };
     }
 
-    const unit = Number(p.price);
+    const unit = quote ? Number(quote.revision.price) : Number(p.price);
     subtotal += unit * qty;
     const imgUrl = primaryProductImageUrl(p);
     resolvedProducts.push({
@@ -293,8 +305,14 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const deliveryCharge = settings.codCharges || 0;
-  const totalAmount = subtotal + deliveryCharge;
+  const deliveryCharge = quote ? Number(quote.revision.shipping) : settings.codCharges || 0;
+  const serviceInputs = lineItems.filter(line => line.serviceId != null).map(line => {
+    if (typeof line.serviceId !== "string" || !line.serviceId || String(line.productId).startsWith("na-") || quote) throw new ApiError(400, "Service add-ons require a regular catalog product checkout.");
+    return { serviceId: line.serviceId, productId: String(line.productId), quantity: Number(line.quantity) };
+  });
+  const services = await Promise.all(serviceInputs.map(s => resolveServiceAddon(prisma, s.productId, s.serviceId, s.quantity, String(city))));
+  const serviceTotal = services.reduce((sum, s) => sum.add(s.price.mul(s.quantity)), new Prisma.Decimal(0));
+  const totalAmount = new Prisma.Decimal(subtotal).add(deliveryCharge).add(serviceTotal).toDecimalPlaces(2);
 
   const orderNumber = await generateOrderNumber();
 
@@ -308,12 +326,17 @@ export async function POST(req: NextRequest) {
 
     const mp = getMarketplaceTx(tx);
 
+    if (quoteId) { const currentQuote = await checkoutQuote(tx, quoteId, session.user.email || "", String(city)); if (currentQuote.orderId) throw new ApiError(409, "Quote already checked out. Refresh your orders."); }
+    for (const service of services) {
+      const current = await resolveServiceAddon(tx, service.productId, service.serviceId, service.quantity, String(city));
+      if (!current.price.equals(service.price) || !current.commissionAmount.equals(service.commissionAmount)) throw new ApiError(409, "Service terms changed. Refresh checkout before ordering.");
+    }
     const o = await tx.order.create({
       data: {
         orderNumber,
         customerName: String(customerName).trim(),
         customerPhone: String(customerPhone).trim(),
-        customerEmail: String(customerEmail).trim(),
+        customerEmail: String(session.user.email || customerEmail).trim().toLowerCase(),
         customerAddress: String(customerAddress).trim(),
         city: String(city).trim(),
         totalAmount,
@@ -417,7 +440,7 @@ export async function POST(req: NextRequest) {
           customerId: customerIdForShop,
           customerName: String(customerName).trim(),
           customerPhone: String(customerPhone).trim(),
-          customerEmail: String(customerEmail).trim(),
+          customerEmail: String(session.user.email || customerEmail).trim().toLowerCase(),
           customerAddress: String(customerAddress).trim(),
           city: String(city).trim(),
           items,
@@ -493,6 +516,14 @@ export async function POST(req: NextRequest) {
       if (productStock.count !== 1) throw new Error("Insufficient stock");
     }
 
+    for (const service of services) {
+      await tx.orderService.create({ data: { ...service, orderId: o.id, events: { create: { actor: `customer:${session.user.email}`, status: "PENDING", note: "Service booked with product checkout." } } } });
+    }
+    if (quote) {
+      const claimed = await tx.offerQuote.updateMany({ where: { id: quote.id, orderId: null }, data: { orderId: o.id } });
+      if (claimed.count !== 1) throw new ApiError(409, "Quote already checked out.");
+      await tx.want.update({ where: { id: quote.wantId }, data: { status: "FULFILLED" } });
+    }
     return o;
   });
 
@@ -541,6 +572,7 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json(out);
   } catch (e) {
+    if (e instanceof ApiError) return NextResponse.json({ error: e.message }, { status: e.status });
     console.error("POST /api/orders", e);
     if (e instanceof Error && e.message === "Insufficient stock") {
       return NextResponse.json(

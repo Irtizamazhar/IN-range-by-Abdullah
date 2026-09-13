@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { MarketplaceNav } from "./MarketplaceNav";
 import Link from "next/link";
 import {
   usePathname,
@@ -372,7 +373,7 @@ export function Navbar({
             <LogoMark compact />
 
             <div className="flex items-center gap-3">
-              <span className="text-[9px] font-black uppercase tracking-[0.13em] text-black/40">
+              <span className="text-[12px] font-black uppercase tracking-[0.13em] text-black/40">
                 Secure Checkout
               </span>
 
@@ -390,7 +391,7 @@ export function Navbar({
               ) : null}
             </div>
           </div>
-        </header>
+        </header><MarketplaceNav />
 
         <CartSidebar
           open={cartOpen}
@@ -436,7 +437,7 @@ export function Navbar({
               <div className="order-2 shrink-0">
                 <LogoMark href="/" />
 
-                <p className="mt-0.5 hidden text-[6px] font-bold uppercase tracking-[0.075em] text-black/40 xl:block">
+                <p className="mt-0.5 hidden text-[12px] font-bold uppercase tracking-[0.075em] text-black/40 xl:block">
                   People • Products • Vendors • Together
                 </p>
               </div>
@@ -488,7 +489,7 @@ export function Navbar({
                       }}
                       placeholder="Search products, brands or your want..."
                       autoComplete="off"
-                      className="min-w-0 flex-1 border-0 bg-transparent px-4 text-[11px] font-medium text-brand-dark outline-none placeholder:text-black/35 sm:text-[12px]"
+                      className="min-w-0 flex-1 border-0 bg-transparent px-4 text-[12px] font-medium text-brand-dark outline-none placeholder:text-black/35 sm:text-[12px]"
                     />
 
                     <button
@@ -508,7 +509,7 @@ export function Navbar({
                   .length >= 2 ? (
                   <div className="animate-search-suggest-in absolute left-0 right-0 top-[calc(100%+7px)] max-h-[390px] overflow-y-auto rounded-2xl border border-black/[0.08] bg-white p-1.5 text-brand-dark shadow-[0_20px_55px_rgba(0,0,0,0.15)]">
                     {loading ? (
-                      <div className="px-4 py-4 text-[10px] font-semibold text-black/40">
+                      <div className="px-4 py-4 text-[12px] font-semibold text-black/40">
                         Searching…
                       </div>
                     ) : null}
@@ -521,18 +522,18 @@ export function Navbar({
                           Product nahi mila?
                         </p>
 
-                        <p className="mt-1 text-[9px] font-medium text-black/45">
+                        <p className="mt-1 text-[12px] font-medium text-black/45">
                           Apni Want post karo aur sellers ko batao kya chahiye.
                         </p>
 
                         <Link
-                          href="/#wants"
+                          href="/wants"
                           onClick={() =>
                             setShowDropdown(
                               false
                             )
                           }
-                          className="mt-3 inline-flex h-9 items-center rounded-lg bg-brand-primary px-3 text-[9px] font-black text-brand-dark transition hover:bg-brand-hover"
+                          className="mt-3 inline-flex h-9 items-center rounded-lg bg-brand-primary px-3 text-[12px] font-black text-brand-dark transition hover:bg-brand-hover"
                         >
                           Want Post Karo
                         </Link>
@@ -590,20 +591,20 @@ export function Navbar({
                           </div>
 
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-[10px] font-black text-brand-dark">
+                            <p className="truncate text-[12px] font-black text-brand-dark">
                               {
                                 product.name
                               }
                             </p>
 
-                            <p className="mt-0.5 truncate text-[8px] font-medium text-black/35">
+                            <p className="mt-0.5 truncate text-[12px] font-medium text-black/35">
                               {
                                 product.category
                               }
                             </p>
                           </div>
 
-                          <span className="shrink-0 text-[10px] font-black text-brand-link">
+                          <span className="shrink-0 text-[12px] font-black text-brand-link">
                             {formatPKR(
                               product.price
                             )}
@@ -619,7 +620,7 @@ export function Navbar({
                         onClick={
                           submitSearch
                         }
-                        className="mt-1 flex h-9 w-full items-center justify-center rounded-xl bg-brand-dark text-[9px] font-black text-white transition hover:bg-black"
+                        className="mt-1 flex h-9 w-full items-center justify-center rounded-xl bg-brand-dark text-[12px] font-black text-white transition hover:bg-black"
                       >
                         View All Results
                       </button>
@@ -637,13 +638,13 @@ export function Navbar({
                 {/* WANTS */}
 
                 <Link
-                  href="/#wants"
+                  href="/wants"
                   className="group relative flex h-10 items-center gap-1.5 rounded-xl px-2.5 text-brand-dark transition hover:bg-brand-soft"
                   aria-label="Wants"
                 >
                   <Heart className="h-[19px] w-[19px] transition-transform group-hover:scale-105" />
 
-                  <span className="hidden text-[8px] font-black xl:inline">
+                  <span className="hidden text-[12px] font-black xl:inline">
                     Wants
                   </span>
 
@@ -665,7 +666,7 @@ export function Navbar({
                   >
                     <User className="h-[19px] w-[19px] transition-transform group-hover:scale-105" />
 
-                    <span className="hidden text-[8px] font-black xl:inline">
+                    <span className="hidden text-[12px] font-black xl:inline">
                       Account
                     </span>
                   </button>
@@ -706,7 +707,7 @@ export function Navbar({
                         <User className="h-[19px] w-[19px]" />
                       )}
 
-                      <span className="hidden max-w-[68px] truncate text-[8px] font-black xl:inline">
+                      <span className="hidden max-w-[68px] truncate text-[12px] font-black xl:inline">
                         {session.user
                           ?.name ||
                           "Account"}
@@ -727,7 +728,7 @@ export function Navbar({
 
                               openProfileModal();
                             }}
-                            className="w-full rounded-lg px-3 py-2.5 text-left text-[10px] font-bold transition hover:bg-brand-soft"
+                            className="w-full rounded-lg px-3 py-2.5 text-left text-[12px] font-bold transition hover:bg-brand-soft"
                           >
                             My Profile
                           </button>
@@ -740,7 +741,7 @@ export function Navbar({
                               false
                             )
                           }
-                          className="block rounded-lg px-3 py-2.5 text-[10px] font-bold transition hover:bg-brand-soft"
+                          className="block rounded-lg px-3 py-2.5 text-[12px] font-bold transition hover:bg-brand-soft"
                         >
                           My Orders
                         </Link>
@@ -757,7 +758,7 @@ export function Navbar({
                                 "/",
                             });
                           }}
-                          className="w-full rounded-lg px-3 py-2.5 text-left text-[10px] font-bold text-red-600 transition hover:bg-red-50"
+                          className="w-full rounded-lg px-3 py-2.5 text-left text-[12px] font-bold text-red-600 transition hover:bg-red-50"
                         >
                           Logout
                         </button>
@@ -778,12 +779,12 @@ export function Navbar({
                 >
                   <ShoppingCart className="h-[20px] w-[20px] transition-transform group-hover:scale-105" />
 
-                  <span className="hidden text-[8px] font-black xl:inline">
+                  <span className="hidden text-[12px] font-black xl:inline">
                     Cart
                   </span>
 
                   {totalQty > 0 ? (
-                    <span className="absolute right-0 top-0 flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-brand-primary px-1 text-[7px] font-black text-brand-dark ring-2 ring-white">
+                    <span className="absolute right-0 top-0 flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-brand-primary px-1 text-[12px] font-black text-brand-dark ring-2 ring-white">
                       {totalQty > 99
                         ? "99+"
                         : totalQty}
@@ -795,7 +796,7 @@ export function Navbar({
 
                 <Link
                   href="/vendor/register"
-                  className="ml-1 hidden h-10 items-center justify-center rounded-xl bg-brand-primary px-4 text-[8px] font-black text-brand-dark shadow-[0_6px_18px_rgba(183,227,58,0.18)] transition duration-200 hover:-translate-y-0.5 hover:bg-brand-hover md:flex"
+                  className="ml-1 hidden h-10 items-center justify-center rounded-xl bg-brand-primary px-4 text-[12px] font-black text-brand-dark shadow-[0_6px_18px_rgba(183,227,58,0.18)] transition duration-200 hover:-translate-y-0.5 hover:bg-brand-hover md:flex"
                 >
                   Seller Bano
                 </Link>
@@ -812,7 +813,7 @@ export function Navbar({
           <div className="mx-auto flex max-w-7xl items-center px-4 sm:px-6">
             <Link
               href="/products"
-              className="flex h-9 shrink-0 items-center gap-2 border-r border-black/[0.08] pr-4 text-[9px] font-black text-brand-dark transition hover:text-brand-link"
+              className="flex h-9 shrink-0 items-center gap-2 border-r border-black/[0.08] pr-4 text-[12px] font-black text-brand-dark transition hover:text-brand-link"
             >
               <Menu className="h-3.5 w-3.5" />
 
@@ -831,7 +832,7 @@ export function Navbar({
                     href={`/products?category=${encodeURIComponent(
                       category
                     )}`}
-                    className="shrink-0 rounded-lg px-3 py-2 text-[8px] font-bold text-black/58 transition hover:bg-brand-soft hover:text-brand-link"
+                    className="shrink-0 rounded-lg px-3 py-2 text-[12px] font-bold text-black/58 transition hover:bg-brand-soft hover:text-brand-link"
                   >
                     {category}
                   </Link>
@@ -840,14 +841,14 @@ export function Navbar({
             </nav>
 
             <Link
-              href="/#trending-wants"
-              className="ml-2 hidden shrink-0 items-center rounded-lg bg-brand-soft px-3 py-1.5 text-[8px] font-black text-brand-link transition hover:bg-brand-primary hover:text-brand-dark lg:inline-flex"
+              href="/wants/trending"
+              className="ml-2 hidden shrink-0 items-center rounded-lg bg-brand-soft px-3 py-1.5 text-[12px] font-black text-brand-link transition hover:bg-brand-primary hover:text-brand-dark lg:inline-flex"
             >
               Trending Wants
             </Link>
           </div>
         </div>
-      </header>
+      </header><MarketplaceNav />
 
       {/* ===================================================
           MOBILE MENU
@@ -861,7 +862,7 @@ export function Navbar({
             <div>
               <LogoMark compact />
 
-              <p className="mt-1 text-[6px] font-bold uppercase tracking-[0.08em] text-black/35">
+              <p className="mt-1 text-[12px] font-bold uppercase tracking-[0.08em] text-black/35">
                 People • Products • Vendors • Together
               </p>
             </div>
@@ -881,7 +882,7 @@ export function Navbar({
           {/* MENU BODY */}
 
           <div className="h-[calc(100vh-78px)] overflow-y-auto p-5">
-            <p className="mb-3 text-[8px] font-black uppercase tracking-[0.15em] text-brand-link">
+            <p className="mb-3 text-[12px] font-black uppercase tracking-[0.15em] text-brand-link">
               JORO Marketplace
             </p>
 
@@ -901,7 +902,7 @@ export function Navbar({
               </Link>
 
               <Link
-                href="/#wants"
+                href="/wants"
                 onClick={() =>
                   setMobileOpen(
                     false
@@ -915,13 +916,13 @@ export function Navbar({
                   Want Post Karo
                 </span>
 
-                <span className="rounded-full bg-brand-dark px-2 py-1 text-[6px] font-black uppercase tracking-wider text-brand-primary">
+                <span className="rounded-full bg-brand-dark px-2 py-1 text-[12px] font-black uppercase tracking-wider text-brand-primary">
                   Hot
                 </span>
               </Link>
 
               <Link
-                href="/#trending-wants"
+                href="/wants/trending"
                 onClick={() =>
                   setMobileOpen(
                     false
@@ -951,7 +952,7 @@ export function Navbar({
 
             <div className="my-5 h-px bg-black/[0.07]" />
 
-            <p className="mb-3 text-[8px] font-black uppercase tracking-[0.15em] text-black/35">
+            <p className="mb-3 text-[12px] font-black uppercase tracking-[0.15em] text-black/35">
               Categories
             </p>
 
@@ -970,7 +971,7 @@ export function Navbar({
                         false
                       )
                     }
-                    className="rounded-xl border border-black/[0.06] bg-white px-3 py-3 text-[10px] font-bold shadow-sm transition hover:bg-brand-soft"
+                    className="rounded-xl border border-black/[0.06] bg-white px-3 py-3 text-[12px] font-bold shadow-sm transition hover:bg-brand-soft"
                   >
                     {category}
                   </Link>
@@ -990,7 +991,7 @@ export function Navbar({
                     false
                   )
                 }
-                className="block rounded-xl px-3 py-3 text-[11px] font-bold text-black/60 transition hover:bg-brand-background"
+                className="block rounded-xl px-3 py-3 text-[12px] font-bold text-black/60 transition hover:bg-brand-background"
               >
                 Track Order
               </Link>
@@ -1007,7 +1008,7 @@ export function Navbar({
                     false
                   )
                 }
-                className="block rounded-xl px-3 py-3 text-[11px] font-bold text-black/60 transition hover:bg-brand-background"
+                className="block rounded-xl px-3 py-3 text-[12px] font-bold text-black/60 transition hover:bg-brand-background"
               >
                 WhatsApp Support
               </a>
@@ -1030,7 +1031,7 @@ export function Navbar({
                       "login"
                     );
                   }}
-                  className="rounded-xl border border-black/[0.1] px-4 py-3 text-[11px] font-black text-brand-dark"
+                  className="rounded-xl border border-black/[0.1] px-4 py-3 text-[12px] font-black text-brand-dark"
                 >
                   Login
                 </button>
@@ -1046,7 +1047,7 @@ export function Navbar({
                       "signup"
                     );
                   }}
-                  className="rounded-xl bg-brand-primary px-4 py-3 text-[11px] font-black text-brand-dark"
+                  className="rounded-xl bg-brand-primary px-4 py-3 text-[12px] font-black text-brand-dark"
                 >
                   Sign Up
                 </button>
@@ -1065,7 +1066,7 @@ export function Navbar({
 
                       openProfileModal();
                     }}
-                    className="w-full rounded-xl bg-brand-background px-4 py-3 text-left text-[11px] font-black text-brand-dark"
+                    className="w-full rounded-xl bg-brand-background px-4 py-3 text-left text-[12px] font-black text-brand-dark"
                   >
                     My Profile
                   </button>
@@ -1083,7 +1084,7 @@ export function Navbar({
                         "/",
                     });
                   }}
-                  className="w-full rounded-xl px-4 py-3 text-left text-[11px] font-black text-red-600"
+                  className="w-full rounded-xl px-4 py-3 text-left text-[12px] font-black text-red-600"
                 >
                   Logout
                 </button>

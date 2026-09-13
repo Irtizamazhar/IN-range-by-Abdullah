@@ -51,7 +51,7 @@ export default function CartPage() {
                   >
                     {line.name}
                   </Link>
-                  {line.variant ? (
+                  {line.serviceId && <p className="my-2 rounded-lg bg-brand-soft p-2 text-sm">{line.serviceName} · {formatPKR((line.servicePrice || 0) * line.quantity)} service add-on</p>}{line.quoteId && <p className="my-2 text-sm">Accepted offer · Agreed quantity {line.quantity}</p>}{line.variant ? (
                     <p className="text-sm text-darkText/50">{line.variant}</p>
                   ) : null}
                   <p className="text-primaryBlue font-bold mt-1">
