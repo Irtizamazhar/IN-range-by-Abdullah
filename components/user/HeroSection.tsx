@@ -47,7 +47,7 @@ export function HeroSection({
 
         <div className="relative z-20">
           {/* Small top badge */}
-          <div className="mt-3 mb-4 inline-flex items-center gap-2 rounded-full border border-brand-primary/30 bg-brand-primary/10 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.14em] text-brand-primary backdrop-blur-md sm:mt-4 sm:text-[10px] lg:mt-5">
+          <div className="mt-3 mb-4 inline-flex items-center gap-2 rounded-full border border-brand-primary/30 bg-brand-primary/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-brand-primary backdrop-blur-md sm:mt-4 sm:text-[12px] lg:mt-5">
             <span className="h-1.5 w-1.5 rounded-full bg-brand-primary shadow-[0_0_12px_rgba(183,227,58,.9)]" />
 
             Pakistan ka apna marketplace
@@ -73,7 +73,7 @@ export function HeroSection({
           </h2>
 
           {/* Description */}
-          <p className="mt-3 max-w-[520px] text-[12px] font-medium leading-5 text-white/70 sm:text-[13px] sm:leading-6">
+          <p className="mt-3 max-w-[520px] text-[14px] font-medium leading-6 text-white/75 sm:text-[15px] sm:leading-6">
             Products dekho, seller se connect ho aur asaani se order karo.
           </p>
 
@@ -81,7 +81,7 @@ export function HeroSection({
           <div className="mt-5 flex flex-wrap gap-2.5">
             <Link
               href="/products"
-              className="group inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-white px-5 text-[11px] font-black text-brand-dark shadow-lg transition duration-300 hover:-translate-y-0.5 hover:shadow-xl"
+              className="group inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-white px-5 text-[13px] font-black text-brand-dark shadow-lg transition duration-300 hover:-translate-y-0.5 hover:shadow-xl"
             >
               <ShoppingBag className="h-4 w-4" />
 
@@ -91,8 +91,8 @@ export function HeroSection({
             </Link>
 
             <Link
-              href="/#wants"
-              className="group inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-brand-primary px-5 text-[11px] font-black text-brand-dark shadow-lime transition duration-300 hover:-translate-y-0.5 hover:bg-brand-hover"
+              href="/wants/new"
+              className="group inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-brand-primary px-5 text-[13px] font-black text-brand-dark shadow-lime transition duration-300 hover:-translate-y-0.5 hover:bg-brand-hover"
             >
               <Megaphone className="h-4 w-4" />
 
@@ -103,7 +103,7 @@ export function HeroSection({
 
             <Link
               href={sellNowHref}
-              className="group inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-white/25 bg-white/[0.06] px-5 text-[11px] font-black text-white backdrop-blur-md transition duration-300 hover:-translate-y-0.5 hover:border-brand-primary/50 hover:bg-white/[0.1]"
+              className="group inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-white/25 bg-white/[0.06] px-5 text-[13px] font-black text-white backdrop-blur-md transition duration-300 hover:-translate-y-0.5 hover:border-brand-primary/50 hover:bg-white/[0.1]"
             >
               <Store className="h-4 w-4" />
 
@@ -114,7 +114,7 @@ export function HeroSection({
           </div>
 
           {/* Compact trust row */}
-          <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-white/10 pt-4 text-[8px] font-bold uppercase tracking-[0.08em] text-white/45 sm:text-[9px]">
+          <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-white/10 pt-4 text-[11px] font-bold uppercase tracking-[0.08em] text-white/55 sm:text-[12px]">
             <span>✓ Verified Sellers</span>
             <span>✓ Secure Shopping</span>
             <span>✓ Pakistan Delivery</span>

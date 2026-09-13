@@ -16,7 +16,8 @@ const config: Config = {
 
       fontFamily: {
         sans: [
-          "Inter",
+          "var(--font-jakarta)",
+          "Plus Jakarta Sans",
           "-apple-system",
           "BlinkMacSystemFont",
           "Segoe UI",
@@ -26,7 +27,8 @@ const config: Config = {
         ],
 
         inter: [
-          "Inter",
+          "var(--font-jakarta)",
+          "Plus Jakarta Sans",
           "-apple-system",
           "BlinkMacSystemFont",
           "Segoe UI",
@@ -35,7 +37,8 @@ const config: Config = {
         ],
 
         jakarta: [
-          "Inter",
+          "var(--font-jakarta)",
+          "Plus Jakarta Sans",
           "-apple-system",
           "BlinkMacSystemFont",
           "Segoe UI",
@@ -43,7 +46,8 @@ const config: Config = {
         ],
 
         dm: [
-          "Inter",
+          "var(--font-jakarta)",
+          "Plus Jakarta Sans",
           "-apple-system",
           "BlinkMacSystemFont",
           "Segoe UI",
@@ -52,13 +56,12 @@ const config: Config = {
       },
 
       /* =====================================================
-         TYPOGRAPHY
-         Slightly more readable than previous setup
+        TYPOGRAPHY
       ====================================================== */
 
       fontSize: {
         micro: [
-          "9px",
+          "10px",
           {
             lineHeight: "1.25",
             letterSpacing: "0.01em",
@@ -66,56 +69,56 @@ const config: Config = {
         ],
 
         tiny: [
-          "10px",
+          "11px",
           {
             lineHeight: "1.3",
           },
         ],
 
         xs: [
-          "11px",
+          "13px",
           {
             lineHeight: "1.4",
           },
         ],
 
         sm: [
-          "12px",
+          "14px",
           {
             lineHeight: "1.45",
           },
         ],
 
         base: [
-          "14px",
+          "15px",
           {
             lineHeight: "1.55",
           },
         ],
 
         md: [
-          "15px",
+          "16px",
           {
             lineHeight: "1.5",
           },
         ],
 
         lg: [
-          "16px",
+          "17px",
           {
             lineHeight: "1.45",
           },
         ],
 
         xl: [
-          "18px",
+          "19px",
           {
             lineHeight: "1.35",
           },
         ],
 
         "2xl": [
-          "21px",
+          "23px",
           {
             lineHeight: "1.25",
             letterSpacing: "-0.02em",
@@ -123,7 +126,7 @@ const config: Config = {
         ],
 
         "3xl": [
-          "25px",
+          "27px",
           {
             lineHeight: "1.18",
             letterSpacing: "-0.025em",
@@ -131,7 +134,7 @@ const config: Config = {
         ],
 
         "4xl": [
-          "30px",
+          "32px",
           {
             lineHeight: "1.12",
             letterSpacing: "-0.03em",
@@ -139,7 +142,7 @@ const config: Config = {
         ],
 
         "5xl": [
-          "36px",
+          "40px",
           {
             lineHeight: "1.05",
             letterSpacing: "-0.04em",

@@ -308,7 +308,7 @@ export default function AdminOrderDetailPage() {
                       "pending",
                       "confirmed",
                       "processing",
-                      "packing",
+                      "packed",
                       "shipped",
                       "delivered",
                       "cancelled",

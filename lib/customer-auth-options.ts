@@ -8,32 +8,8 @@ import { customerCookieOptions } from "@/lib/auth-cookies";
 const OAUTH_PLACEHOLDER_HASH =
   "$2b$10$UoH4j7Gyt7qR95R5M6b8suXNG7QDGtFKwM9lYjLw9M4iyf2EG6m9e";
 
-let oauthColumnsEnsured = false;
-async function ensureOauthColumns() {
-  if (oauthColumnsEnsured) return;
-
-  const rows = await prisma.$queryRawUnsafe<
-    Array<{ COLUMN_NAME: string }>
-  >(
-    "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Customer' AND COLUMN_NAME IN ('image', 'provider')"
-  );
-  const names = new Set(rows.map((r) => r.COLUMN_NAME));
-
-  if (!names.has("image")) {
-    await prisma.$executeRawUnsafe(
-      "ALTER TABLE `Customer` ADD COLUMN `image` VARCHAR(2048) NULL"
-    );
-  }
-  if (!names.has("provider")) {
-    await prisma.$executeRawUnsafe(
-      "ALTER TABLE `Customer` ADD COLUMN `provider` VARCHAR(32) NULL"
-    );
-  }
-  oauthColumnsEnsured = true;
-}
-
 export const customerAuthOptions: NextAuthOptions = {
-  debug: true,
+  debug: process.env.NODE_ENV === "development",
   providers: [
     ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
       ? [
@@ -63,23 +39,11 @@ export const customerAuthOptions: NextAuthOptions = {
         const customer = await prisma.customer.findUnique({
           where: { email },
         });
-        if (!customer) return null;
+        if (!customer?.isActive) return null;
         if (customer.passwordHash === OAUTH_PLACEHOLDER_HASH) {
-          // Allow Google-created accounts to set a local password on first
-          // credentials login attempt.
-          if (password.length < 6) return null;
-          const localHash = await bcrypt.hash(password, 10);
-          await prisma.customer.update({
-            where: { id: customer.id },
-            data: { passwordHash: localHash },
-          });
-          return {
-            id: customer.id,
-            email: customer.email,
-            name: customer.name,
-            phone: customer.phone || "",
-            role: "customer" as const,
-          };
+          // OAuth-only accounts must use Google or the verified reset flow.
+          // Never let an arbitrary first password claim an OAuth account.
+          return null;
         }
         const ok = await bcrypt.compare(password, customer.passwordHash);
         if (!ok) return null;
@@ -104,33 +68,28 @@ export const customerAuthOptions: NextAuthOptions = {
           if (!email) return false;
           if (adminEmail && email === adminEmail) return false;
 
-          // Persist provider + profile image once columns exist.
-          await ensureOauthColumns();
           const safeName = user?.name?.trim() || "Customer";
-
-          // Upsert by raw SQL to avoid Prisma model/client drift issues.
-          await prisma.$executeRawUnsafe(
-            "INSERT INTO `Customer` (`id`, `email`, `passwordHash`, `name`, `phone`, `createdAt`, `updatedAt`) VALUES (UUID(), ?, ?, ?, '', NOW(), NOW()) ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `updatedAt` = NOW()",
-            email,
-            OAUTH_PLACEHOLDER_HASH,
-            safeName
-          );
-
-          const row = await prisma.$queryRawUnsafe<Array<{ id: string }>>(
-            "SELECT `id` FROM `Customer` WHERE `email` = ? LIMIT 1",
-            email
-          );
-          const customerId = row?.[0]?.id;
-          if (!customerId) {
-            throw new Error("Google sign-in customer row missing after upsert");
-          }
-
-          await prisma.$executeRawUnsafe(
-            "UPDATE `Customer` SET `provider` = ?, `image` = ? WHERE `id` = ?",
-            "google",
-            user?.image ?? null,
-            customerId
-          );
+          const existing = await prisma.customer.findUnique({
+            where: { email },
+            select: { isActive: true },
+          });
+          if (existing && !existing.isActive) return false;
+          await prisma.customer.upsert({
+            where: { email },
+            create: {
+              email,
+              passwordHash: OAUTH_PLACEHOLDER_HASH,
+              name: safeName,
+              phone: "",
+              provider: "google",
+              image: user?.image ?? null,
+            },
+            update: {
+              name: safeName,
+              provider: "google",
+              image: user?.image ?? null,
+            },
+          });
         }
         return true;
       } catch (error) {
@@ -140,11 +99,18 @@ export const customerAuthOptions: NextAuthOptions = {
     },
     async jwt({ token, user, account, trigger, session }) {
       if (account?.provider === "google" && user?.email) {
-        token.sub = token.sub ?? user.id ?? user.email;
-        token.email = user.email;
+        const email = user.email.trim().toLowerCase();
+        const customer = await prisma.customer.findUnique({
+          where: { email },
+          select: { id: true, phone: true, sessionVersion: true, isActive: true },
+        });
+        if (!customer?.isActive) return token;
+        token.sub = customer.id;
+        token.email = email;
         token.name = user.name;
         token.role = "customer";
-        token.phone = "";
+        token.phone = customer.phone;
+        token.sessionVersion = customer.sessionVersion;
         token.picture = user.image ?? null;
         return token;
       }
@@ -160,11 +126,12 @@ export const customerAuthOptions: NextAuthOptions = {
         try {
           const email = typeof user.email === "string" ? user.email.trim().toLowerCase() : "";
           if (email) {
-            const rows = await prisma.$queryRawUnsafe<Array<{ image: string | null }>>(
-              "SELECT `image` FROM `Customer` WHERE `email` = ? LIMIT 1",
-              email
-            );
-            token.picture = rows?.[0]?.image ?? null;
+            const customer = await prisma.customer.findUnique({
+              where: { email },
+              select: { image: true, sessionVersion: true },
+            });
+            token.picture = customer?.image ?? null;
+            token.sessionVersion = customer?.sessionVersion ?? 0;
           }
         } catch {
           // Keep credentials login resilient even if image lookup fails.
@@ -174,10 +141,26 @@ export const customerAuthOptions: NextAuthOptions = {
         if (typeof session.name === "string") token.name = session.name;
         if (typeof session.phone === "string") token.phone = session.phone;
       }
+
+      // A password reset increments sessionVersion and revokes older JWTs.
+      if (!user && token.role === "customer" && token.sub) {
+        const current = await prisma.customer.findUnique({
+          where: { id: token.sub },
+          select: { sessionVersion: true, isActive: true },
+        });
+        if (
+          !current?.isActive ||
+          current.sessionVersion !== Number(token.sessionVersion ?? 0)
+        ) {
+          token.role = undefined;
+          token.invalidated = true;
+        }
+      }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
+        session.user.id = token.sub || "";
         session.user.email = token.email as string;
         session.user.name = token.name as string | null;
         session.user.role = token.role as "admin" | "customer" | undefined;

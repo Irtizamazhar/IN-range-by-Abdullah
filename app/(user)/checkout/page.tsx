@@ -19,6 +19,7 @@ export default function CheckoutPage() {
   const { data: session } = useSession();
   const [settings, setSettings] = useState<ISettings | null>(null);
   const [loading, setLoading] = useState(false);
+  const [checkoutKey, setCheckoutKey] = useState("");
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -48,6 +49,10 @@ export default function CheckoutPage() {
     _id: string;
     customerPhone: string;
   } | null>(null);
+
+  useEffect(() => {
+    setCheckoutKey(crypto.randomUUID());
+  }, []);
 
   useEffect(() => {
     fetch("/api/settings")
@@ -115,7 +120,7 @@ export default function CheckoutPage() {
     settings?.codAvailableCities?.some(
       (c) => c.toLowerCase() === city.trim().toLowerCase()
     ) ?? false;
-  const deliveryCharge = subtotal > 1000 ? 0 : 250;
+  const deliveryCharge = Number(settings?.codCharges ?? 0);
   const totalAmount = subtotal + deliveryCharge;
 
   const infoComplete = useMemo(
@@ -139,9 +144,14 @@ export default function CheckoutPage() {
     }
     setLoading(true);
     try {
+      const requestKey = checkoutKey || crypto.randomUUID();
+      if (!checkoutKey) setCheckoutKey(requestKey);
       const res = await fetch("/api/orders", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": requestKey,
+        },
         body: JSON.stringify({
           customerName: customerFullName,
           customerPhone: phone,
@@ -322,9 +332,8 @@ export default function CheckoutPage() {
       <div className="bg-brand-primary py-2 text-xs font-semibold tracking-wide text-brand-dark">
         <div className="overflow-hidden whitespace-nowrap">
           <p className="inline-block min-w-full animate-[checkoutMarquee_18s_linear_infinite]">
-            ENJOY FREE DELIVERY ON ORDERS ABOVE Rs.1,000 | CASH ON DELIVERY
-            AVAILABLE | EASY RETURNS & EXCHANGES | PAKISTAN&apos;S #1 BUDGET
-            SHOP
+            CASH ON DELIVERY AVAILABLE | DELIVERY CHARGES SHOWN AT CHECKOUT |
+            EASY RETURNS & EXCHANGES | PAKISTAN&apos;S #1 BUDGET SHOP
           </p>
         </div>
       </div>

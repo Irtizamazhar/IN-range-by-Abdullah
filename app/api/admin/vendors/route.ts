@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { VendorAccountStatus } from "@prisma/client";
-import { getAdminSession } from "@/lib/sessions";
+import { requireAdminPermission } from "@/lib/admin-rbac";
 import { prisma } from "@/lib/prisma";
 
 const STATUSES: VendorAccountStatus[] = [
@@ -13,10 +13,8 @@ const STATUSES: VendorAccountStatus[] = [
 ];
 
 export async function GET(req: NextRequest) {
-  const session = await getAdminSession();
-  if (session?.user?.role !== "admin") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireAdminPermission("vendors.manage");
+  if ("response" in auth) return auth.response;
 
   const raw = req.nextUrl.searchParams.get("status")?.toLowerCase();
   const status =
@@ -90,6 +88,10 @@ export async function GET(req: NextRequest) {
               }
             : null,
         auditLogs: undefined,
+        documents: v.documents.map((document) => ({
+          ...document,
+          fileUrl: `/api/private/vendor-documents/${document.id}`,
+        })),
         specialCommissionRate:
           v.specialCommissionRate != null
             ? Number(v.specialCommissionRate)

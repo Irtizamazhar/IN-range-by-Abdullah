@@ -17,6 +17,7 @@ export type ProductSerializeInput = Pick<
   | "discountPercent"
   | "category"
   | "stock"
+  | "warrantyMonths"
   | "variants"
   | "isActive"
   | "listingImageUrls"
@@ -79,6 +80,7 @@ export function serializeProduct(
       : undefined,
     category: p.category,
     stock: p.stock,
+    warrantyMonths: p.warrantyMonths,
     variants: Array.isArray(p.variants)
       ? (p.variants as string[])
       : (p.variants as unknown as string[]) || [],

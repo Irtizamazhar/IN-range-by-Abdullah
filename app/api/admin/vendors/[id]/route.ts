@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
-import { getAdminSession } from "@/lib/sessions";
+import { requireAdminPermission, writeAdminAudit } from "@/lib/admin-rbac";
 import { prisma } from "@/lib/prisma";
 import { sanitizePlainText } from "@/lib/security/sanitize";
 import { sendVendorApprovedEmail } from "@/lib/vendor-mail";
@@ -33,10 +33,8 @@ const patchSchema = z.discriminatedUnion("action", [
 type Ctx = { params: { id: string } };
 
 export async function PATCH(req: NextRequest, ctx: Ctx) {
-  const session = await getAdminSession();
-  if (session?.user?.role !== "admin") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireAdminPermission("vendors.manage");
+  if ("response" in auth) return auth.response;
 
   const { id } = ctx.params;
   if (!id) {
@@ -67,10 +65,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   }
 
   const wasAlreadyApproved = vendor.status === "approved";
-  const adminActorId =
-    ((session.user as unknown as { id?: string } | undefined)?.id ??
-      session.user?.email ??
-      null);
+  const adminActorId = auth.admin.id;
 
   try {
     if (parsed.data.action === "approve") {
@@ -102,7 +97,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
                 ...details,
                 resolved: true,
                 resolvedAt: new Date().toISOString(),
-                resolvedBy: session.user?.email ?? "admin",
+                resolvedBy: auth.admin.email,
                 resolutionNote: "Auto-resolved after vendor approval",
               },
             },
@@ -200,13 +195,20 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
         vendorId: id,
         action: `admin_${parsed.data.action}`,
         details: {
-          adminEmail: session.user?.email ?? null,
+          adminEmail: auth.admin.email,
           adminId: adminActorId,
           payload: JSON.parse(
             JSON.stringify(parsed.data)
           ) as Prisma.InputJsonValue,
         },
       },
+    });
+    await writeAdminAudit(prisma, {
+      adminId: auth.admin.id,
+      action: `vendor_${parsed.data.action}`,
+      entityType: "Vendor",
+      entityId: id,
+      details: { previousStatus: vendor.status },
     });
 
     return NextResponse.json({ ok: true });

@@ -44,6 +44,7 @@ export async function syncVendorProductStorefront(
     discountPercent,
     category: vp.category,
     stock: vp.stock,
+    warrantyMonths: vp.warrantyMonths,
     variants: [] as Prisma.InputJsonValue,
     isActive,
     ...(listingImageUrls !== undefined ? { listingImageUrls } : {}),

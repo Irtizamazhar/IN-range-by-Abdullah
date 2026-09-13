@@ -24,8 +24,8 @@
   --brand-link: #49651a;
 
   --font-primary:
-    var(--font-inter),
-    "Inter",
+    var(--font-jakarta),
+    "Plus Jakarta Sans",
     -apple-system,
     BlinkMacSystemFont,
     "Segoe UI",
@@ -74,7 +74,7 @@
 
     font-family: var(--font-primary);
 
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 400;
 
     line-height: 1.5;

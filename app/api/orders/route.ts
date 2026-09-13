@@ -2,12 +2,12 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
-import { getCustomerSession, getAdminSession } from "@/lib/sessions";
+import { getCustomerSession } from "@/lib/sessions";
+import { requireAdminPermission } from "@/lib/admin-rbac";
 import { autoCancelStaleBankOrders } from "@/lib/auto-cancel-orders";
 import { generateOrderNumber } from "@/lib/order-number";
 import { getOrCreateSettings } from "@/lib/settings-db";
 import { catalogProductSelect } from "@/lib/catalog-product-select";
-import { readProducts } from "@/lib/products-store";
 import {
   ORDER_INCLUDE_SERIALIZE,
   WHERE_PARENT_ORDER_ONLY,
@@ -27,10 +27,8 @@ import {
 } from "@/lib/marketplace-prisma";
 
 export async function GET(req: NextRequest) {
-  const session = await getAdminSession();
-  if (session?.user?.role !== "admin") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireAdminPermission("orders.view");
+  if ("response" in auth) return auth.response;
   try {
     await autoCancelStaleBankOrders();
   } catch (e) {
@@ -81,7 +79,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const session = await getCustomerSession();
-  if (session?.user?.role !== "customer") {
+  if (session?.user?.role !== "customer" || !session.user.id) {
     return NextResponse.json(
       { error: "Please sign in with a customer account to place an order" },
       { status: 401 }
@@ -98,6 +96,37 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
+  const checkoutKey = String(
+    req.headers.get("Idempotency-Key") || body.checkoutKey || ""
+  ).trim();
+  if (!/^[A-Za-z0-9:_-]{16,128}$/.test(checkoutKey)) {
+    return NextResponse.json(
+      { error: "A valid checkout idempotency key is required" },
+      { status: 400 }
+    );
+  }
+
+  const customer = await prisma.customer.findUnique({
+    where: { id: session.user.id },
+    select: { id: true, email: true, name: true, phone: true },
+  });
+  if (!customer) {
+    return NextResponse.json({ error: "Customer account not found" }, { status: 401 });
+  }
+
+  const existingOrder = await prisma.order.findUnique({
+    where: { checkoutKey },
+    include: ORDER_INCLUDE_SERIALIZE,
+  });
+  if (existingOrder) {
+    if (existingOrder.customerId !== customer.id) {
+      return NextResponse.json({ error: "Checkout key conflict" }, { status: 409 });
+    }
+    return NextResponse.json(serializeOrder(existingOrder), {
+      headers: { "X-Idempotent-Replay": "true" },
+    });
+  }
+
   type CartLine = {
     productId?: unknown;
     quantity?: unknown;
@@ -107,7 +136,6 @@ export async function POST(req: NextRequest) {
   const {
     customerName,
     customerPhone,
-    customerEmail,
     customerAddress,
     city,
     products: rawLines,
@@ -115,7 +143,6 @@ export async function POST(req: NextRequest) {
   } = body as {
     customerName?: string;
     customerPhone?: string;
-    customerEmail?: string;
     customerAddress?: string;
     city?: string;
     products?: CartLine[];
@@ -127,7 +154,7 @@ export async function POST(req: NextRequest) {
   if (!lineItems?.length) {
     return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
   }
-  if (!customerName || !customerPhone || !customerEmail || !customerAddress || !city) {
+  if (!customerName || !customerPhone || !customerAddress || !city) {
     return NextResponse.json({ error: "Missing customer fields" }, { status: 400 });
   }
   if (paymentMethod && paymentMethod !== "cod") {
@@ -152,7 +179,6 @@ export async function POST(req: NextRequest) {
 
   try {
   let subtotal = 0;
-  const newArrivalStore = await readProducts();
   type VendorSlice = {
     vendorId: string;
     vendorProductId: string;
@@ -180,35 +206,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid product quantity" }, { status: 400 });
     }
     const lineProductId = String(line.productId || "");
-    if (lineProductId.startsWith("na-")) {
-      const naId = Number(lineProductId.slice(3));
-      const na = newArrivalStore.find((x) => Number(x.id) === naId && x.isNew);
-      if (!na) {
-        return NextResponse.json({ error: "Invalid product" }, { status: 400 });
-      }
-      const qty = Math.max(1, parseInt(String(line.quantity), 10));
-      const naStock = Math.max(0, Number(na.stock ?? (na.inStock ? 1 : 0)));
-      if (naStock < qty) {
-        return NextResponse.json(
-          { error: `Insufficient stock: ${na.name}` },
-          { status: 400 }
-        );
-      }
-      const unit = Number(na.price);
-      subtotal += unit * qty;
-      resolvedProducts.push({
-        productId: lineProductId,
-        orderItemProductId: null,
-        name: na.name,
-        price: unit,
-        quantity: qty,
-        image: (Array.isArray(na.images) && na.images[0]) || na.image || "",
-        variant: line.variant ? String(line.variant) : undefined,
-        decrementFromPrisma: false,
-      });
-      continue;
-    }
-
     const p = await prisma.product.findUnique({
       where: { id: lineProductId },
       select: catalogProductSelect({ take: 1 }),
@@ -311,9 +308,11 @@ export async function POST(req: NextRequest) {
     const o = await tx.order.create({
       data: {
         orderNumber,
+        customerId: customer.id,
+        checkoutKey,
         customerName: String(customerName).trim(),
         customerPhone: String(customerPhone).trim(),
-        customerEmail: String(customerEmail).trim(),
+        customerEmail: customer.email,
         customerAddress: String(customerAddress).trim(),
         city: String(city).trim(),
         totalAmount,
@@ -323,22 +322,29 @@ export async function POST(req: NextRequest) {
         paymentProofData: null,
         paymentProofMime: null,
         notes: null,
-        paymentStatus: "received",
+        // COD is not collected until fulfilment confirms delivery.
+        paymentStatus: "pending",
         orderStatus: "confirmed",
         isRead: false,
-        orderItems: {
-          create: resolvedProducts.map((r) => ({
-            productId: r.orderItemProductId,
-            name: r.name,
-            price: r.price,
-            quantity: r.quantity,
-            image: r.image,
-            variant: r.variant ?? null,
-          })),
-        },
       },
-      include: { orderItems: true },
     });
+
+    const createdOrderItems = [];
+    for (const line of resolvedProducts) {
+      createdOrderItems.push(
+        await tx.orderItem.create({
+          data: {
+            orderId: o.id,
+            productId: line.orderItemProductId,
+            name: line.name,
+            price: line.price,
+            quantity: line.quantity,
+            image: line.image,
+            variant: line.variant ?? null,
+          },
+        })
+      );
+    }
 
     // One VendorShopOrder per vendor on this checkout (bundled lines) + linked VendorOrder rows.
     const vendorLines = resolvedProducts.filter((r) => r.vendorSlice);
@@ -349,12 +355,7 @@ export async function POST(req: NextRequest) {
       groups.get(vid)!.push(line);
     }
 
-    const customerEmailNorm = String(customerEmail).trim().toLowerCase();
-    const customerRow = await tx.customer.findUnique({
-      where: { email: customerEmailNorm },
-      select: { id: true },
-    });
-    const customerIdForShop = customerRow?.id ?? null;
+    const shopOrderByVendor = new Map<string, string>();
 
     for (const [, lines] of Array.from(groups.entries())) {
       type ItemSnap = {
@@ -414,10 +415,10 @@ export async function POST(req: NextRequest) {
           shopOrderNumber,
           orderId: o.id,
           vendorId,
-          customerId: customerIdForShop,
+          customerId: customer.id,
           customerName: String(customerName).trim(),
           customerPhone: String(customerPhone).trim(),
-          customerEmail: String(customerEmail).trim(),
+          customerEmail: customer.email,
           customerAddress: String(customerAddress).trim(),
           city: String(city).trim(),
           items,
@@ -430,6 +431,7 @@ export async function POST(req: NextRequest) {
           statusHistory,
         },
       });
+      shopOrderByVendor.set(vendorId, vso.id);
 
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i]!;
@@ -493,6 +495,39 @@ export async function POST(req: NextRequest) {
       if (productStock.count !== 1) throw new Error("Insufficient stock");
     }
 
+    for (let i = 0; i < resolvedProducts.length; i++) {
+      const line = resolvedProducts[i]!;
+      const orderItem = createdOrderItems[i]!;
+      await tx.orderInventoryLine.create({
+        data: {
+          orderId: o.id,
+          orderItemId: orderItem.id,
+          productId: line.orderItemProductId,
+          vendorProductId: line.vendorSlice?.vendorProductId ?? null,
+          vendorShopOrderId: line.vendorSlice
+            ? shopOrderByVendor.get(line.vendorSlice.vendorId) ?? null
+            : null,
+          quantity: line.quantity,
+          state: "reserved",
+        },
+      });
+    }
+
+    await tx.orderStatusEvent.create({
+      data: {
+        orderId: o.id,
+        actorType: "customer",
+        actorId: customer.id,
+        eventType: "order_created",
+        toStatus: "confirmed",
+        idempotencyKey: `checkout:${checkoutKey}`,
+        details: {
+          paymentMethod: effectivePaymentMethod,
+          paymentStatus: "pending",
+        },
+      },
+    });
+
     return o;
   });
 
@@ -554,6 +589,17 @@ export async function POST(req: NextRequest) {
       e && typeof e === "object" && "code" in e
         ? String((e as { code: unknown }).code)
         : "";
+    if (code === "P2002") {
+      const replay = await prisma.order.findUnique({
+        where: { checkoutKey },
+        include: ORDER_INCLUDE_SERIALIZE,
+      });
+      if (replay?.customerId === customer.id) {
+        return NextResponse.json(serializeOrder(replay), {
+          headers: { "X-Idempotent-Replay": "true" },
+        });
+      }
+    }
     const hint =
       code === "P2002"
         ? "Duplicate conflict — try again."

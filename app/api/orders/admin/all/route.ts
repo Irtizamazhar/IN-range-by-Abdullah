@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import type { Prisma, VendorShopOrderStatus } from "@prisma/client";
-import { getAdminSession } from "@/lib/sessions";
+import { requireAdminPermission } from "@/lib/admin-rbac";
 import { prisma } from "@/lib/prisma";
 import {
   paymentMethodLabel,
@@ -11,10 +11,8 @@ import {
 
 /** Admin: all vendor shop orders with filters (GET /api/orders/admin/all). */
 export async function GET(req: NextRequest) {
-  const session = await getAdminSession();
-  if (session?.user?.role !== "admin") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireAdminPermission("orders.view");
+  if ("response" in auth) return auth.response;
 
   const { searchParams } = new URL(req.url);
   const status = searchParams.get("status");

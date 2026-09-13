@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/sessions";
+import { requireAdminPermission } from "@/lib/admin-rbac";
 import { prisma } from "@/lib/prisma";
 
 /** Next may pass `params` as a plain object or a Promise (align with other app routes). */
@@ -20,10 +20,8 @@ async function resolveProductId(params: RouteParams): Promise<string | null> {
  * Uses raw SQL when the generated Prisma client predates the `isBestSeller` field.
  */
 export async function PATCH(_req: NextRequest, context: Ctx) {
-  const session = await getAdminSession();
-  if (session?.user?.role !== "admin") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireAdminPermission("catalog.manage");
+  if ("response" in auth) return auth.response;
 
   const id = await resolveProductId(context.params);
   if (!id) {

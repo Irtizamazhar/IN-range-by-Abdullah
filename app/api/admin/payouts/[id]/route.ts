@@ -2,11 +2,12 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getAdminSession } from "@/lib/sessions";
+import { requireAdminPermission, writeAdminAudit } from "@/lib/admin-rbac";
 import { prisma } from "@/lib/prisma";
 import { sanitizePlainText } from "@/lib/security/sanitize";
 import {
   markEarningsPaidForWithdrawal,
+  releaseWithdrawalAllocations,
 } from "@/lib/vendor-earning-service";
 import { createVendorNotification } from "@/lib/vendor-notifications";
 import {
@@ -19,6 +20,7 @@ const patchSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("approve") }),
   z.object({
     action: z.literal("mark_paid"),
+    transferReference: z.string().min(3).max(191),
   }),
   z.object({
     action: z.literal("reject"),
@@ -30,10 +32,8 @@ const patchSchema = z.discriminatedUnion("action", [
 type Ctx = { params: Promise<{ id: string }> };
 
 export async function PATCH(req: NextRequest, ctx: Ctx) {
-  const session = await getAdminSession();
-  if (session?.user?.role !== "admin") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireAdminPermission("payouts.manage");
+  if ("response" in auth) return auth.response;
 
   const { id } = await ctx.params;
 
@@ -70,9 +70,13 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
           { status: 400 }
         );
       }
-      await prisma.vendorWithdrawal.update({
-        where: { id },
-        data: { status: "approved" },
+      await prisma.$transaction(async (tx) => {
+        const gate = await tx.vendorWithdrawal.updateMany({
+          where: { id, status: "pending" },
+          data: { status: "approved" },
+        });
+        if (gate.count !== 1) throw new Error("Request status changed");
+        await writeAdminAudit(tx, { adminId: auth.admin.id, action: "payout_approved", entityType: "VendorWithdrawal", entityId: id, details: { amount: Number(w.requestedAmount), vendorId: w.vendorId } });
       });
       await createVendorNotification({
         vendorId: w.vendorId,
@@ -95,21 +99,32 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
         );
       }
 
+      const transferReference = sanitizePlainText(
+        parsed.data.transferReference,
+        191
+      );
+
       await prisma.$transaction(async (tx) => {
         await markEarningsPaidForWithdrawal(
           {
+            withdrawalId: w.id,
             vendorId: w.vendorId,
             requestedAmount: Number(w.requestedAmount),
+            transferReference,
           },
           tx
         );
-        await tx.vendorWithdrawal.update({
-          where: { id },
+        const gate = await tx.vendorWithdrawal.updateMany({
+          where: { id, status: "approved" },
           data: {
             status: "paid",
             processedAt: new Date(),
+            transferReference,
+            openKey: null,
           },
         });
+        if (gate.count !== 1) throw new Error("Payout was already processed");
+        await writeAdminAudit(tx, { adminId: auth.admin.id, action: "payout_paid", entityType: "VendorWithdrawal", entityId: id, details: { amount: Number(w.requestedAmount), transferReference } });
       });
 
       await createVendorNotification({
@@ -134,14 +149,24 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       ? sanitizePlainText(parsed.data.adminNote, 2000)
       : null;
 
-    await prisma.vendorWithdrawal.update({
-      where: { id },
-      data: {
-        status: "rejected",
-        rejectionReason: reason,
-        adminNote,
-        processedAt: new Date(),
-      },
+    await prisma.$transaction(async (tx) => {
+      await releaseWithdrawalAllocations(tx, {
+        withdrawalId: w.id,
+        vendorId: w.vendorId,
+        requestedAmount: Number(w.requestedAmount),
+      });
+      const gate = await tx.vendorWithdrawal.updateMany({
+        where: { id, status: { in: ["pending", "approved"] } },
+        data: {
+          status: "rejected",
+          rejectionReason: reason,
+          adminNote,
+          processedAt: new Date(),
+          openKey: null,
+        },
+      });
+      if (gate.count !== 1) throw new Error("Request status changed");
+      await writeAdminAudit(tx, { adminId: auth.admin.id, action: "payout_rejected", entityType: "VendorWithdrawal", entityId: id, details: { amount: Number(w.requestedAmount), reason } });
     });
 
     await createVendorNotification({

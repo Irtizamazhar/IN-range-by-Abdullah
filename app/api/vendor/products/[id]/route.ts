@@ -34,6 +34,7 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
         p.originalPrice != null ? p.originalPrice.toString() : null,
       category: p.category,
       stock: p.stock,
+      warrantyMonths: p.warrantyMonths,
       images: p.images,
       status: p.status,
       createdAt: p.createdAt.toISOString(),
@@ -90,6 +91,9 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   }
   if (d.stock != null) {
     data.stock = d.stock;
+  }
+  if (d.warrantyMonths !== undefined) {
+    data.warrantyMonths = d.warrantyMonths;
   }
   if (d.images != null) {
     data.images = d.images as unknown as Prisma.InputJsonValue;

@@ -2,10 +2,10 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { Prisma } from "@prisma/client";
 import { requireApprovedVendorApi } from "@/lib/vendor-api-auth";
 import { prisma } from "@/lib/prisma";
 import {
+  createWithdrawalWithAllocations,
   hasOpenWithdrawalRequest,
   sumPendingEarningsNet,
 } from "@/lib/vendor-earning-service";
@@ -104,16 +104,15 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const w = await prisma.vendorWithdrawal.create({
-      data: {
-        vendorId: auth.vendor.id,
-        requestedAmount: new Prisma.Decimal(amount.toFixed(2)),
+    const w = await createWithdrawalWithAllocations({
+      vendorId: auth.vendor.id,
+      requestedAmount: amount,
+      bank: {
         bankName: v.bankName,
         accountTitle: v.accountTitle,
         accountNumber: v.accountNumber,
-        notes: parsed.data.notes?.trim() || null,
-        status: "pending",
       },
+      notes: parsed.data.notes?.trim() || null,
     });
 
     return NextResponse.json({

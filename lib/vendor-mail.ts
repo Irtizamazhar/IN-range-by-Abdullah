@@ -41,6 +41,30 @@ export function vendorAppBaseUrl(): string {
   return base || "http://localhost:3000";
 }
 
+export function vendorMailConfigured(): boolean {
+  const user = process.env.EMAIL_USER?.trim() || process.env.SMTP_USER?.trim();
+  const pass = process.env.EMAIL_PASS?.trim() || process.env.SMTP_PASS?.trim();
+  return Boolean(user && pass);
+}
+
+export async function sendVendorPasswordResetEmail(
+  toRaw: string,
+  token: string,
+  requestOrigin?: string
+): Promise<void> {
+  const to = sanitizePlainText(toRaw, 320).toLowerCase();
+  const base = (process.env.NEXT_PUBLIC_APP_URL || requestOrigin || vendorAppBaseUrl()).replace(/\/$/, "");
+  const url = `${base}/vendor/reset-password?token=${encodeURIComponent(token)}`;
+  const transporter = createVendorTransport();
+  await transporter.sendMail({
+    from: fromAddress(),
+    to,
+    subject: "Reset your In Range seller password",
+    text: `Open this link within 30 minutes to reset your seller password:\n${url}`,
+    html: `<p>Use the link below within 30 minutes to reset your seller password.</p><p><a href="${url}">Reset seller password</a></p><p>If you did not request this, ignore this email.</p>`,
+  });
+}
+
 export async function sendVendorVerificationEmail(
   toRaw: string,
   verifyToken: string

@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
-import { getAdminSession } from "@/lib/sessions";
+import { getAdminSession, getCustomerSession } from "@/lib/sessions";
 import { autoCancelStaleBankOrders } from "@/lib/auto-cancel-orders";
 import { findOrderByIdOrNumber } from "@/lib/find-order";
 import {
@@ -13,6 +13,12 @@ import {
 } from "@/lib/order-emails";
 import { prisma } from "@/lib/prisma";
 import { serializeOrder } from "@/lib/serialize";
+import { canTransitionOrderStatus, canTransitionPaymentStatus } from "@/lib/order-state";
+import { cancelParentOrder } from "@/lib/order-cancellation-service";
+import { consumeReservedInventory } from "@/lib/order-inventory-service";
+import { customerOwnsRecord } from "@/lib/order-ownership";
+import { requireAdminPermission } from "@/lib/admin-rbac";
+import { createCustomerNotification } from "@/lib/customer-notifications";
 
 type Ctx = { params: { id: string } };
 
@@ -20,6 +26,10 @@ export async function GET(req: NextRequest, context: Ctx) {
   await autoCancelStaleBankOrders();
   const { id } = context.params;
   const session = await getAdminSession();
+  if (session?.user?.role === "admin") {
+    const auth = await requireAdminPermission("orders.view");
+    if ("response" in auth) return auth.response;
+  }
   /** Admin panel must pass `?admin=1` so vendor-facing merge is not applied while browsing as admin. */
   const forAdmin =
     session?.user?.role === "admin" &&
@@ -28,6 +38,16 @@ export async function GET(req: NextRequest, context: Ctx) {
   const order = await findOrderByIdOrNumber(id);
   if (!order) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  if (session?.user?.role !== "admin") {
+    const customerSession = await getCustomerSession();
+    if (
+      customerSession?.user?.role !== "customer" ||
+      !customerSession.user.id ||
+      !customerOwnsRecord(order.customerId, customerSession.user.id)
+    ) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
   }
   const ref = id.trim().toUpperCase();
   const vendorShopOrderRef =
@@ -49,8 +69,52 @@ export async function PUT(req: NextRequest, context: Ctx) {
   }
 
   if (session?.user?.role === "admin") {
+    const auth = await requireAdminPermission("orders.manage");
+    if ("response" in auth) return auth.response;
     const prevStatus = order.orderStatus;
     const prevPayment = order.paymentStatus;
+
+    const requestedStatus =
+      body.orderStatus != null && body.orderStatus !== ""
+        ? String(body.orderStatus)
+        : prevStatus;
+    const requestedPayment =
+      body.paymentStatus != null && body.paymentStatus !== ""
+        ? String(body.paymentStatus)
+        : prevPayment;
+    if (!canTransitionOrderStatus(prevStatus, requestedStatus)) {
+      return NextResponse.json(
+        { error: `Invalid order transition: ${prevStatus} to ${requestedStatus}` },
+        { status: 409 }
+      );
+    }
+    if (!canTransitionPaymentStatus(prevPayment, requestedPayment)) {
+      return NextResponse.json(
+        { error: `Invalid payment transition: ${prevPayment} to ${requestedPayment}` },
+        { status: 409 }
+      );
+    }
+    if (requestedPayment === "rejected" && !String(body.paymentRejectedReason || "").trim()) {
+      return NextResponse.json(
+        { error: "A rejection reason is required" },
+        { status: 400 }
+      );
+    }
+
+    if (requestedStatus === "cancelled" && prevStatus !== "cancelled") {
+      const result = await cancelParentOrder({
+        orderId: order.id,
+        reason: String(body.cancelReason || body.notes || "Cancelled by admin"),
+        actorType: "admin",
+        actorId: auth.admin.id,
+      });
+      if (!result.ok) {
+        return NextResponse.json({ error: result.error }, { status: 409 });
+      }
+      const cancelled = await findOrderByIdOrNumber(order.id);
+      if (!cancelled) return NextResponse.json({ error: "Not found" }, { status: 404 });
+      return NextResponse.json(serializeOrder(cancelled, { forAdmin: true }));
+    }
 
     const data: Prisma.OrderUpdateInput = {};
     if (body.isRead === true) data.isRead = true;
@@ -70,10 +134,64 @@ export async function PUT(req: NextRequest, context: Ctx) {
       data.notes = body.notes;
     }
 
-    const updated = await prisma.order.update({
-      where: { id: order.id },
-      data,
-      include: { orderItems: true },
+    const updated = await prisma.$transaction(async (tx) => {
+      const row = await tx.order.update({
+        where: { id: order.id },
+        data,
+        include: { orderItems: true },
+      });
+      if (prevStatus !== row.orderStatus) {
+        await tx.orderStatusEvent.create({
+          data: {
+            orderId: order.id,
+            actorType: "admin",
+            actorId: auth.admin.id,
+            eventType: "fulfilment_status_changed",
+            fromStatus: prevStatus,
+            toStatus: row.orderStatus,
+          },
+        });
+        if (order.customerId) {
+          await createCustomerNotification({
+            customerId: order.customerId,
+            type: "order_status",
+            title: `Order ${row.orderStatus.replaceAll("_", " ")}`,
+            message: `${row.orderNumber} is now ${row.orderStatus.replaceAll("_", " ")}.`,
+            link: `/track-order?order=${encodeURIComponent(row.orderNumber)}`,
+            idempotencyKey: `order-status:${row.id}:${row.orderStatus}`,
+          }, tx);
+        }
+      }
+      if (prevPayment !== row.paymentStatus) {
+        await tx.orderStatusEvent.create({
+          data: {
+            orderId: order.id,
+            actorType: "admin",
+            actorId: auth.admin.id,
+            eventType: "payment_status_changed",
+            fromStatus: prevPayment,
+            toStatus: row.paymentStatus,
+          },
+        });
+        await tx.vendorShopOrder.updateMany({
+          where: { orderId: order.id },
+          data: { paymentStatus: row.paymentStatus },
+        });
+        if (order.customerId) {
+          await createCustomerNotification({
+            customerId: order.customerId,
+            type: "payment_status",
+            title: `Payment ${row.paymentStatus.replaceAll("_", " ")}`,
+            message: `Payment for ${row.orderNumber} is ${row.paymentStatus.replaceAll("_", " ")}.`,
+            link: `/track-order?order=${encodeURIComponent(row.orderNumber)}`,
+            idempotencyKey: `payment-status:${row.id}:${row.paymentStatus}`,
+          }, tx);
+        }
+      }
+      if (row.orderStatus === "delivered") {
+        await consumeReservedInventory(tx, { orderId: order.id });
+      }
+      return row;
     });
 
     const payload = {
@@ -107,16 +225,25 @@ export async function PUT(req: NextRequest, context: Ctx) {
     return NextResponse.json(serializeOrder(updated, { forAdmin: true }));
   }
 
-  const phoneOk =
-    body.customerPhone && body.customerPhone === order.customerPhone;
+  const customerSession = await getCustomerSession();
+  if (
+    customerSession?.user?.role !== "customer" ||
+    !customerSession.user.id ||
+    !customerOwnsRecord(order.customerId, customerSession.user.id)
+  ) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
 
   if (
     body.paymentProofStagingId &&
-    phoneOk &&
     order.paymentMethod === "bank_transfer"
   ) {
-    const st = await prisma.paymentProofStaging.findUnique({
-      where: { id: String(body.paymentProofStagingId) },
+    const st = await prisma.paymentProofStaging.findFirst({
+      where: {
+        id: String(body.paymentProofStagingId),
+        customerId: customerSession.user.id,
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+      },
     });
     if (!st) {
       return NextResponse.json({ error: "Invalid upload" }, { status: 400 });
@@ -130,33 +257,11 @@ export async function PUT(req: NextRequest, context: Ctx) {
         paymentProofData: proof as Uint8Array<ArrayBuffer>,
         paymentProofMime: st.mimeType,
         paymentScreenshot: null,
+        paymentStatus: "submitted",
       },
       include: { orderItems: true },
     });
     await prisma.paymentProofStaging.delete({ where: { id: st.id } });
-    const { notifyAdminScreenshotUploaded } = await import("@/lib/order-emails");
-    await notifyAdminScreenshotUploaded({
-      orderNumber: updated.orderNumber,
-      customerName: updated.customerName,
-      customerEmail: updated.customerEmail,
-      totalAmount: Number(updated.totalAmount),
-    });
-    return NextResponse.json(serializeOrder(updated));
-  }
-
-  if (body.paymentScreenshot && phoneOk) {
-    if (order.paymentMethod !== "bank_transfer") {
-      return NextResponse.json({ error: "Invalid" }, { status: 400 });
-    }
-    const updated = await prisma.order.update({
-      where: { id: order.id },
-      data: {
-        paymentScreenshot: String(body.paymentScreenshot),
-        paymentProofData: null,
-        paymentProofMime: null,
-      },
-      include: { orderItems: true },
-    });
     const { notifyAdminScreenshotUploaded } = await import("@/lib/order-emails");
     await notifyAdminScreenshotUploaded({
       orderNumber: updated.orderNumber,

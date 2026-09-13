@@ -4,11 +4,11 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   const session = await getCustomerSession();
-  if (!session?.user?.email || session.user.role !== "customer") {
+  if (!session?.user?.id || session.user.role !== "customer") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const customer = await prisma.customer.findUnique({
-    where: { email: session.user.email.toLowerCase() },
+    where: { id: session.user.id },
     select: { name: true, email: true, phone: true, createdAt: true },
   });
   if (!customer) {
@@ -24,7 +24,7 @@ export async function GET() {
 
 export async function PATCH(req: NextRequest) {
   const session = await getCustomerSession();
-  if (!session?.user?.email || session.user.role !== "customer") {
+  if (!session?.user?.id || session.user.role !== "customer") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   let body: { name?: string; phone?: string };
@@ -39,7 +39,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
   }
   const updated = await prisma.customer.update({
-    where: { email: session.user.email.toLowerCase() },
+    where: { id: session.user.id },
     data: { name, phone },
     select: { name: true, email: true, phone: true },
   });

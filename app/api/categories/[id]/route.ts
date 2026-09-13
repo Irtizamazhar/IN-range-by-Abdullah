@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/sessions";
+import { requireAdminPermission } from "@/lib/admin-rbac";
 import { readCategories, writeCategories } from "@/lib/categories-store";
 
 export const dynamic = "force-dynamic";
@@ -13,10 +13,8 @@ export async function PUT(
   req: NextRequest,
   ctx: { params: Promise<{ id: string }> }
 ) {
-  const session = await getAdminSession();
-  if (session?.user?.role !== "admin") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireAdminPermission("catalog.manage");
+  if ("response" in auth) return auth.response;
 
   const { id: idRaw } = await ctx.params;
   const id = parseId(idRaw);
@@ -68,10 +66,8 @@ export async function DELETE(
   _req: NextRequest,
   ctx: { params: Promise<{ id: string }> }
 ) {
-  const session = await getAdminSession();
-  if (session?.user?.role !== "admin") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireAdminPermission("catalog.manage");
+  if ("response" in auth) return auth.response;
 
   const { id: idRaw } = await ctx.params;
   const id = parseId(idRaw);

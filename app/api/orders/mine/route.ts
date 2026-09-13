@@ -8,14 +8,12 @@ import { serializeOrder } from "@/lib/serialize";
 
 export async function GET() {
   const session = await getCustomerSession();
-  if (session?.user?.role !== "customer" || !session.user?.email) {
+  if (session?.user?.role !== "customer" || !session.user.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const email = String(session.user.email).trim();
-
   const orders = await prisma.order.findMany({
-    where: { customerEmail: email },
+    where: { customerId: session.user.id },
     orderBy: { createdAt: "desc" },
     take: 15,
     include: ORDER_INCLUDE_SERIALIZE,
@@ -25,4 +23,3 @@ export async function GET() {
     orders: orders.map((o) => serializeOrder(o)),
   });
 }
-

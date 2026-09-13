@@ -1,15 +1,13 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/sessions";
+import { requireAdminPermission } from "@/lib/admin-rbac";
 import { prisma } from "@/lib/prisma";
 
 /** Counts for admin sidebar badges (pending vendor signups + new seller shop orders). */
 export async function GET() {
-  const session = await getAdminSession();
-  if (session?.user?.role !== "admin") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireAdminPermission("dashboard.view");
+  if ("response" in auth) return auth.response;
 
   try {
     const [pendingVendors, pendingSellerOrders, pendingAppealsRaw] = await Promise.all([

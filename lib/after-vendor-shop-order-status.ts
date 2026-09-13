@@ -6,6 +6,7 @@ import {
 } from "@/lib/order-emails";
 import { createVendorEarningForDeliveredShopOrder } from "@/lib/vendor-earning-service";
 import { createVendorNotification } from "@/lib/vendor-notifications";
+import { createCustomerNotification } from "@/lib/customer-notifications";
 
 /**
  * Side effects after vendor advances (or admin mirrors) a shop order status.
@@ -44,6 +45,17 @@ export async function runAfterVendorShopOrderStatusChange(params: {
     shopOrderNumber: row.shopOrderNumber,
   };
 
+  if (row.customerId) {
+    await createCustomerNotification({
+      customerId: row.customerId,
+      type: "seller_delivery_status",
+      title: `Seller order ${newStatus}`,
+      message: `${row.shopOrderNumber} from ${row.vendor.shopName} is now ${newStatus}.`,
+      link: `/track-order?order=${encodeURIComponent(row.shopOrderNumber)}`,
+      idempotencyKey: `shop-status:${row.id}:${newStatus}`,
+    });
+  }
+
   if (newStatus === "shipped") {
     await notifyCustomerShipped(payload);
     return;
@@ -63,11 +75,19 @@ export async function runAfterVendorShopOrderStatusChange(params: {
     const allDelivered =
       siblings.length > 0 &&
       siblings.every((s) => s.status === "delivered");
+    const internalLines = await prisma.orderInventoryLine.count({
+      where: { orderId: row.orderId, vendorShopOrderId: null },
+    });
 
-    if (allDelivered) {
+    if (allDelivered && internalLines === 0) {
       await prisma.order.update({
         where: { id: row.orderId },
-        data: { orderStatus: "delivered" },
+        data: {
+          orderStatus: "delivered",
+          ...(row.paymentMethod === "cod"
+            ? { paymentStatus: "received" }
+            : {}),
+        },
       });
       await notifyCustomerDelivered({
         orderNumber: row.order.orderNumber,

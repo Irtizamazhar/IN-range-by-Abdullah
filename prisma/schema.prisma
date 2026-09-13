@@ -8,54 +8,96 @@ datasource db {
 }
 
 model Customer {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String   @db.VarChar(255)
-  name         String
-  phone        String   @default("")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id             String   @id @default(cuid())
+  email          String   @unique
+  passwordHash   String   @db.VarChar(255)
+  name           String
+  phone          String   @default("")
+  image          String?  @db.VarChar(2048)
+  provider       String?  @db.VarChar(32)
+  sessionVersion Int      @default(0)
+  isActive       Boolean  @default(true)
+  adminNote      String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   vendorReviews    VendorReview[]
   vendorShopOrders VendorShopOrder[]
   productReviews   Review[]
+  orders           Order[]
+  paymentProofs    PaymentProofStaging[]
+  passwordResets   CustomerPasswordResetToken[]
+  addresses        CustomerAddress[]
+  savedProducts    SavedProduct[]
+  storeFollows     StoreFollow[]
+  wants            WantPost[]
+  returnRequests   ReturnRequest[]
+  disputes         Dispute[]
+  refunds          Refund[]
+  warranties       WarrantyRecord[]
+  notifications    CustomerNotification[]
+
+  @@index([isActive, createdAt])
 }
 
 model Product {
-  id              String         @id @default(cuid())
-  name            String
-  description     String         @db.Text
-  price           Decimal        @db.Decimal(12, 2)
-  originalPrice   Decimal?       @db.Decimal(12, 2)
-  discountPercent Int            @default(0)
-  category        String
-  stock           Int            @default(0)
-  variants        Json
-  isActive        Boolean        @default(true)
-  isBestSeller    Boolean        @default(false)
+  id                 String               @id @default(cuid())
+  name               String
+  description        String               @db.Text
+  price              Decimal              @db.Decimal(12, 2)
+  originalPrice      Decimal?             @db.Decimal(12, 2)
+  discountPercent    Int                  @default(0)
+  category           String
+  stock              Int                  @default(0)
+  warrantyMonths     Int?
+  variants           Json
+  isActive           Boolean              @default(true)
+  isBestSeller       Boolean              @default(false)
+  isFeatured         Boolean              @default(false)
+  legacyNewArrivalId Int?                 @unique
+  categoryRecordId   String?
+  categoryRecord     Category?            @relation(fields: [categoryRecordId], references: [id], onDelete: SetNull)
   /// When set (e.g. vendor uploads), storefront uses these URLs instead of `ProductImage` rows.
-  listingImageUrls Json?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  orderItems      OrderItem[]
-  productImages   ProductImage[]
-  reviews         Review[]
-  vendorPublication VendorProduct?
+  listingImageUrls   Json?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  orderItems         OrderItem[]
+  productImages      ProductImage[]
+  reviews            Review[]
+  vendorPublication  VendorProduct?
+  inventoryLines     OrderInventoryLine[]
+  savedBy            SavedProduct[]
+  warranties         WarrantyRecord[]
 
   @@index([isActive, isBestSeller])
+  @@index([categoryRecordId])
+}
+
+model Category {
+  id         String    @id @default(cuid())
+  legacyId   Int?      @unique
+  name       String    @unique
+  slug       String    @unique
+  image      String    @db.Text
+  showOnHome Boolean   @default(false)
+  sortOrder  Int       @default(0)
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  products   Product[]
 }
 
 model Review {
-  id        Int      @id @default(autoincrement())
-  name      String
-  email     String
-  rating    Int
-  comment   String   @db.Text
-  imageUrl  String? @db.VarChar(2048)
-  productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  approved  Boolean  @default(false)
+  id         Int       @id @default(autoincrement())
+  name       String
+  email      String
+  rating     Int
+  comment    String    @db.Text
+  imageUrl   String?   @db.VarChar(2048)
+  productId  String
+  product    Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt  DateTime  @default(now())
+  approved   Boolean   @default(false)
   /// Logged-in purchase review (one per order + product when set).
   customerId String?
   customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
@@ -74,7 +116,7 @@ model NewArrivalReview {
   email        String
   rating       Int
   comment      String   @db.Text
-  imageUrl     String? @db.VarChar(2048)
+  imageUrl     String?  @db.VarChar(2048)
   newArrivalId Int
   createdAt    DateTime @default(now())
   approved     Boolean  @default(false)
@@ -95,55 +137,418 @@ model ProductImage {
 
 /// Guest payment screenshot before order is created.
 model PaymentProofStaging {
-  id        String   @id @default(cuid())
-  data      Bytes    @db.MediumBlob
-  mimeType  String
-  createdAt DateTime @default(now())
+  id         String    @id @default(cuid())
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  data       Bytes     @db.MediumBlob
+  mimeType   String
+  createdAt  DateTime  @default(now())
+  expiresAt  DateTime?
+
+  @@index([customerId])
+  @@index([expiresAt])
 }
 
 model Order {
-  id                    String      @id @default(cuid())
-  orderNumber           String      @unique
+  id                    String               @id @default(cuid())
+  orderNumber           String               @unique
   customerName          String
   customerPhone         String
   customerEmail         String
-  customerAddress       String      @db.Text
+  customerAddress       String               @db.Text
   city                  String
-  totalAmount           Decimal     @db.Decimal(12, 2)
+  totalAmount           Decimal              @db.Decimal(12, 2)
   paymentMethod         String
-  paymentStatus         String      @default("pending")
-  paymentRejectedReason String?     @db.Text
+  paymentStatus         String               @default("pending")
+  paymentRejectedReason String?              @db.Text
   /// Legacy external URL (optional)
-  paymentScreenshot     String?     @db.Text
-  paymentProofData      Bytes?      @db.MediumBlob
+  paymentScreenshot     String?              @db.Text
+  paymentProofData      Bytes?               @db.MediumBlob
   paymentProofMime      String?
   bankAccount           String?
-  orderStatus           String      @default("pending")
-  isRead                Boolean     @default(false)
+  orderStatus           String               @default("pending")
+  customerId            String?
+  customer              Customer?            @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  checkoutKey           String?              @unique @db.VarChar(128)
+  cancelledAt           DateTime?
+  cancelReason          String?              @db.Text
+  isRead                Boolean              @default(false)
   trackingNumber        String?
-  notes                 String?     @db.Text
-  createdAt             DateTime    @default(now())
-  updatedAt             DateTime    @updatedAt
+  notes                 String?              @db.Text
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
   orderItems            OrderItem[]
   vendorOrders          VendorOrder[]
   vendorShopOrders      VendorShopOrder[]
   vendorEarnings        VendorEarning[]
   vendorReviews         VendorReview[]
   productReviews        Review[]
+  inventoryLines        OrderInventoryLine[]
+  statusEvents          OrderStatusEvent[]
+  returnRequests        ReturnRequest[]
+  disputes              Dispute[]
+  refunds               Refund[]
+  warranties            WarrantyRecord[]
+
+  @@index([customerId, createdAt])
 }
 
 model OrderItem {
-  id        String   @id @default(cuid())
-  orderId   String
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  id             String              @id @default(cuid())
+  orderId        String
+  order          Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
   /// Null after the catalog product is deleted; line still has name, price, image.
-  productId String?
-  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
-  name      String
-  price     Decimal @db.Decimal(12, 2)
-  quantity  Int
-  image     String  @default("")
-  variant   String?
+  productId      String?
+  product        Product?            @relation(fields: [productId], references: [id], onDelete: SetNull)
+  name           String
+  price          Decimal             @db.Decimal(12, 2)
+  quantity       Int
+  image          String              @default("")
+  variant        String?
+  inventoryLine  OrderInventoryLine?
+  returnRequests ReturnRequest[]
+  warranty       WarrantyRecord?
+}
+
+enum InventoryReservationState {
+  reserved
+  released
+  consumed
+}
+
+model OrderInventoryLine {
+  id                String                    @id @default(cuid())
+  orderId           String
+  order             Order                     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderItemId       String                    @unique
+  orderItem         OrderItem                 @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  productId         String?
+  product           Product?                  @relation(fields: [productId], references: [id], onDelete: SetNull)
+  vendorProductId   String?
+  vendorProduct     VendorProduct?            @relation(fields: [vendorProductId], references: [id], onDelete: SetNull)
+  vendorShopOrderId String?
+  vendorShopOrder   VendorShopOrder?          @relation(fields: [vendorShopOrderId], references: [id], onDelete: SetNull)
+  quantity          Int
+  state             InventoryReservationState @default(reserved)
+  releasedAt        DateTime?
+  releaseReason     String?                   @db.Text
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+
+  @@index([orderId, state])
+  @@index([vendorShopOrderId, state])
+  @@index([vendorProductId])
+}
+
+model OrderStatusEvent {
+  id             String   @id @default(cuid())
+  orderId        String
+  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  actorType      String   @db.VarChar(32)
+  actorId        String?  @db.VarChar(191)
+  eventType      String   @db.VarChar(64)
+  fromStatus     String?  @db.VarChar(32)
+  toStatus       String?  @db.VarChar(32)
+  idempotencyKey String?  @unique @db.VarChar(191)
+  details        Json?
+  createdAt      DateTime @default(now())
+
+  @@index([orderId, createdAt])
+}
+
+model CustomerPasswordResetToken {
+  id         String    @id @default(cuid())
+  customerId String
+  customer   Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  tokenHash  String    @unique @db.VarChar(64)
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([customerId, expiresAt])
+}
+
+model CustomerNotification {
+  id             String   @id @default(cuid())
+  customerId     String
+  customer       Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  type           String   @db.VarChar(64)
+  title          String   @db.VarChar(200)
+  message        String   @db.Text
+  link           String?  @db.VarChar(500)
+  isRead         Boolean  @default(false)
+  idempotencyKey String   @unique @db.VarChar(191)
+  createdAt      DateTime @default(now())
+
+  @@index([customerId, isRead, createdAt])
+}
+
+model CustomerAddress {
+  id            String   @id @default(cuid())
+  customerId    String
+  customer      Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  label         String   @default("Home") @db.VarChar(60)
+  recipientName String   @db.VarChar(200)
+  phone         String   @db.VarChar(40)
+  address       String   @db.Text
+  city          String   @db.VarChar(120)
+  postalCode    String?  @db.VarChar(30)
+  isDefault     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([customerId, isDefault])
+}
+
+model SavedProduct {
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@id([customerId, productId])
+  @@index([productId])
+}
+
+model StoreFollow {
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  vendorId   String
+  vendor     Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@id([customerId, vendorId])
+  @@index([vendorId])
+}
+
+enum WantPostStatus {
+  pending
+  open
+  fulfilled
+  closed
+  rejected
+}
+
+enum WantOfferStatus {
+  pending
+  accepted
+  rejected
+  withdrawn
+}
+
+model WantPost {
+  id             String         @id @default(cuid())
+  customerId     String
+  customer       Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  title          String         @db.VarChar(200)
+  description    String         @db.Text
+  category       String         @db.VarChar(120)
+  city           String         @db.VarChar(120)
+  budgetMin      Decimal?       @db.Decimal(12, 2)
+  budgetMax      Decimal?       @db.Decimal(12, 2)
+  quantity       Int            @default(1)
+  condition      String?        @db.VarChar(60)
+  status         WantPostStatus @default(pending)
+  moderationNote String?        @db.Text
+  expiresAt      DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  offers         WantOffer[]
+
+  @@index([status, createdAt])
+  @@index([customerId, createdAt])
+  @@index([category, city])
+}
+
+model WantOffer {
+  id            String          @id @default(cuid())
+  wantId        String
+  want          WantPost        @relation(fields: [wantId], references: [id], onDelete: Cascade)
+  vendorId      String
+  vendor        Vendor          @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  amount        Decimal         @db.Decimal(12, 2)
+  message       String          @db.Text
+  estimatedDays Int?
+  status        WantOfferStatus @default(pending)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@unique([wantId, vendorId])
+  @@index([vendorId, status])
+}
+
+enum ReturnRequestStatus {
+  requested
+  vendor_approved
+  vendor_rejected
+  return_in_transit
+  received
+  refund_pending
+  refunded
+  closed
+}
+
+enum DisputeStatus {
+  open
+  under_review
+  resolved
+  rejected
+}
+
+enum RefundStatus {
+  pending
+  processed
+  rejected
+}
+
+/// A customer-owned after-sales request for one fulfilled order line.
+/// `activeKey` prevents duplicate concurrent requests without blocking a later
+/// request after the previous case reaches a terminal state.
+model ReturnRequest {
+  id               String              @id @default(cuid())
+  customerId       String
+  customer         Customer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  orderId          String
+  order            Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderItemId      String
+  orderItem        OrderItem           @relation(fields: [orderItemId], references: [id], onDelete: Restrict)
+  vendorId         String?
+  vendor           Vendor?             @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  quantity         Int
+  reason           String              @db.VarChar(120)
+  details          String?             @db.Text
+  status           ReturnRequestStatus @default(requested)
+  customerTracking String?             @db.VarChar(191)
+  vendorNote       String?             @db.Text
+  adminNote        String?             @db.Text
+  activeKey        String?             @unique @db.VarChar(191)
+  requestedAt      DateTime            @default(now())
+  reviewedAt       DateTime?
+  receivedAt       DateTime?
+  closedAt         DateTime?
+  updatedAt        DateTime            @updatedAt
+  disputes         Dispute[]
+  refund           Refund?
+
+  @@index([customerId, requestedAt])
+  @@index([vendorId, status])
+  @@index([orderId])
+}
+
+model Dispute {
+  id              String         @id @default(cuid())
+  customerId      String
+  customer        Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  orderId         String
+  order           Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  returnRequestId String?
+  returnRequest   ReturnRequest? @relation(fields: [returnRequestId], references: [id], onDelete: SetNull)
+  vendorId        String?
+  vendor          Vendor?        @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  type            String         @db.VarChar(80)
+  message         String         @db.Text
+  status          DisputeStatus  @default(open)
+  resolution      String?        @db.Text
+  activeKey       String?        @unique @db.VarChar(191)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  resolvedAt      DateTime?
+
+  @@index([customerId, createdAt])
+  @@index([vendorId, status])
+  @@index([orderId])
+}
+
+/// Provider-neutral refund record. Money is only marked processed after an
+/// administrator records a real external transfer/reference.
+model Refund {
+  id              String        @id @default(cuid())
+  customerId      String
+  customer        Customer      @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  orderId         String
+  order           Order         @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  returnRequestId String        @unique
+  returnRequest   ReturnRequest @relation(fields: [returnRequestId], references: [id], onDelete: Restrict)
+  vendorId        String?
+  vendor          Vendor?       @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  amount          Decimal       @db.Decimal(12, 2)
+  method          String        @default("manual") @db.VarChar(40)
+  status          RefundStatus  @default(pending)
+  idempotencyKey  String        @unique @db.VarChar(191)
+  externalRef     String?       @db.VarChar(191)
+  adminNote       String?       @db.Text
+  processedBy     String?       @db.VarChar(191)
+  createdAt       DateTime      @default(now())
+  processedAt     DateTime?
+  updatedAt       DateTime      @updatedAt
+
+  @@index([customerId, createdAt])
+  @@index([orderId, status])
+  @@index([vendorId, status])
+}
+
+model WarrantyRecord {
+  id              String         @id @default(cuid())
+  customerId      String
+  customer        Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  orderId         String
+  order           Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderItemId     String         @unique
+  orderItem       OrderItem      @relation(fields: [orderItemId], references: [id], onDelete: Restrict)
+  productId       String?
+  product         Product?       @relation(fields: [productId], references: [id], onDelete: SetNull)
+  vendorId        String?
+  vendor          Vendor?        @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  productName     String         @db.VarChar(255)
+  quantity        Int
+  startsAt        DateTime
+  expiresAt       DateTime
+  status          String         @default("active") @db.VarChar(32)
+  voidedAt        DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  vendorProduct   VendorProduct? @relation(fields: [vendorProductId], references: [id])
+  vendorProductId String?
+
+  @@index([customerId, expiresAt])
+  @@index([vendorId, status])
+  @@index([orderId])
+}
+
+/// Database-backed admin identity. The configured environment admin is
+/// bootstrapped as `super_admin` only after a successful credential check.
+model AdminUser {
+  id           String          @id @default(cuid())
+  email        String          @unique
+  passwordHash String          @db.VarChar(255)
+  name         String
+  role         String          @default("operations") @db.VarChar(40)
+  permissions  Json
+  isActive     Boolean         @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  auditLogs    AdminAuditLog[]
+
+  @@index([isActive, role])
+}
+
+model AdminAuditLog {
+  id         String     @id @default(cuid())
+  adminId    String?
+  admin      AdminUser? @relation(fields: [adminId], references: [id], onDelete: SetNull)
+  action     String     @db.VarChar(100)
+  entityType String?    @db.VarChar(80)
+  entityId   String?    @db.VarChar(191)
+  ipAddress  String?    @db.VarChar(45)
+  userAgent  String?    @db.Text
+  details    Json?
+  createdAt  DateTime   @default(now())
+
+  @@index([adminId, createdAt])
+  @@index([entityType, entityId])
+  @@index([createdAt])
 }
 
 model Settings {
@@ -270,17 +675,24 @@ model Vendor {
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
 
-  documents     VendorDocument[]
-  products      VendorProduct[]
-  orders        VendorOrder[]
-  earnings      VendorEarning[]
-  withdrawals   VendorWithdrawal[]
-  reviews       VendorReview[]
-  coupons       VendorCoupon[]
-  notifications VendorNotification[]
-  sessions      VendorSession[]
-  auditLogs     VendorAuditLog[]
+  documents        VendorDocument[]
+  products         VendorProduct[]
+  orders           VendorOrder[]
+  earnings         VendorEarning[]
+  withdrawals      VendorWithdrawal[]
+  reviews          VendorReview[]
+  coupons          VendorCoupon[]
+  notifications    VendorNotification[]
+  sessions         VendorSession[]
+  auditLogs        VendorAuditLog[]
   vendorShopOrders VendorShopOrder[]
+  ledgerEntries    VendorLedgerEntry[]
+  followers        StoreFollow[]
+  wantOffers       WantOffer[]
+  returnRequests   ReturnRequest[]
+  disputes         Dispute[]
+  refunds          Refund[]
+  warranties       WarrantyRecord[]
 
   @@index([status])
 }
@@ -297,27 +709,30 @@ model VendorDocument {
 }
 
 model VendorProduct {
-  id          String              @id @default(cuid())
-  vendorId    String
-  vendor      Vendor              @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  productName String
-  description String              @db.Text
-  price       Decimal             @db.Decimal(12, 2)
+  id                 String              @id @default(cuid())
+  vendorId           String
+  vendor             Vendor              @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  productName        String
+  description        String              @db.Text
+  price              Decimal             @db.Decimal(12, 2)
   /// Optional higher "was" price for discount display when above sale price.
-  originalPrice Decimal?          @db.Decimal(12, 2)
-  category    String
-  stock       Int                 @default(0)
-  images      Json
-  status      VendorProductStatus @default(active)
+  originalPrice      Decimal?            @db.Decimal(12, 2)
+  category           String
+  stock              Int                 @default(0)
+  warrantyMonths     Int?
+  images             Json
+  status             VendorProductStatus @default(active)
   /// Synced storefront `Product.id` when published (customer /products + checkout).
-  publishedProductId String?      @unique
-  publishedProduct   Product?      @relation(fields: [publishedProductId], references: [id], onDelete: SetNull)
-  totalSold   Int                 @default(0)
-  viewsCount  Int                 @default(0)
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
+  publishedProductId String?             @unique
+  publishedProduct   Product?            @relation(fields: [publishedProductId], references: [id], onDelete: SetNull)
+  totalSold          Int                 @default(0)
+  viewsCount         Int                 @default(0)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
 
-  orders VendorOrder[]
+  orders         VendorOrder[]
+  inventoryLines OrderInventoryLine[]
+  warranties     WarrantyRecord[]
 
   @@index([vendorId])
 }
@@ -352,43 +767,44 @@ model VendorOrder {
 }
 
 model VendorShopOrder {
-  id               String                @id @default(cuid())
+  id              String    @id @default(cuid())
   /// Human-friendly id for vendor UI (e.g. IRV-0001).
-  shopOrderNumber  String                @unique
-  orderId          String
-  order            Order                 @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  vendorId         String
-  vendor           Vendor                @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  customerId       String?
-  customer         Customer?             @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  shopOrderNumber String    @unique
+  orderId         String
+  order           Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  vendorId        String
+  vendor          Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  customerId      String?
+  customer        Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
 
-  customerName     String
-  customerPhone    String
-  customerEmail    String
-  customerAddress  String                @db.Text
-  city             String
+  customerName    String
+  customerPhone   String
+  customerEmail   String
+  customerAddress String @db.Text
+  city            String
 
   /// Snapshot: [{ productId, productName, quantity, price, subtotal, vendorProductId?, variant? }]
-  items            Json
+  items Json
 
-  totalAmount      Decimal               @db.Decimal(12, 2)
-  commissionAmount Decimal               @db.Decimal(12, 2)
-  netAmount        Decimal               @db.Decimal(12, 2)
+  totalAmount      Decimal @db.Decimal(12, 2)
+  commissionAmount Decimal @db.Decimal(12, 2)
+  netAmount        Decimal @db.Decimal(12, 2)
 
-  paymentMethod    String
-  paymentStatus    String
+  paymentMethod String
+  paymentStatus String
 
-  status           VendorShopOrderStatus @default(pending)
+  status         VendorShopOrderStatus @default(pending)
   /// [{ status, updatedAt, note }]
-  statusHistory    Json                  @default("[]")
-  cancelReason     String?               @db.Text
-  trackingNumber   String?               @db.VarChar(255)
+  statusHistory  Json                  @default("[]")
+  cancelReason   String?               @db.Text
+  trackingNumber String?               @db.VarChar(255)
 
-  placedAt         DateTime              @default(now())
-  updatedAt        DateTime              @updatedAt
+  placedAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  lineOrders       VendorOrder[]
-  vendorEarning    VendorEarning?
+  lineOrders     VendorOrder[]
+  vendorEarning  VendorEarning?
+  inventoryLines OrderInventoryLine[]
 
   @@index([vendorId])
   @@index([orderId])
@@ -405,24 +821,28 @@ model CommissionSetting {
 }
 
 model VendorEarning {
-  id               String              @id @default(cuid())
-  vendorId         String
-  vendor           Vendor              @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  orderId          String?
-  order            Order?              @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  id                String              @id @default(cuid())
+  vendorId          String
+  vendor            Vendor              @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  orderId           String?
+  order             Order?              @relation(fields: [orderId], references: [id], onDelete: SetNull)
   /// One earning row per delivered shop-order bundle (prevents duplicates).
-  vendorShopOrderId String?            @unique
-  vendorShopOrder  VendorShopOrder?    @relation(fields: [vendorShopOrderId], references: [id], onDelete: SetNull)
+  vendorShopOrderId String?             @unique
+  vendorShopOrder   VendorShopOrder?    @relation(fields: [vendorShopOrderId], references: [id], onDelete: SetNull)
   /// Gross sale (sum of line sale amounts) for this bundle.
-  saleAmount       Decimal             @db.Decimal(12, 2)
+  saleAmount        Decimal             @db.Decimal(12, 2)
   /// Weighted average commission % (for display).
-  commissionRate   Decimal             @db.Decimal(5, 2)
-  commissionAmount Decimal             @db.Decimal(12, 2)
+  commissionRate    Decimal             @db.Decimal(5, 2)
+  commissionAmount  Decimal             @db.Decimal(12, 2)
   /// Net to vendor for this bundle (sale − commission).
-  vendorAmount     Decimal             @db.Decimal(12, 2)
-  status           VendorEarningStatus @default(pending)
-  holdReleaseDate  DateTime?
-  createdAt        DateTime            @default(now())
+  vendorAmount      Decimal             @db.Decimal(12, 2)
+  reservedAmount    Decimal             @default(0) @db.Decimal(12, 2)
+  paidAmount        Decimal             @default(0) @db.Decimal(12, 2)
+  status            VendorEarningStatus @default(pending)
+  holdReleaseDate   DateTime?
+  createdAt         DateTime            @default(now())
+  payoutAllocations PayoutAllocation[]
+  ledgerEntries     VendorLedgerEntry[]
 
   @@index([vendorId])
   @@index([orderId])
@@ -444,9 +864,53 @@ model VendorWithdrawal {
   adminNote         String?                @db.Text
   requestedAt       DateTime               @default(now())
   processedAt       DateTime?
+  transferReference String?                @db.VarChar(191)
+  /// Equals vendorId while pending/approved; null after paid/rejected. Unique = one open request.
+  openKey           String?                @unique @db.VarChar(191)
+  payoutAllocations PayoutAllocation[]
+  ledgerEntries     VendorLedgerEntry[]
 
   @@index([vendorId])
   @@index([status])
+}
+
+enum PayoutAllocationStatus {
+  reserved
+  paid
+  released
+}
+
+model PayoutAllocation {
+  id           String                 @id @default(cuid())
+  withdrawalId String
+  withdrawal   VendorWithdrawal       @relation(fields: [withdrawalId], references: [id], onDelete: Cascade)
+  earningId    String
+  earning      VendorEarning          @relation(fields: [earningId], references: [id], onDelete: Restrict)
+  amount       Decimal                @db.Decimal(12, 2)
+  status       PayoutAllocationStatus @default(reserved)
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+
+  @@unique([withdrawalId, earningId])
+  @@index([earningId, status])
+}
+
+model VendorLedgerEntry {
+  id             String            @id @default(cuid())
+  vendorId       String
+  vendor         Vendor            @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  earningId      String?
+  earning        VendorEarning?    @relation(fields: [earningId], references: [id], onDelete: SetNull)
+  withdrawalId   String?
+  withdrawal     VendorWithdrawal? @relation(fields: [withdrawalId], references: [id], onDelete: SetNull)
+  type           String            @db.VarChar(64)
+  amount         Decimal           @db.Decimal(12, 2)
+  idempotencyKey String            @unique @db.VarChar(191)
+  details        Json?
+  createdAt      DateTime          @default(now())
+
+  @@index([vendorId, createdAt])
+  @@index([withdrawalId])
 }
 
 model VendorReview {
@@ -467,18 +931,18 @@ model VendorReview {
 }
 
 model VendorCoupon {
-  id              String                   @id @default(cuid())
-  vendorId        String
-  vendor          Vendor                   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  couponCode      String
-  discountType    VendorCouponDiscountType
-  discountValue   Decimal                  @db.Decimal(12, 2)
-  minOrderAmount  Decimal                  @default(0) @db.Decimal(12, 2)
-  maxUses         Int?
-  usedCount       Int                      @default(0)
-  expiryDate      DateTime?
-  status          VendorCouponStatus       @default(active)
-  createdAt       DateTime                 @default(now())
+  id             String                   @id @default(cuid())
+  vendorId       String
+  vendor         Vendor                   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  couponCode     String
+  discountType   VendorCouponDiscountType
+  discountValue  Decimal                  @db.Decimal(12, 2)
+  minOrderAmount Decimal                  @default(0) @db.Decimal(12, 2)
+  maxUses        Int?
+  usedCount      Int                      @default(0)
+  expiryDate     DateTime?
+  status         VendorCouponStatus       @default(active)
+  createdAt      DateTime                 @default(now())
 
   @@unique([vendorId, couponCode])
   @@index([vendorId])

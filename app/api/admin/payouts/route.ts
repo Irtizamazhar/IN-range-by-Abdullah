@@ -1,14 +1,12 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/sessions";
+import { requireAdminPermission } from "@/lib/admin-rbac";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
-  const session = await getAdminSession();
-  if (session?.user?.role !== "admin") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireAdminPermission("payouts.manage");
+  if ("response" in auth) return auth.response;
 
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -77,6 +75,7 @@ export async function GET() {
       status: w.status,
       rejectionReason: w.rejectionReason,
       adminNote: w.adminNote,
+      transferReference: w.transferReference,
       requestedAt: w.requestedAt.toISOString(),
       processedAt: w.processedAt?.toISOString() ?? null,
     })),
