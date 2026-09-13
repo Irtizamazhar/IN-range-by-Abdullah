@@ -23,7 +23,7 @@ export async function sendMail(opts: {
   subject: string;
   html: string;
   text?: string;
-}) {
+}): Promise<boolean> {
   try {
     const transporter = createTransport();
     await transporter.sendMail({
@@ -33,9 +33,15 @@ export async function sendMail(opts: {
       text: opts.text,
       html: opts.html,
     });
+    return true;
   } catch (e) {
     console.error("sendMail error", e);
+    return false;
   }
+}
+
+export function isMailConfigured(): boolean {
+  return Boolean(process.env.SMTP_USER?.trim() && process.env.SMTP_PASS?.trim());
 }
 
 export function getAdminEmail(): string {

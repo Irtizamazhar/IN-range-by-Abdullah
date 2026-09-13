@@ -1,12 +1,16 @@
 import Link from "next/link";
-import { MarketplaceHomePanels, VendorSpotlight } from "@/components/user/MarketplaceHomePanels";
+import { VendorSpotlight } from "@/components/user/MarketplaceHomePanels";
 import type { Prisma } from "@prisma/client";
 import { headers } from "next/headers";
 
 import {
   ArrowRight,
+  Flame,
+  MapPin,
   Megaphone,
   Sparkles,
+  Store,
+  TrendingUp,
 } from "lucide-react";
 
 import {
@@ -286,6 +290,10 @@ async function getFeatured(
   }
 }
 
+/* =========================================================
+   HOME PAGE
+========================================================= */
+
 export default async function HomePage() {
   /* -------------------------------------------------------
      Load Categories
@@ -297,6 +305,34 @@ export default async function HomePage() {
     (category) =>
       category.showOnHome === true
   );
+
+  const [wantExamples, storeExamples] = await Promise.all([
+    prisma.want.findMany({
+      where: {
+        status: "OPEN",
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: [{ offers: { _count: "desc" } }, { createdAt: "desc" }],
+      take: 3,
+      select: {
+        id: true,
+        title: true,
+        city: true,
+        _count: { select: { offers: true } },
+      },
+    }),
+    prisma.vendor.findMany({
+      where: { status: "approved" },
+      orderBy: [{ followers: { _count: "desc" } }, { totalOrders: "desc" }],
+      take: 4,
+      select: {
+        id: true,
+        shopName: true,
+        primaryCategory: true,
+        _count: { select: { followers: true } },
+      },
+    }),
+  ]);
 
   /* -------------------------------------------------------
      Load Product Data
@@ -399,12 +435,15 @@ export default async function HomePage() {
               {/* RIGHT */}
 
               <div className="flex flex-1 flex-col gap-2 sm:flex-row">
-                <div className="flex h-11 flex-1 items-center rounded-xl border border-black/[0.07] bg-white/75 px-4 text-[12px] font-medium text-black/40">
-                  e.g. Gaming laptop under 250k
-                </div>
-
                 <Link
                   href="/wants/new"
+                  className="flex h-11 flex-1 items-center rounded-xl border border-black/[0.07] bg-white/75 px-4 text-[12px] font-medium text-black/45 transition hover:border-brand-primary/50"
+                >
+                  e.g. Gaming laptop under 250k
+                </Link>
+
+                <Link
+                  href="/wants"
                   className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-brand-primary px-5 text-[12px] font-black text-brand-dark transition hover:bg-brand-hover"
                 >
                   Explore Wants
@@ -526,7 +565,191 @@ export default async function HomePage() {
               </div>
             </div>
 
-            <MarketplaceHomePanels />
+            {/* =============================================
+                TRENDING WANTS
+            ============================================== */}
+
+            <div
+              id="trending-wants"
+              className="rounded-[22px] border border-black/[0.055] bg-white p-4 shadow-panel"
+            >
+              {/* HEADER */}
+
+              <div className="mb-3">
+                <p className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.1em] text-brand-link">
+                  <TrendingUp className="h-3.5 w-3.5" />
+
+                  What People Need
+                </p>
+
+                <h2 className="mt-1 flex items-center gap-1 text-[20px] font-black tracking-[-0.035em] text-brand-dark">
+                  Trending Wants
+
+                  <Flame className="h-4 w-4 fill-[#FF7900] text-[#FF7900]" />
+                </h2>
+              </div>
+
+              {/* WANT CARDS */}
+
+              <div className="space-y-2">
+                {wantExamples.length ? wantExamples.map(
+                  (want) => (
+                    <Link
+                      key={want.id}
+                      href={`/wants/${want.id}`}
+                      className="rounded-[14px] border border-black/[0.055] bg-[#FBFCF8] p-2.5 transition duration-200 hover:border-brand-primary/40 hover:bg-brand-soft/20"
+                    >
+                      <div className="flex items-start gap-2">
+                        {/* ICON */}
+
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand-link">
+                          <Flame className="h-3.5 w-3.5" />
+                        </span>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-1.5">
+                            <p className="line-clamp-2 text-[12px] font-bold leading-[17px] text-brand-dark">
+                              {
+                                want.title
+                              }
+                            </p>
+
+                            <span className="shrink-0 rounded-full bg-brand-primary px-2 py-0.5 text-[9px] font-black text-brand-dark">
+                              Open
+                            </span>
+                          </div>
+
+                          {/* META */}
+
+                          <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[10px] font-medium text-black/40">
+                            <span className="inline-flex items-center gap-1">
+                              <MapPin className="h-2.5 w-2.5" />
+
+                              {
+                                want.city
+                              }
+                            </span>
+
+                            <span>
+                              •
+                            </span>
+
+                            <span>
+                              {
+                                want._count.offers
+                              }{" "}
+                              offers
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  )
+                ) : (
+                  <div className="rounded-[14px] border border-dashed border-black/[0.08] bg-[#FBFCF8] p-5 text-center text-[11px] font-semibold text-black/40">
+                    No moderated Wants yet.
+                  </div>
+                )}
+              </div>
+
+              {/* CTA */}
+
+              <Link
+                href="/wants"
+                className="mt-3 flex h-9 w-full items-center justify-center gap-1 rounded-lg bg-brand-soft text-[11px] font-bold text-brand-link transition hover:bg-brand-primary hover:text-brand-dark"
+              >
+                Explore Wants
+
+                <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+
+            {/* =============================================
+                TOP STORES
+            ============================================== */}
+
+            <div
+              id="stores"
+              className="rounded-[22px] bg-[#123D27] p-4 text-white shadow-panel"
+            >
+              {/* HEADER */}
+
+              <div className="mb-3">
+                <p className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.1em] text-brand-primary">
+                  <Store className="h-3.5 w-3.5" />
+
+                  Seller Network
+                </p>
+
+                <h2 className="mt-1 text-[20px] font-black tracking-[-0.035em]">
+                  Top Stores
+                </h2>
+              </div>
+
+              {/* STORE LIST */}
+
+              <div className="space-y-2">
+                {storeExamples.length ? storeExamples.map(
+                  (
+                    store,
+                    index
+                  ) => (
+                    <Link
+                      key={store.id}
+                      href={`/stores/${store.id}`}
+                      className="flex items-center gap-2 rounded-[13px] border border-white/[0.08] bg-white/[0.055] p-2.5 transition duration-200 hover:border-brand-primary/30 hover:bg-white/[0.09]"
+                    >
+                      {/* STORE INITIALS */}
+
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-primary text-[10px] font-black text-brand-dark">
+                        {
+                          store.shopName.slice(0, 2).toUpperCase()
+                        }
+                      </span>
+
+                      {/* STORE INFO */}
+
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[11px] font-bold text-white">
+                          {
+                            store.shopName
+                          }
+                        </p>
+
+                        <p className="mt-0.5 truncate text-[9px] font-medium text-white/50">
+                          {
+                            store.primaryCategory
+                          }
+                        </p>
+                      </div>
+
+                      {/* TOP BADGE */}
+
+                      {index === 0 ? (
+                        <span className="rounded-full bg-brand-primary/15 px-1.5 py-0.5 text-[8px] font-black uppercase text-brand-primary">
+                          {store._count.followers} follows
+                        </span>
+                      ) : null}
+                    </Link>
+                  )
+                ) : (
+                  <div className="rounded-[13px] border border-white/[0.08] p-4 text-center text-[10px] font-semibold text-white/50">
+                    Approved stores will appear here.
+                  </div>
+                )}
+              </div>
+
+              {/* SELLER CTA */}
+
+              <Link
+                href="/stores"
+                className="mt-3 flex h-9 items-center justify-center gap-1 rounded-lg bg-brand-primary text-[11px] font-black text-brand-dark transition hover:bg-brand-hover"
+              >
+                Browse Stores
+
+                <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
           </div>
         </section>
         <VendorSpotlight />

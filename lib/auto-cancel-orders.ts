@@ -1,36 +1,32 @@
 import { prisma } from "@/lib/prisma";
+import { cancelParentOrder } from "@/lib/order-cancellation-service";
 
-/** Bank transfer orders without screenshot after 24h → cancelled + stock restored */
+/** Auto-cancel bank-transfer orders older than 24h without proof. */
 export async function autoCancelStaleBankOrders(): Promise<void> {
   const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const stale = await prisma.order.findMany({
     where: {
       paymentMethod: "bank_transfer",
       paymentStatus: "pending",
-      orderStatus: { notIn: ["cancelled", "delivered", "shipped"] },
+      orderStatus: { in: ["pending", "confirmed", "processing", "packed"] },
       createdAt: { lt: cutoff },
       AND: [
         { OR: [{ paymentScreenshot: null }, { paymentScreenshot: "" }] },
         { paymentProofData: null },
       ],
     },
-    include: { orderItems: true },
+    select: { id: true },
   });
 
   for (const order of stale) {
-    await prisma.$transaction(async (tx) => {
-      for (const line of order.orderItems) {
-        if (line.productId) {
-          await tx.product.update({
-            where: { id: line.productId },
-            data: { stock: { increment: line.quantity } },
-          });
-        }
-      }
-      await tx.order.update({
-        where: { id: order.id },
-        data: { orderStatus: "cancelled", paymentStatus: "failed" },
-      });
+    const result = await cancelParentOrder({
+      orderId: order.id,
+      reason: "Payment proof was not received within 24 hours",
+      actorType: "system",
+      actorId: "auto-cancel",
     });
+    if (!result.ok) {
+      console.error("Auto-cancel failed", { orderId: order.id, error: result.error });
+    }
   }
 }

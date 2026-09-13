@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/sessions";
+import { requireAdminPermission } from "@/lib/admin-rbac";
 import {
   nextCategoryId,
   readCategories,
@@ -23,10 +23,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getAdminSession();
-  if (session?.user?.role !== "admin") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireAdminPermission("catalog.manage");
+  if ("response" in auth) return auth.response;
 
   try {
     const body = (await req.json()) as Partial<ShopCategory>;

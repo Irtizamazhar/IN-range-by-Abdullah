@@ -22,6 +22,7 @@ export type VendorProductFormInitial = {
   originalPrice?: string | null;
   category: string;
   stock: number;
+  warrantyMonths?: number | null;
   images: unknown;
   status?: "active" | "inactive";
 };
@@ -85,6 +86,9 @@ export function VendorProductForm({
     });
   }, [categoryOptions, initial?.category]);
   const [stock, setStock] = useState(String(initial?.stock ?? 0));
+  const [warrantyMonths, setWarrantyMonths] = useState(
+    initial?.warrantyMonths ? String(initial.warrantyMonths) : ""
+  );
   const [images, setImages] = useState<string[]>(() =>
     parseImagesJson(initial?.images)
   );
@@ -193,6 +197,11 @@ export function VendorProductForm({
       toast.error("Enter a valid stock");
       return;
     }
+    const warrantyNum = warrantyMonths.trim() ? Number(warrantyMonths) : null;
+    if (warrantyNum != null && (!Number.isInteger(warrantyNum) || warrantyNum < 1 || warrantyNum > 120)) {
+      toast.error("Warranty must be 1 to 120 months, or left empty");
+      return;
+    }
     if (images.length < 1) {
       toast.error("Add at least one product image");
       return;
@@ -214,6 +223,7 @@ export function VendorProductForm({
               : {}),
             category,
             stock: stockNum,
+            warrantyMonths: warrantyNum,
             images,
           }),
         });
@@ -242,6 +252,7 @@ export function VendorProductForm({
             originalPrice: origParsed as number | null,
             category,
             stock: stockNum,
+            warrantyMonths: warrantyNum,
             images,
             status,
           }),
@@ -346,6 +357,22 @@ export function VendorProductForm({
             className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2"
           />
         </div>
+      </div>
+
+      <div>
+        <label className="text-sm font-bold text-neutral-800">
+          Seller warranty (months, optional)
+        </label>
+        <input
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={120}
+          value={warrantyMonths}
+          onChange={(e) => setWarrantyMonths(e.target.value)}
+          placeholder="Leave empty when no warranty is offered"
+          className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2"
+        />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">

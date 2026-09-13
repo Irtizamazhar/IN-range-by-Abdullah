@@ -1,88 +1,85 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
+import { getCustomerSession } from "@/lib/sessions";
 import { findOrderByIdOrNumber } from "@/lib/find-order";
+import { cancelParentOrder } from "@/lib/order-cancellation-service";
 import { notifyAdminOrderCancelled, notifyCustomerOrderCancelled } from "@/lib/order-emails";
 import { ORDER_INCLUDE_SERIALIZE } from "@/lib/prisma-order-includes";
 import { prisma } from "@/lib/prisma";
+import { sanitizePlainText } from "@/lib/security/sanitize";
 import { serializeOrder } from "@/lib/serialize";
-import { cancelVendorShopOrder } from "@/lib/vendor-shop-order-service";
 import { createVendorNotification } from "@/lib/vendor-notifications";
+import { customerOwnsRecord } from "@/lib/order-ownership";
 
 type Ctx = { params: { id: string } };
 
-const BLOCK_CANCEL: string[] = ["packing", "shipped", "delivered", "cancelled"];
+export async function POST(req: NextRequest, context: Ctx) {
+  const session = await getCustomerSession();
+  if (session?.user?.role !== "customer" || !session.user.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-export async function POST(_req: NextRequest, context: Ctx) {
-  const { id } = context.params;
-  const order = await findOrderByIdOrNumber(id);
-  if (!order) {
+  let requestedReason = "Customer cancelled order";
+  try {
+    const body = (await req.json()) as { reason?: unknown };
+    if (body.reason) requestedReason = String(body.reason);
+  } catch {
+    // Existing clients sent no body; keep the safe default reason.
+  }
+  const reason = sanitizePlainText(requestedReason, 500);
+
+  const order = await findOrderByIdOrNumber(context.params.id);
+  if (!order || !customerOwnsRecord(order.customerId, session.user.id)) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  if (BLOCK_CANCEL.includes(order.orderStatus)) {
-    return NextResponse.json(
-      { error: "This order can no longer be cancelled" },
-      { status: 403 }
-    );
-  }
-
-  const vendorSlices = await prisma.vendorShopOrder.findMany({
-    where: { orderId: order.id },
-    select: { id: true, vendorId: true, shopOrderNumber: true, status: true },
+  const result = await cancelParentOrder({
+    orderId: order.id,
+    reason,
+    actorType: "customer",
+    actorId: session.user.id,
+    customerId: session.user.id,
   });
-  for (const s of vendorSlices) {
-    if (s.status === "delivered" || s.status === "cancelled") continue;
-    const res = await cancelVendorShopOrder({
-      shopOrderId: s.id,
-      reason: "Customer cancelled order",
-    });
-    if (res.ok) {
-      await createVendorNotification({
-        vendorId: s.vendorId,
-        type: "order_cancelled",
-        title: "Order cancelled",
-        message: `Order ${s.shopOrderNumber} was cancelled by the customer.`,
-      });
-    }
+  if (!result.ok) {
+    return NextResponse.json({ error: result.error }, { status: 409 });
   }
-
-  await prisma.$transaction(async (tx) => {
-    for (const line of order.orderItems) {
-      if (line.productId) {
-        await tx.product.update({
-          where: { id: line.productId },
-          data: { stock: { increment: line.quantity } },
-        });
-      }
-    }
-    await tx.order.update({
-      where: { id: order.id },
-      data: { orderStatus: "cancelled" },
-    });
-  });
 
   const fresh = await prisma.order.findUnique({
     where: { id: order.id },
     include: ORDER_INCLUDE_SERIALIZE,
   });
-  if (!fresh) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!fresh) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const out = serializeOrder(fresh);
+
+  if (!result.alreadyCancelled) {
+    const vendorSlices = await prisma.vendorShopOrder.findMany({
+      where: { orderId: order.id },
+      select: { vendorId: true, shopOrderNumber: true },
+    });
+    for (const slice of vendorSlices) {
+      await createVendorNotification({
+        vendorId: slice.vendorId,
+        type: "order_cancelled",
+        title: "Order cancelled",
+        message: `Order ${slice.shopOrderNumber} was cancelled by the customer.`,
+      });
+    }
+    await notifyAdminOrderCancelled({
+      orderNumber: out.orderNumber,
+      customerName: out.customerName,
+      customerEmail: out.customerEmail,
+      totalAmount: out.totalAmount,
+    });
+    await notifyCustomerOrderCancelled({
+      orderNumber: out.orderNumber,
+      customerName: out.customerName,
+      customerEmail: out.customerEmail,
+      totalAmount: out.totalAmount,
+    });
   }
 
-  const out = serializeOrder(fresh);
-  await notifyAdminOrderCancelled({
-    orderNumber: out.orderNumber,
-    customerName: out.customerName,
-    customerEmail: out.customerEmail,
-    totalAmount: out.totalAmount,
+  return NextResponse.json(out, {
+    headers: result.alreadyCancelled ? { "X-Idempotent-Replay": "true" } : {},
   });
-  await notifyCustomerOrderCancelled({
-    orderNumber: out.orderNumber,
-    customerName: out.customerName,
-    customerEmail: out.customerEmail,
-    totalAmount: out.totalAmount,
-  });
-
-  return NextResponse.json(out);
 }

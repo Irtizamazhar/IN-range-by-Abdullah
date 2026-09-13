@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { getAdminSession } from "@/lib/sessions";
+import { requireAdminPermission } from "@/lib/admin-rbac";
 import { prisma } from "@/lib/prisma";
 import { computeDiscountPercent } from "@/lib/product-discount";
 import { catalogProductSelect } from "@/lib/catalog-product-select";
@@ -111,10 +112,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getAdminSession();
-  if (session?.user?.role !== "admin") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireAdminPermission("catalog.manage");
+  if ("response" in auth) return auth.response;
   const body = await req.json();
   const price = Number(body.price);
   const originalPrice =
@@ -137,6 +136,10 @@ export async function POST(req: NextRequest) {
         discountPercent,
         category: body.category,
         stock: Number(body.stock ?? 0),
+        warrantyMonths:
+          Number.isInteger(Number(body.warrantyMonths)) && Number(body.warrantyMonths) > 0
+            ? Math.min(120, Number(body.warrantyMonths))
+            : null,
         variants: body.variants ?? [],
         isActive: body.isActive ?? true,
       },

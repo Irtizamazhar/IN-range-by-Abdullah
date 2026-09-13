@@ -46,6 +46,7 @@ export default function AddProductPage() {
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [apiCategories, setApiCategories] = useState<ApiCategory[]>([]);
   const [stock, setStock] = useState("0");
+  const [warrantyMonths, setWarrantyMonths] = useState("");
   const [variants, setVariants] = useState("");
   const [isActive, setIsActive] = useState(true);
 
@@ -179,6 +180,7 @@ export default function AddProductPage() {
           originalPrice: originalPrice ? parseFloat(originalPrice) : undefined,
           category,
           stock: parseInt(stock, 10) || 0,
+          warrantyMonths: warrantyMonths ? parseInt(warrantyMonths, 10) : null,
           imageIds: finalImages.map((x) => x.id),
           variants: variants
             .split(",")
@@ -415,6 +417,15 @@ export default function AddProductPage() {
           placeholder="Stock"
           value={stock}
           onChange={(e) => setStock(e.target.value)}
+        />
+        <input
+          type="number"
+          min={1}
+          max={120}
+          className="w-full rounded-xl border border-borderGray px-4 py-2"
+          placeholder="Warranty months (optional)"
+          value={warrantyMonths}
+          onChange={(e) => setWarrantyMonths(e.target.value)}
         />
         <input
           className="w-full rounded-xl border border-borderGray px-4 py-2"

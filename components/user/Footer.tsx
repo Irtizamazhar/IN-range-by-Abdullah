@@ -87,13 +87,13 @@ export function Footer({
                 >
                   <BenefitIcon className="mx-auto h-5 w-5 text-brand-primary sm:mx-0" />
 
-                  <p className="mt-2 text-[10px] font-black">
+                  <p className="mt-2 text-[12px] font-black">
                     {String(
                       title
                     )}
                   </p>
 
-                  <p className="mt-0.5 text-[9px] font-medium text-white/35">
+                  <p className="mt-0.5 text-[11px] font-medium text-white/45">
                     {String(
                       text
                     )}
@@ -113,7 +113,7 @@ export function Footer({
               href="/"
             />
 
-            <p className="mt-1 text-[9px] font-bold text-brand-primary/80">
+            <p className="mt-1 text-[11px] font-bold text-brand-primary/85">
               Customers aur vendors ko joro
             </p>
 
@@ -133,14 +133,14 @@ export function Footer({
                 className="text-brand-primary transition hover:text-white"
               />
 
-              <span className="rounded-full border border-white/10 px-3 py-1.5 text-[9px] font-bold text-white/35">
+              <span className="rounded-full border border-white/10 px-3 py-1.5 text-[11px] font-bold text-white/45">
                 Pakistan ko joro
               </span>
             </div>
           </div>
 
           <div>
-            <h3 className="text-[10px] font-black uppercase tracking-[0.14em] text-brand-primary">
+            <h3 className="text-[12px] font-black uppercase tracking-[0.14em] text-brand-primary">
               Marketplace
             </h3>
 
@@ -156,7 +156,7 @@ export function Footer({
 
               <li>
                 <Link
-                  href="/#wants"
+                  href="/wants"
                   className="hover:text-white"
                 >
                   Wants
@@ -165,7 +165,7 @@ export function Footer({
 
               <li>
                 <Link
-                  href="/#trending-wants"
+                  href="/wants"
                   className="hover:text-white"
                 >
                   Trending Wants
@@ -174,7 +174,7 @@ export function Footer({
 
               <li>
                 <Link
-                  href="/#stores"
+                  href="/stores"
                   className="hover:text-white"
                 >
                   Stores
@@ -195,7 +195,7 @@ export function Footer({
           </div>
 
           <div>
-            <h3 className="text-[10px] font-black uppercase tracking-[0.14em] text-brand-primary">
+            <h3 className="text-[12px] font-black uppercase tracking-[0.14em] text-brand-primary">
               Help
             </h3>
 
@@ -248,7 +248,7 @@ export function Footer({
           </div>
 
           <div>
-            <h3 className="text-[10px] font-black uppercase tracking-[0.14em] text-brand-primary">
+            <h3 className="text-[12px] font-black uppercase tracking-[0.14em] text-brand-primary">
               Payments
             </h3>
 
@@ -277,7 +277,7 @@ export function Footer({
               )}
             </div>
 
-            <p className="mt-4 text-[10px] font-medium leading-5 text-white/40">
+            <p className="mt-4 text-[12px] font-medium leading-5 text-white/50">
               WhatsApp:{" "}
 
               <a
@@ -299,7 +299,7 @@ export function Footer({
       </div>
 
       <div className="border-t border-white/[0.07]">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-4 text-center text-[9px] font-semibold text-white/28 sm:flex-row sm:px-6 sm:text-left">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-4 text-center text-[11px] font-semibold text-white/40 sm:flex-row sm:px-6 sm:text-left">
           <span>
             ©{" "}
             {new Date().getFullYear()}{" "}

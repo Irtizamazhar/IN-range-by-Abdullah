@@ -66,14 +66,14 @@ export async function POST(req: NextRequest) {
       ? crypto.randomUUID().slice(0, 8)
       : Math.random().toString(36).slice(2, 10);
   const fileName = `appeal-${Date.now()}-${random}.${ext}`;
-  const uploadDir = path.join(process.cwd(), "public", "uploads", "vendor-appeals", vendor.id);
+  const uploadDir = path.join(process.cwd(), "storage", "private", "vendor-appeals", vendor.id);
 
   try {
     await fs.mkdir(uploadDir, { recursive: true });
     const buf = Buffer.from(await file.arrayBuffer());
     await fs.writeFile(path.join(uploadDir, fileName), buf);
     return NextResponse.json({
-      url: `/uploads/vendor-appeals/${vendor.id}/${fileName}`,
+      url: `/api/private/vendor-appeals/${vendor.id}/${fileName}`,
     });
   } catch (e) {
     console.error("vendor appeal upload", e);

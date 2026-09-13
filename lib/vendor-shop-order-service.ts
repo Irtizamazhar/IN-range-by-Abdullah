@@ -5,6 +5,8 @@ import {
   nextShopStatus,
   syncLineOrdersToShopStatus,
 } from "@/lib/vendor-shop-order-helpers";
+import { cancelSellerOrder } from "@/lib/order-cancellation-service";
+import { consumeReservedInventory } from "@/lib/order-inventory-service";
 
 export type AdvanceShopOrderActor = "vendor" | "admin";
 
@@ -83,16 +85,28 @@ export async function advanceVendorShopOrderStatus(params: {
   }
 
   await prisma.$transaction(async (tx) => {
-    await tx.vendorShopOrder.update({
-      where: { id: shopOrderId },
+    const gate = await tx.vendorShopOrder.updateMany({
+      where: { id: shopOrderId, status: row.status },
       data,
     });
+    if (gate.count !== 1) {
+      throw new Error("Order status changed; refresh and try again");
+    }
     await syncLineOrdersToShopStatus(
       tx,
       shopOrderId,
       next,
       next === "shipped" ? trackingNumber : undefined
     );
+    if (next === "delivered") {
+      await consumeReservedInventory(tx, { vendorShopOrderId: shopOrderId });
+      if (row.paymentMethod === "cod") {
+        await tx.vendorShopOrder.update({
+          where: { id: shopOrderId },
+          data: { paymentStatus: "received" },
+        });
+      }
+    }
   });
 
   return { ok: true, newStatus: next };
@@ -153,42 +167,12 @@ export async function cancelVendorShopOrder(params: {
   /** When set, only this vendor may cancel (vendor flow). */
   vendorId?: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
-  const { shopOrderId, reason, vendorId } = params;
-  const trimmed = reason.trim();
-  if (!trimmed) {
-    return { ok: false, error: "Cancellation reason is required" };
-  }
-
-  const row = await prisma.vendorShopOrder.findFirst({
-    where: vendorId ? { id: shopOrderId, vendorId } : { id: shopOrderId },
+  const result = await cancelSellerOrder({
+    shopOrderId: params.shopOrderId,
+    reason: params.reason,
+    vendorId: params.vendorId,
+    actorType: params.vendorId ? "vendor" : "admin",
+    actorId: params.vendorId ?? "admin",
   });
-  if (!row) {
-    return { ok: false, error: "Not found" };
-  }
-  if (row.status === "cancelled") {
-    return { ok: false, error: "Already cancelled" };
-  }
-  if (row.status === "delivered") {
-    return { ok: false, error: "Delivered orders cannot be cancelled" };
-  }
-
-  const history = appendStatusHistory(row.statusHistory, {
-    status: "cancelled",
-    updatedAt: new Date().toISOString(),
-    note: trimmed,
-  });
-
-  await prisma.$transaction(async (tx) => {
-    await tx.vendorShopOrder.update({
-      where: { id: shopOrderId },
-      data: {
-        status: "cancelled",
-        cancelReason: trimmed,
-        statusHistory: history as Prisma.InputJsonValue,
-      },
-    });
-    await syncLineOrdersToShopStatus(tx, shopOrderId, "cancelled", undefined);
-  });
-
-  return { ok: true };
+  return result.ok ? { ok: true } : result;
 }

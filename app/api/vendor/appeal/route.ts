@@ -58,7 +58,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (paymentProofUrl && !paymentProofUrl.startsWith(`/uploads/vendor-appeals/${vendor.id}/appeal-`)) {
+    if (
+      paymentProofUrl &&
+      !paymentProofUrl.startsWith(`/api/private/vendor-appeals/${vendor.id}/appeal-`)
+    ) {
       return NextResponse.json({ error: "Invalid payment proof" }, { status: 400 });
     }
 

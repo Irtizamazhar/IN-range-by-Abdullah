@@ -4,12 +4,10 @@ export const dynamic = "force-dynamic";
 type Context = { params: { id: string } };
 export async function GET(_request: Request, { params }: Context) {
   return api(async () => {
-    const customer = await customerActor();
-    const [follow, count] = await Promise.all([
-      prisma.storeFollow.findUnique({ where: { customerId_vendorId: { customerId: customer.id, vendorId: params.id } }, select: { id: true } }),
-      prisma.storeFollow.count({ where: { vendorId: params.id } }),
-    ]);
-    return { following: !!follow, count };
+    let following = false;
+    try { const customer = await customerActor(); following = !!await prisma.storeFollow.findUnique({ where: { customerId_vendorId: { customerId: customer.id, vendorId: params.id } }, select: { id: true } }); } catch { /* anonymous viewer */ }
+    const followers = await prisma.storeFollow.count({ where: { vendorId: params.id } });
+    return { following, followers };
   });
 }
 async function change(request: Request, vendorId: string, following: boolean) {
@@ -21,7 +19,7 @@ async function change(request: Request, vendorId: string, following: boolean) {
       if (!vendor) throw new ApiError(404, "Store unavailable.");
       if (following) await tx.storeFollow.createMany({ data: [{ customerId: customer.id, vendorId }], skipDuplicates: true });
       else await tx.storeFollow.deleteMany({ where: { customerId: customer.id, vendorId } });
-      return { following, count: await tx.storeFollow.count({ where: { vendorId } }) };
+      return { following, followers: await tx.storeFollow.count({ where: { vendorId } }) };
     }, { isolationLevel: "Serializable" });
   });
 }

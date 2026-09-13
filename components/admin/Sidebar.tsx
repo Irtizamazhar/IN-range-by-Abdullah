@@ -17,6 +17,9 @@ import {
   Wallet,
   Percent,
   Bell,
+  RotateCcw,
+  ShieldCheck,
+  Users,
 } from "lucide-react";
 import { LogoMark } from "@/components/user/LogoMark";
 
@@ -77,6 +80,9 @@ const links = [
     icon: Truck,
   },
   { href: "/admin/vendors", label: "Vendors", icon: Store },
+  { href: "/admin/customers", label: "Customers", icon: Users },
+  { href: "/admin/dashboard/after-sales", label: "After-sales", icon: RotateCcw },
+  { href: "/admin/dashboard/team", label: "Admin Team", icon: ShieldCheck },
   {
     href: "/admin/dashboard/payouts",
     label: "Payouts",

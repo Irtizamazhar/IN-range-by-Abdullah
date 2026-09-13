@@ -9,10 +9,8 @@ import toast from "react-hot-toast";
 import {
   MapPin,
   Truck,
-  Package,
-  Banknote,
   RotateCcw,
-  ShieldOff,
+  ShieldCheck,
   Minus,
   Plus,
 } from "lucide-react";
@@ -40,6 +38,7 @@ export type ProductDetailProduct = {
   variants: string[];
   ratingAvg?: number;
   reviewCount?: number;
+  warrantyMonths?: number | null;
 };
 
 type SiteSettings = {
@@ -117,9 +116,6 @@ export function ProductDetailClient({
   }, []);
 
   const shopName = settings?.shopName?.trim() || "In Range By Abdullah";
-  const codFee = Number(settings?.codCharges);
-  const deliveryFee = Number.isFinite(codFee) ? codFee : 150;
-
   const mainImg = product.images[idx] || product.images[0];
   const mainLocal = mainImg ? isLocalProductImageSrc(mainImg) : false;
   const hasDiscount =
@@ -596,25 +592,13 @@ export function ProductDetailClient({
                     <div>
                       <p className="font-medium text-[#333]">Standard Delivery</p>
                       <p className="text-[#757575]">
-                        {formatPKR(deliveryFee)} · Est. 2–4 business days
+                        Fee and availability are calculated from your address at checkout.
                       </p>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Package className="mt-0.5 h-4 w-4 shrink-0 text-[#757575]" />
-                    <div>
-                      <p className="font-medium text-[#333]">
-                        Standard Collection Point
-                      </p>
-                      <p className="text-[#757575]">
-                        {formatPKR(35)} · Pickup in 3–5 days
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2 pt-1">
-                    <Banknote className="mt-0.5 h-4 w-4 shrink-0 text-[#2e7d32]" />
-                    <p className="text-[#333]">Cash on Delivery Available</p>
-                  </div>
+                  <p className="text-[#757575]">
+                    Available payment methods are confirmed at checkout.
+                  </p>
                 </div>
               </div>
 
@@ -624,11 +608,11 @@ export function ProductDetailClient({
                 </p>
                 <div className="flex gap-2 text-[12px] text-[#333]">
                   <RotateCcw className="mt-0.5 h-4 w-4 shrink-0 text-[#757575]" />
-                  <span>14 days easy return</span>
+                  <span>Return requests are reviewed after delivery in My Stuff</span>
                 </div>
                 <div className="mt-2 flex gap-2 text-[12px] text-[#757575]">
-                  <ShieldOff className="mt-0.5 h-4 w-4 shrink-0" />
-                  <span>Warranty not available</span>
+                  <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>{product.warrantyMonths ? `${product.warrantyMonths}-month seller warranty` : "No warranty specified for this listing"}</span>
                 </div>
               </div>
 
@@ -639,14 +623,9 @@ export function ProductDetailClient({
                     {shopName}
                   </span>
                 </div>
-                <span className="mt-2 inline-block rounded bg-brand-soft px-2 py-0.5 text-[11px] font-semibold text-primaryBlue">
-                  Flagship Store
-                </span>
-                <ul className="mt-3 space-y-1.5 text-[11px] text-[#757575]">
-                  <li>Positive Seller Ratings: —</li>
-                  <li>Ship on Time: —</li>
-                  <li>Chat Response: Fast</li>
-                </ul>
+                <p className="mt-2 text-[11px] leading-relaxed text-[#757575]">
+                  Browse the current catalog for availability, delivery, and warranty details.
+                </p>
                 <Link
                   href="/products"
                   className="mt-3 inline-block text-[12px] font-semibold text-primaryBlue hover:underline"

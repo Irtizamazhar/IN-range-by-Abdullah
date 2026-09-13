@@ -18,6 +18,7 @@ type Row = {
   status: string;
   rejectionReason: string | null;
   adminNote: string | null;
+  transferReference: string | null;
   requestedAt: string;
   processedAt: string | null;
 };
@@ -52,6 +53,8 @@ export function PayoutsClient() {
   const [rejectFor, setRejectFor] = useState<Row | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [rejectAdminNote, setRejectAdminNote] = useState("");
+  const [payFor, setPayFor] = useState<Row | null>(null);
+  const [transferReference, setTransferReference] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -208,6 +211,11 @@ export function PayoutsClient() {
                         Internal: {w.adminNote}
                       </p>
                     ) : null}
+                    {w.transferReference ? (
+                      <p className="mt-1 max-w-[220px] font-mono text-xs text-darkText/60">
+                        Ref: {w.transferReference}
+                      </p>
+                    ) : null}
                   </td>
                   <td className="p-3 space-y-1">
                     {w.status === "pending" ? (
@@ -235,9 +243,7 @@ export function PayoutsClient() {
                         <button
                           type="button"
                           disabled={busy === w.id}
-                          onClick={() =>
-                            void patch(w.id, { action: "mark_paid" })
-                          }
+                          onClick={() => setPayFor(w)}
                           className="mr-2 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white"
                         >
                           Mark paid
@@ -317,6 +323,55 @@ export function PayoutsClient() {
                 className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
                 Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {payFor ? (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <h3 className="font-bold text-darkText">Confirm bank transfer</h3>
+            <p className="mt-1 text-sm text-darkText/60">
+              Record the bank, Raast, or settlement reference before marking {formatPKR(payFor.requestedAmount)} paid.
+            </p>
+            <label className="mt-4 block text-sm font-semibold text-darkText">
+              Transfer reference
+              <input
+                autoFocus
+                value={transferReference}
+                onChange={(event) => setTransferReference(event.target.value)}
+                className="mt-1 w-full rounded-xl border border-borderGray px-3 py-2.5 text-sm"
+                placeholder="e.g. bank transaction ID"
+              />
+            </label>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setPayFor(null);
+                  setTransferReference("");
+                }}
+                className="rounded-xl border border-borderGray px-4 py-2 text-sm font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={transferReference.trim().length < 3 || busy === payFor.id}
+                onClick={() => {
+                  void patch(payFor.id, {
+                    action: "mark_paid",
+                    transferReference: transferReference.trim(),
+                  }).then(() => {
+                    setPayFor(null);
+                    setTransferReference("");
+                  });
+                }}
+                className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                Confirm paid
               </button>
             </div>
           </div>

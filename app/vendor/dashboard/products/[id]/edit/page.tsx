@@ -36,6 +36,7 @@ export default async function VendorEditProductPage({ params }: Props) {
             p.originalPrice != null ? p.originalPrice.toString() : "",
           category: p.category,
           stock: p.stock,
+          warrantyMonths: p.warrantyMonths,
           images: p.images,
           status: p.status,
         }}

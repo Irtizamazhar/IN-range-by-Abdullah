@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/sessions";
+import { requireAdminPermission } from "@/lib/admin-rbac";
 import { getVendorFromSession } from "@/lib/vendor-auth-server";
 import {
   getAdminShopStats,
@@ -25,6 +26,8 @@ export async function GET() {
   }
 
   if (admin?.user?.role === "admin") {
+    const auth = await requireAdminPermission("dashboard.view");
+    if ("response" in auth) return auth.response;
     const stats = await getAdminShopStats();
     return NextResponse.json({
       scope: "admin",

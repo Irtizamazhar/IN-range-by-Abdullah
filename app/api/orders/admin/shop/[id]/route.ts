@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/sessions";
+import { requireAdminPermission } from "@/lib/admin-rbac";
 import { prisma } from "@/lib/prisma";
 import {
   paymentMethodLabel,
@@ -12,10 +12,8 @@ type Ctx = { params: Promise<{ id: string }> };
 
 /** Admin: shop-order detail with vendor block (GET /api/orders/admin/shop/:id). */
 export async function GET(_req: NextRequest, ctx: Ctx) {
-  const session = await getAdminSession();
-  if (session?.user?.role !== "admin") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireAdminPermission("orders.view");
+  if ("response" in auth) return auth.response;
 
   const { id } = await ctx.params;
   const row = await prisma.vendorShopOrder.findUnique({

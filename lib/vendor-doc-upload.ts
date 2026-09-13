@@ -45,8 +45,8 @@ export async function saveVendorDocumentBuffer(
   }
   const dir = path.join(
     process.cwd(),
-    "public",
-    "uploads",
+    "storage",
+    "private",
     "vendor-docs",
     vendorId
   );
@@ -64,12 +64,12 @@ export async function saveVendorDocumentBuffer(
   const fileName = `${documentType}-${Date.now()}-${random}.${ext}`;
   const full = path.join(dir, fileName);
   await fs.writeFile(full, buffer);
-  const publicPath = `/uploads/vendor-docs/${vendorId}/${fileName}`;
+  const privatePath = `vendor-docs/${vendorId}/${fileName}`;
   await prisma.vendorDocument.create({
     data: {
       vendorId,
       documentType,
-      fileUrl: publicPath,
+      fileUrl: privatePath,
     },
   });
 }

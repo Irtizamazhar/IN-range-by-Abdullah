@@ -89,7 +89,7 @@ export function CategoryAutoScroll({
   if (categories.length === 0) {
     return (
       <div className="flex min-h-[120px] w-full items-center justify-center rounded-[18px] border border-dashed border-black/10 bg-white">
-        <p className="text-[11px] font-semibold text-black/40">
+        <p className="text-[13px] font-semibold text-black/40">
           No categories available.
         </p>
       </div>
@@ -123,7 +123,7 @@ export function CategoryAutoScroll({
               />
             </div>
 
-            <p className="mt-2 line-clamp-2 min-h-[28px] text-center text-[9px] font-black leading-[14px] text-brand-dark sm:text-[10px]">
+            <p className="mt-2 line-clamp-2 min-h-[34px] text-center text-[12px] font-bold leading-[17px] text-brand-dark sm:text-[13px]">
               {category.name}
             </p>
           </div>

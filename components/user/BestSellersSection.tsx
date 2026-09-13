@@ -175,7 +175,7 @@ export function BestSellersSection({
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="mb-6 flex items-end justify-between gap-4">
           <div>
-            <div className="mb-1.5 inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[0.15em] text-brand-link">
+            <div className="mb-1.5 inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.15em] text-brand-link">
               <Sparkles className="h-3.5 w-3.5" />
 
               Handpicked for you
@@ -185,7 +185,7 @@ export function BestSellersSection({
               Featured Products
             </h2>
 
-            <p className="mt-1 text-[11px] font-medium text-black/40 sm:text-xs">
+            <p className="mt-1 text-[13px] font-medium text-black/45 sm:text-sm">
               Popular products from the marketplace.
             </p>
           </div>
@@ -199,7 +199,7 @@ export function BestSellersSection({
               onClick={
                 loadMore
               }
-              className="inline-flex shrink-0 items-center gap-1 text-[10px] font-black text-brand-link transition hover:text-brand-dark disabled:opacity-50"
+              className="inline-flex shrink-0 items-center gap-1 text-[12px] font-black text-brand-link transition hover:text-brand-dark disabled:opacity-50"
             >
               {loading
                 ? "Loading..."

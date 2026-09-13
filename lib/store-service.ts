@@ -3,12 +3,12 @@ import { prisma } from "@/lib/prisma";
 export const publicStoreSelect = {
   id: true, shopName: true, storeSlug: true, shopLogo: true, storeBanner: true,
   primaryCategory: true, shopDescription: true, storePolicies: true, serviceCities: true,
-  _count: { select: { storeFollows: true } },
+  _count: { select: { followers: true } },
 } satisfies Prisma.VendorSelect;
 export async function publicStores() {
-  return prisma.vendor.findMany({ where: { status: "approved" }, select: publicStoreSelect, orderBy: [{ storeFollows: { _count: "desc" } }, { id: "asc" }], take: 60 });
+  return prisma.vendor.findMany({ where: { status: "approved" }, select: publicStoreSelect, orderBy: [{ followers: { _count: "desc" } }, { id: "asc" }], take: 60 });
 }
-export function storeHref(store: { id: string; storeSlug: string | null }) { return `/stores/${encodeURIComponent(store.storeSlug || store.id)}`; }
+export function storeHref(store: { id: string }) { return `/stores/${encodeURIComponent(store.id)}`; }
 export async function activePromotions(now = new Date()) {
   return prisma.vendorPromotion.findMany({
     where: { status: "ACTIVE", placement: "HOMEPAGE", startAt: { lte: now }, endAt: { gt: now }, vendor: { status: "approved" } },

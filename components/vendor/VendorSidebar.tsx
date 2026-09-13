@@ -14,6 +14,7 @@ import {
   Bell,
   CircleDollarSign,
   ShieldAlert,
+  RotateCcw,
 } from "lucide-react";
 import { LogoMark } from "@/components/user/LogoMark";
 import { clearVendorLoginRememberPrefs } from "@/lib/vendor-login-remember-prefs";
@@ -65,6 +66,11 @@ const links: {
     href: "/vendor/dashboard/products",
     label: "My Products",
     icon: Package,
+  },
+  {
+    href: "/vendor/dashboard/returns",
+    label: "Returns & Disputes",
+    icon: RotateCcw,
   },
   {
     href: "/vendor/dashboard/earnings",

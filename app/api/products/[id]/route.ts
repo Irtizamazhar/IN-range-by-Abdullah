@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { getAdminSession } from "@/lib/sessions";
+import { requireAdminPermission } from "@/lib/admin-rbac";
 import { prisma } from "@/lib/prisma";
 import { catalogProductSelect } from "@/lib/catalog-product-select";
 import { computeDiscountPercent } from "@/lib/product-discount";
@@ -29,10 +30,8 @@ async function isAdmin() {
 }
 
 export async function PUT(req: NextRequest, context: Ctx) {
-  const session = await getAdminSession();
-  if (session?.user?.role !== "admin") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireAdminPermission("catalog.manage");
+  if ("response" in auth) return auth.response;
   const { id } = context.params;
   const body = await req.json();
   const existing = await prisma.product.findUnique({
@@ -64,6 +63,12 @@ export async function PUT(req: NextRequest, context: Ctx) {
   if (body.description !== undefined) data.description = body.description;
   if (body.category !== undefined) data.category = body.category;
   if (body.stock !== undefined) data.stock = Number(body.stock);
+  if (body.warrantyMonths !== undefined) {
+    const months = Number(body.warrantyMonths);
+    data.warrantyMonths = Number.isInteger(months) && months > 0
+      ? Math.min(120, months)
+      : null;
+  }
   if (body.isActive !== undefined) data.isActive = body.isActive;
   if (body.variants !== undefined) data.variants = body.variants;
 
@@ -118,10 +123,8 @@ export async function PUT(req: NextRequest, context: Ctx) {
 }
 
 export async function DELETE(_req: NextRequest, context: Ctx) {
-  const session = await getAdminSession();
-  if (session?.user?.role !== "admin") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireAdminPermission("catalog.manage");
+  if ("response" in auth) return auth.response;
   const { id } = context.params;
   await prisma.product.delete({ where: { id } });
   return NextResponse.json({ ok: true });

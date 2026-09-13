@@ -171,7 +171,7 @@ export function NewArrivalsSection({
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="mb-6 flex items-end justify-between gap-4">
           <div>
-            <div className="mb-1.5 inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[0.15em] text-brand-link">
+            <div className="mb-1.5 inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.15em] text-brand-link">
               <Zap className="h-3.5 w-3.5" />
 
               Just added
@@ -191,7 +191,7 @@ export function NewArrivalsSection({
               onClick={
                 loadMore
               }
-              className="inline-flex shrink-0 items-center gap-1 text-[10px] font-black text-brand-link transition hover:text-brand-dark disabled:opacity-50"
+              className="inline-flex shrink-0 items-center gap-1 text-[12px] font-black text-brand-link transition hover:text-brand-dark disabled:opacity-50"
             >
               {loading
                 ? "Loading..."

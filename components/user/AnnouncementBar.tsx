@@ -28,7 +28,7 @@ function MessageRow() {
 export function AnnouncementBar() {
   return (
     <div className="fixed inset-x-0 top-0 z-50 h-8 overflow-hidden bg-[#123d27] text-white">
-      <div className="marquee-track flex h-full w-max items-center whitespace-nowrap text-[9px] font-extrabold uppercase tracking-[0.08em] sm:text-[10px]">
+      <div className="marquee-track flex h-full w-max items-center whitespace-nowrap text-[11px] font-extrabold uppercase tracking-[0.08em] sm:text-[12px]">
         <div className="inline-flex items-center pr-10">
           <MessageRow />
         </div>

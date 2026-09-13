@@ -15,7 +15,7 @@ export async function GET() {
 
   const vendorId = auth.vendor.id;
 
-  const [earnings, aggAll, pendingWithdrawals] = await Promise.all([
+  const [earnings, aggAll, pendingWithdrawals, refundDebits] = await Promise.all([
     prisma.vendorEarning.findMany({
       where: { vendorId },
       orderBy: { createdAt: "desc" },
@@ -36,18 +36,27 @@ export async function GET() {
       },
       orderBy: { requestedAt: "desc" },
     }),
+    prisma.vendorLedgerEntry.aggregate({
+      where: { vendorId, type: "refund_debit" },
+      _sum: { amount: true },
+    }),
   ]);
 
   const available = await sumPendingEarningsNet(vendorId);
   const withdrawnAllTime = await sumPaidWithdrawals(vendorId);
 
-  const totalNetAllTime = Number(aggAll._sum.vendorAmount ?? 0);
+  const refundAdjustments = Math.abs(Number(refundDebits._sum.amount ?? 0));
+  const totalNetAllTime = Math.max(
+    0,
+    Number(aggAll._sum.vendorAmount ?? 0) - refundAdjustments
+  );
 
   return NextResponse.json({
     summary: {
       totalEarningsNet: totalNetAllTime,
       availableBalance: available,
       withdrawnAllTime,
+      refundAdjustments,
       hasOpenWithdrawal: await hasOpenWithdrawalRequest(vendorId),
     },
     pendingWithdrawals: pendingWithdrawals.map((w) => ({

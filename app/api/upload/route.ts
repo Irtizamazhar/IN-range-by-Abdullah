@@ -3,7 +3,8 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
-import { getAdminSession, getCustomerSession } from "@/lib/sessions";
+import { getCustomerSession } from "@/lib/sessions";
+import { requireAdminPermission } from "@/lib/admin-rbac";
 import { prisma } from "@/lib/prisma";
 
 const GUEST_FOLDER = "inrange-payments";
@@ -44,12 +45,7 @@ export async function POST(req: NextRequest) {
   const isReviewPhoto = folderRaw === REVIEW_GUEST_FOLDER;
   const isCategoryUpload = folderRaw === ADMIN_CATEGORY_FOLDER;
   const isLocalProductUpload = folderRaw === ADMIN_LOCAL_PRODUCT_FOLDER;
-  const adminSession =
-    isPayment || isReviewPhoto ? null : await getAdminSession();
   const customerSession = isPayment ? await getCustomerSession() : null;
-  const role = isPayment
-    ? customerSession?.user?.role
-    : adminSession?.user?.role;
 
   if (isReviewPhoto) {
     const reviewCustomer = await getCustomerSession();
@@ -88,20 +84,22 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  if (isPayment) {
-    if (role !== "customer") {
+    if (isPayment) {
+      if (customerSession?.user?.role !== "customer") {
       return NextResponse.json(
         { error: "Please sign in as a customer to upload payment proof" },
         { status: 401 }
       );
-    }
+      }
+      if (!customerSession?.user.id) {
+        return NextResponse.json({ error: "Customer session is invalid" }, { status: 401 });
+      }
     if (file.size > MAX_GUEST) {
       return NextResponse.json({ error: "Max 5MB" }, { status: 400 });
     }
   } else {
-    if (role !== "admin") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await requireAdminPermission("catalog.manage");
+    if ("response" in auth) return auth.response;
     if (file.size > MAX_ADMIN) {
       return NextResponse.json({ error: "Max 8MB" }, { status: 400 });
     }
@@ -112,7 +110,12 @@ export async function POST(req: NextRequest) {
   try {
     if (isPayment) {
       const row = await prisma.paymentProofStaging.create({
-        data: { data: buf, mimeType: mime || "image/jpeg" },
+        data: {
+          customerId: customerSession!.user.id,
+          data: buf,
+          mimeType: mime || "image/jpeg",
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        },
       });
       return NextResponse.json({
         id: row.id,

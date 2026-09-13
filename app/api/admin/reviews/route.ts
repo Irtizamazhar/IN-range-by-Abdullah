@@ -1,15 +1,13 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/sessions";
+import { requireAdminPermission } from "@/lib/admin-rbac";
 import { prisma } from "@/lib/prisma";
 import { readProducts } from "@/lib/products-store";
 
 export async function GET() {
-  const session = await getAdminSession();
-  if (session?.user?.role !== "admin") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireAdminPermission("moderation.manage");
+  if ("response" in auth) return auth.response;
 
   try {
     const [reviews, newArrivalReviews, storedProducts] = await Promise.all([

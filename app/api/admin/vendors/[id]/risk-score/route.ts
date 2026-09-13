@@ -1,17 +1,15 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/sessions";
+import { requireAdminPermission } from "@/lib/admin-rbac";
 import { prisma } from "@/lib/prisma";
 import { calculateVendorRiskScore } from "@/app/api/admin/vendors/_lib/risk-score";
 
 type Ctx = { params: { id: string } };
 
 export async function GET(_req: Request, ctx: Ctx) {
-  const session = await getAdminSession();
-  if (session?.user?.role !== "admin") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireAdminPermission("vendors.manage");
+  if ("response" in auth) return auth.response;
 
   const vendorId = String(ctx.params.id || "");
   if (!vendorId) {

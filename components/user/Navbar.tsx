@@ -518,7 +518,7 @@ export function Navbar({
                     suggestions.length ===
                       0 ? (
                       <div className="p-4">
-                        <p className="text-[12px] font-black text-brand-dark">
+                        <p className="text-[14px] font-black text-brand-dark">
                           Product nahi mila?
                         </p>
 
@@ -527,7 +527,7 @@ export function Navbar({
                         </p>
 
                         <Link
-                          href="/wants"
+                          href="/wants/new"
                           onClick={() =>
                             setShowDropdown(
                               false
@@ -735,7 +735,7 @@ export function Navbar({
                         ) : null}
 
                         <Link
-                          href="/track-order"
+                          href="/account"
                           onClick={() =>
                             setProfileOpen(
                               false
@@ -743,7 +743,23 @@ export function Navbar({
                           }
                           className="block rounded-lg px-3 py-2.5 text-[12px] font-bold transition hover:bg-brand-soft"
                         >
-                          My Orders
+                          My Account
+                        </Link>
+
+                        <Link
+                          href="/my-stuff"
+                          onClick={() => setProfileOpen(false)}
+                          className="block rounded-lg px-3 py-2.5 text-left text-[12px] font-bold transition hover:bg-brand-soft"
+                        >
+                          My Stuff
+                        </Link>
+
+                        <Link
+                          href="/account/notifications"
+                          onClick={() => setProfileOpen(false)}
+                          className="block rounded-lg px-3 py-2.5 text-left text-[12px] font-bold transition hover:bg-brand-soft"
+                        >
+                          Notifications
                         </Link>
 
                         <button
@@ -894,7 +910,7 @@ export function Navbar({
                     false
                   )
                 }
-                className="flex items-center gap-3 rounded-xl bg-brand-background px-4 py-3.5 text-[12px] font-black"
+                className="flex items-center gap-3 rounded-xl bg-brand-background px-4 py-3.5 text-[14px] font-black"
               >
                 <ShoppingCart className="h-4 w-4 text-brand-link" />
 
@@ -902,13 +918,13 @@ export function Navbar({
               </Link>
 
               <Link
-                href="/wants"
+                href="/wants/new"
                 onClick={() =>
                   setMobileOpen(
                     false
                   )
                 }
-                className="flex items-center justify-between rounded-xl bg-brand-primary px-4 py-3.5 text-[12px] font-black text-brand-dark"
+                className="flex items-center justify-between rounded-xl bg-brand-primary px-4 py-3.5 text-[14px] font-black text-brand-dark"
               >
                 <span className="flex items-center gap-3">
                   <Heart className="h-4 w-4" />
@@ -928,7 +944,7 @@ export function Navbar({
                     false
                   )
                 }
-                className="block rounded-xl bg-brand-soft px-4 py-3.5 text-[12px] font-black text-brand-link"
+                className="block rounded-xl bg-brand-soft px-4 py-3.5 text-[14px] font-black text-brand-link"
               >
                 Trending Wants
               </Link>
@@ -940,7 +956,7 @@ export function Navbar({
                     false
                   )
                 }
-                className="flex items-center gap-3 rounded-xl bg-brand-dark px-4 py-3.5 text-[12px] font-black text-white"
+                className="flex items-center gap-3 rounded-xl bg-brand-dark px-4 py-3.5 text-[14px] font-black text-white"
               >
                 <Store className="h-4 w-4 text-brand-primary" />
 
@@ -1070,6 +1086,32 @@ export function Navbar({
                   >
                     My Profile
                   </button>
+                ) : null}
+
+                {session.user?.role !== "admin" ? (
+                  <>
+                    <Link
+                      href="/account"
+                      onClick={() => setMobileOpen(false)}
+                      className="block w-full rounded-xl bg-brand-soft px-4 py-3 text-left text-[13px] font-black text-brand-dark"
+                    >
+                      My Account
+                    </Link>
+                    <Link
+                      href="/my-stuff"
+                      onClick={() => setMobileOpen(false)}
+                      className="block w-full rounded-xl bg-brand-soft px-4 py-3 text-left text-[13px] font-black text-brand-dark"
+                    >
+                      My Stuff
+                    </Link>
+                    <Link
+                      href="/account/notifications"
+                      onClick={() => setMobileOpen(false)}
+                      className="block w-full rounded-xl bg-brand-soft px-4 py-3 text-left text-[13px] font-black text-brand-dark"
+                    >
+                      Notifications
+                    </Link>
+                  </>
                 ) : null}
 
                 <button

@@ -2,14 +2,16 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { memo } from "react";
+import { memo, useState } from "react";
 import {
   ArrowRight,
+  Heart,
   ShoppingCart,
   Star,
 } from "lucide-react";
 
 import { useCart } from "@/context/CartContext";
+import { useCustomerAuth } from "@/context/CustomerAuthContext";
 import { formatPKR } from "@/lib/format";
 import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 
@@ -45,11 +47,11 @@ function ProductRating({
     <div className="flex items-center gap-1">
       <Star className="h-3 w-3 fill-[#F5A623] text-[#F5A623]" />
 
-      <span className="text-[10px] font-bold text-brand-dark">
+      <span className="text-[12px] font-bold text-brand-dark">
         {safeRating.toFixed(1)}
       </span>
 
-      <span className="text-[9px] font-medium text-black/35">
+      <span className="text-[11px] font-medium text-black/40">
         ({count})
       </span>
     </div>
@@ -65,6 +67,9 @@ export const ProductCard = memo(function ProductCard({
   badgePosition?: "left" | "right";
 }) {
   const { items, addItem } = useCart();
+  const { openAuthModal } = useCustomerAuth();
+  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const image =
     product.images?.[0];
@@ -203,6 +208,25 @@ export const ProductCard = memo(function ProductCard({
     });
   }
 
+  async function saveProduct() {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const response = await fetch(`/api/customer/saved-products${saved ? `/${product._id}` : ""}`, {
+        method: saved ? "DELETE" : "POST",
+        headers: saved ? undefined : { "Content-Type": "application/json" },
+        body: saved ? undefined : JSON.stringify({ productId: String(product._id) }),
+      });
+      if (response.status === 401) {
+        openAuthModal("login");
+        return;
+      }
+      if (response.ok) setSaved((value) => !value);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <article className="group flex min-w-0 flex-col overflow-hidden rounded-[16px] border border-black/[0.06] bg-white shadow-xs transition-all duration-250 hover:-translate-y-0.5 hover:border-brand-primary/40 hover:shadow-cardHover">
       {/* IMAGE */}
@@ -212,6 +236,20 @@ export const ProductCard = memo(function ProductCard({
         className="block"
       >
         <div className="relative h-[145px] overflow-hidden bg-gradient-to-b from-[#FBFCF9] to-[#F5F7F1] sm:h-[155px]">
+          <button
+            type="button"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              void saveProduct();
+            }}
+            disabled={saving}
+            aria-label={saved ? `Remove ${product.name} from saved products` : `Save ${product.name}`}
+            aria-pressed={saved}
+            className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/95 text-brand-link shadow-sm transition hover:bg-brand-soft disabled:opacity-60"
+          >
+            <Heart className={`h-4 w-4 ${saved ? "fill-current" : ""}`} />
+          </button>
           {image ? (
             <Image
               src={image}
@@ -226,14 +264,14 @@ export const ProductCard = memo(function ProductCard({
               className="object-contain p-3 transition-transform duration-300 group-hover:scale-[1.05]"
             />
           ) : (
-            <div className="flex h-full items-center justify-center text-[10px] font-semibold text-black/25">
+            <div className="flex h-full items-center justify-center text-[12px] font-semibold text-black/30">
               Product image
             </div>
           )}
 
           {discountPercent >
           0 ? (
-            <span className="absolute left-2 top-2 rounded-full bg-brand-primary px-2 py-1 text-[9px] font-black text-brand-dark">
+            <span className="absolute left-2 top-2 rounded-full bg-brand-primary px-2 py-1 text-[11px] font-black text-brand-dark">
               -
               {
                 discountPercent
@@ -241,7 +279,7 @@ export const ProductCard = memo(function ProductCard({
               %
             </span>
           ) : ribbon ? (
-            <span className="absolute left-2 top-2 rounded-full bg-brand-primary px-2 py-1 text-[9px] font-black text-brand-dark">
+            <span className="absolute left-2 top-2 rounded-full bg-brand-primary px-2 py-1 text-[11px] font-black text-brand-dark">
               {ribbon}
             </span>
           ) : null}
@@ -251,7 +289,7 @@ export const ProductCard = memo(function ProductCard({
       {/* CONTENT */}
 
       <div className="flex flex-1 flex-col p-3">
-        <p className="truncate text-[9px] font-bold uppercase tracking-[0.07em] text-brand-link/70">
+        <p className="truncate text-[11px] font-bold uppercase tracking-[0.07em] text-brand-link/70">
           {product.category ||
             "Marketplace"}
         </p>
@@ -261,7 +299,7 @@ export const ProductCard = memo(function ProductCard({
             detailHref
           }
         >
-          <h3 className="mt-1 line-clamp-2 min-h-[34px] text-[12px] font-bold leading-[17px] text-brand-dark transition group-hover:text-brand-link">
+          <h3 className="mt-1 line-clamp-2 min-h-[40px] text-[14px] font-bold leading-5 text-brand-dark transition group-hover:text-brand-link">
             {
               product.name
             }
@@ -277,7 +315,7 @@ export const ProductCard = memo(function ProductCard({
 
           {hasDiscount &&
           product.originalPrice ? (
-            <span className="text-[9px] font-medium text-black/30 line-through">
+            <span className="text-[11px] font-medium text-black/35 line-through">
               {formatPKR(
                 product.originalPrice
               )}
@@ -296,7 +334,7 @@ export const ProductCard = memo(function ProductCard({
               }
             />
           ) : (
-            <span className="text-[9px] font-medium text-black/35">
+            <span className="text-[11px] font-medium text-black/40">
               Available now
             </span>
           )}
@@ -308,7 +346,7 @@ export const ProductCard = memo(function ProductCard({
               href={
                 detailHref
               }
-              className="flex h-8 w-full items-center justify-center gap-1 rounded-lg bg-brand-dark text-[10px] font-bold text-white transition hover:bg-brand-primary hover:text-brand-dark"
+              className="flex h-9 w-full items-center justify-center gap-1 rounded-lg bg-brand-dark text-[12px] font-bold text-white transition hover:bg-brand-primary hover:text-brand-dark"
             >
               View Options
 
@@ -323,7 +361,7 @@ export const ProductCard = memo(function ProductCard({
               onClick={
                 handleAddToCart
               }
-              className="flex h-8 w-full items-center justify-center gap-1.5 rounded-lg bg-brand-primary text-[10px] font-bold text-brand-dark transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-black/[0.06] disabled:text-black/30"
+              className="flex h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-brand-primary text-[12px] font-bold text-brand-dark transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-black/[0.06] disabled:text-black/30"
             >
               <ShoppingCart className="h-3.5 w-3.5" />
 

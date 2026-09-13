@@ -19,6 +19,7 @@ export function catalogProductSelect(
     discountPercent: true,
     category: true,
     stock: true,
+    warrantyMonths: true,
     variants: true,
     isActive: true,
     listingImageUrls: true,

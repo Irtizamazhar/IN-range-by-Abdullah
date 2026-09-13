@@ -32,6 +32,7 @@ yarn-error.log*
 # Private vendor identity and appeal documents stay out of source control.
 /public/uploads/vendor-docs/
 /public/uploads/vendor-appeals/
+/storage/private/
 
 # vercel
 .vercel
