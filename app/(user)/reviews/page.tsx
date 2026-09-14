@@ -68,7 +68,7 @@ export default async function CustomerReviewsPage() {
               <span className="font-bold text-primaryBlue">{averageRating}/5</span>
             </>
           ) : (
-            <>Be the first to leave a review on a product or new arrival page.</>
+            <>Verified customer reviews will appear here after moderation.</>
           )}
         </p>
       </header>
@@ -107,8 +107,8 @@ export default async function CustomerReviewsPage() {
 
       {totalCount === 0 ? (
         <p className="mx-auto mt-12 max-w-lg text-center text-darkText/60">
-          No public reviews yet. Purchased something? Open any product and share your thoughts — we
-          approve reviews quickly.
+          No verified reviews yet. After delivery, open the product from your order
+          tracking page to share your experience.
         </p>
       ) : (
         <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -140,6 +140,9 @@ export default async function CustomerReviewsPage() {
                 </div>
               ) : null}
               <p className="mt-3 font-semibold text-darkText">{r.name}</p>
+              <span className="mt-2 w-fit rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">
+                Verified Purchase
+              </span>
               <Link
                 href={r.itemHref}
                 className="mt-1 text-sm font-medium text-primaryBlue hover:underline"

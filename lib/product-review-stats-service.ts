@@ -1,16 +1,76 @@
+import type { Review } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import {
+  customerOwnsReviewOrder,
+  isOrderProductDeliveredForReview,
+  type OrderForReviewCheck,
+} from "@/lib/order-review-eligibility";
 import { ORDER_INCLUDE_REVIEW } from "@/lib/prisma-order-includes";
-import { isOrderDeliveredForReview, orderEmailsMatch, orderHasProductLine } from "@/lib/order-review-eligibility";
-/** Only purchase-backed approved reviews contribute to marketplace trust. Deduplicate legacy rows without deleting history. */
+import {
+  isPublicReviewPhotoUrl,
+  sanitizeReviewComment,
+} from "@/lib/review-policy";
+
+export type ReviewWithPurchaseEvidence = Review & {
+  order: OrderForReviewCheck | null;
+};
+
+/** A badge/aggregate is valid only while the referenced purchase still proves it. */
+export function isPurchaseBackedReview(
+  review: ReviewWithPurchaseEvidence
+): boolean {
+  return Boolean(
+    review.customerId &&
+      review.order &&
+      customerOwnsReviewOrder(review.order.customerId, review.customerId) &&
+      isOrderProductDeliveredForReview(review.order, review.productId)
+  );
+}
+
+/**
+ * Only approved, active, purchase-backed reviews contribute to trust. Legacy
+ * duplicates are retained in the database but only the newest valid row per
+ * customer/product is exposed.
+ */
 export async function productReviewStatsService(productIds: string[]) {
+  const ids = Array.from(new Set(productIds.filter(Boolean)));
+  if (!ids.length) return [];
+
   const rows = await prisma.review.findMany({
-    where: { productId: { in: productIds }, approved: true, withdrawn: false, customerId: { not: null }, orderId: { not: null } },
-    include: { customer: { select: { email: true } }, order: { include: ORDER_INCLUDE_REVIEW } },
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    where: {
+      productId: { in: ids },
+      approved: true,
+      withdrawn: false,
+      rating: { gte: 1, lte: 5 },
+      customerId: { not: null },
+      orderId: { not: null },
+    },
+    include: { order: { include: ORDER_INCLUDE_REVIEW } },
+    orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
   });
+
   const seen = new Set<string>();
-  return rows.filter(r => {
-    if (!r.customer || !r.order || !isOrderDeliveredForReview(r.order) || !orderEmailsMatch(r.order.customerEmail, r.customer.email) || !orderHasProductLine(r.order, r.productId)) return false;
-    const key = `${r.customerId}:${r.productId}`; if (seen.has(key)) return false; seen.add(key); return true;
-  }).map(r => ({ id: r.id, productId: r.productId, name: r.name, rating: r.rating, comment: r.comment, imageUrl: r.imageUrl, createdAt: r.createdAt, verifiedPurchase: true as const }));
+  return rows
+    .filter((row) => {
+      const review = row as ReviewWithPurchaseEvidence;
+      if (!isPurchaseBackedReview(review)) return false;
+      const key = `${review.customerId}:${review.productId}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .map((row) => ({
+      id: row.id,
+      productId: row.productId,
+      name: sanitizeReviewComment(row.name).slice(0, 160) || "Customer",
+      rating: row.rating,
+      comment: sanitizeReviewComment(row.comment),
+      imageUrl:
+        row.imageUrl && isPublicReviewPhotoUrl(row.imageUrl)
+          ? row.imageUrl
+          : null,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      verifiedPurchase: true as const,
+    }));
 }

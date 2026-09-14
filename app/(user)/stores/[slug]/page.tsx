@@ -9,6 +9,8 @@ import { generateUniqueStoreSlug } from "@/lib/store-slug";
 import { prisma } from "@/lib/prisma";
 import { serializeProduct } from "@/lib/serialize";
 import { getCustomerSession } from "@/lib/sessions";
+import { pickReviewStat, reviewStatsForProductIds } from "@/lib/review-stats";
+import { vendorReviewStatsService } from "@/lib/vendor-review-stats-service";
 
 export const dynamic = "force-dynamic";
 
@@ -72,14 +74,14 @@ export default async function StorePage({ params }: { params: { slug: string } }
     redirect(`/stores/${vendor.storeSlug}`);
   }
 
-  const [products, session, ratingAgg] = await Promise.all([
+  const [products, session, storeRatings] = await Promise.all([
     prisma.product.findMany({
       where: { isActive: true, vendorPublication: { vendorId: vendor.id, status: "active" } },
       select: catalogProductSelect(),
       orderBy: { createdAt: "desc" },
     }),
     getCustomerSession(),
-    prisma.vendorReview.aggregate({ where: { vendorId: vendor.id, isVisible: true }, _avg: { rating: true }, _count: { rating: true } }),
+    vendorReviewStatsService([vendor.id]),
   ]);
 
   const following =
@@ -87,9 +89,18 @@ export default async function StorePage({ params }: { params: { slug: string } }
       ? (await prisma.storeFollow.count({ where: { customerId: session.user.id, vendorId: vendor.id } })) > 0
       : false;
 
-  const cards = products.map((product) => serializeProduct(product) as ProductCardData);
+  const productRatings = await reviewStatsForProductIds(
+    products.map((product) => product.id)
+  );
+  const cards = products.map((product) => ({
+    ...(serializeProduct(product) as ProductCardData),
+    ...pickReviewStat(productRatings, product.id),
+  }));
   const serviceCities = Array.isArray(vendor.serviceCities) ? (vendor.serviceCities as unknown[]).filter((c): c is string => typeof c === "string") : [];
-  const rating = ratingAgg._count.rating > 0 ? Number(ratingAgg._avg.rating) : null;
+  const storeRating = storeRatings.get(vendor.id) ?? {
+    ratingAvg: 0,
+    reviewCount: 0,
+  };
   const origin = canonicalOrigin();
   const shareableUrl = `${origin ?? ""}/stores/${vendor.storeSlug}`;
 
@@ -133,7 +144,9 @@ export default async function StorePage({ params }: { params: { slug: string } }
           <span className="flex items-center gap-2 p-4 text-sm"><PackageCheck className="h-4 w-4 text-brand-primary" />{vendor.vendorShopOrders.length} delivered</span>
           <span className="flex items-center gap-2 p-4 text-sm">
             <Star className="h-4 w-4 text-brand-primary" />
-            {rating ? `${rating.toFixed(1)} (${ratingAgg._count.rating})` : "No reviews yet"}
+            {storeRating.reviewCount
+              ? `${storeRating.ratingAvg.toFixed(1)} (${storeRating.reviewCount})`
+              : "No verified reviews yet"}
           </span>
           <span className="p-4 text-sm">Selling since {vendor.createdAt.getFullYear()}</span>
         </div>

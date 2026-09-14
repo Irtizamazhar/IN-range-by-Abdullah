@@ -19,6 +19,26 @@ npx tsc --noEmit
 npm run build
 ```
 
+### Existing database after the marketplace merge
+
+Databases that already applied `20260913030000_customer_stores_wants`
+contain the legacy `WantPost`/`WantOffer` shape. Back up the database and run
+the read-only preflight first. If it reports that legacy shape and lists the
+two pulled merge migrations as pending, reconcile their history before deploy:
+
+```powershell
+$env:DOTENV_CONFIG_PATH='.env.local'
+npx tsx scripts/joro-preflight.ts
+node -r dotenv/config ./node_modules/prisma/build/index.js migrate resolve --applied 20260913000000_joro_marketplace_foundation dotenv_config_path=.env.local
+node -r dotenv/config ./node_modules/prisma/build/index.js migrate resolve --applied 20260913090000_joro_merge_reconciliation dotenv_config_path=.env.local
+node -r dotenv/config ./node_modules/prisma/build/index.js migrate deploy dotenv_config_path=.env.local
+```
+
+The follow-up reconciliation migration copies legacy Wants and offers into the
+new revision-based model and keeps the legacy source tables as rollback
+archives. Do not use the two `migrate resolve` commands on an environment where
+those migrations were actually executed; inspect that environment separately.
+
 ## Configuration names
 
 Keep secrets in `.env.local` or the deployment secret manager. Do not commit real values.

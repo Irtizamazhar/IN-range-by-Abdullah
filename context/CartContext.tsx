@@ -9,6 +9,8 @@ import {
   useState,
 } from "react";
 
+import { useSession } from "next-auth/react";
+
 export type CartLine = {
   productId: string;
   name: string;
@@ -36,30 +38,46 @@ type CartContextValue = {
 
 const CartContext = createContext<CartContextValue | null>(null);
 
-const STORAGE_KEY = "irb-cart";
+const GUEST_STORAGE_KEY = "irb-cart";
 
 function lineKey(productId: string, variant?: string) {
   return `${productId}::${variant || ""}`;
 }
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
+  const { data: session, status } = useSession();
+  const storageKey = session?.user?.role === "customer" && session.user.id ? `irb-cart:customer:${session.user.id}` : GUEST_STORAGE_KEY;
+  return <PersonalCartProvider key={status === "loading" ? "loading" : storageKey} storageKey={status === "loading" ? null : storageKey}>{children}</PersonalCartProvider>;
+}
+
+function PersonalCartProvider({ children, storageKey }: { children: React.ReactNode; storageKey: string | null }) {
   const [items, setItems] = useState<CartLine[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
+    if (!storageKey) return;
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setItems(JSON.parse(raw));
+      const raw = localStorage.getItem(storageKey);
+      const saved: CartLine[] = raw ? JSON.parse(raw) : [];
+      // Claim the guest cart once at sign-in; it is never left for the next customer.
+      const guestRaw = storageKey !== GUEST_STORAGE_KEY ? localStorage.getItem(GUEST_STORAGE_KEY) : null;
+      const guest: CartLine[] = guestRaw ? JSON.parse(guestRaw) : [];
+      const merged = [...saved, ...guest.filter(line => !saved.some(existing => lineKey(existing.productId, existing.variant) === lineKey(line.productId, line.variant)))];
+      setItems(merged);
+      if (guestRaw) {
+        localStorage.setItem(storageKey, JSON.stringify(merged));
+        localStorage.removeItem(GUEST_STORAGE_KEY);
+      }
     } catch {
       /* ignore */
     }
     setHydrated(true);
-  }, []);
+  }, [storageKey]);
 
   useEffect(() => {
-    if (!hydrated) return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-  }, [items, hydrated]);
+    if (!hydrated || !storageKey) return;
+    try { localStorage.setItem(storageKey, JSON.stringify(items)); } catch { /* Storage may be disabled. */ }
+  }, [items, hydrated, storageKey]);
 
   const addItem = useCallback(
     (line: Omit<CartLine, "quantity"> & { quantity?: number }) => {

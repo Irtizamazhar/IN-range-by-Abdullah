@@ -75,7 +75,8 @@ export function RateYourProductsSection({
     <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-4">
       <h2 className="mb-3 text-base font-bold text-emerald-800">Rate Your Products</h2>
       <p className="mb-4 text-xs text-darkText/65">
-        Share feedback on items from this order. One review per product per order.
+        Share feedback on delivered items. One active review per customer and
+        product; returning here edits that review.
       </p>
       <div className="space-y-3">
         {withPid.map((line) => {
@@ -109,22 +110,16 @@ export function RateYourProductsSection({
                 <p className="mt-1 text-xs tracking-tight text-[#FFC400]" aria-hidden>
                   {"★".repeat(5)}
                 </p>
-                {reviewed ? (
-                  <button
-                    type="button"
-                    disabled
-                    className="mt-2 cursor-not-allowed rounded-lg bg-emerald-100 px-4 py-2 text-xs font-bold text-emerald-800"
-                  >
-                    ✅ Reviewed
-                  </button>
-                ) : (
-                  <Link
-                    href={href}
-                    className="mt-2 inline-block rounded-lg bg-brand-primary px-4 py-2 text-xs font-bold text-brand-dark hover:bg-brand-hover"
-                  >
-                    Write a Review
-                  </Link>
-                )}
+                <Link
+                  href={href}
+                  className={`mt-2 inline-block rounded-lg px-4 py-2 text-xs font-bold ${
+                    reviewed
+                      ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                      : "bg-brand-primary text-brand-dark hover:bg-brand-hover"
+                  }`}
+                >
+                  {reviewed ? "Edit Review" : "Write a Review"}
+                </Link>
               </div>
             </div>
           );
@@ -139,7 +134,7 @@ export function RateYourProductsSection({
           >
             Sign in
           </button>{" "}
-          with the email used at checkout to attach reviews to your account.
+          to the customer account that owns this order to manage its reviews.
         </p>
       ) : null}
     </div>

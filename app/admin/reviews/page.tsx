@@ -14,6 +14,8 @@ type AdminReview = {
   imageUrl?: string | null;
   createdAt: string;
   approved: boolean;
+  withdrawn: boolean;
+  verifiedPurchase: boolean;
   productId: string;
   productName: string;
 };
@@ -29,7 +31,7 @@ function formatShort(iso: string) {
 export default function AdminReviewsPage() {
   const [reviews, setReviews] = useState<AdminReview[]>([]);
   const [loading, setLoading] = useState(true);
-  const [busyId, setBusyId] = useState<number | null>(null);
+  const [busyKey, setBusyKey] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -54,13 +56,13 @@ export default function AdminReviewsPage() {
     void load();
   }, []);
 
-  async function toggleApproved(id: number, next: boolean) {
-    setBusyId(id);
+  async function toggleApproved(review: AdminReview, next: boolean) {
+    const key = `${review.scope ?? "product"}-${review.id}`;
+    setBusyKey(key);
     try {
-      const rev = reviews.find((x) => x.id === id);
-      const scope = rev?.scope === "newArrival" ? "newArrival" : "product";
+      const scope = review.scope === "newArrival" ? "newArrival" : "product";
       const r = await fetch(
-        `/api/admin/reviews/${id}?scope=${encodeURIComponent(scope)}`,
+        `/api/admin/reviews/${review.id}?scope=${encodeURIComponent(scope)}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -74,24 +76,28 @@ export default function AdminReviewsPage() {
         return;
       }
       setReviews((prev) =>
-        prev.map((x) => (x.id === id ? { ...x, approved: next } : x))
+        prev.map((item) =>
+          item.id === review.id && item.scope === review.scope
+            ? { ...item, approved: next }
+            : item
+        )
       );
       toast.success(next ? "Review approved" : "Review hidden");
     } catch {
       toast.error("Network error");
     } finally {
-      setBusyId(null);
+      setBusyKey(null);
     }
   }
 
-  async function remove(id: number) {
-    if (!window.confirm("Delete this review permanently?")) return;
-    setBusyId(id);
+  async function remove(review: AdminReview) {
+    if (!window.confirm("Remove this review from public view? The original record will be preserved.")) return;
+    const key = `${review.scope ?? "product"}-${review.id}`;
+    setBusyKey(key);
     try {
-      const rev = reviews.find((x) => x.id === id);
-      const scope = rev?.scope === "newArrival" ? "newArrival" : "product";
+      const scope = review.scope === "newArrival" ? "newArrival" : "product";
       const r = await fetch(
-        `/api/admin/reviews/${id}?scope=${encodeURIComponent(scope)}`,
+        `/api/admin/reviews/${review.id}?scope=${encodeURIComponent(scope)}`,
         {
           method: "DELETE",
           credentials: "same-origin",
@@ -99,15 +105,21 @@ export default function AdminReviewsPage() {
       );
       const data = (await r.json()) as { error?: string };
       if (!r.ok) {
-        toast.error(data.error || "Delete failed");
+        toast.error(data.error || "Could not remove review");
         return;
       }
-      setReviews((prev) => prev.filter((x) => x.id !== id));
-      toast.success("Review deleted");
+      setReviews((prev) =>
+        prev.map((x) =>
+          x.id === review.id && x.scope === review.scope
+            ? { ...x, approved: false, withdrawn: x.scope !== "newArrival" }
+            : x
+        )
+      );
+      toast.success("Review removed; its history was preserved");
     } catch {
       toast.error("Network error");
     } finally {
-      setBusyId(null);
+      setBusyKey(null);
     }
   }
 
@@ -115,7 +127,8 @@ export default function AdminReviewsPage() {
     <div className="p-6 md:p-8">
       <h1 className="text-2xl font-bold text-darkText mb-2">Reviews</h1>
       <p className="text-sm text-darkText/60 mb-8">
-        Approve guest submissions before they appear on product and review pages.
+        Moderate purchase-backed reviews. Legacy guest rows remain available as
+        history but cannot be published as verified reviews.
       </p>
 
       {loading ? (
@@ -130,7 +143,7 @@ export default function AdminReviewsPage() {
         <div className="space-y-4">
           {reviews.map((rev) => (
             <div
-              key={rev.id}
+              key={`${rev.scope ?? "product"}-${rev.id}`}
               className="rounded-xl border border-borderGray bg-white p-4 shadow-sm md:p-5"
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -141,9 +154,22 @@ export default function AdminReviewsPage() {
                       <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-bold text-green-800">
                         Approved
                       </span>
+                    ) : rev.withdrawn ? (
+                      <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-bold text-gray-700">
+                        Removed
+                      </span>
                     ) : (
                       <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-900">
                         Pending
+                      </span>
+                    )}
+                    {rev.verifiedPurchase ? (
+                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-800">
+                        Verified Purchase
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-bold text-red-700">
+                        Unverified legacy
                       </span>
                     )}
                   </div>
@@ -170,19 +196,31 @@ export default function AdminReviewsPage() {
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    disabled={busyId === rev.id}
-                    onClick={() => void toggleApproved(rev.id, !rev.approved)}
+                    disabled={
+                      busyKey === `${rev.scope ?? "product"}-${rev.id}` ||
+                      (!rev.approved && (!rev.verifiedPurchase || rev.withdrawn))
+                    }
+                    onClick={() => void toggleApproved(rev, !rev.approved)}
                     className="rounded-lg bg-brand-primary px-3 py-2 text-xs font-bold text-brand-dark hover:bg-brand-hover disabled:opacity-50"
                   >
-                    {rev.approved ? "Unapprove" : "Approve"}
+                    {rev.approved
+                      ? "Unapprove"
+                      : rev.withdrawn
+                        ? "Withdrawn"
+                        : rev.verifiedPurchase
+                          ? "Approve"
+                          : "Not eligible"}
                   </button>
                   <button
                     type="button"
-                    disabled={busyId === rev.id}
-                    onClick={() => void remove(rev.id)}
+                    disabled={
+                      busyKey === `${rev.scope ?? "product"}-${rev.id}` ||
+                      rev.withdrawn
+                    }
+                    onClick={() => void remove(rev)}
                     className="rounded-lg border border-red-300 px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 disabled:opacity-50"
                   >
-                    Delete
+                    {rev.scope === "newArrival" ? "Hide legacy" : "Withdraw"}
                   </button>
                 </div>
               </div>

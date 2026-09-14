@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { StoreCard } from "@/components/user/StoreCard";
+import { vendorReviewStatsService } from "@/lib/vendor-review-stats-service";
 
 export const dynamic = "force-dynamic";
 
@@ -16,10 +17,12 @@ export default async function StoresPage() {
       primaryCategory: true,
       city: true,
       _count: { select: { followers: true, products: true } },
-      reviews: { where: { isVisible: true }, select: { rating: true } },
       vendorShopOrders: { where: { status: "delivered" }, select: { id: true } },
     },
   });
+  const ratingStats = await vendorReviewStatsService(
+    vendors.map((vendor) => vendor.id)
+  );
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
@@ -33,9 +36,10 @@ export default async function StoresPage() {
       {vendors.length ? (
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {vendors.map((vendor) => {
-            const rating = vendor.reviews.length
-              ? vendor.reviews.reduce((sum, review) => sum + review.rating, 0) / vendor.reviews.length
-              : null;
+            const rating = ratingStats.get(vendor.id) ?? {
+              ratingAvg: 0,
+              reviewCount: 0,
+            };
             return (
               <StoreCard
                 key={vendor.id}
@@ -47,7 +51,8 @@ export default async function StoresPage() {
                   primaryCategory: vendor.primaryCategory,
                   shopDescription: vendor.shopDescription,
                   city: vendor.city,
-                  rating,
+                  rating: rating.reviewCount ? rating.ratingAvg : null,
+                  ratingCount: rating.reviewCount,
                   deliveredCount: vendor.vendorShopOrders.length,
                   _count: vendor._count,
                 }}

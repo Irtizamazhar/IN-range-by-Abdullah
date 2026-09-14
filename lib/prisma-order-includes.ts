@@ -15,14 +15,21 @@ export type OrderWithSerializeRelations = Order & {
 };
 
 export const ORDER_INCLUDE_REVIEW = {
-  orderItems: true,
+  orderItems: {
+    include: {
+      inventoryLine: {
+        select: {
+          vendorShopOrder: { select: { status: true } },
+        },
+      },
+    },
+  },
   vendorShopOrders: { select: { status: true } },
-} as unknown as Prisma.OrderInclude;
+} satisfies Prisma.OrderInclude;
 
-export type OrderWithReviewRelations = Order & {
-  orderItems: OrderItem[];
-  vendorShopOrders: { status: string }[];
-};
+export type OrderWithReviewRelations = Prisma.OrderGetPayload<{
+  include: typeof ORDER_INCLUDE_REVIEW;
+}>;
 
 export const WHERE_PARENT_ORDER_ONLY = {
   vendorShopOrders: { none: {} },

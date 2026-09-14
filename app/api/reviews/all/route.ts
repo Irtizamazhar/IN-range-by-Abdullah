@@ -1,17 +1,11 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getApprovedPublicReviews } from "@/lib/public-reviews-list";
 
 export async function GET() {
   try {
-    const rows = await prisma.review.findMany({
-      where: { approved: true },
-      orderBy: { createdAt: "desc" },
-      include: {
-        product: { select: { id: true, name: true } },
-      },
-    });
+    const rows = await getApprovedPublicReviews();
 
     const reviews = rows.map((r) => ({
       id: String(r.id),
@@ -19,8 +13,9 @@ export async function GET() {
       rating: r.rating,
       comment: r.comment,
       createdAt: r.createdAt.toISOString(),
-      productId: r.product.id,
-      productName: r.product.name,
+      productId: r.itemHref.slice("/products/".length),
+      productName: r.itemName,
+      verifiedPurchase: r.verifiedPurchase,
     }));
 
     const totalCount = reviews.length;

@@ -5,7 +5,9 @@ Next.js 14 App Router, React 18, TypeScript, Prisma 6 and MySQL. Preserve custom
 
 ## Findings
 - No current Wants, offer revisions, store follows, collaborative rooms, service bookings or vendor promotion models.
-- Reviews currently permit guest submissions and enforce order/product uniqueness, not customer/product uniqueness.
+- Reviews require an owned delivered purchase, reuse one canonical
+  customer/product row, and exclude unverifiable legacy guest rows from public
+  ratings (completed in Step 5).
 - Homepage includes example demand and store rankings that must be replaced with real data and honest empty states.
 - No package test script or tests directory found.
 - Existing untracked .npm-cache-repair/ and public/logo1.png must be preserved.

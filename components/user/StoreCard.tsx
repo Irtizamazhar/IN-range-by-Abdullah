@@ -12,6 +12,7 @@ export type PublicStore = {
   shopDescription: string | null;
   city?: string;
   rating?: number | null;
+  ratingCount?: number;
   deliveredCount?: number;
   _count: { followers: number; products?: number };
 };
@@ -44,7 +45,7 @@ export function StoreCard({ store }: { store: PublicStore }) {
         {store.city ? <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{store.city}</span> : null}
         {typeof store.deliveredCount === "number" ? <span className="inline-flex items-center gap-1"><PackageCheck className="h-3.5 w-3.5" />{store.deliveredCount} delivered</span> : null}
         {typeof store._count.products === "number" ? <span className="inline-flex items-center gap-1"><StoreIcon className="h-3.5 w-3.5" />{store._count.products} products</span> : null}
-        <span className="inline-flex items-center gap-1"><Star className="h-3.5 w-3.5" />{store.rating ? store.rating.toFixed(1) : "New"} · {store._count.followers} followers</span>
+        <span className="inline-flex items-center gap-1"><Star className="h-3.5 w-3.5" />{store.rating ? `${store.rating.toFixed(1)} (${store.ratingCount ?? 0})` : "No verified ratings"} · {store._count.followers} followers</span>
       </div>
       <div className="mt-4">
         <StoreFollowButton vendorId={store.id} initialFollowers={store._count.followers} />

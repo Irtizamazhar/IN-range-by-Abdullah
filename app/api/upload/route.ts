@@ -8,7 +8,7 @@ import { requireAdminPermission } from "@/lib/admin-rbac";
 import { prisma } from "@/lib/prisma";
 
 const GUEST_FOLDER = "inrange-payments";
-/** Public guest uploads for review photos → `public/uploads/reviews/` */
+/** Legacy folder token; review photos now require order-scoped `/api/reviews/photo`. */
 const REVIEW_GUEST_FOLDER = "inrange-reviews";
 /** Customer Want photos → `public/uploads/wants/` */
 const WANT_GUEST_FOLDER = "inrange-wants";
@@ -27,6 +27,14 @@ const MAX_ADMIN = 8 * 1024 * 1024;
 const MAX_GUEST = 5 * 1024 * 1024;
 
 export async function POST(req: NextRequest) {
+  const origin = req.headers.get("origin");
+  if (origin && origin !== new URL(req.url).origin) {
+    return NextResponse.json(
+      { error: "Cross-origin requests are not allowed" },
+      { status: 403 }
+    );
+  }
+
   const formData = await req.formData();
   const file = formData.get("file");
   const folderRaw = String(formData.get("folder") || ADMIN_PRODUCT_FOLDER).trim();
@@ -48,13 +56,25 @@ export async function POST(req: NextRequest) {
   const isWantPhoto = folderRaw === WANT_GUEST_FOLDER;
   const isCategoryUpload = folderRaw === ADMIN_CATEGORY_FOLDER;
   const isLocalProductUpload = folderRaw === ADMIN_LOCAL_PRODUCT_FOLDER;
-  const customerSession = isPayment ? await getCustomerSession() : null;
+  const customerSession =
+    isPayment || isReviewPhoto || isWantPhoto
+      ? await getCustomerSession()
+      : null;
 
-  if (isReviewPhoto || isWantPhoto) {
-    const guestCustomer = await getCustomerSession();
-    if (guestCustomer?.user?.role !== "customer") {
+  if (isReviewPhoto) {
+    return NextResponse.json(
+      { error: "Use the purchase-verified review photo upload." },
+      { status: 400 }
+    );
+  }
+
+  if (isWantPhoto) {
+    if (
+      customerSession?.user?.role !== "customer" ||
+      !customerSession.user.id
+    ) {
       return NextResponse.json(
-        { error: isWantPhoto ? "Please sign in to upload a Want photo" : "Please sign in to upload a review photo" },
+        { error: "Please sign in to upload a Want photo" },
         { status: 401 }
       );
     }
@@ -72,8 +92,8 @@ export async function POST(req: NextRequest) {
       typeof crypto.randomUUID === "function"
         ? crypto.randomUUID().slice(0, 8)
         : Math.random().toString(36).slice(2, 10);
-    const prefix = isWantPhoto ? "want" : "rev";
-    const folder = isWantPhoto ? "wants" : "reviews";
+    const prefix = "want";
+    const folder = "wants";
     const fileName = `${prefix}-${Date.now()}-${random}.${ext}`;
     const uploadDir = path.join(process.cwd(), "public", "uploads", folder);
     try {
@@ -84,7 +104,7 @@ export async function POST(req: NextRequest) {
         url: `/uploads/${folder}/${fileName}`,
       });
     } catch (e) {
-      console.error(isWantPhoto ? "want upload" : "review upload", e);
+      console.error("want upload", e);
       return NextResponse.json({ error: "Upload failed" }, { status: 500 });
     }
   }

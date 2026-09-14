@@ -15,8 +15,10 @@ import {
   Plus,
 } from "lucide-react";
 import { ProductCard, ProductCardData } from "@/components/user/ProductCard";
-import { ProductApprovedReviewsList } from "@/components/user/ProductApprovedReviewsList";
-import type { PublicReviewPostField } from "@/components/user/PublicReviewsSection";
+import {
+  ProductApprovedReviewsList,
+  type ReviewDisplayField,
+} from "@/components/user/ProductApprovedReviewsList";
 import { VerifiedOrderReviewSection } from "@/components/user/VerifiedOrderReviewSection";
 import { useCart } from "@/context/CartContext";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
@@ -78,7 +80,7 @@ export function ProductDetailClient({
   product: ProductDetailProduct;
   related: ProductCardData[];
   /** Default: DB `productId`. Use `{ newArrivalId }` for JSON new-arrival detail. */
-  reviewsPostField?: PublicReviewPostField;
+  reviewsPostField?: ReviewDisplayField;
 }) {
   const [idx, setIdx] = useState(0);
   const [variant, setVariant] = useState<string | undefined>(

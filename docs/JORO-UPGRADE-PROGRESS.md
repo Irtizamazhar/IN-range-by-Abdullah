@@ -1,6 +1,24 @@
 # Joro upgrade delivery register
 
-Last updated: 2026-09-13
+Last updated: 2026-09-14
+
+## Step 5 delivery note — Reviews & Ratings
+
+**STEP 5 STATUS: COMPLETE**
+
+Step 5 is implemented without a schema change. Product reviews now require an
+active customer session plus an owned, product-matching delivered purchase;
+marketplace lines use their seller-specific delivery state. Repeat submissions
+edit the canonical customer/product row and return it to moderation. Public
+product, review-feed and store aggregates share the same approved,
+purchase-backed rows and exclude withdrawn, guest, invalid and legacy duplicate
+records. Review photos use an order-scoped upload endpoint with size, MIME,
+signature and account-path validation. Admin moderation remains permissioned,
+uses non-destructive withdrawal, and records audit events. Legacy guest review
+data is retained for history but cannot be republished as Verified Purchase.
+Validation completed with Prisma validate/generate, TypeScript, the full unit
+suite (25 passing), the focused reviews E2E suite (17 passing), production
+build, and browser checks at 360, 390, 768, 1024 and 1440 pixels.
 
 This register maps all 60 backlog items in the supplied requirements plan to the current repository. `Implemented` means the enabled scope is connected to MySQL and protected server-side. `Partial` means useful production code exists but at least one acceptance criterion remains. `Blocked` means a named business/provider decision is required. `Deferred` means the later-release module stays disabled and has no live navigation claim.
 

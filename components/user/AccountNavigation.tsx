@@ -5,6 +5,7 @@ export const accountDestinations = [
   ["overview","Overview","/account"], ["orders","Orders","/account?tab=orders"], ["wants","My Wants","/account?tab=wants"],
   ["offers","Received Offers","/account/offers"], ["saved","Saved","/account?tab=saved"], ["stores","Following","/account?tab=stores"],
   ["notifications","Notifications","/account/notifications"], ["returns","Returns / After-sales","/my-stuff?tab=returns"],
+  ["together","Family Cart","/account/together"],
   ["services","Services / My Stuff","/account/services"], ["profile","Profile","/account?tab=profile"], ["addresses","Addresses","/account?tab=addresses"],
 ] as const;
 export function AccountNavigation() {

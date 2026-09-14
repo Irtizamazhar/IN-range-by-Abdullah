@@ -28,6 +28,7 @@ export async function GET(_req: NextRequest, context: Ctx) {
       comment: r.comment,
       imageUrl: r.imageUrl ?? null,
       createdAt: r.createdAt.toISOString(),
+      verifiedPurchase: r.verifiedPurchase,
     }));
     return NextResponse.json({
       reviews,

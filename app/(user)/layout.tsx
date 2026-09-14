@@ -1,22 +1,8 @@
-import { Suspense } from "react";
-
 import { getOrCreateSettings } from "@/lib/settings-db";
 import { fallbackSettings } from "@/lib/default-settings-public";
 import { UserRouteShell } from "@/components/user/UserRouteShell";
 
 export const dynamic = "force-dynamic";
-
-function UserShellFallback({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="min-h-screen w-full bg-brand-background">
-      {children}
-    </div>
-  );
-}
 
 export default async function UserLayout({
   children,
@@ -43,23 +29,11 @@ export default async function UserLayout({
     fallbackSettings.whatsappNumber;
 
   return (
-    <Suspense
-      fallback={
-        <UserShellFallback>
-          {children}
-        </UserShellFallback>
-      }
+    <UserRouteShell
+      whatsappNumber={whatsappNumber}
+      footerSettings={footerProps}
     >
-      <UserRouteShell
-        whatsappNumber={
-          whatsappNumber
-        }
-        footerSettings={
-          footerProps
-        }
-      >
-        {children}
-      </UserRouteShell>
-    </Suspense>
+      {children}
+    </UserRouteShell>
   );
 }

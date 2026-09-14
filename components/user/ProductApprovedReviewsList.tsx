@@ -2,8 +2,11 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
-import type { PublicReviewPostField } from "@/components/user/PublicReviewsSection";
 import { PRODUCT_REVIEWS_UPDATED_EVENT } from "@/lib/product-reviews-events";
+
+export type ReviewDisplayField =
+  | { productId: string }
+  | { newArrivalId: number };
 
 type ReviewItem = {
   id: string;
@@ -12,9 +15,14 @@ type ReviewItem = {
   comment: string;
   imageUrl: string | null;
   createdAt: string;
+  verifiedPurchase: true;
 };
 
-type Breakdown = { star: number; count: number; percent: number };
+type Breakdown = {
+  star: number;
+  count: number;
+  percent: number;
+};
 
 type ReviewsPayload = {
   reviews: ReviewItem[];
@@ -23,7 +31,7 @@ type ReviewsPayload = {
   breakdown: Breakdown[];
 };
 
-function reviewsQuery(postField: PublicReviewPostField) {
+function reviewsQuery(postField: ReviewDisplayField) {
   if ("newArrivalId" in postField) {
     return `newArrivalId=${postField.newArrivalId}`;
   }
@@ -67,7 +75,7 @@ function StarRowStatic({ rating }: { rating: number }) {
 export function ProductApprovedReviewsList({
   postField,
 }: {
-  postField: PublicReviewPostField;
+  postField: ReviewDisplayField;
 }) {
   const queryString = reviewsQuery(postField);
   const [loading, setLoading] = useState(true);
@@ -185,6 +193,11 @@ export function ProductApprovedReviewsList({
                   <span className="text-xs font-normal text-[#999]">
                     {formatReviewDate(r.createdAt)}
                   </span>
+                  {r.verifiedPurchase ? (
+                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700">
+                      Verified Purchase
+                    </span>
+                  ) : null}
                 </div>
                 <p className="mt-2 whitespace-pre-wrap text-base font-normal leading-relaxed text-[#555]">
                   {r.comment}

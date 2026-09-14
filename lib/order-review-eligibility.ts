@@ -1,26 +1,42 @@
 import type { OrderWithReviewRelations } from "@/lib/prisma-order-includes";
-import { resolveCustomerOrderTrackStatus } from "@/lib/order-track-status";
 
 export type OrderForReviewCheck = OrderWithReviewRelations;
 
-export function orderEmailsMatch(
-  orderEmail: string,
-  customerEmail: string
+/** Review ownership must come from the immutable account relation, never an email supplied at checkout. */
+export function customerOwnsReviewOrder(
+  orderCustomerId: string | null,
+  customerId: string
 ): boolean {
-  return orderEmail.trim().toLowerCase() === customerEmail.trim().toLowerCase();
+  return Boolean(orderCustomerId && orderCustomerId === customerId);
 }
 
-export function isOrderDeliveredForReview(order: OrderForReviewCheck): boolean {
-  const effective = resolveCustomerOrderTrackStatus(
-    order.orderStatus,
-    order.vendorShopOrders
-  );
-  return effective === "delivered";
-}
-
-export function orderHasProductLine(
+/**
+ * A marketplace line is eligible when its own seller slice is delivered. A
+ * first-party/legacy line without a seller slice follows the parent order.
+ */
+export function isOrderProductDeliveredForReview(
   order: OrderForReviewCheck,
   productId: string
 ): boolean {
-  return order.orderItems.some((i) => i.productId === productId);
+  const matchingLines = order.orderItems.filter(
+    (item) => item.productId === productId
+  );
+  if (!matchingLines.length) return false;
+
+  return matchingLines.some((item) => {
+    const shopOrder = item.inventoryLine?.vendorShopOrder;
+    if (shopOrder) return shopOrder.status.toLowerCase() === "delivered";
+    return order.orderStatus.toLowerCase() === "delivered";
+  });
+}
+
+export function isReviewOrderEligible(
+  order: OrderForReviewCheck,
+  customerId: string,
+  productId: string
+): boolean {
+  return (
+    customerOwnsReviewOrder(order.customerId, customerId) &&
+    isOrderProductDeliveredForReview(order, productId)
+  );
 }

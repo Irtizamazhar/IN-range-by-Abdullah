@@ -1,9 +1,9 @@
 import { prisma } from "@/lib/prisma";
-import { readProducts } from "@/lib/products-store";
+import { productReviewStatsService } from "@/lib/product-review-stats-service";
 
 export type PublicReviewListItem = {
   id: number;
-  scope: "product" | "newArrival";
+  scope: "product";
   name: string;
   rating: number;
   comment: string;
@@ -11,59 +11,36 @@ export type PublicReviewListItem = {
   createdAt: Date;
   itemName: string;
   itemHref: string;
+  verifiedPurchase: true;
 };
 
 /**
- * Approved catalog + new-arrival reviews, newest first (for /reviews and home).
+ * Guest/new-arrival rows remain preserved for admin/history, but only verified
+ * customer purchases can appear in the public review feed.
  */
 export async function getApprovedPublicReviews(options?: {
   take?: number;
 }): Promise<PublicReviewListItem[]> {
-  const [catalog, naRows, stored] = await Promise.all([
-    prisma.review.findMany({
-      where: { approved: true },
-      orderBy: { createdAt: "desc" },
-      include: { product: { select: { id: true, name: true } } },
-    }),
-    prisma.newArrivalReview.findMany({
-      where: { approved: true },
-      orderBy: { createdAt: "desc" },
-    }),
-    readProducts(),
-  ]);
-
-  const nameByNaId = new Map(stored.map((p) => [p.id, p.name]));
-
-  const merged: PublicReviewListItem[] = [
-    ...catalog.map((r) => ({
-      id: r.id,
+  const products = await prisma.product.findMany({
+    where: { isActive: true },
+    select: { id: true, name: true },
+  });
+  const nameById = new Map(products.map((product) => [product.id, product.name]));
+  const rows = await productReviewStatsService(products.map((product) => product.id));
+  const reviews = rows
+    .map((review) => ({
+      id: review.id,
       scope: "product" as const,
-      name: r.name,
-      rating: r.rating,
-      comment: r.comment,
-      imageUrl: r.imageUrl,
-      createdAt: r.createdAt,
-      itemName: r.product.name,
-      itemHref: `/products/${r.product.id}`,
-    })),
-    ...naRows.map((r) => ({
-      id: r.id,
-      scope: "newArrival" as const,
-      name: r.name,
-      rating: r.rating,
-      comment: r.comment,
-      imageUrl: r.imageUrl,
-      createdAt: r.createdAt,
-      itemName:
-        nameByNaId.get(r.newArrivalId) ?? `New arrival #${r.newArrivalId}`,
-      itemHref: `/new-arrivals/${r.newArrivalId}`,
-    })),
-  ];
+      name: review.name,
+      rating: review.rating,
+      comment: review.comment,
+      imageUrl: review.imageUrl,
+      createdAt: review.createdAt,
+      itemName: nameById.get(review.productId) || "Product",
+      itemHref: `/products/${review.productId}`,
+      verifiedPurchase: review.verifiedPurchase,
+    }))
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
-  merged.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-
-  if (options?.take != null) {
-    return merged.slice(0, options.take);
-  }
-  return merged;
+  return options?.take == null ? reviews : reviews.slice(0, options.take);
 }

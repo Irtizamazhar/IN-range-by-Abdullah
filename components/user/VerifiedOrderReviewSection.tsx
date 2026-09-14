@@ -8,7 +8,6 @@ import toast from "react-hot-toast";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
 import { PRODUCT_REVIEWS_UPDATED_EVENT } from "@/lib/product-reviews-events";
 
-const REVIEW_UPLOAD_FOLDER = "inrange-reviews";
 const MAX_REVIEW_PHOTO_BYTES = 5 * 1024 * 1024;
 
 export function VerifiedOrderReviewSection({ productId }: { productId: string }) {
@@ -24,9 +23,12 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [alreadyReviewed, setAlreadyReviewed] = useState(false);
+  const [reviewApproved, setReviewApproved] = useState(false);
   const [eligible, setEligible] = useState<boolean | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [existingPhotoUrl, setExistingPhotoUrl] = useState<string | null>(null);
+  const [removeExistingPhoto, setRemoveExistingPhoto] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   const isCustomer = session?.user?.role === "customer";
@@ -53,16 +55,30 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
         );
         if (cancelled) return;
         if (r.ok) {
-          const d = (await r.json()) as { reviewed?: boolean; eligible?: boolean; review?: { rating: number; comment: string } };
+          const d = (await r.json()) as {
+            reviewed?: boolean;
+            eligible?: boolean;
+            review?: {
+              rating: number;
+              comment: string;
+              imageUrl?: string | null;
+              approved?: boolean;
+            };
+          };
           setAlreadyReviewed(!!d.reviewed);
-          if (d.review) { setRating(d.review.rating); setComment(d.review.comment); }
-          setEligible(d.eligible !== false);
+          if (d.review) {
+            setRating(d.review.rating);
+            setComment(d.review.comment);
+            setExistingPhotoUrl(d.review.imageUrl || null);
+            setReviewApproved(!!d.review.approved);
+          }
+          setEligible(d.eligible === true);
         } else {
           setEligible(false);
           setAlreadyReviewed(false);
         }
       } catch {
-        if (!cancelled) setEligible(null);
+        if (!cancelled) setEligible(false);
       }
     })();
 
@@ -86,7 +102,7 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
       <section className="mb-6 rounded-xl border border-brand-primary/40 bg-brand-soft/50 p-5 shadow-sm">
         <h2 className="text-[16px] font-semibold text-[#333]">Review this purchase</h2>
         <p className="mt-2 text-sm text-[#555]">
-          Sign in with the account that matches your order email to submit a review.
+          Sign in with the customer account that owns this order to submit a review.
         </p>
         <button
           type="button"
@@ -99,12 +115,10 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
     );
   }
 
-  if ((alreadyReviewed || done) && !editing) {
+  if (eligible === null) {
     return (
-      <section className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50/60 p-5 text-center shadow-sm">
-        <p className="text-[16px] font-semibold text-emerald-900">
-          Your review has been saved.
-        </p><button type="button" onClick={() => { setEditing(true); setAlreadyReviewed(true); }} className="mt-3 font-bold underline">Edit Review</button>
+      <section className="mb-6 rounded-xl border border-[#e8e8e8] bg-white p-5 shadow-sm">
+        <p className="text-sm text-[#757575]">Checking purchase eligibility...</p>
       </section>
     );
   }
@@ -113,8 +127,31 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
     return (
       <section className="mb-6 rounded-xl border border-amber-200 bg-amber-50/60 p-5 shadow-sm">
         <p className="text-sm text-amber-900">
-          Reviews are only available after your order is marked delivered.
+          Reviews are only available after this product is delivered on an
+          order owned by your account.
         </p>
+      </section>
+    );
+  }
+
+  if ((alreadyReviewed || done) && !editing) {
+    return (
+      <section className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50/60 p-5 text-center shadow-sm">
+        <p className="text-[16px] font-semibold text-emerald-900">
+          {reviewApproved && !done
+            ? "Your verified review is published."
+            : "Your review has been saved and is awaiting moderation."}
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            setEditing(true);
+            setAlreadyReviewed(true);
+          }}
+          className="mt-3 rounded-lg border border-emerald-300 px-4 py-2 text-sm font-bold text-emerald-900 hover:bg-emerald-100"
+        >
+          Edit review
+        </button>
       </section>
     );
   }
@@ -123,7 +160,7 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    if (!file.type.startsWith("image/")) {
+    if (!["image/jpeg", "image/jpg", "image/png", "image/webp"].includes(file.type.toLowerCase())) {
       toast.error("Please choose an image (JPG, PNG, or WebP)");
       return;
     }
@@ -136,6 +173,7 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
       return URL.createObjectURL(file);
     });
     setPhotoFile(file);
+    setRemoveExistingPhoto(false);
   }
 
   function clearPhoto() {
@@ -147,6 +185,11 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
     if (photoInputRef.current) photoInputRef.current.value = "";
   }
 
+  function clearExistingPhoto() {
+    setExistingPhotoUrl(null);
+    setRemoveExistingPhoto(true);
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
@@ -155,8 +198,9 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
       if (photoFile) {
         const fd = new FormData();
         fd.append("file", photoFile);
-        fd.append("folder", REVIEW_UPLOAD_FOLDER);
-        const up = await fetch("/api/upload", {
+        fd.append("orderId", orderId);
+        fd.append("productId", productId);
+        const up = await fetch("/api/reviews/photo", {
           method: "POST",
           body: fd,
           credentials: "include",
@@ -182,7 +226,11 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
           productId,
           rating,
           comment: comment.trim(),
-          ...(imageUrl ? { imageUrl } : {}),
+          ...(imageUrl
+            ? { imageUrl }
+            : removeExistingPhoto
+              ? { imageUrl: null }
+              : {}),
         }),
       });
       const data = (await r.json()) as { error?: string; message?: string };
@@ -192,6 +240,10 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
       }
       toast.success(data.message || "Thank you!");
       clearPhoto();
+      if (imageUrl) setExistingPhotoUrl(imageUrl);
+      setRemoveExistingPhoto(false);
+      setReviewApproved(false);
+      setAlreadyReviewed(true);
       setDone(true);
       setEditing(false);
       router.refresh();
@@ -207,8 +259,17 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
 
   return (
     <section className="mb-6 rounded-xl border border-[#e8e8e8] bg-white p-5 shadow-sm sm:p-6">
-      <h2 className="text-[16px] font-semibold text-[#333]">Rate your purchase</h2>
-      <p className="mt-1 text-xs text-[#757575]">Your review will appear on this product page.</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="text-lg font-semibold text-[#333]">
+          {alreadyReviewed ? "Edit your review" : "Rate your purchase"}
+        </h2>
+        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">
+          Verified Purchase
+        </span>
+      </div>
+      <p className="mt-1 text-sm text-[#757575]">
+        Reviews are moderated before they appear on this product page.
+      </p>
 
       <form onSubmit={(e) => void onSubmit(e)} className="mt-5 space-y-4">
         <div>
@@ -242,11 +303,17 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
           <textarea
             id="verified-review-comment"
             rows={4}
+            required
+            minLength={1}
+            maxLength={5000}
             className="mt-1 w-full rounded-lg border border-[#e0e0e0] px-3 py-2 text-sm text-[#333] placeholder:text-[#999]"
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             placeholder="What did you like? How was quality and delivery?"
           />
+          <p className="mt-1 text-right text-xs text-[#999]">
+            {comment.length}/5000
+          </p>
         </div>
 
         <div>
@@ -275,15 +342,39 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
                 className="mx-auto max-h-48 max-w-full object-contain"
               />
             </div>
+          ) : existingPhotoUrl ? (
+            <div className="mt-3">
+              <div className="relative h-32 w-32 overflow-hidden rounded-lg border border-[#e0e0e0] bg-[#fafafa]">
+                <Image
+                  src={existingPhotoUrl}
+                  alt="Current review photo"
+                  fill
+                  unoptimized
+                  className="object-cover"
+                  sizes="128px"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={clearExistingPhoto}
+                className="mt-2 text-sm font-semibold text-red-600 hover:underline"
+              >
+                Remove current photo
+              </button>
+            </div>
           ) : null}
         </div>
 
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-lg bg-[#22c55e] px-8 py-3 text-sm font-bold text-white hover:bg-[#16a34a] disabled:opacity-50"
+          className="min-h-11 w-full rounded-lg bg-brand-primary px-8 py-3 text-base font-bold text-brand-dark hover:bg-brand-hover disabled:opacity-50 sm:w-auto"
         >
-          {submitting ? "Submitting…" : "Submit"}
+          {submitting
+            ? "Saving..."
+            : alreadyReviewed
+              ? "Save review changes"
+              : "Submit review"}
         </button>
       </form>
     </section>
