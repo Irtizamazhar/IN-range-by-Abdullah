@@ -1,7 +1,9 @@
+import {appOrigin} from "@/lib/app-url";
 import nodemailer from "nodemailer";
 import { sanitizePlainText } from "@/lib/security/sanitize";
 
 function createVendorTransport() {
+  if (!vendorMailConfigured()) throw new Error("Vendor email is not configured.");
   const host =
     process.env.EMAIL_HOST?.trim() ||
     process.env.SMTP_HOST?.trim() ||
@@ -32,14 +34,11 @@ function fromAddress(): string {
     process.env.SMTP_FROM?.trim() ||
     process.env.EMAIL_USER?.trim() ||
     process.env.SMTP_USER?.trim() ||
-    "noreply@inrange.pk"
+    "noreply@" + new URL(appOrigin()).hostname
   );
 }
 
-export function vendorAppBaseUrl(): string {
-  const base = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || "";
-  return base || "http://localhost:3000";
-}
+export function vendorAppBaseUrl(): string { return appOrigin(); }
 
 export function vendorMailConfigured(): boolean {
   const user = process.env.EMAIL_USER?.trim() || process.env.SMTP_USER?.trim();
@@ -49,11 +48,10 @@ export function vendorMailConfigured(): boolean {
 
 export async function sendVendorPasswordResetEmail(
   toRaw: string,
-  token: string,
-  requestOrigin?: string
+  token: string
 ): Promise<void> {
   const to = sanitizePlainText(toRaw, 320).toLowerCase();
-  const base = (process.env.NEXT_PUBLIC_APP_URL || requestOrigin || vendorAppBaseUrl()).replace(/\/$/, "");
+  const base = appOrigin();
   const url = `${base}/vendor/reset-password?token=${encodeURIComponent(token)}`;
   const transporter = createVendorTransport();
   await transporter.sendMail({

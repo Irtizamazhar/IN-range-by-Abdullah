@@ -1,9 +1,9 @@
 export const ADMIN_ROLE_PERMISSIONS = {
   super_admin: ["*"],
-  operations: ["dashboard.view", "orders.manage", "customers.manage", "vendors.manage", "returns.manage", "disputes.manage", "moderation.manage"],
+  operations: ["dashboard.view", "orders.manage", "customers.manage", "vendors.manage", "returns.manage", "disputes.manage", "moderation.manage", "support.manage"],
   finance: ["dashboard.view", "payments.manage", "refunds.manage", "payouts.manage", "returns.manage", "reconciliation.view", "analytics.view"],
   catalog: ["dashboard.view", "catalog.manage", "homepage.manage", "moderation.manage"],
-  support: ["dashboard.view", "customers.manage", "orders.view", "returns.manage", "disputes.manage"],
+  support: ["dashboard.view", "customers.manage", "orders.view", "returns.manage", "disputes.manage", "support.manage"],
   analyst: ["dashboard.view", "analytics.view", "reconciliation.view", "audit.view"],
 } as const;
 

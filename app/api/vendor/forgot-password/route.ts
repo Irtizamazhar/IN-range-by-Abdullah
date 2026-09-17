@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     },
   });
   try {
-    await sendVendorPasswordResetEmail(email, rawToken, req.nextUrl.origin);
+    await sendVendorPasswordResetEmail(email, rawToken);
   } catch (error) {
     console.error("vendor password reset email", error);
     await prisma.vendor.update({

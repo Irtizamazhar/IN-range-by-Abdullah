@@ -32,6 +32,22 @@ export function createUploadRateLimiter() {
   });
 }
 
+/** Support ticket creation: 5 / hour per customer or vendor. */
+export function createSupportTicketRateLimiter() {
+  return new RateLimiterMemory({
+    points: 5,
+    duration: 60 * 60,
+  });
+}
+
+/** Support ticket messages (reuses the attachment on the same request): 20 / hour per actor. */
+export function createSupportMessageRateLimiter() {
+  return new RateLimiterMemory({
+    points: 20,
+    duration: 60 * 60,
+  });
+}
+
 export type RateLimitResult = { ok: true } | { ok: false; retrySecs: number };
 
 export async function consumeOrReject(

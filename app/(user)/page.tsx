@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { VendorSpotlight } from "@/components/user/MarketplaceHomePanels";
 import type { Prisma } from "@prisma/client";
-import { headers } from "next/headers";
+import {bestSellers} from "@/lib/best-sellers";
 
 import {
   ArrowRight,
@@ -34,6 +34,8 @@ import { newArrivalsWindowStart } from "@/lib/product-new-arrival-window";
 import { catalogProductSelect } from "@/lib/catalog-product-select";
 import { prisma } from "@/lib/prisma";
 import { serializeProduct } from "@/lib/serialize";
+import { topVendors } from "@/lib/store-service";
+import { vendorReviewStatsService } from "@/lib/vendor-review-stats-service";
 
 import {
   pickReviewStat,
@@ -100,47 +102,8 @@ async function getBestSellersInitial(): Promise<{
   total: number;
 }> {
   try {
-    const requestHeaders = headers();
-
-    const host =
-      requestHeaders.get("x-forwarded-host") ??
-      requestHeaders.get("host") ??
-      "localhost:3000";
-
-    const protocol =
-      requestHeaders.get("x-forwarded-proto") ??
-      "http";
-
-    const params = new URLSearchParams({
-      offset: "0",
-      limit: String(
-        BEST_SELLERS_PAGE_SIZE
-      ),
-    });
-
-    const url =
-      `${protocol}://${host}` +
-      `/api/products/bestsellers?${params.toString()}`;
-
-    const response = await fetch(url, {
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      return {
-        initial: [],
-        total: 0,
-      };
-    }
-
-    const data =
-      (await response.json()) as {
-        products?: ProductCardData[];
-        total?: number;
-      };
-
-    const initial =
-      data.products ?? [];
+    const data = await bestSellers(0,BEST_SELLERS_PAGE_SIZE);
+    const initial = data.products;
 
     return {
       initial,
@@ -306,7 +269,7 @@ export default async function HomePage() {
       category.showOnHome === true
   );
 
-  const [wantExamples, storeExamples] = await Promise.all([
+  const [wantExamples, topVendorRows] = await Promise.all([
     prisma.want.findMany({
       where: {
         status: "OPEN",
@@ -321,19 +284,17 @@ export default async function HomePage() {
         _count: { select: { offers: true } },
       },
     }),
-    prisma.vendor.findMany({
-      where: { status: "approved" },
-      orderBy: [{ followers: { _count: "desc" } }, { totalOrders: "desc" }],
-      take: 4,
-      select: {
-        id: true,
-        shopName: true,
-        storeSlug: true,
-        primaryCategory: true,
-        _count: { select: { followers: true } },
-      },
-    }),
+    topVendors(4),
   ]);
+  const topVendorRatings = await vendorReviewStatsService(topVendorRows.map((row) => row.vendor.id));
+  const storeExamples = topVendorRows.map((row) => ({
+    id: row.vendor.id,
+    shopName: row.vendor.shopName,
+    storeSlug: row.vendor.storeSlug,
+    primaryCategory: row.vendor.primaryCategory,
+    label: row.label,
+    rating: topVendorRatings.get(row.vendor.id) ?? { ratingAvg: 0, reviewCount: 0 },
+  }));
 
   /* -------------------------------------------------------
      Load Product Data
@@ -394,7 +355,7 @@ export default async function HomePage() {
       ====================================================== */}
 
       <HeroSection
-        sellNowHref="/vendor/register"
+        sellNowHref="/sell"
         heroProducts={
           heroProducts
         }
@@ -683,18 +644,19 @@ export default async function HomePage() {
                 </p>
 
                 <h2 className="mt-1 text-[20px] font-black tracking-[-0.035em]">
-                  Top Stores
+                  Top Vendors
                 </h2>
+
+                <p className="mt-0.5 text-[10px] font-medium text-white/50">
+                  Discover trusted stores selected on JORO
+                </p>
               </div>
 
               {/* STORE LIST */}
 
               <div className="space-y-2">
                 {storeExamples.length ? storeExamples.map(
-                  (
-                    store,
-                    index
-                  ) => (
+                  (store) => (
                     <Link
                       key={store.id}
                       href={`/stores/${store.storeSlug || store.id}`}
@@ -718,24 +680,21 @@ export default async function HomePage() {
                         </p>
 
                         <p className="mt-0.5 truncate text-[9px] font-medium text-white/50">
-                          {
-                            store.primaryCategory
-                          }
+                          {store.primaryCategory}
+                          {store.rating.reviewCount ? ` · ★ ${store.rating.ratingAvg.toFixed(1)} (${store.rating.reviewCount})` : " · No rating yet"}
                         </p>
                       </div>
 
-                      {/* TOP BADGE */}
+                      {/* TOP VENDOR BADGE */}
 
-                      {index === 0 ? (
-                        <span className="rounded-full bg-brand-primary/15 px-1.5 py-0.5 text-[8px] font-black uppercase text-brand-primary">
-                          {store._count.followers} follows
-                        </span>
-                      ) : null}
+                      <span className="shrink-0 rounded-full bg-brand-primary/15 px-1.5 py-0.5 text-[8px] font-black uppercase text-brand-primary">
+                        {store.label || "Top Vendor"}
+                      </span>
                     </Link>
                   )
                 ) : (
                   <div className="rounded-[13px] border border-white/[0.08] p-4 text-center text-[10px] font-semibold text-white/50">
-                    Approved stores will appear here.
+                    No Top Vendors selected yet.
                   </div>
                 )}
               </div>
@@ -807,7 +766,7 @@ export default async function HomePage() {
               {/* CTA */}
 
               <Link
-                href="/vendor/register"
+                href="/login?role=vendor&mode=signup"
                 className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-brand-primary px-5 text-[12px] font-black text-brand-dark transition hover:bg-brand-hover"
               >
                 Seller Bano

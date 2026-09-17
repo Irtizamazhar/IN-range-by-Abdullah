@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { CategoryNavigation, useNavCategories } from "./CategoryNavigation";
 import { MarketplaceNav } from "./MarketplaceNav";
 import Link from "next/link";
 import {
@@ -15,7 +16,6 @@ import {
   useState,
 } from "react";
 import {
-  ChevronDown,
   Heart,
   Menu,
   Package,
@@ -54,16 +54,7 @@ type SearchSuggestion = {
    SECOND NAV CATEGORIES
 ========================================================= */
 
-const navCategories = [
-  "Mobiles",
-  "Computers",
-  "Fashion",
-  "Home & Living",
-  "Beauty",
-  "Groceries",
-  "Sports",
-  "Automotive",
-];
+
 
 /* =========================================================
    NAVBAR
@@ -74,6 +65,8 @@ export function Navbar({
 }: {
   whatsappNumber: string;
 }) {
+  const { data: categoryRows = [] } = useNavCategories();
+  const navCategories = categoryRows.map(category => category.name);
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -437,8 +430,10 @@ export function Navbar({
               <div className="order-2 shrink-0">
                 <LogoMark href="/" />
 
-                <p className="mt-0.5 hidden text-[12px] font-bold uppercase tracking-[0.075em] text-black/40 xl:block">
-                  People • Products • Vendors • Together
+                <p className="mt-0.5 whitespace-nowrap text-center text-[8.5px] font-semibold uppercase tracking-[0.055em] sm:text-[9.5px] sm:tracking-[0.07em] lg:text-[10.5px] lg:tracking-[0.09em]">
+                  <span className="joro-tagline-market">Apni Market</span>
+                  <span className="joro-tagline-dot px-[3px]">•</span>
+                  <span className="joro-tagline-choice">Apni Choice</span>
                 </p>
               </div>
 
@@ -647,9 +642,42 @@ export function Navbar({
                   <span className="hidden text-[12px] font-black xl:inline">
                     Wants
                   </span>
-
-                  <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-brand-primary shadow-[0_0_7px_rgba(183,227,58,0.8)]" />
                 </Link>
+
+                <Link href="/together" aria-label="Together" className="hidden h-10 items-center rounded-xl px-2 text-xs font-bold hover:bg-brand-soft md:flex">Together</Link>
+                <Link href="/stores" aria-label="Stores" className="hidden h-10 items-center rounded-xl px-2 text-xs font-bold hover:bg-brand-soft md:flex">Stores</Link>
+                {/* SELLER CTA */}
+
+                <Link
+                  href="/sell"
+                  className="ml-1 hidden h-10 items-center justify-center rounded-xl bg-brand-primary px-4 text-[12px] font-black text-brand-dark shadow-[0_6px_18px_rgba(183,227,58,0.18)] transition duration-200 hover:-translate-y-0.5 hover:bg-brand-hover md:flex"
+                >
+                  Sell on JORO
+                </Link>
+                {/* CART */}
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCartOpen(true)
+                  }
+                  className="group relative flex h-10 items-center gap-1.5 rounded-xl px-2.5 text-brand-dark transition hover:bg-brand-soft"
+                  aria-label="Open cart"
+                >
+                  <ShoppingCart className="h-[20px] w-[20px] transition-transform group-hover:scale-105" />
+
+                  <span className="hidden text-[12px] font-black xl:inline">
+                    Cart
+                  </span>
+
+                  {totalQty > 0 ? (
+                    <span className="absolute right-0 top-0 flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-brand-primary px-1 text-[12px] font-black text-brand-dark ring-2 ring-white">
+                      {totalQty > 99
+                        ? "99+"
+                        : totalQty}
+                    </span>
+                  ) : null}
+                </button>
 
                 {/* ACCOUNT */}
 
@@ -783,39 +811,6 @@ export function Navbar({
                   </div>
                 )}
 
-                {/* CART */}
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setCartOpen(true)
-                  }
-                  className="group relative flex h-10 items-center gap-1.5 rounded-xl px-2.5 text-brand-dark transition hover:bg-brand-soft"
-                  aria-label="Open cart"
-                >
-                  <ShoppingCart className="h-[20px] w-[20px] transition-transform group-hover:scale-105" />
-
-                  <span className="hidden text-[12px] font-black xl:inline">
-                    Cart
-                  </span>
-
-                  {totalQty > 0 ? (
-                    <span className="absolute right-0 top-0 flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-brand-primary px-1 text-[12px] font-black text-brand-dark ring-2 ring-white">
-                      {totalQty > 99
-                        ? "99+"
-                        : totalQty}
-                    </span>
-                  ) : null}
-                </button>
-
-                {/* SELLER CTA */}
-
-                <Link
-                  href="/vendor/register"
-                  className="ml-1 hidden h-10 items-center justify-center rounded-xl bg-brand-primary px-4 text-[12px] font-black text-brand-dark shadow-[0_6px_18px_rgba(183,227,58,0.18)] transition duration-200 hover:-translate-y-0.5 hover:bg-brand-hover md:flex"
-                >
-                  Seller Bano
-                </Link>
               </div>
             </div>
           </div>
@@ -825,45 +820,7 @@ export function Navbar({
             CATEGORY / SECOND NAV
         ================================================= */}
 
-        <div className="border-b border-black/[0.055] bg-[#fafbf7]">
-          <div className="mx-auto flex max-w-7xl items-center px-4 sm:px-6">
-            <Link
-              href="/products"
-              className="flex h-9 shrink-0 items-center gap-2 border-r border-black/[0.08] pr-4 text-[12px] font-black text-brand-dark transition hover:text-brand-link"
-            >
-              <Menu className="h-3.5 w-3.5" />
-
-              Categories
-
-              <ChevronDown className="h-3 w-3 text-black/35" />
-            </Link>
-
-            <nav className="hide-scrollbar flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto pl-2">
-              {navCategories.map(
-                (category) => (
-                  <Link
-                    key={
-                      category
-                    }
-                    href={`/products?category=${encodeURIComponent(
-                      category
-                    )}`}
-                    className="shrink-0 rounded-lg px-3 py-2 text-[12px] font-bold text-black/58 transition hover:bg-brand-soft hover:text-brand-link"
-                  >
-                    {category}
-                  </Link>
-                )
-              )}
-            </nav>
-
-            <Link
-              href="/wants/trending"
-              className="ml-2 hidden shrink-0 items-center rounded-lg bg-brand-soft px-3 py-1.5 text-[12px] font-black text-brand-link transition hover:bg-brand-primary hover:text-brand-dark lg:inline-flex"
-            >
-              Trending Wants
-            </Link>
-          </div>
-        </div>
+        <CategoryNavigation />
       </header><MarketplaceNav />
 
       {/* ===================================================
@@ -878,8 +835,10 @@ export function Navbar({
             <div>
               <LogoMark compact />
 
-              <p className="mt-1 text-[12px] font-bold uppercase tracking-[0.08em] text-black/35">
-                People • Products • Vendors • Together
+              <p className="mt-1 whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.07em]">
+                <span className="joro-tagline-market">Apni Market</span>
+                <span className="joro-tagline-dot px-[3px]">•</span>
+                <span className="joro-tagline-choice">Apni Choice</span>
               </p>
             </div>
 
@@ -931,10 +890,6 @@ export function Navbar({
 
                   Want Post Karo
                 </span>
-
-                <span className="rounded-full bg-brand-dark px-2 py-1 text-[12px] font-black uppercase tracking-wider text-brand-primary">
-                  Hot
-                </span>
               </Link>
 
               <Link
@@ -950,7 +905,7 @@ export function Navbar({
               </Link>
 
               <Link
-                href="/vendor/register"
+                href="/sell"
                 onClick={() =>
                   setMobileOpen(
                     false
@@ -960,10 +915,14 @@ export function Navbar({
               >
                 <Store className="h-4 w-4 text-brand-primary" />
 
-                Seller Bano
+                Sell on JORO
               </Link>
             </div>
 
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <Link href="/together" onClick={() => setMobileOpen(false)} className="rounded-xl bg-brand-soft px-4 py-3 text-sm font-bold text-brand-link">Together</Link>
+              <Link href="/stores" onClick={() => setMobileOpen(false)} className="rounded-xl bg-brand-soft px-4 py-3 text-sm font-bold text-brand-link">Stores</Link>
+            </div>
             {/* CATEGORIES */}
 
             <div className="my-5 h-px bg-black/[0.07]" />

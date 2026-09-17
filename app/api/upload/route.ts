@@ -1,3 +1,4 @@
+import {imageExtension} from "@/lib/security/image-signature";
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
@@ -15,6 +16,7 @@ const WANT_GUEST_FOLDER = "inrange-wants";
 const ADMIN_PRODUCT_FOLDER = "inrange-products";
 const ADMIN_CATEGORY_FOLDER = "categories-local";
 const ADMIN_LOCAL_PRODUCT_FOLDER = "products-local";
+const ADMIN_PROMOTION_FOLDER = "promotions-local";
 
 const ALLOWED_TYPES = new Set([
   "image/jpeg",
@@ -56,6 +58,7 @@ export async function POST(req: NextRequest) {
   const isWantPhoto = folderRaw === WANT_GUEST_FOLDER;
   const isCategoryUpload = folderRaw === ADMIN_CATEGORY_FOLDER;
   const isLocalProductUpload = folderRaw === ADMIN_LOCAL_PRODUCT_FOLDER;
+  const isPromotionUpload = folderRaw === ADMIN_PROMOTION_FOLDER;
   const customerSession =
     isPayment || isReviewPhoto || isWantPhoto
       ? await getCustomerSession()
@@ -82,6 +85,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Max 5MB" }, { status: 400 });
     }
     const buf = new Uint8Array(await file.arrayBuffer());
+    if (!imageExtension(buf,mime)) return NextResponse.json({error:"Image bytes do not match the declared type."},{status:400});
     const ext =
       mime === "image/png"
         ? "png"
@@ -123,7 +127,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Max 5MB" }, { status: 400 });
     }
   } else {
-    const auth = await requireAdminPermission("catalog.manage");
+    const auth = await requireAdminPermission(isPromotionUpload ? "homepage.manage" : "catalog.manage");
     if ("response" in auth) return auth.response;
     if (file.size > MAX_ADMIN) {
       return NextResponse.json({ error: "Max 8MB" }, { status: 400 });
@@ -131,6 +135,7 @@ export async function POST(req: NextRequest) {
   }
 
   const buf = new Uint8Array(await file.arrayBuffer());
+    if (!imageExtension(buf,mime)) return NextResponse.json({error:"Image bytes do not match the declared type."},{status:400});
 
   try {
     if (isPayment) {
@@ -148,7 +153,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    if (isCategoryUpload || isLocalProductUpload) {
+    if (isCategoryUpload || isLocalProductUpload || isPromotionUpload) {
       const ext =
         mime === "image/png"
           ? "png"
@@ -162,17 +167,18 @@ export async function POST(req: NextRequest) {
         .replace(/^-+|-+$/g, "")
         .slice(0, 50) || "category";
       const fileName = `${Date.now()}-${safeBase}.${ext}`;
+      const subfolder = isCategoryUpload ? "categories" : isPromotionUpload ? "promotions" : "products";
       const uploadDir = path.join(
         process.cwd(),
         "public",
         "uploads",
-        isCategoryUpload ? "categories" : "products"
+        subfolder
       );
       await fs.mkdir(uploadDir, { recursive: true });
       await fs.writeFile(path.join(uploadDir, fileName), Buffer.from(buf));
       return NextResponse.json({
         id: fileName,
-        url: `/uploads/${isCategoryUpload ? "categories" : "products"}/${fileName}`,
+        url: `/uploads/${subfolder}/${fileName}`,
       });
     }
 

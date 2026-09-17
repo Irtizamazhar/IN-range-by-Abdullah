@@ -42,7 +42,7 @@ function statusBadgeClass(status: string) {
 }
 
 export default async function VendorDashboardPage() {
-  const row = await getVendorFromSession();
+  const row = await getVendorFromSession({ allowUnapproved: true });
   if (!row) {
     redirect("/vendor/login");
   }

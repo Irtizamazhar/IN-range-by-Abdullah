@@ -65,6 +65,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
   }
 
+  if (vendor.status === "onboarding") return NextResponse.json({ error: "Seller setup must be completed and submitted before review." }, { status: 409 });
   const wasAlreadyApproved = vendor.status === "approved";
   const adminActorId = auth.admin.id;
 

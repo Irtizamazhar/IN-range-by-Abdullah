@@ -25,7 +25,9 @@ export function PasswordToggleInput({
       />
       <button
         type="button"
-        tabIndex={-1}
+        aria-pressed={show}
+        aria-controls={props.id}
+        disabled={props.disabled}
         onClick={() => setShow((s) => !s)}
         className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-lg p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800"
         aria-label={show ? "Hide password" : "Show password"}

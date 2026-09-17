@@ -5,7 +5,7 @@ import { vendorWantMatchService } from "@/lib/vendor-want-match-service";
 import { WantCard } from "@/components/user/WantCard";
 export const dynamic = "force-dynamic";
 export default async function DemandPage() {
-  const session = await getVendorFromSession(); if (!session) redirect("/vendor/login");
+  const session = await getVendorFromSession({ allowUnapproved: true }); if (!session) redirect("/vendor/login");
   if (session.vendor.status !== "approved") return <main className="p-6"><h1 className="text-3xl font-bold">Customer Demand</h1><p className="my-4">Your store must be approved before you can browse customer demand.</p></main>;
   const matches = await vendorWantMatchService(session.vendor.id);
   const matching = matches.filter(m => m.score > 0);

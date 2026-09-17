@@ -264,7 +264,7 @@ async function main() {
     await adminPage.getByRole("heading", { name: "Wants moderation" }).waitFor();
     assert.ok(await adminPage.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), `admin Wants moderation overflow at ${width}px`);
   }
-  assert.ok((await adminPage.content()).includes("Need used furniture"));
+  await adminPage.getByText("Need used furniture", { exact: true }).waitFor();
   await adminContext.close();
 
   // Vendor browser session

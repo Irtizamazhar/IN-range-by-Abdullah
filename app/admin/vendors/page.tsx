@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 import toast from "react-hot-toast";
 
-type VendorStatus = "pending" | "approved" | "rejected" | "suspended";
+type VendorStatus = "onboarding" | "pending" | "approved" | "rejected" | "suspended";
 
 type VendorDoc = {
   id: string;
@@ -20,13 +20,16 @@ type AdminVendorRow = {
   email: string;
   phone: string;
   city: string;
-  cnic: string;
+  cnic: string | null;
   address: string;
   businessType: string;
   businessRegNo: string | null;
   bankName: string;
   accountTitle: string;
   accountNumber: string;
+  iban: string | null;
+  storeSlug: string | null;
+  onboardingData: Record<string, string | boolean | number> | null;
   primaryCategory: string;
   shopDescription: string | null;
   status: VendorStatus;
@@ -45,6 +48,7 @@ type RiskMini = { riskLevel: "GREEN" | "YELLOW" | "RED"; riskScore: number };
 
 const STATUS_OPTIONS: { value: "" | VendorStatus; label: string }[] = [
   { value: "", label: "All" },
+  { value: "onboarding", label: "Setup incomplete" },
   { value: "pending", label: "Pending review" },
   { value: "approved", label: "Approved" },
   { value: "rejected", label: "Rejected" },
@@ -77,6 +81,8 @@ function formatDate(iso: string) {
 export default function AdminVendorsPage() {
   const [filter, setFilter] = useState<"" | VendorStatus>("pending");
   const [rows, setRows] = useState<AdminVendorRow[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -87,12 +93,13 @@ export default function AdminVendorsPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const q = filter ? `?status=${encodeURIComponent(filter)}` : "";
+      const q = `?page=${page}${filter ? `&status=${encodeURIComponent(filter)}` : ""}`;
       const r = await fetch(`/api/admin/vendors${q}`, {
         credentials: "same-origin",
       });
       const data = (await r.json()) as {
         vendors?: AdminVendorRow[];
+        total?: number;
         error?: string;
       };
       if (!r.ok) {
@@ -101,13 +108,14 @@ export default function AdminVendorsPage() {
         return;
       }
       setRows(data.vendors || []);
+      setTotal(data.total || 0);
     } catch {
       toast.error("Network error");
       setRows([]);
     } finally {
       setLoading(false);
     }
-  }, [filter]);
+  }, [filter, page]);
 
   useEffect(() => {
     void load();
@@ -121,7 +129,7 @@ export default function AdminVendorsPage() {
         return;
       }
       const entries = await Promise.all(
-        rows.map(async (r) => {
+        rows.filter(r => r.id === expanded).map(async (r) => {
           try {
             const res = await fetch(
               `/api/admin/vendors/${encodeURIComponent(r.id)}/risk-score`
@@ -146,7 +154,7 @@ export default function AdminVendorsPage() {
     return () => {
       cancelled = true;
     };
-  }, [rows]);
+  }, [rows, expanded]);
 
   async function patch(
     id: string,
@@ -205,7 +213,7 @@ export default function AdminVendorsPage() {
             id="vf"
             value={filter}
             onChange={(e) =>
-              setFilter(e.target.value as "" | VendorStatus)
+              (setFilter(e.target.value as "" | VendorStatus), setPage(1))
             }
             className="rounded-lg border border-borderGray px-3 py-2 text-sm font-medium"
           >
@@ -349,9 +357,7 @@ export default function AdminVendorsPage() {
                 {v.status === "pending" && !v.isEmailVerified ? (
                   <div className="px-4 pb-4 text-sm text-amber-800 bg-amber-50/80 border-t border-amber-100">
                     Email not verified yet — you can still use{" "}
-                    <strong>Approve</strong> or <strong>Reject</strong>. After
-                    approval, the seller must verify their email (link in inbox
-                    or resend) before they can sign in.
+                    <strong>Approve</strong> or <strong>Reject</strong>. Approval also marks this account verified and grants dashboard access.
                   </div>
                 ) : null}
 
@@ -382,6 +388,29 @@ export default function AdminVendorsPage() {
                         </p>
                       </div>
                     </div>
+                    <section className="rounded-xl border bg-white p-4">
+                      <h3 className="font-bold">Private operational details</h3>
+                      <dl className="mt-3 grid gap-3 sm:grid-cols-2">
+                        {Object.entries({ "Store slug": v.storeSlug, IBAN: v.iban,
+                          "Registered business name": v.onboardingData?.businessLegalName,
+                          "NTN (optional)": v.onboardingData?.taxNumber,
+                          "Business province": v.onboardingData?.province,
+                          "Business postal code": v.onboardingData?.postalCode,
+                          "Pickup address": v.onboardingData?.pickupAddress,
+                          "Pickup city": v.onboardingData?.pickupCity,
+                          "Pickup province": v.onboardingData?.pickupProvince,
+                          "Pickup postal code": v.onboardingData?.pickupPostalCode,
+                          "Pickup contact": v.onboardingData?.pickupContactName,
+                          "Pickup phone": v.onboardingData?.pickupPhone,
+                          "Return address": v.onboardingData?.returnSameAsPickup ? "Same as pickup" : v.onboardingData?.returnAddress,
+                          "Return city": v.onboardingData?.returnSameAsPickup ? v.onboardingData?.pickupCity : v.onboardingData?.returnCity,
+                          "Return province": v.onboardingData?.returnSameAsPickup ? v.onboardingData?.pickupProvince : v.onboardingData?.returnProvince,
+                          "Return postal code": v.onboardingData?.returnSameAsPickup ? v.onboardingData?.pickupPostalCode : v.onboardingData?.returnPostalCode,
+                          "Return contact": v.onboardingData?.returnSameAsPickup ? v.onboardingData?.pickupContactName : v.onboardingData?.returnContactName,
+                          "Return phone": v.onboardingData?.returnSameAsPickup ? v.onboardingData?.pickupPhone : v.onboardingData?.returnPhone,
+                        }).map(([label, value]) => <div key={label} className="min-w-0"><dt className="text-xs text-neutral-500">{label}</dt><dd className="break-words">{String(value || "Not provided")}</dd></div>)}
+                      </dl>
+                    </section>
                     {v.shopDescription ? (
                       <div>
                         <p className="font-bold text-darkText">Shop note</p>
@@ -446,6 +475,11 @@ export default function AdminVendorsPage() {
         </div>
       )}
 
+      <nav aria-label="Vendor pages" className="my-6 flex flex-wrap items-center gap-3 text-sm">
+        <button disabled={loading || page <= 1} onClick={() => setPage(p => p - 1)} className="rounded-lg border px-4 py-2 disabled:opacity-40">Previous</button>
+        <span>Page {page} of {Math.max(1, Math.ceil(total / 20))} · {total} vendors</span>
+        <button disabled={loading || page * 20 >= total} onClick={() => setPage(p => p + 1)} className="rounded-lg border px-4 py-2 disabled:opacity-40">Next</button>
+      </nav>
       {rejectFor ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">

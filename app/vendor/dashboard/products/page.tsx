@@ -32,7 +32,7 @@ function formatPrice(value: unknown): string {
 }
 
 export default async function VendorProductsPage() {
-  const row = await getVendorFromSession();
+  const row = await getVendorFromSession({ allowUnapproved: true });
   if (!row) {
     redirect("/vendor/login");
   }

@@ -6,7 +6,7 @@ import { VendorProductForm } from "@/components/vendor/VendorProductForm";
 export const dynamic = "force-dynamic";
 
 export default async function VendorNewProductPage() {
-  const row = await getVendorFromSession();
+  const row = await getVendorFromSession({ allowUnapproved: true });
   if (!row) {
     redirect("/vendor/login");
   }

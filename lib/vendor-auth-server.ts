@@ -8,7 +8,7 @@ import type { VendorMe } from "@/lib/vendor-me-type";
 
 export type VendorMePayload = VendorMe;
 
-export async function getVendorFromSession(): Promise<{
+export async function getVendorFromSession(options: { allowUnapproved?: boolean } = {}): Promise<{
   vendor: VendorMePayload;
 } | null> {
   if (!resolveVendorJwtSecretKey()) return null;
@@ -66,6 +66,7 @@ export async function getVendorFromSession(): Promise<{
     });
     return null;
   }
+  if (!options.allowUnapproved && session.vendor.status !== "approved") return null;
   return { vendor: session.vendor };
 }
 

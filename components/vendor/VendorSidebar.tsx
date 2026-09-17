@@ -15,6 +15,7 @@ import {
   CircleDollarSign,
   ShieldAlert,
   RotateCcw,
+  LifeBuoy,
 } from "lucide-react";
 import { LogoMark } from "@/components/user/LogoMark";
 import { clearVendorLoginRememberPrefs } from "@/lib/vendor-login-remember-prefs";
@@ -91,6 +92,11 @@ const links: {
     href: "/vendor/dashboard/account-status",
     label: "Account Status",
     icon: ShieldAlert,
+  },
+  {
+    href: "/vendor/dashboard/help",
+    label: "Help & Support",
+    icon: LifeBuoy,
   },
   {
     href: "/vendor/dashboard/settings",

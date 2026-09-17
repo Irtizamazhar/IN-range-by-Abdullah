@@ -1,3 +1,4 @@
+import {imageExtension} from "@/lib/security/image-signature";
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
@@ -71,6 +72,7 @@ export async function POST(req: NextRequest) {
   try {
     await fs.mkdir(uploadDir, { recursive: true });
     const buf = Buffer.from(await file.arrayBuffer());
+    if (!imageExtension(buf,mime)) return NextResponse.json({error:"Image bytes do not match the declared type."},{status:400});
     await fs.writeFile(path.join(uploadDir, fileName), buf);
     return NextResponse.json({
       url: `/api/private/vendor-appeals/${vendor.id}/${fileName}`,

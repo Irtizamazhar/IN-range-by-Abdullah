@@ -5,7 +5,7 @@ import { EarningsClient } from "../earnings/EarningsClient";
 export const dynamic = "force-dynamic";
 
 export default async function VendorWithdrawalsPage() {
-  const row = await getVendorFromSession();
+  const row = await getVendorFromSession({ allowUnapproved: true });
   if (!row) redirect("/vendor/login");
   if (row.vendor.status !== "approved") {
     redirect("/vendor/dashboard");

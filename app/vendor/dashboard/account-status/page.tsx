@@ -4,7 +4,7 @@ import { getVendorFromSession } from "@/lib/vendor-auth-server";
 export const dynamic = "force-dynamic";
 
 export default async function VendorAccountStatusPage() {
-  const row = await getVendorFromSession();
+  const row = await getVendorFromSession({ allowUnapproved: true });
   if (!row) redirect("/vendor/login");
 
   const v = row.vendor;

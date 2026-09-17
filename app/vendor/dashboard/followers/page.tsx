@@ -4,7 +4,7 @@ import { getVendorFromSession } from "@/lib/vendor-auth-server";
 import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 export default async function FollowersPage() {
-  const session = await getVendorFromSession(); if (!session) redirect("/vendor/login");
+  const session = await getVendorFromSession({ allowUnapproved: true }); if (!session) redirect("/vendor/login");
   const vendorId = session.vendor.id;
   const [total, recent, store] = await Promise.all([
     prisma.storeFollow.count({ where: { vendorId } }),

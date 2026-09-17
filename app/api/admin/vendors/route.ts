@@ -6,6 +6,7 @@ import { requireAdminPermission } from "@/lib/admin-rbac";
 import { prisma } from "@/lib/prisma";
 
 const STATUSES: VendorAccountStatus[] = [
+  "onboarding",
   "pending",
   "approved",
   "rejected",
@@ -23,7 +24,12 @@ export async function GET(req: NextRequest) {
       : undefined;
 
   try {
+    const page = Math.max(1, Math.min(100000, Number(req.nextUrl.searchParams.get("page")) || 1));
+    const pageSize = 20;
+    const total = await prisma.vendor.count({where: status ? {status} : undefined});
     const vendors = await prisma.vendor.findMany({
+      take: pageSize,
+      skip: (Math.floor(page) - 1) * pageSize,
       where: status ? { status } : undefined,
       orderBy: { createdAt: "desc" },
       select: {
@@ -40,6 +46,10 @@ export async function GET(req: NextRequest) {
         bankName: true,
         accountTitle: true,
         accountNumber: true,
+        iban: true,
+        storeSlug: true,
+        onboardingData: true,
+        onboardingSubmittedAt: true,
         primaryCategory: true,
         shopDescription: true,
         specialCommissionRate: true,
@@ -68,6 +78,7 @@ export async function GET(req: NextRequest) {
     });
 
     return NextResponse.json({
+      total, page: Math.floor(page), pageSize,
       vendors: vendors.map((v) => ({
         ...v,
         latestAppeal:

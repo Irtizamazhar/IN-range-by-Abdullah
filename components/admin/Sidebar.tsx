@@ -20,6 +20,7 @@ import {
   RotateCcw,
   ShieldCheck,
   Users,
+  LifeBuoy,
 } from "lucide-react";
 import { LogoMark } from "@/components/user/LogoMark";
 
@@ -80,6 +81,7 @@ const links = [
     icon: Truck,
   },
   { href: "/admin/vendors", label: "Vendors", icon: Store },
+  { href: "/admin/vendors/top-vendors", label: "Top Vendors", icon: Star },
   { href: "/admin/customers", label: "Customers", icon: Users },
   { href: "/admin/dashboard/after-sales", label: "After-sales", icon: RotateCcw },
   { href: "/admin/dashboard/team", label: "Admin Team", icon: ShieldCheck },
@@ -93,6 +95,7 @@ const links = [
     label: "Commission",
     icon: Percent,
   },
+  { href: "/admin/support", label: "Support", icon: LifeBuoy },
   { href: "/admin/notifications", label: "Notifications", icon: Bell },
   { href: "/admin/reviews", label: "Reviews", icon: Star },
   { href: "/admin/settings", label: "Settings", icon: Settings },

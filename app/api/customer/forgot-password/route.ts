@@ -1,3 +1,4 @@
+import {appOrigin} from "@/lib/app-url";
 export const dynamic = "force-dynamic";
 
 import { createHash, randomBytes } from "crypto";
@@ -61,7 +62,7 @@ export async function POST(req: NextRequest) {
     }),
   ]);
 
-  const base = (process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin).replace(/\/$/, "");
+  const base = appOrigin();
   const url = `${base}/reset-password?token=${encodeURIComponent(token)}`;
   const sent = await sendMail({
     to: customer.email,

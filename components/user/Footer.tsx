@@ -2,12 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import {
-  HeartHandshake,
-  ShieldCheck,
-  Store,
-  Truck,
-} from "lucide-react";
 
 import { LogoMark } from "./LogoMark";
 import { WhatsAppIconLink } from "./WhatsAppButton";
@@ -46,65 +40,6 @@ export function Footer({
 
   return (
     <footer className="mt-auto bg-brand-dark text-white">
-      <div className="border-b border-white/[0.07] bg-[#0d1410]">
-        <div className="mx-auto grid max-w-7xl grid-cols-2 gap-px bg-white/[0.06] sm:grid-cols-4">
-          {[
-            [
-              ShieldCheck,
-              "Secure Payments",
-              "Multiple payment options",
-            ],
-            [
-              Truck,
-              "Nationwide Delivery",
-              "Across Pakistan",
-            ],
-            [
-              Store,
-              "Verified Sellers",
-              "Marketplace confidence",
-            ],
-            [
-              HeartHandshake,
-              "Support Local",
-              "Grow together",
-            ],
-          ].map(
-            ([
-              Icon,
-              title,
-              text,
-            ]) => {
-              const BenefitIcon =
-                Icon as typeof ShieldCheck;
-
-              return (
-                <div
-                  key={String(
-                    title
-                  )}
-                  className="bg-[#0d1410] px-4 py-4 text-center sm:text-left"
-                >
-                  <BenefitIcon className="mx-auto h-5 w-5 text-brand-primary sm:mx-0" />
-
-                  <p className="mt-2 text-[12px] font-black">
-                    {String(
-                      title
-                    )}
-                  </p>
-
-                  <p className="mt-0.5 text-[11px] font-medium text-white/45">
-                    {String(
-                      text
-                    )}
-                  </p>
-                </div>
-              );
-            }
-          )}
-        </div>
-      </div>
-
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:py-12">
         <div className="grid gap-9 md:grid-cols-2 lg:grid-cols-[1.35fr_1fr_1fr_1.15fr]">
           <div>
@@ -114,7 +49,7 @@ export function Footer({
             />
 
             <p className="mt-1 text-[11px] font-bold text-brand-primary/85">
-              Customers aur vendors ko joro
+              APNI MARKET • APNI CHOICE
             </p>
 
             <p className="mt-4 max-w-sm text-xs font-medium leading-5 text-white/45">
@@ -134,7 +69,7 @@ export function Footer({
               />
 
               <span className="rounded-full border border-white/10 px-3 py-1.5 text-[11px] font-bold text-white/45">
-                Pakistan ko joro
+                Made for Pakistan
               </span>
             </div>
           </div>
@@ -183,12 +118,11 @@ export function Footer({
 
               <li>
                 <a
-                  href="/vendor/register"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  href="/sell"
+
                   className="font-bold text-brand-primary hover:text-white"
                 >
-                  Become a Seller
+                  Sell on JORO
                 </a>
               </li>
             </ul>
@@ -307,7 +241,7 @@ export function Footer({
           </span>
 
           <span>
-            People • Products • Vendors • Together
+            APNI MARKET • APNI CHOICE
           </span>
         </div>
       </div>

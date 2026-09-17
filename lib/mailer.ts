@@ -1,3 +1,4 @@
+import {appOrigin} from "@/lib/app-url";
 import nodemailer from "nodemailer";
 
 function createTransport() {
@@ -16,7 +17,7 @@ function createTransport() {
   });
 }
 
-const from = process.env.SMTP_FROM || process.env.SMTP_USER || "noreply@inrange.pk";
+function fromAddress() { return process.env.SMTP_FROM || process.env.SMTP_USER || ("noreply@" + new URL(appOrigin()).hostname); }
 
 export async function sendMail(opts: {
   to: string;
@@ -25,9 +26,10 @@ export async function sendMail(opts: {
   text?: string;
 }): Promise<boolean> {
   try {
+    if (!isMailConfigured()) return false;
     const transporter = createTransport();
     await transporter.sendMail({
-      from,
+      from: fromAddress(),
       to: opts.to,
       subject: opts.subject,
       text: opts.text,
@@ -45,5 +47,5 @@ export function isMailConfigured(): boolean {
 }
 
 export function getAdminEmail(): string {
-  return process.env.ADMIN_EMAIL || "admin@inrange.pk";
+  return process.env.ADMIN_EMAIL || "";
 }

@@ -6,7 +6,7 @@ import { vendorWantMatchService } from "@/lib/vendor-want-match-service";
 import { SubmitWantOffer } from "@/components/vendor/SubmitWantOffer";
 export const dynamic = "force-dynamic";
 export default async function DemandDetail({ params }: { params: { id: string } }) {
-  const session = await getVendorFromSession(); if (!session) redirect("/vendor/login");
+  const session = await getVendorFromSession({ allowUnapproved: true }); if (!session) redirect("/vendor/login");
   if (session.vendor.status !== "approved") return <main className="mx-auto max-w-4xl p-6"><h1 className="text-3xl font-bold">Customer Demand</h1><p className="my-4">Your store must be approved before you can view demand details.</p></main>;
   const want = await prisma.want.findFirst({ where: { id: params.id, status: "OPEN", expiresAt: { gt: new Date() } }, select: { id: true, title: true, description: true, category: true, city: true, quantity: true, condition: true, budgetMin: true, budgetMax: true, budgetFlexible: true, expiresAt: true, _count: { select: { interests: true } } } });
   if (!want) notFound();

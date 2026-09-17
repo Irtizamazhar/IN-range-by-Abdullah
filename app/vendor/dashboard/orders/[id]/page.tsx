@@ -13,6 +13,7 @@ import {
 } from "@/components/orders/OrderDetail";
 import { StatusBadge, type ShopOrderStatusPill } from "@/components/orders/StatusBadge";
 import { VendorStatusDropdown } from "@/components/orders/VendorStatusDropdown";
+import { NeedHelpButton } from "@/components/support/NeedHelpButton";
 
 export default function VendorShopOrderDetailPage() {
   const params = useParams();
@@ -193,7 +194,10 @@ export default function VendorShopOrderDetailPage() {
               <span className="font-mono text-brand-dark">{data.parentOrderNumber}</span>
             </p>
           </div>
-          <StatusBadge status={data.orderStatus as ShopOrderStatusPill} />
+          <div className="flex items-center gap-2">
+            <StatusBadge status={data.orderStatus as ShopOrderStatusPill} />
+            <NeedHelpButton role="vendor" resourceType="VENDOR_SHOP_ORDER" resourceId={id} />
+          </div>
         </div>
 
         <div className="mt-8">

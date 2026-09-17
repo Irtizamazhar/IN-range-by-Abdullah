@@ -1,3 +1,4 @@
+import {imageExtension} from "@/lib/security/image-signature";
 import { promises as fs } from "fs";
 import path from "path";
 import type { VendorDocumentType } from "@prisma/client";
@@ -40,7 +41,7 @@ export async function saveVendorDocumentBuffer(
 ): Promise<void> {
   const mime = mimeRaw.toLowerCase().split(";")[0].trim();
   const normalized = mime === "image/jpg" ? "image/jpeg" : mime;
-  if (!ALLOWED.has(normalized) || buffer.length === 0 || buffer.length > MAX_BYTES) {
+  if (!ALLOWED.has(normalized) || buffer.length === 0 || buffer.length > MAX_BYTES || !imageExtension(buffer,normalized) || !/^[A-Za-z0-9_-]+$/.test(vendorId)) {
     throw new Error(`Invalid document image: ${documentType}`);
   }
   const dir = path.join(

@@ -130,6 +130,7 @@ export async function POST(req: NextRequest) {
 
   // Strict mode only when transactional email is enabled (see VENDOR_REQUIRE_EMAIL_VERIFICATION).
   if (
+    live.status !== "onboarding" && live.status !== "pending" && live.status !== "rejected" &&
     vendorEmailVerificationRequired() &&
     !live.isEmailVerified &&
     live.status !== "approved"
@@ -144,22 +145,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (live.status === "pending") {
-    return NextResponse.json(
-      { code: "pending", error: "Application under review" },
-      { status: 403 }
-    );
-  }
 
-  if (live.status === "rejected") {
-    return NextResponse.json(
-      {
-        code: "rejected",
-        error: live.rejectionReason?.trim() || "Your application was not approved.",
-      },
-      { status: 403 }
-    );
-  }
 
   if (live.status === "suspended") {
     const res = NextResponse.json(
@@ -214,6 +200,7 @@ export async function POST(req: NextRequest) {
   const res = NextResponse.json({
     ok: true,
     message: "Signed in",
+    next: ["onboarding","rejected"].includes(live.status) ? "/vendor/onboarding" : live.status === "pending" ? "/vendor/status" : "/vendor/dashboard",
     vendor: {
       id: live.id,
       shopName: live.shopName,

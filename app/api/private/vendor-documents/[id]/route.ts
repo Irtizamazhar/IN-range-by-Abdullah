@@ -32,7 +32,7 @@ export async function GET(_request: Request, context: Ctx) {
     const auth = await requireAdminPermission("vendors.manage");
     if ("response" in auth) return NextResponse.json({ error: "Not found" }, { status: 404 });
   } else {
-    const vendor = await getVendorFromSession();
+    const vendor = await getVendorFromSession({allowUnapproved:true});
     if (!vendor || vendor.vendor.id !== document.vendorId) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }

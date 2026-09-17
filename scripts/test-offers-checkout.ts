@@ -309,12 +309,13 @@ async function main() {
     }
     // Pakistani top strip: no clipping, no forced marquee, no page overflow
     const stripInfo = await page.evaluate(() => {
-      const el = document.querySelector(".joro-topstrip-scroll") as HTMLElement | null;
-      if (!el) return null;
-      const rect = el.getBoundingClientRect();
-      const first = el.querySelector(":scope > span:first-child") as HTMLElement | null;
+      const bar = document.querySelector(".joro-topstrip") as HTMLElement | null;
+      const win = document.querySelector(".joro-topstrip-window") as HTMLElement | null;
+      if (!bar || !win) return null;
+      const rect = bar.getBoundingClientRect();
+      const first = win.querySelector('.joro-topstrip-group:not([aria-hidden="true"]) .joro-topstrip-item:first-child') as HTMLElement | null;
       const firstRect = first?.getBoundingClientRect();
-      return { height: rect.height, firstLeftOk: firstRect ? firstRect.left >= rect.left - 0.5 : false, scrollWidth: el.scrollWidth, clientWidth: el.clientWidth };
+      return { height: rect.height, firstLeftOk: firstRect ? firstRect.left >= rect.left - 0.5 : false, scrollWidth: win.scrollWidth, clientWidth: win.clientWidth };
     });
     assert.ok(stripInfo, `top strip missing at ${width}px`);
     assert.ok(stripInfo!.height >= 30 && stripInfo!.height <= 44, `top strip height out of expected range at ${width}px`);

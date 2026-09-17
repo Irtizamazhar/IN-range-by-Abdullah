@@ -5,7 +5,7 @@ import { VENDOR_JWT_COOKIE } from "@/lib/vendor-cookies";
 import { getVendorFromSession } from "@/lib/vendor-auth-server";
 
 export async function GET() {
-  const row = await getVendorFromSession();
+  const row = await getVendorFromSession({ allowUnapproved: true });
   if (!row) {
     const res = NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const secure = process.env.NODE_ENV === "production";

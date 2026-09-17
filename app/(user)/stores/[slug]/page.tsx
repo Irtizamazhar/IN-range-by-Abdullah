@@ -1,3 +1,4 @@
+import {appOrigin} from "@/lib/app-url";
 import { notFound, redirect } from "next/navigation";
 import Image from "next/image";
 import { MapPin, PackageCheck, ShieldCheck, Star, FileText, Globe2 } from "lucide-react";
@@ -46,7 +47,7 @@ async function resolveVendor(param: string) {
 }
 
 function canonicalOrigin() {
-  const configured = process.env.CANONICAL_HOST || process.env.NEXT_PUBLIC_SITE_URL;
+  const configured = appOrigin();
   try {
     const url = new URL(configured || "");
     if (url.protocol !== "https:" || url.username || url.password) return null;

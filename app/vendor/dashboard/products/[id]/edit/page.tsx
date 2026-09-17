@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 type Props = { params: { id: string } };
 
 export default async function VendorEditProductPage({ params }: Props) {
-  const row = await getVendorFromSession();
+  const row = await getVendorFromSession({ allowUnapproved: true });
   if (!row) {
     redirect("/vendor/login");
   }

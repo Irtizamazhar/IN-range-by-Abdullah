@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import toast from "react-hot-toast";
 
@@ -60,6 +61,7 @@ export function CustomerAuthProvider({
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
   const { data: session, status, update } = useSession();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("signup");
@@ -76,9 +78,8 @@ export function CustomerAuthProvider({
   const authLoading = status === "loading";
 
   const openAuthModal = useCallback((t: Tab = "signup") => {
-    setTab(t);
-    setOpen(true);
-  }, []);
+    router.push("/login?role=customer&mode=" + (t === "signup" ? "signup" : "signin") + "&callbackUrl=" + encodeURIComponent(window.location.pathname + window.location.search));
+  }, [router]);
 
   const closeAuthModal = useCallback(() => {
     setOpen(false);

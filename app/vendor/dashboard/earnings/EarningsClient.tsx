@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { formatPKR } from "@/lib/format";
+import { NeedHelpButton } from "@/components/support/NeedHelpButton";
 
 type EarningRow = {
   id: string;
@@ -253,11 +254,14 @@ export function EarningsClient({
               {pendingWd.map((w) => (
                 <li
                   key={w.id}
-                  className="rounded-lg border border-borderGray bg-white px-4 py-2"
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-borderGray bg-white px-4 py-2"
                 >
-                  {formatPKR(w.requestedAmount)} ·{" "}
-                  <span className="font-semibold capitalize">{w.status}</span> ·{" "}
-                  {new Date(w.requestedAt).toLocaleString("en-PK")}
+                  <span>
+                    {formatPKR(w.requestedAmount)} ·{" "}
+                    <span className="font-semibold capitalize">{w.status}</span> ·{" "}
+                    {new Date(w.requestedAt).toLocaleString("en-PK")}
+                  </span>
+                  <NeedHelpButton role="vendor" resourceType="WITHDRAWAL" resourceId={w.id} />
                 </li>
               ))}
             </ul>
