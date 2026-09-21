@@ -39,14 +39,14 @@ async function main(){
    await prisma.customer.update({where:{id:first.id},data:{isActive:true}});
    pass(provider+": new/repeated identity, stable customer mapping, customer-only JWT and inactive rejection");
   }
-  const collision=await prisma.customer.create({data:{name:"Existing",email:run+"-collision@example.invalid",passwordHash:"existing-password"}});
+    const collision=await prisma.customer.create({data:{name:"Existing",email:run+"-collision@example.invalid",passwordHash:"existing-password"}});
   for(const provider of ["google","facebook"] as const){
    const id=run+"-collision-"+provider;const profile={sub:id,id,email_verified:true,email:collision.email};
-   await assert.rejects(resolveCustomerOAuth({provider,providerAccountId:id,profile}),e=>e instanceof CustomerOAuthError&&e.code==="OAuthAccountNotLinked");
-   const result=await cb.signIn!({account:{provider,providerAccountId:id},profile,user:{}} as any);assert.equal(result,"/login?role=customer&mode=signin&error=OAuthAccountNotLinked");
+    const result=await resolveCustomerOAuth({provider,providerAccountId:id,profile});
+    assert.equal(result.id,collision.id);
+    assert.equal((await prisma.customerOAuthAccount.count({where:{customerId:collision.id}})),provider==="google"?1:2);
   }
-  assert.equal(await prisma.customerOAuthAccount.count({where:{customerId:collision.id}}),0);
-  pass("Google/Facebook same-email collisions neither sign in nor link existing account");
+    pass("Google and Facebook verified emails link existing customers");
   await assert.rejects(resolveCustomerOAuth({provider:"google",providerAccountId:run+"-unverified",profile:{sub:run+"-unverified",email:run+"-unverified@example.invalid",email_verified:false}}));
   await assert.rejects(resolveCustomerOAuth({provider:"facebook",providerAccountId:run+"-noemail",profile:{id:run+"-noemail"}}));
   pass("unverified Google email and missing Facebook email reject cleanly");

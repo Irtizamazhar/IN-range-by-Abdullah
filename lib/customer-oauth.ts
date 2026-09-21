@@ -11,6 +11,11 @@ export async function resolveCustomerOAuth(input: { provider: CustomerOAuthProvi
   const { provider, providerAccountId, profile } = input;
   const subject = provider === "google" ? profile.sub : profile.id;
   if (!providerAccountId || providerAccountId.length > 191 || subject !== providerAccountId) throw new CustomerOAuthError("AccessDenied");
+  const image = typeof profile.picture === "string"
+    ? profile.picture
+    : profile.picture && typeof profile.picture === "object" && "data" in profile.picture && typeof profile.picture.data === "object" && profile.picture.data && "url" in profile.picture.data && typeof profile.picture.data.url === "string"
+      ? profile.picture.data.url
+      : null;
   const key = { provider, providerAccountId };
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
@@ -18,14 +23,28 @@ export async function resolveCustomerOAuth(input: { provider: CustomerOAuthProvi
         const linked = await tx.customerOAuthAccount.findUnique({ where: { provider_providerAccountId: key }, include: { customer: true } });
         if (linked) {
           if (!linked.customer.isActive) throw new CustomerOAuthError("AccessDenied");
+          if (image && linked.customer.image !== image) {
+            await tx.customer.update({ where: { id: linked.customer.id }, data: { image } });
+          }
           return linked.customer;
         }
         const email = typeof profile.email === "string" ? profile.email.trim().toLowerCase() : "";
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 255 || (provider === "google" && profile.email_verified !== true)) throw new CustomerOAuthError("OAuthEmailRequired");
         if (email === process.env.ADMIN_EMAIL?.trim().toLowerCase()) throw new CustomerOAuthError("AccessDenied");
-        if (await tx.customer.findUnique({ where: { email }, select: { id: true } })) throw new CustomerOAuthError("OAuthAccountNotLinked");
+        const existing = await tx.customer.findUnique({ where: { email } });
+        if (existing) {
+          if (!existing.isActive) throw new CustomerOAuthError("OAuthAccountNotLinked");
+          return tx.customer.update({
+            where: { id: existing.id },
+            data: {
+              name: sanitizePlainText(profile.name, 200) || existing.name,
+              image: image || existing.image,
+              oauthAccounts: { create: key },
+            },
+          });
+        }
         return tx.customer.create({ data: {
-          email, name: sanitizePlainText(profile.name, 200) || "Customer", provider,
+          email, name: sanitizePlainText(profile.name, 200) || "Customer", image, provider,
           // Non-bcrypt, random, unusable for password login. Password reset remains the recovery path.
           passwordHash: `oauth-only:${randomBytes(32).toString("hex")}`,
           oauthAccounts: { create: key },

@@ -456,10 +456,7 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
                       className={socialBtnClass}
                       onClick={() =>
                         void signIn("google", {
-                          callbackUrl:
-                            typeof window !== "undefined"
-                              ? window.location.pathname + window.location.search
-                              : "/",
+                          callbackUrl: "/",
                         }, {
                           prompt: "select_account",
                         })

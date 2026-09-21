@@ -2,12 +2,12 @@ import {appOrigin} from "@/lib/app-url";
 import nodemailer from "nodemailer";
 
 function createTransport() {
-  const host = process.env.SMTP_HOST || "smtp.gmail.com";
-  const port = Number(process.env.SMTP_PORT || 587);
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
+  const host = process.env.EMAIL_HOST?.trim() || process.env.SMTP_HOST?.trim() || "smtp.gmail.com";
+  const port = Number(process.env.EMAIL_PORT || process.env.SMTP_PORT || 587);
+  const user = process.env.EMAIL_USER?.trim() || process.env.SMTP_USER?.trim();
+  const pass = process.env.EMAIL_PASS?.trim() || process.env.SMTP_PASS?.trim();
   if (!user || !pass) {
-    console.warn("SMTP_USER/SMTP_PASS not set — emails will not send");
+    console.warn("EMAIL_USER/EMAIL_PASS or SMTP_USER/SMTP_PASS not set — emails will not send");
   }
   return nodemailer.createTransport({
     host,
@@ -17,7 +17,9 @@ function createTransport() {
   });
 }
 
-function fromAddress() { return process.env.SMTP_FROM || process.env.SMTP_USER || ("noreply@" + new URL(appOrigin()).hostname); }
+function fromAddress() {
+  return process.env.EMAIL_FROM?.trim() || process.env.SMTP_FROM?.trim() || process.env.EMAIL_USER?.trim() || process.env.SMTP_USER?.trim() || ("noreply@" + new URL(appOrigin()).hostname);
+}
 
 export async function sendMail(opts: {
   to: string;
@@ -43,7 +45,9 @@ export async function sendMail(opts: {
 }
 
 export function isMailConfigured(): boolean {
-  return Boolean(process.env.SMTP_USER?.trim() && process.env.SMTP_PASS?.trim());
+  const user = process.env.EMAIL_USER?.trim() || process.env.SMTP_USER?.trim();
+  const pass = process.env.EMAIL_PASS?.trim() || process.env.SMTP_PASS?.trim();
+  return Boolean(user && pass);
 }
 
 export function getAdminEmail(): string {

@@ -48,6 +48,16 @@ const nextConfig = {
         hostname: "lh3.googleusercontent.com",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "*.fbcdn.net",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "platform-lookaside.fbsbx.com",
+        pathname: "/**",
+      },
     ],
   },
   /** Applies to `npm run dev` (webpack). Not used with `npm run dev:turbo` (Turbopack). */

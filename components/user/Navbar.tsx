@@ -735,7 +735,7 @@ export function Navbar({
                         <User className="h-[19px] w-[19px]" />
                       )}
 
-                      <span className="hidden max-w-[68px] truncate text-[12px] font-black xl:inline">
+                      <span className="max-w-[120px] truncate text-[12px] font-black">
                         {session.user
                           ?.name ||
                           "Account"}

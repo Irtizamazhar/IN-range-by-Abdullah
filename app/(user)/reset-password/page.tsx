@@ -30,6 +30,8 @@ export default function ResetPasswordPage() {
       if (!response.ok) return toast.error(data.error || "Could not reset password");
       setComplete(true);
       toast.success("Password updated");
+    } catch {
+      toast.error("Could not reach the server. Please try again.");
     } finally {
       setBusy(false);
     }
