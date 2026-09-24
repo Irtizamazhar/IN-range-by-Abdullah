@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ProductCard, ProductCardSkeleton } from "@/components/user/ProductCard";
 import type { ProductCardData } from "@/components/user/ProductCard";
 
+import { ProductFilterSelect } from "@/components/user/ProductFilterSelect";
+
 const PAGE_SIZE = 12;
 
 function normalizeProducts(raw: unknown[]): ProductCardData[] {
@@ -138,92 +140,66 @@ export function ProductsClient() {
       </h1>
       <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:gap-4 mb-6 lg:hidden">
         <div className="min-w-0 flex-1 sm:max-w-xs">
-          <label htmlFor="category-mobile" className="block font-bold text-darkText mb-2 text-sm">
+          <label id="category-mobile-label" htmlFor="category-mobile" className="block font-bold text-darkText mb-2 text-sm">
             Category
           </label>
-          <select
-            id="category-mobile"
-            value={unknownCategory ? category : category || ""}
-            onChange={(e) => {
-              const v = e.target.value;
-              router.push(`/products?${buildQuery({ cat: v })}`);
-            }}
-            className="w-full rounded-xl border border-borderGray bg-white px-3 py-2.5 text-sm text-darkText shadow-sm focus:border-primaryBlue focus:outline-none focus:ring-2 focus:ring-primaryBlue/20"
-          >
-            <option value="">All categories</option>
-            {categoryOptions.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-            {unknownCategory ? (
-              <option value={unknownCategory}>{unknownCategory}</option>
-            ) : null}
-          </select>
+          <ProductFilterSelect
+              id="category-mobile"
+              value={category}
+              options={[
+                { value: "", label: "All categories" },
+                ...Array.from(new Set([...categoryOptions, ...(unknownCategory ? [unknownCategory] : [])])).map((name) => ({ value: name, label: name })),
+              ]}
+              onChange={(value) => router.push(`/products?${buildQuery({ cat: value })}`)}
+            />
         </div>
         <div className="min-w-0 flex-1 sm:max-w-xs">
-          <label htmlFor="sort-mobile" className="block font-bold text-darkText mb-2 text-sm">
+          <label id="sort-mobile-label" htmlFor="sort-mobile" className="block font-bold text-darkText mb-2 text-sm">
             Sort
           </label>
-          <select
-            id="sort-mobile"
-            value={sort}
-            onChange={(e) => {
-              const v = e.target.value;
-              router.push(`/products?${buildQuery({ sort: v })}`);
-            }}
-            className="w-full rounded-xl border border-borderGray bg-white px-3 py-2.5 text-sm text-darkText shadow-sm focus:border-primaryBlue focus:outline-none focus:ring-2 focus:ring-primaryBlue/20"
-          >
-            <option value="newest">Newest</option>
-            <option value="price_asc">Price: Low to High</option>
-            <option value="price_desc">Price: High to Low</option>
-          </select>
+          <ProductFilterSelect
+              id="sort-mobile"
+              value={sort}
+              options={[
+                { value: "newest", label: "Newest" },
+                { value: "price_asc", label: "Price: Low to High" },
+                { value: "price_desc", label: "Price: High to Low" },
+              ]}
+              onChange={(value) => router.push(`/products?${buildQuery({ sort: value })}`)}
+            />
         </div>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-8">
         <aside className="hidden lg:block lg:w-56 shrink-0 space-y-6">
           <div>
-            <label htmlFor="category-desktop" className="font-bold text-darkText mb-2 block">
+            <label id="category-desktop-label" htmlFor="category-desktop" className="font-bold text-darkText mb-2 block">
               Category
             </label>
-            <select
+            <ProductFilterSelect
               id="category-desktop"
-              value={unknownCategory ? category : category || ""}
-              onChange={(e) => {
-                const v = e.target.value;
-                router.push(`/products?${buildQuery({ cat: v })}`);
-              }}
-              className="w-full rounded-xl border border-borderGray bg-white px-3 py-2.5 text-sm text-darkText shadow-sm focus:border-primaryBlue focus:outline-none focus:ring-2 focus:ring-primaryBlue/20"
-            >
-              <option value="">All categories</option>
-              {categoryOptions.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-              {unknownCategory ? (
-                <option value={unknownCategory}>{unknownCategory}</option>
-              ) : null}
-            </select>
+              value={category}
+              options={[
+                { value: "", label: "All categories" },
+                ...Array.from(new Set([...categoryOptions, ...(unknownCategory ? [unknownCategory] : [])])).map((name) => ({ value: name, label: name })),
+              ]}
+              onChange={(value) => router.push(`/products?${buildQuery({ cat: value })}`)}
+            />
           </div>
           <div>
-            <label htmlFor="sort-desktop" className="font-bold text-darkText mb-2 block">
+            <label id="sort-desktop-label" htmlFor="sort-desktop" className="font-bold text-darkText mb-2 block">
               Sort
             </label>
-            <select
+            <ProductFilterSelect
               id="sort-desktop"
               value={sort}
-              onChange={(e) => {
-                const v = e.target.value;
-                router.push(`/products?${buildQuery({ sort: v })}`);
-              }}
-              className="w-full rounded-xl border border-borderGray bg-white px-3 py-2.5 text-sm text-darkText shadow-sm focus:border-primaryBlue focus:outline-none focus:ring-2 focus:ring-primaryBlue/20"
-            >
-              <option value="newest">Newest</option>
-              <option value="price_asc">Price: Low to High</option>
-              <option value="price_desc">Price: High to Low</option>
-            </select>
+              options={[
+                { value: "newest", label: "Newest" },
+                { value: "price_asc", label: "Price: Low to High" },
+                { value: "price_desc", label: "Price: High to Low" },
+              ]}
+              onChange={(value) => router.push(`/products?${buildQuery({ sort: value })}`)}
+            />
           </div>
         </aside>
 
