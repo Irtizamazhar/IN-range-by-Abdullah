@@ -1,7 +1,4 @@
 -- AlterTable
-ALTER TABLE `review` ADD COLUMN `withdrawn` BOOLEAN NOT NULL DEFAULT false;
-
--- AlterTable
 ALTER TABLE `vendorpromotion` ADD COLUMN `ctaHref` TEXT NULL,
     MODIFY `placement` VARCHAR(191) NOT NULL DEFAULT 'HOMEPAGE_SPOTLIGHT',
     MODIFY `endAt` DATETIME(3) NULL;

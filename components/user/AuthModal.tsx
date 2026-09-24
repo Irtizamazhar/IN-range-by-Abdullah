@@ -449,6 +449,9 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
                         Log in
                       </button>
                     </form>
+                    <p className="rounded-lg bg-emerald-50 p-3 text-xs leading-5 text-emerald-950">
+                      Signed up with Google? Continue with Google, or use Forgot Password to set a website password. Your Google password won&apos;t work here.
+                    </p>
 
                     <OrDivider />
                     <button

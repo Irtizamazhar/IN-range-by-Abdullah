@@ -2,6 +2,7 @@
 
 import { Suspense } from "react";
 import { VendorSidebar } from "@/components/vendor/VendorSidebar";
+import { DashboardShell } from "@/components/DashboardShell";
 
 export function VendorChrome({
   shopName,
@@ -11,7 +12,7 @@ export function VendorChrome({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-screen overflow-hidden bg-brand-background">
+    <DashboardShell label="Vendor" sidebar={
       <Suspense
         fallback={
           <aside
@@ -22,9 +23,8 @@ export function VendorChrome({
       >
         <VendorSidebar shopName={shopName} />
       </Suspense>
-      <div className="min-w-0 flex-1 overflow-y-auto">
-        <div className="min-h-full">{children}</div>
-      </div>
-    </div>
+    }>
+      <div className="min-h-full">{children}</div>
+    </DashboardShell>
   );
 }

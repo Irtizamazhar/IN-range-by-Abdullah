@@ -35,7 +35,7 @@ async function main(){
  for(const status of ["approved","pending","suspended","rejected"] as const){const v=await db.vendor.create({data:{ownerName:"Seller Owner",email:run+"-"+status+"@example.invalid",passwordHash,address:"Test address",status,isEmailVerified:true}});vendors.push(v.id);statusVendors.push(v);}
  browser=await chromium.launch({executablePath:process.env.ACCOUNT_TEST_BROWSER||"C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",headless:true});
  await start(false);
- const providers=await (await fetch(base+"/api/auth/providers")).json();assert.ok(providers.credentials&&!providers.google&&!providers.facebook);pass("missing provider credentials preserve password authentication");
+ const providers=await (await fetch(base+"/api/auth/providers")).json();assert.ok(providers.credentials&&!providers.google);pass("missing provider credentials preserve password authentication");
  let page=await browser.newPage({extraHTTPHeaders:{"x-forwarded-for":"127.0.0."+ (++pageNumber)}});
  await ready(page,"customer","signup");
  await page.getByLabel("Full Name",{exact:true}).fill("New Customer");const signupEmail=run+"-signup@example.invalid";
@@ -87,14 +87,13 @@ async function main(){
   assert.equal((await db.vendor.findUniqueOrThrow({where:{id:vendor.id}})).status,vendor.status);await page.close();}
  pass("existing approved/pending/rejected/suspended statuses and entry behavior preserved");
  await start(true);
- const configured=await (await fetch(base+"/api/auth/providers")).json();assert.ok(configured.google&&configured.facebook&&configured.credentials);
- assert.equal(configured.facebook.callbackUrl,base+"/api/auth/callback/facebook");pass("Google/Facebook provider registration and actual callback URL");
+ const configured=await (await fetch(base+"/api/auth/providers")).json();assert.ok(configured.google&&configured.credentials);
+ pass("Google provider registration is active");
  for(const width of [360,390,768,1024,1280,1440]){
   page=await browser.newPage({viewport:{width,height:768}});const errors:string[]=[];page.on("pageerror",e=>errors.push(e.message));
   for(const role of ["customer","vendor"])for(const mode of ["signin","signup"]){
    await ready(page,role,mode);await noOverflow(page,width+" "+role+" "+mode);
    assert.equal(await page.getByRole("button",{name:"Continue with Google",exact:true}).count(),role==="customer"?1:0);
-   assert.equal(await page.getByRole("button",{name:"Continue with Facebook",exact:true}).count(),role==="customer"?1:0);
    assert.equal(await page.getByLabel("Confirm Password",{exact:true}).count(),mode==="signup"?1:0);
    const layout=await page.evaluate(()=>({height:document.documentElement.scrollHeight,viewport:innerHeight,nested:Array.from(document.querySelectorAll("main *")).filter(e=>{const s=getComputedStyle(e);return ["auto","scroll"].includes(s.overflowY)&&e.scrollHeight>e.clientHeight+1;}).length}));
    if(width>=1024)assert.ok(layout.height<=layout.viewport+1,JSON.stringify({width,role,mode,layout}));

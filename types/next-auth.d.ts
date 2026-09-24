@@ -29,6 +29,7 @@ declare module "next-auth/jwt" {
     role?: "admin" | "customer";
     phone?: string;
     sessionVersion?: number;
+    googleAuthenticatedAt?: number;
     invalidated?: boolean;
     adminRole?: string;
     permissions?: string[];

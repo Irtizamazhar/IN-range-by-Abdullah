@@ -40,11 +40,11 @@ export default function ResetPasswordPage() {
   return (
     <main className="mx-auto flex min-h-[65vh] max-w-lg items-center px-4 py-14">
       <section className="w-full rounded-card border border-borderGray bg-white p-6 shadow-card sm:p-8">
-        <h1 className="text-2xl font-bold text-darkText">Choose a new password</h1>
+        <h1 className="text-2xl font-bold text-darkText">Set your website password</h1>
         {complete ? (
           <div className="mt-5">
             <p className="text-darkText/70">
-              Your password has been changed and older customer sessions were signed out.
+              Your website password has been set and older customer sessions were signed out. You can now sign in with Google or your website email and password.
             </p>
             <button
               type="button"
@@ -86,7 +86,7 @@ export default function ResetPasswordPage() {
               disabled={busy}
               className="w-full rounded-xl bg-brand-primary px-4 py-3 font-bold text-brand-dark hover:bg-brand-hover disabled:opacity-60"
             >
-              {busy ? "Updating…" : "Update password"}
+              {busy ? "Saving…" : "Set password"}
             </button>
           </form>
         )}

@@ -16,6 +16,7 @@ import {
   ShieldAlert,
   RotateCcw,
   LifeBuoy,
+  Store,
 } from "lucide-react";
 import { LogoMark } from "@/components/user/LogoMark";
 import { clearVendorLoginRememberPrefs } from "@/lib/vendor-login-remember-prefs";
@@ -53,20 +54,20 @@ const links: {
   label: string;
   icon: ComponentType<{ className?: string }>;
 }[] = [
-  { href: "/vendor/dashboard/services", label: "Services", icon: ShoppingBag },
-  { href: "/vendor/dashboard/offers", label: "Offers", icon: ShoppingBag },
-  { href: "/vendor/dashboard/demand", label: "Customer Demand", icon: ShoppingBag },
-  { href: "/vendor/dashboard/followers", label: "Followers", icon: ShoppingBag },
   { href: "/vendor/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  {
-    href: "/vendor/dashboard/orders",
-    label: "My Orders",
-    icon: ShoppingBag,
-  },
+  { href: "/vendor/dashboard/store", label: "Store & QR", icon: Store },
   {
     href: "/vendor/dashboard/products",
     label: "My Products",
     icon: Package,
+  },
+  { href: "/vendor/dashboard/services", label: "Services", icon: ShoppingBag },
+  { href: "/vendor/dashboard/demand", label: "Customer Demand", icon: ShoppingBag },
+  { href: "/vendor/dashboard/offers", label: "Offers", icon: ShoppingBag },
+  {
+    href: "/vendor/dashboard/orders",
+    label: "My Orders",
+    icon: ShoppingBag,
   },
   {
     href: "/vendor/dashboard/returns",
@@ -83,6 +84,7 @@ const links: {
     label: "Withdrawals",
     icon: Wallet,
   },
+  { href: "/vendor/dashboard/followers", label: "Followers", icon: ShoppingBag },
   {
     href: "/vendor/dashboard/notifications",
     label: "Notifications",
@@ -94,14 +96,14 @@ const links: {
     icon: ShieldAlert,
   },
   {
-    href: "/vendor/dashboard/help",
-    label: "Help & Support",
-    icon: LifeBuoy,
-  },
-  {
     href: "/vendor/dashboard/settings",
     label: "Settings",
     icon: Settings,
+  },
+  {
+    href: "/vendor/dashboard/help",
+    label: "Help & Support",
+    icon: LifeBuoy,
   },
 ];
 
@@ -180,9 +182,8 @@ export function VendorSidebar({
   }
 
   return (
-    <aside className="sticky top-0 h-screen w-64 shrink-0 overflow-y-auto bg-footerDark text-white">
-      <div className="flex min-h-full flex-col">
-      <div className="border-b border-white/10 p-4">
+    <aside className="flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-footerDark text-white">
+      <div className="shrink-0 border-b border-white/10 p-4">
         <div className="min-w-0 flex-1">
           <LogoMark inverse
             href="/vendor/dashboard"
@@ -201,7 +202,7 @@ export function VendorSidebar({
           ) : null}
         </div>
       </div>
-      <nav className="flex-1 space-y-1 p-3">
+      <nav aria-label="Vendor navigation" tabIndex={0} className="dashboard-sidebar-scrollbar min-h-0 flex-1 space-y-1 overflow-x-hidden overflow-y-auto overscroll-y-contain p-3">
         {links.map(({ href, label, icon: Icon }) => {
           const active = linkActive(pathname, href);
           const onOrdersSection = isVendorOrdersPath(pathname);
@@ -237,7 +238,7 @@ export function VendorSidebar({
           );
         })}
       </nav>
-      <div className="border-t border-white/10 p-3">
+      <div className="shrink-0 border-t border-white/10 p-3">
         <button
           type="button"
           onClick={() => void logout()}
@@ -246,7 +247,6 @@ export function VendorSidebar({
           <LogOut className="h-4 w-4 shrink-0" />
           Logout
         </button>
-      </div>
       </div>
     </aside>
   );

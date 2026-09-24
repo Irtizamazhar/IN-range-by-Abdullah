@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 import { randomBytes } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { sanitizePlainText } from "@/lib/security/sanitize";
-export type CustomerOAuthProvider = "google" | "facebook";
+export type CustomerOAuthProvider = "google";
 export class CustomerOAuthError extends Error {
   constructor(public code: "OAuthAccountNotLinked" | "OAuthEmailRequired" | "AccessDenied") { super(code); }
 }

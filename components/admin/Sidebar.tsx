@@ -67,37 +67,38 @@ function isAdminNotificationsPath(pathname: string | null): boolean {
 }
 
 const links = [
+  { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/products", label: "Products", icon: Package, dividerBefore: true },
+  { href: "/admin/categories", label: "Categories", icon: Shapes },
+  { href: "/admin/new-arrivals", label: "New Arrivals", icon: Package },
   { href: "/admin/services", label: "Services", icon: ShoppingBag },
   { href: "/admin/wants", label: "Wants", icon: ShoppingBag },
-  { href: "/admin/vendor-promotions", label: "Vendor Promotions", icon: Store },
-  { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/products", label: "Products", icon: Package },
-  { href: "/admin/new-arrivals", label: "New Arrivals", icon: Package },
-  { href: "/admin/categories", label: "Categories", icon: Shapes },
-  { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
+  { href: "/admin/orders", label: "Orders", icon: ShoppingBag, dividerBefore: true },
   {
     href: "/admin/vendor-orders",
     label: "Seller orders",
     icon: Truck,
   },
-  { href: "/admin/vendors", label: "Vendors", icon: Store },
-  { href: "/admin/vendors/top-vendors", label: "Top Vendors", icon: Star },
-  { href: "/admin/customers", label: "Customers", icon: Users },
   { href: "/admin/dashboard/after-sales", label: "After-sales", icon: RotateCcw },
-  { href: "/admin/dashboard/team", label: "Admin Team", icon: ShieldCheck },
+  { href: "/admin/vendors", label: "Vendors", icon: Store, dividerBefore: true },
+  { href: "/admin/vendors/top-vendors", label: "Top Vendors", icon: Star },
+  { href: "/admin/vendor-promotions", label: "Vendor Promotions", icon: Store },
+  { href: "/admin/customers", label: "Customers", icon: Users },
+  { href: "/admin/reviews", label: "Reviews", icon: Star },
   {
     href: "/admin/dashboard/payouts",
     label: "Payouts",
     icon: Wallet,
+    dividerBefore: true,
   },
   {
     href: "/admin/dashboard/commission-settings",
     label: "Commission",
     icon: Percent,
   },
-  { href: "/admin/support", label: "Support", icon: LifeBuoy },
   { href: "/admin/notifications", label: "Notifications", icon: Bell },
-  { href: "/admin/reviews", label: "Reviews", icon: Star },
+  { href: "/admin/support", label: "Support", icon: LifeBuoy },
+  { href: "/admin/dashboard/team", label: "Admin Team", icon: ShieldCheck, dividerBefore: true },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
@@ -210,9 +211,8 @@ export function AdminSidebar() {
   }, [pathname]);
 
   return (
-    <aside className="sticky top-0 h-screen w-64 shrink-0 overflow-y-auto bg-footerDark text-white">
-      <div className="flex min-h-full flex-col">
-      <div className="p-4 border-b border-white/10">
+    <aside className="flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-footerDark text-white">
+      <div className="shrink-0 p-4 border-b border-white/10">
         {/* Shared brand mark and sizing with the customer navbar. */}
         <LogoMark inverse
           href="/admin/dashboard"
@@ -222,8 +222,8 @@ export function AdminSidebar() {
           Admin
         </p>
       </div>
-      <nav className="flex-1 p-3 space-y-1">
-        {links.map(({ href, label, icon: Icon }) => {
+      <nav aria-label="Admin navigation" tabIndex={0} className="dashboard-sidebar-scrollbar min-h-0 flex-1 space-y-1 overflow-x-hidden overflow-y-auto overscroll-y-contain p-3">
+        {links.map(({ href, label, icon: Icon, dividerBefore }) => {
           const onVendors = isAdminVendorsPath(pathname);
           const onSellerOrders = isAdminSellerOrdersPath(pathname);
           const vendorsNew =
@@ -250,7 +250,7 @@ export function AdminSidebar() {
             <Link
               key={href}
               href={href}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-base font-medium transition-all duration-200 ${
+              className={`${dividerBefore ? "mt-3 border-t border-white/10 pt-4" : ""} flex items-center gap-3 rounded-lg px-3 py-2.5 text-base font-medium transition-all duration-200 ${
                 isAdminLinkActive(pathname, href)
                   ? "bg-brand-primary font-semibold text-brand-dark shadow-sm"
                   : "text-white/80 hover:bg-white/10 hover:text-white"
@@ -291,7 +291,7 @@ export function AdminSidebar() {
           );
         })}
       </nav>
-      <div className="p-3 border-t border-white/10">
+      <div className="shrink-0 border-t border-white/10 p-3">
         <button
           type="button"
           onClick={() =>
@@ -302,7 +302,6 @@ export function AdminSidebar() {
           <LogOut className="h-4 w-4" />
           Log out
         </button>
-      </div>
       </div>
     </aside>
   );

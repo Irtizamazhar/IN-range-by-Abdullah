@@ -15,17 +15,17 @@ async function main(){
  try {
   const saved={google:process.env.GOOGLE_CLIENT_ID,googleSecret:process.env.GOOGLE_CLIENT_SECRET,facebook:process.env.FACEBOOK_CLIENT_ID,facebookSecret:process.env.FACEBOOK_CLIENT_SECRET};
   process.env.GOOGLE_CLIENT_ID="";process.env.GOOGLE_CLIENT_SECRET="";process.env.FACEBOOK_CLIENT_ID="";process.env.FACEBOOK_CLIENT_SECRET="";
-  assert.deepEqual(customerProviderAvailability(),{google:false,facebook:false});
+  assert.deepEqual(customerProviderAvailability(),{google:false});
   process.env.GOOGLE_CLIENT_ID="fixture";process.env.FACEBOOK_CLIENT_ID="fixture";
-  assert.deepEqual(customerProviderAvailability(),{google:false,facebook:false});
-  process.env.GOOGLE_CLIENT_SECRET="fixture";process.env.FACEBOOK_CLIENT_SECRET="fixture";
-  assert.deepEqual(customerProviderAvailability(),{google:true,facebook:true});
+  assert.deepEqual(customerProviderAvailability(),{google:false});
+  process.env.GOOGLE_CLIENT_SECRET="fixture";
+  assert.deepEqual(customerProviderAvailability(),{google:true});
   pass("providers require both credentials and can be independently configured");
   const {vendorSetupSchema,submitVendorSetup}=await import("../lib/vendor-onboarding");
   const {customerAuthOptions}=await import("../lib/customer-auth-options");
-  assert.ok(customerAuthOptions.providers.some(p=>p.id==="facebook"));assert.ok(customerAuthOptions.providers.some(p=>p.id==="google"));
+  assert.ok(!customerAuthOptions.providers.some(p=>p.id==="facebook"));assert.ok(customerAuthOptions.providers.some(p=>p.id==="google"));
   const cb=customerAuthOptions.callbacks!;
-  for(const provider of ["google","facebook"] as const){
+  for(const provider of ["google"] as const){
    const id=run+"-"+provider;const profile={...(provider==="google"?{sub:id,email_verified:true}:{id}),email:id+"@example.invalid",name:"OAuth Customer"};
    const first=await resolveCustomerOAuth({provider,providerAccountId:id,profile});
    const repeated=await Promise.all([resolveCustomerOAuth({provider,providerAccountId:id,profile}),resolveCustomerOAuth({provider,providerAccountId:id,profile})]);assert.ok(repeated.every(c=>c.id===first.id));
@@ -40,16 +40,14 @@ async function main(){
    pass(provider+": new/repeated identity, stable customer mapping, customer-only JWT and inactive rejection");
   }
     const collision=await prisma.customer.create({data:{name:"Existing",email:run+"-collision@example.invalid",passwordHash:"existing-password"}});
-  for(const provider of ["google","facebook"] as const){
-   const id=run+"-collision-"+provider;const profile={sub:id,id,email_verified:true,email:collision.email};
-    const result=await resolveCustomerOAuth({provider,providerAccountId:id,profile});
-    assert.equal(result.id,collision.id);
-    assert.equal((await prisma.customerOAuthAccount.count({where:{customerId:collision.id}})),provider==="google"?1:2);
-  }
-    pass("Google and Facebook verified emails link existing customers");
+  const provider="google" as const;
+  const id=run+"-collision-"+provider;const profile={sub:id,email_verified:true,email:collision.email};
+  const result=await resolveCustomerOAuth({provider,providerAccountId:id,profile});
+  assert.equal(result.id,collision.id);
+  assert.equal((await prisma.customerOAuthAccount.count({where:{customerId:collision.id}})),1);
+  pass("Google verified emails link existing customers");
   await assert.rejects(resolveCustomerOAuth({provider:"google",providerAccountId:run+"-unverified",profile:{sub:run+"-unverified",email:run+"-unverified@example.invalid",email_verified:false}}));
-  await assert.rejects(resolveCustomerOAuth({provider:"facebook",providerAccountId:run+"-noemail",profile:{id:run+"-noemail"}}));
-  pass("unverified Google email and missing Facebook email reject cleanly");
+  pass("unverified Google email rejects cleanly");
   const raceId=run+"-race";const race=await Promise.all([1,2,3].map(()=>resolveCustomerOAuth({provider:"google",providerAccountId:raceId,profile:{sub:raceId,email:raceId+"@example.invalid",email_verified:true}})));assert.equal(new Set(race.map(c=>c.id)).size,1);
   pass("concurrent first OAuth callbacks create one customer/identity");
   const vendors=await Promise.all((["approved","pending","rejected","suspended","onboarding"] as const).map(status=>prisma.vendor.create({data:{email:run+"-"+status+"@example.invalid",ownerName:"Fixture Seller",passwordHash:"fixture",address:"",status}})));

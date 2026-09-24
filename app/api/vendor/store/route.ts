@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { api, ApiError, sameOrigin } from "@/lib/marketplace-api";
 import { getVendorFromSession } from "@/lib/vendor-auth-server";
 import { isReservedOrInvalidSlug } from "@/lib/store-slug";
+import { appOrigin } from "@/lib/app-url";
 export const dynamic = "force-dynamic";
 const image = z.string().max(2048).refine(v => !v || /^https:\/\//.test(v) || v.startsWith("/uploads/") && !v.includes(".."));
 const input = z.object({
@@ -15,7 +16,7 @@ const input = z.object({
   primaryCategory: z.string().trim().min(1).max(100),
   serviceCities: z.array(z.string().trim().min(1).max(100)).max(100),
 });
-export async function GET() { return api(async () => { const s = await getVendorFromSession(); if (!s) throw new ApiError(401, "Vendor sign-in required."); return { store: await prisma.vendor.findUnique({ where: { id: s.vendor.id }, select: { id: true, shopName: true, storeSlug: true, shopDescription: true, shopLogo: true, storeBanner: true, storePolicies: true, primaryCategory: true, serviceCities: true } }) }; }); }
+export async function GET() { return api(async () => { const s = await getVendorFromSession(); if (!s) throw new ApiError(401, "Vendor sign-in required."); const store = await prisma.vendor.findUnique({ where: { id: s.vendor.id }, select: { id: true, shopName: true, storeSlug: true, shopDescription: true, shopLogo: true, storeBanner: true, storePolicies: true, primaryCategory: true, serviceCities: true, status: true } }); let publicStoreUrl: string | null = null; let publicUrlMessage = ""; if (store?.storeSlug) { try { const origin = appOrigin(); if (new URL(origin).protocol !== "https:") publicUrlMessage = "Set NEXT_PUBLIC_APP_URL or NEXTAUTH_URL to your public HTTPS domain."; else publicStoreUrl = `${origin}/stores/${encodeURIComponent(store.storeSlug)}`; } catch { publicUrlMessage = "Set NEXT_PUBLIC_APP_URL or NEXTAUTH_URL to your public HTTPS domain."; } } return { store, publicStoreUrl, publicUrlMessage }; }); }
 export async function PATCH(request: Request) { return api(async () => {
   sameOrigin(request); const s = await getVendorFromSession(); if (!s || s.vendor.status !== "approved") throw new ApiError(403, "Approved vendor required."); const data = input.parse(await request.json());
   return prisma.$transaction(async tx => {

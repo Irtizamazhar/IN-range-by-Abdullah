@@ -139,6 +139,29 @@
   display: none;
 }
 
+.dashboard-sidebar-scrollbar {
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: #40564d transparent;
+}
+
+.dashboard-sidebar-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dashboard-sidebar-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dashboard-sidebar-scrollbar::-webkit-scrollbar-thumb {
+  background: #40564d;
+  border-radius: 999px;
+}
+
+.dashboard-sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #597367;
+}
+
 @layer utilities {
   .bg-brand-primary,
   .bg-primaryYellow {

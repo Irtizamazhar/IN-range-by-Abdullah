@@ -3,6 +3,7 @@
 import { Suspense } from "react";
 import { usePathname } from "next/navigation";
 import { AdminSidebar } from "@/components/admin/Sidebar";
+import { DashboardShell } from "@/components/DashboardShell";
 
 function AdminChromeInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -10,10 +11,9 @@ function AdminChromeInner({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
   return (
-    <div className="flex h-screen overflow-hidden bg-brand-background">
-      <AdminSidebar />
-      <div className="flex-1 overflow-y-auto">{children}</div>
-    </div>
+    <DashboardShell label="Admin" sidebar={<AdminSidebar />}>
+      {children}
+    </DashboardShell>
   );
 }
 
@@ -21,10 +21,10 @@ export function AdminChrome({ children }: { children: React.ReactNode }) {
   return (
     <Suspense
       fallback={
-        <div className="h-screen bg-brand-background">
-          <div className="flex h-screen overflow-hidden">
-            <aside className="w-64 shrink-0 bg-footerDark" aria-hidden />
-            <div className="flex-1 overflow-y-auto">{children}</div>
+        <div className="h-[100dvh] bg-brand-background">
+          <div className="flex h-full overflow-hidden">
+            <aside className="hidden w-64 shrink-0 bg-footerDark md:block" aria-hidden />
+            <div className="min-w-0 flex-1 overflow-y-auto">{children}</div>
           </div>
         </div>
       }

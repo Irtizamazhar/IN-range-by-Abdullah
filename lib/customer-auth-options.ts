@@ -1,15 +1,12 @@
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
-import FacebookProvider from "next-auth/providers/facebook";
 import { customerProviderAvailability } from "@/lib/auth-provider-config";
 import { resolveCustomerOAuth, CustomerOAuthError } from "@/lib/customer-oauth";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { customerCookieOptions } from "@/lib/auth-cookies";
-
-const OAUTH_PLACEHOLDER_HASH =
-  "$2b$10$UoH4j7Gyt7qR95R5M6b8suXNG7QDGtFKwM9lYjLw9M4iyf2EG6m9e";
+import { isOAuthOnlyPasswordHash } from "@/lib/customer-password-security";
 
 export const customerAuthOptions: NextAuthOptions = {
   debug: false,
@@ -24,10 +21,6 @@ export const customerAuthOptions: NextAuthOptions = {
           }),
         ]
       : []),
-    ...(customerProviderAvailability().facebook ? [FacebookProvider({
-      clientId: process.env.FACEBOOK_CLIENT_ID!, clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,
-      authorization: { url: "https://www.facebook.com/dialog/oauth", params: { scope: "email,public_profile" } },
-    })] : []),
     CredentialsProvider({
       id: "credentials",
       name: "Credentials",
@@ -49,7 +42,7 @@ export const customerAuthOptions: NextAuthOptions = {
           where: { email },
         });
         if (!customer?.isActive) return null;
-        if (customer.passwordHash === OAUTH_PLACEHOLDER_HASH || customer.passwordHash.startsWith("oauth-only:")) {
+        if (isOAuthOnlyPasswordHash(customer.passwordHash)) {
           // OAuth-only accounts must use Google or the verified reset flow.
           // Never let an arbitrary first password claim an OAuth account.
           return null;
@@ -70,7 +63,7 @@ export const customerAuthOptions: NextAuthOptions = {
   cookies: customerCookieOptions,
   callbacks: {
     async signIn({ account, profile }) {
-      if (account?.provider !== "google" && account?.provider !== "facebook") return true;
+      if (account?.provider !== "google") return true;
       try {
         await resolveCustomerOAuth({ provider: account.provider, providerAccountId: account.providerAccountId, profile: (profile || {}) as Record<string, unknown> });
         return true;
@@ -80,7 +73,8 @@ export const customerAuthOptions: NextAuthOptions = {
       }
     },
     async jwt({ token, user, account, trigger, session }) {
-      if (account?.provider === "google" || account?.provider === "facebook") {
+      if (account?.provider === "google") {
+        token.googleAuthenticatedAt = Date.now();
         const identity = await prisma.customerOAuthAccount.findUnique({ where: { provider_providerAccountId: { provider: account.provider, providerAccountId: account.providerAccountId } }, include: { customer: true } });
         if (!identity?.customer.isActive) throw new Error("AccessDenied");
         const customer = identity.customer;
