@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { BrandTagline } from "./BrandTagline";
 import { CategoryNavigation, useNavCategories } from "./CategoryNavigation";
 import { MarketplaceNav } from "./MarketplaceNav";
 import Link from "next/link";
@@ -37,6 +38,7 @@ import { useCart } from "@/context/CartContext";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
 
 import { formatPKR } from "@/lib/format";
+
 
 /* =========================================================
    TYPES
@@ -408,7 +410,7 @@ export function Navbar({
         ================================================= */}
 
         <div className="border-b border-black/[0.06] bg-white">
-          <div className="mx-auto max-w-7xl px-4 py-2.5 sm:px-6">
+          <div className="mx-auto max-w-7xl px-4 py-[5.5px] sm:px-6">
             <div className="flex flex-wrap items-center gap-3 lg:flex-nowrap lg:gap-4">
               {/* MOBILE MENU */}
 
@@ -427,14 +429,10 @@ export function Navbar({
                   LOGO
               ================================================= */}
 
-              <div className="order-2 shrink-0">
+              <div className="order-2 flex shrink-0 flex-col items-center">
                 <LogoMark href="/" />
 
-                <p className="mt-0.5 whitespace-nowrap text-center text-[8.5px] font-semibold uppercase tracking-[0.055em] sm:text-[9.5px] sm:tracking-[0.07em] lg:text-[10.5px] lg:tracking-[0.09em]">
-                  <span className="joro-tagline-market">Apni Market</span>
-                  <span className="joro-tagline-dot px-[3px]">•</span>
-                  <span className="joro-tagline-choice">Apni Choice</span>
-                </p>
+                <BrandTagline />
               </div>
 
               {/* =================================================
@@ -832,14 +830,10 @@ export function Navbar({
           {/* HEADER */}
 
           <div className="flex items-center justify-between border-b border-black/[0.08] px-5 py-4">
-            <div>
+            <div className="flex flex-col items-center">
               <LogoMark compact />
 
-              <p className="mt-1 whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.07em]">
-                <span className="joro-tagline-market">Apni Market</span>
-                <span className="joro-tagline-dot px-[3px]">•</span>
-                <span className="joro-tagline-choice">Apni Choice</span>
-              </p>
+              <BrandTagline />
             </div>
 
             <button
