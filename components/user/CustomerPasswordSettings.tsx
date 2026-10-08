@@ -1,9 +1,11 @@
 "use client";
+import { LoadingButton } from "@/components/ui/LoadingButton";
+import { LoadingForm } from "@/components/ui/LoadingForm";
 
 import { FormEvent, useState } from "react";
 import { signIn, signOut } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
-import Link from "next/link";
+import Link from "@/components/ui/LoadingLink";
 import toast from "react-hot-toast";
 import { PasswordToggleInput } from "@/components/ui/PasswordToggleInput";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
@@ -55,7 +57,7 @@ export function CustomerPasswordSettings({ hasLocalPassword }: { hasLocalPasswor
       <div className="mt-6 max-w-xl rounded-2xl border border-borderGray bg-white p-6 shadow-card">
         <h2 className="text-xl font-bold">Website password</h2>
         <p className="mt-2 text-sm text-darkText/65">Your account already has a website password. Use the secure Forgot Password flow to change it.</p>
-        <button type="button" onClick={() => openAuthModal("login")} className="mt-4 rounded-xl bg-brand-primary px-5 py-3 font-bold">Open password reset</button>
+        <LoadingButton type="button" onClick={() => openAuthModal("login")} className="mt-4 rounded-xl bg-brand-primary px-5 py-3 font-bold">Open password reset</LoadingButton>
       </div>
     );
   }
@@ -66,15 +68,15 @@ export function CustomerPasswordSettings({ hasLocalPassword }: { hasLocalPasswor
       {!showForm ? (
         <>
           <p className="mt-2 text-sm text-darkText/65">You signed in with Google and do not have a separate website password yet.</p>
-          <button type="button" disabled={busy} onClick={() => void beginGoogleReauthentication()} className="mt-4 rounded-xl bg-brand-primary px-5 py-3 font-bold disabled:opacity-60">{busy ? "Opening Google…" : "Set website password"}</button>
+          <LoadingButton type="button" loading={busy} loadingLabel="Saving…" onClick={() => beginGoogleReauthentication()} className="mt-4 rounded-xl bg-brand-primary px-5 py-3 font-bold disabled:opacity-60">Set website password</LoadingButton>
         </>
       ) : (
-        <form onSubmit={(event) => void submit(event)} className="mt-4 space-y-4">
+        <LoadingForm onSubmit={(event) => submit(event)} className="mt-4 space-y-4">
           <p className="text-sm text-darkText/65">Google reauthentication completed. Choose a password for this website only.</p>
           <label className="block text-sm font-semibold">New password<PasswordToggleInput required minLength={8} maxLength={128} autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} className="mt-1 w-full rounded-xl border border-borderGray px-3 py-2.5" /></label>
           <label className="block text-sm font-semibold">Confirm password<PasswordToggleInput required minLength={8} maxLength={128} autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} className="mt-1 w-full rounded-xl border border-borderGray px-3 py-2.5" /></label>
-          <button disabled={busy} className="rounded-xl bg-brand-primary px-5 py-3 font-bold disabled:opacity-60">{busy ? "Saving…" : "Save website password"}</button>
-        </form>
+          <LoadingButton loading={busy} loadingLabel="Saving…" className="rounded-xl bg-brand-primary px-5 py-3 font-bold disabled:opacity-60">Save website password</LoadingButton>
+        </LoadingForm>
       )}
       <p className="mt-4 text-xs leading-5 text-darkText/60">This password is separate from your Google password. Google credentials are never requested or stored here.</p>
       {hasLocalPassword && <Link href="/login?mode=signin" className="mt-3 inline-block text-sm font-bold text-brand-link">Go to sign in</Link>}

@@ -1,5 +1,6 @@
-import Image from "next/image";
-import Link from "next/link";
+import { PostWantButton } from "@/components/user/PostWantButton";
+import Link from "@/components/ui/LoadingLink";
+import { HeroHeadline } from "./HeroHeadline";
 import {
   ArrowRight,
   Megaphone,
@@ -8,61 +9,32 @@ import {
   Store,
 } from "lucide-react";
 
-import { formatPKR } from "@/lib/format";
-import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
-
-export type HeroProductPreview = {
-  name: string;
-  price: number;
-  image?: string | null;
-  href: string;
-  discountPercent?: number;
-};
-
 export function HeroSection({
   sellNowHref,
-  heroProducts = [],
 }: {
   sellNowHref: string;
-  heroProducts?: HeroProductPreview[];
 }) {
-  /*
-   * Hero par sirf woh products show honge
-   * jin ke paas actual image ho.
-   */
-  const cards = heroProducts
-    .filter((product) => Boolean(product.image))
-    .slice(0, 3);
-
   return (
     <section className="joro-v4-hero relative isolate overflow-hidden text-white">
       {/* Background effects */}
       <div className="joro-v4-grid pointer-events-none absolute inset-0" />
       <div className="joro-v4-glow pointer-events-none absolute inset-0" />
 
-      <div className="relative mx-auto grid min-h-[400px] max-w-7xl items-center gap-5 px-4 py-6 sm:px-6 lg:grid-cols-[0.92fr_1.08fr] lg:py-6">
+      <div className="relative mx-auto grid min-h-[400px] max-w-7xl items-center gap-5 px-4 pb-6 pt-3 sm:px-6 lg:grid-cols-[0.92fr_1.08fr]">
         {/* =====================================================
             LEFT CONTENT
         ====================================================== */}
 
-        <div className="relative z-20">
+        <div className="relative z-20 self-start">
           {/* Small top badge */}
-          <div className="mt-3 mb-4 inline-flex items-center gap-2 rounded-full border border-brand-primary/30 bg-brand-primary/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-brand-primary backdrop-blur-md sm:mt-4 sm:text-[12px] lg:mt-5">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-brand-primary/30 bg-brand-primary/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-brand-primary backdrop-blur-md sm:text-[12px]">
             <span className="h-1.5 w-1.5 rounded-full bg-brand-primary shadow-[0_0_12px_rgba(183,227,58,.9)]" />
 
             Pakistan ka apna marketplace
           </div>
 
           {/* Main heading */}
-          <h1 className="max-w-[620px] text-[38px] font-black leading-[0.98] tracking-[-0.055em] text-white sm:text-[48px] lg:text-[55px]">
-            Jo chahiye,
-            <br />
-
-            <span className="text-brand-primary">
-              JORO
-            </span>{" "}
-            par dhoondo.
-          </h1>
+          <HeroHeadline />
 
           {/* Want headline */}
           <h2 className="mt-2 text-[24px] font-black leading-tight tracking-[-0.045em] text-white sm:text-[29px]">
@@ -90,8 +62,8 @@ export function HeroSection({
               <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1" />
             </Link>
 
-            <Link
-              href="/wants/new"
+            <PostWantButton
+
               className="group inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-brand-primary px-5 text-[13px] font-black text-brand-dark shadow-lime transition duration-300 hover:-translate-y-0.5 hover:bg-brand-hover"
             >
               <Megaphone className="h-4 w-4" />
@@ -99,7 +71,7 @@ export function HeroSection({
               Want Post Karo
 
               <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1" />
-            </Link>
+            </PostWantButton>
 
             <Link
               href={sellNowHref}
@@ -181,105 +153,8 @@ export function HeroSection({
               <div className="joro-v4-laptop-base" />
             </div>
           </div>
-
-          {/* =================================================
-              FLOATING PRODUCT 1
-          ================================================== */}
-
-          {cards[0] ? (
-            <Link
-              href={cards[0].href}
-              className="joro-v4-product joro-v4-product-one absolute left-[1%] top-[6%] z-30 hidden w-[98px] rounded-2xl bg-white p-2 text-brand-dark xl:block"
-            >
-              <HeroProductCard product={cards[0]} />
-            </Link>
-          ) : null}
-
-          {/* =================================================
-              FLOATING PRODUCT 2
-          ================================================== */}
-
-          {cards[1] ? (
-            <Link
-              href={cards[1].href}
-              className="joro-v4-product joro-v4-product-two absolute bottom-[6%] left-[4%] z-30 hidden w-[98px] rounded-2xl bg-white p-2 text-brand-dark xl:block"
-            >
-              <HeroProductCard product={cards[1]} />
-            </Link>
-          ) : null}
-
-          {/* =================================================
-              FLOATING PRODUCT 3
-          ================================================== */}
-
-          {cards[2] ? (
-            <Link
-              href={cards[2].href}
-              className="joro-v4-product joro-v4-product-three absolute right-[0%] top-[9%] z-30 hidden w-[98px] rounded-2xl bg-white p-2 text-brand-dark xl:block"
-            >
-              <HeroProductCard product={cards[2]} />
-            </Link>
-          ) : null}
-
-          {/* =================================================
-              JORO MESSAGE
-          ================================================== */}
-
-          <div className="joro-v4-message absolute bottom-[4%] right-[0%] z-30 hidden rounded-2xl border border-brand-primary/30 bg-[#0d2517]/95 px-3.5 py-3 shadow-xl backdrop-blur-md xl:block">
-            <p className="text-[7px] font-black uppercase tracking-[0.12em] text-brand-primary">
-              JORO Together
-            </p>
-
-            <p className="mt-1 max-w-[110px] text-[7px] leading-3.5 text-white/60">
-              Customer ki need.
-              <br />
-              Seller ka solution.
-            </p>
-          </div>
         </div>
       </div>
     </section>
-  );
-}
-
-/* =========================================================
-   HERO PRODUCT CARD
-========================================================= */
-
-function HeroProductCard({
-  product,
-}: {
-  product: HeroProductPreview;
-}) {
-  return (
-    <>
-      <div className="relative aspect-square overflow-hidden rounded-xl bg-brand-background">
-        {product.image ? (
-          <Image
-            src={product.image}
-            alt={product.name}
-            fill
-            sizes="98px"
-            unoptimized={shouldUnoptimizeImageSrc(product.image)}
-            className="object-contain p-1"
-          />
-        ) : null}
-
-        {product.discountPercent &&
-        product.discountPercent > 0 ? (
-          <span className="absolute left-1.5 top-1.5 rounded-full bg-brand-primary px-1.5 py-0.5 text-[6px] font-black text-brand-dark">
-            -{product.discountPercent}%
-          </span>
-        ) : null}
-      </div>
-
-      <p className="mt-1.5 line-clamp-1 text-[7px] font-bold text-brand-dark">
-        {product.name}
-      </p>
-
-      <p className="mt-0.5 text-[8px] font-black text-brand-dark">
-        {formatPKR(product.price)}
-      </p>
-    </>
   );
 }

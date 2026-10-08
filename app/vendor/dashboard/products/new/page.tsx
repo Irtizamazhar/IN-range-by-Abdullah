@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/LoadingLink";
 import { redirect } from "next/navigation";
 import { getVendorFromSession } from "@/lib/vendor-auth-server";
 import { VendorProductForm } from "@/components/vendor/VendorProductForm";

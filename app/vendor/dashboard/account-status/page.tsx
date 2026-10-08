@@ -1,3 +1,4 @@
+import Link from "@/components/ui/LoadingLink";
 import { redirect } from "next/navigation";
 import { getVendorFromSession } from "@/lib/vendor-auth-server";
 
@@ -62,12 +63,12 @@ export default async function VendorAccountStatusPage() {
             <li>Repeated violations can lead to permanent suspension.</li>
             <li>After approval, your account access is restored automatically.</li>
           </ul>
-          <a
+          <Link
             href="/vendor/login"
             className="mt-4 inline-block rounded-lg bg-brand-primary px-4 py-2 text-sm font-bold text-brand-dark hover:bg-brand-hover"
           >
             Open Vendor Login / Appeal
-          </a>
+          </Link>
         </section>
       </div>
     </div>

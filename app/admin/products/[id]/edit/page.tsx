@@ -1,9 +1,13 @@
 "use client";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { LoadingForm } from "@/components/ui/LoadingForm";
+
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import Image from "next/image";
 import { useParams } from "next/navigation";
-import { useEffect, useState, type ClipboardEvent, type FormEvent } from "react";
-import Link from "next/link";
+import { useCallback, useEffect, useState, type ClipboardEvent, type FormEvent } from "react";
+import Link from "@/components/ui/LoadingLink";
 import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 import toast from "react-hot-toast";
 import { uploadImageWithId } from "@/lib/cloudinary-client-upload";
@@ -20,7 +24,7 @@ export default function EditProductPage() {
   const id = String(params?.id || "");
 
   const [ready, setReady] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   const [images, setImages] = useState<ImgEntry[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -78,15 +82,14 @@ export default function EditProductPage() {
     }
   }
 
-  useEffect(() => {
+  const loadProduct = useCallback(async () => {
     if (!id) return;
     setReady(false);
-    fetch(`/api/products/${id}`)
-      .then((r) => r.json())
+    return fetch(`/api/products/${id}`)
+      .then(async (r) => { const data = await r.json(); if (!r.ok) throw new Error(data.error || "Could not load product"); return data; })
       .then((p) => {
         if (!p._id) {
-          toast.error("Not found");
-          return;
+          throw new Error("Product not found");
         }
         setName(p.name);
         setDescription(p.description || "");
@@ -109,8 +112,10 @@ export default function EditProductPage() {
           }))
         );
         setReady(true);
-      });
+      }).catch((error) => { setLoadError(true); toast.error(error instanceof Error ? error.message : "Could not load product"); });
   }, [id]);
+
+  useEffect(() => { void loadProduct(); }, [loadProduct]);
 
   useEffect(() => {
     fetch("/api/categories")
@@ -196,7 +201,6 @@ export default function EditProductPage() {
       toast.error("Enter a valid price");
       return;
     }
-    setSaving(true);
     try {
       const finalImages = [...images];
       if (!finalImages.length) {
@@ -233,7 +237,6 @@ export default function EditProductPage() {
       toast.error("Could not update product");
     } finally {
       setUploading(false);
-      setSaving(false);
     }
   }
 
@@ -280,6 +283,8 @@ export default function EditProductPage() {
     setImages((prev) => prev.filter((x) => x.id !== imgId));
   }
 
+  if (!ready) return loadError ? <div className="p-8"><p role="alert">Product could not be loaded.</p><LoadingButton loadingLabel="Loading..." onClick={loadProduct} className="mt-4 rounded-xl bg-brand-primary px-4 py-2 font-bold text-brand-dark">Try again</LoadingButton></div> : <PageSkeleton rows={3} />;
+
   return (
     <div className="p-6 md:p-8 max-w-2xl">
       <Link href="/admin/products" className="text-primaryBlue text-sm">
@@ -288,7 +293,7 @@ export default function EditProductPage() {
       <div className="mt-4 mb-6">
         <h1 className="text-2xl font-bold text-darkText">Edit Product</h1>
       </div>
-      <form onSubmit={onSubmit} className="space-y-4 rounded-card border border-borderGray bg-white p-6 shadow-card">
+      <LoadingForm onSubmit={onSubmit} className="space-y-4 rounded-card border border-borderGray bg-white p-6 shadow-card">
         <input
           className="w-full rounded-xl border border-borderGray px-4 py-2"
           value={name}
@@ -359,7 +364,7 @@ export default function EditProductPage() {
               </div>
             ) : null}
             </div>
-            <button
+            <LoadingButton loadingLabel="Removing…"
               type="button"
               onClick={onDeleteCurrentCategory}
               className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-red-300 text-red-600 hover:bg-red-50"
@@ -369,7 +374,7 @@ export default function EditProductPage() {
               <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden="true">
                 <path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm1 7h2v8h-2v-8Zm4 0h2v8h-2v-8ZM7 10h2v8H7v-8Zm1 11a2 2 0 0 1-2-2V8h12v11a2 2 0 0 1-2 2H8Z" />
               </svg>
-            </button>
+            </LoadingButton>
           </div>
 
           {addingCategory ? (
@@ -380,9 +385,9 @@ export default function EditProductPage() {
                 value={newCategory}
                 onChange={(e) => setNewCategory(e.target.value)}
               />
-              <button
+              <LoadingButton loadingLabel="Saving…"
                 type="button"
-                disabled={saving || uploading}
+
                 onClick={async () => {
                   const val = newCategory.trim();
                   if (!val) {
@@ -427,7 +432,7 @@ export default function EditProductPage() {
                 className="rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-brand-dark disabled:opacity-60 sm:w-auto"
               >
                 Add
-              </button>
+              </LoadingButton>
             </div>
           ) : null}
         </div>
@@ -511,15 +516,15 @@ export default function EditProductPage() {
           ) : null}
         </div>
         <div className="flex justify-end">
-          <button
+          <LoadingButton loadingLabel="Saving…"
             type="submit"
-            disabled={!ready || saving}
+            disabled={!ready}
             className="rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-semibold text-brand-dark disabled:opacity-60"
           >
-            {saving ? "Updating…" : "Update product"}
-          </button>
+            {"Update product"}
+          </LoadingButton>
         </div>
-      </form>
+      </LoadingForm>
     </div>
   );
 }

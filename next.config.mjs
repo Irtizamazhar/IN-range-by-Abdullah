@@ -1,5 +1,9 @@
+import { fileURLToPath } from "node:url";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Isolate verification builds when a local development server is already running.
+  distDir: process.env.JORO_NEXT_DIST_DIR || ".next",
   experimental: {
     serverComponentsExternalPackages: [
       "@prisma/client",
@@ -61,7 +65,7 @@ const nextConfig = {
     ],
   },
   /** Applies to `npm run dev` (webpack). Not used with `npm run dev:turbo` (Turbopack). */
-  webpack: (config, { dev }) => {
+  webpack: (config, { dev, isServer }) => {
     if (dev) {
       // Windows: avoid ENOENT on `.next/cache/webpack/.../*.pack.gz` renames and stale manifests
       config.cache = false;
@@ -70,6 +74,13 @@ const nextConfig = {
         poll: 2000,
         aggregateTimeout: 600,
       };
+      if (!isServer) {
+        // CSS updates can complete after a stylesheet was removed by another update.
+        config.module.rules.push({
+          test: /[\\/]next[\\/]dist[\\/]compiled[\\/]mini-css-extract-plugin[\\/]hmr[\\/]hotModuleReplacement\.js$/,
+          use: [fileURLToPath(new URL("./scripts/webpack/css-hmr-cleanup-loader.cjs", import.meta.url))],
+        });
+      }
     }
     return config;
   },

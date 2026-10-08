@@ -1,12 +1,11 @@
 import { Suspense } from "react";
 import { ProductsClient } from "./ProductsClient";
+import { ProductsLoading } from "./ProductsLoading";
 
 export default function ProductsPage() {
   return (
     <Suspense
-      fallback={
-        <div className="mx-auto max-w-7xl px-4 py-8 text-darkText/60">Loading…</div>
-      }
+      fallback={<ProductsLoading />}
     >
       <ProductsClient />
     </Suspense>

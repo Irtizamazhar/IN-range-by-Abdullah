@@ -1,8 +1,11 @@
 "use client";
+import { LoadingButton } from "@/components/ui/LoadingButton";
+import { LoadingForm } from "@/components/ui/LoadingForm";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/ui/LoadingLink";
 import toast from "react-hot-toast";
 import { getSession, useSession } from "next-auth/react";
 import { useCart } from "@/context/CartContext";
@@ -18,6 +21,8 @@ export default function CheckoutPage() {
   const { isCustomer, authLoading, openAuthModal } = useCustomerAuth();
   const { data: session } = useSession();
   const [settings, setSettings] = useState<ISettings | null>(null);
+  const [settingsLoading, setSettingsLoading] = useState(true);
+  const [settingsError, setSettingsError] = useState("");
   const [loading, setLoading] = useState(false);
   const [checkoutKey, setCheckoutKey] = useState("");
 
@@ -54,12 +59,18 @@ export default function CheckoutPage() {
     setCheckoutKey(crypto.randomUUID());
   }, []);
 
-  useEffect(() => {
-    fetch("/api/settings")
-      .then((r) => r.json())
-      .then(setSettings)
-      .catch(() => {});
+  const loadSettings = useCallback(async (signal?: AbortSignal) => {
+    setSettingsLoading(true);
+    try {
+      const response = await fetch("/api/settings", { signal });
+      if (!response.ok) throw new Error("Could not load checkout options. Please try again.");
+      const data = await response.json();
+      if (!signal?.aborted) { setSettings(data); setSettingsError(""); }
+    } catch (error) {
+      if (!signal?.aborted) setSettingsError(error instanceof Error ? error.message : "Could not load checkout options. Please try again.");
+    } finally { if (!signal?.aborted) setSettingsLoading(false); }
   }, []);
+  useEffect(() => { const controller = new AbortController(); void loadSettings(controller.signal); return () => controller.abort(); }, [loadSettings]);
 
   useEffect(() => {
     let cancelled = false;
@@ -76,7 +87,7 @@ export default function CheckoutPage() {
         }
       }
       setPhone((prev) => prev || s.user?.phone || "");
-    })();
+    })().catch(() => { if (!cancelled) toast.error("Could not load account details. Please try again."); });
     return () => {
       cancelled = true;
     };
@@ -139,8 +150,7 @@ export default function CheckoutPage() {
     const s = await getSession();
     if (s?.user?.role !== "customer") {
       toast.error("Please sign in or create an account first");
-      openAuthModal("signup");
-      return;
+      return openAuthModal("signup");
     }
     setLoading(true);
     try {
@@ -235,13 +245,7 @@ export default function CheckoutPage() {
     !infoComplete ||
     (paymentMethod === "cod" && !codAllowed);
 
-  if (authLoading) {
-    return (
-      <div className="mx-auto max-w-lg px-4 py-24 text-center text-darkText/70">
-        Loading…
-      </div>
-    );
-  }
+  if (authLoading) return <PageSkeleton label="Loading checkout…" />;
 
   if (!isCustomer && !doneOrder) {
     return (
@@ -253,13 +257,13 @@ export default function CheckoutPage() {
           <p className="text-sm text-darkText/70 mb-6">
             Sign up or log in, then complete your order.
           </p>
-          <button
+          <LoadingButton
             type="button"
             onClick={() => openAuthModal("signup")}
             className="w-full rounded-xl bg-primaryYellow py-3 font-bold text-brand-dark mb-3"
           >
             Sign up / Login
-          </button>
+          </LoadingButton>
           <Link href="/cart" className="text-primaryBlue text-sm font-medium">
             ← Back to cart
           </Link>
@@ -267,6 +271,9 @@ export default function CheckoutPage() {
       </div>
     );
   }
+
+  if (settingsLoading && !settings && !settingsError) return <PageSkeleton label="Loading checkout options…" />;
+  if (settingsError && !settings) return <main className="mx-auto max-w-xl px-4 py-12"><p role="alert">{settingsError}</p><LoadingButton onClick={() => loadSettings()} className="mt-4 rounded-xl bg-brand-primary px-5 py-3 font-bold">Try again</LoadingButton></main>;
 
   if (items.length === 0 && !doneOrder) {
     return (
@@ -289,7 +296,7 @@ export default function CheckoutPage() {
             {doneOrder.orderNumber}
           </p>
           <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <button
+            <LoadingButton
               type="button"
               onClick={async () => {
                 try {
@@ -302,7 +309,7 @@ export default function CheckoutPage() {
               className="rounded-xl border border-borderGray py-2.5 text-sm font-semibold hover:bg-lightGray"
             >
               Copy tracking ID
-            </button>
+            </LoadingButton>
             <Link
               href={`/track-order?order=${encodeURIComponent(doneOrder.orderNumber)}`}
               className="rounded-xl bg-brand-primary py-2.5 text-sm font-semibold text-brand-dark hover:bg-brand-hover"
@@ -343,7 +350,7 @@ export default function CheckoutPage() {
       <div className="mx-auto max-w-[1120px] px-4 pt-8">
 <h1 className="mb-6 text-2xl font-bold text-darkText">Checkout</h1><div className="mb-4 space-y-2">{items.filter(i => i.serviceId).map(i => <p className="rounded-xl bg-white p-3 text-sm" key={`${i.productId}:${i.variant || ""}`}>{i.name} — {i.serviceName}: {formatPKR((i.servicePrice || 0) * i.quantity)} service add-on</p>)}</div>
 
-        <form
+        <LoadingForm
           onSubmit={handleCheckoutSubmit}
           className="grid gap-6 lg:h-[calc(100vh-170px)] lg:grid-cols-[minmax(0,560px)_300px] lg:justify-center lg:overflow-hidden"
         >
@@ -570,13 +577,13 @@ export default function CheckoutPage() {
               </div>
 
               <div className="border-t border-borderGray pt-6">
-                <button
+                <LoadingButton
                   type="submit"
-                  disabled={placeOrderDisabled}
+                  loading={loading} loadingLabel="Processing…" disabled={placeOrderDisabled}
                   className="w-full rounded-[8px] bg-brand-primary py-3 text-sm font-bold text-brand-dark disabled:opacity-50 sm:text-base"
                 >
-                  {loading ? "Processing…" : "Complete order"}
-                </button>
+                  Complete order
+                </LoadingButton>
               </div>
             </section>
           </div>
@@ -630,7 +637,7 @@ export default function CheckoutPage() {
               </div>
             </div>
           </aside>
-        </form>
+        </LoadingForm>
       </div>
       <style jsx>{`
         @keyframes checkoutMarquee {

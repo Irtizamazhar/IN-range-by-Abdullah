@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import Link from "@/components/ui/LoadingLink";
 import { Home, LayoutGrid, Megaphone, ShoppingCart, User } from "lucide-react";
 import { usePathname } from "next/navigation";
 export function MarketplaceNav() {

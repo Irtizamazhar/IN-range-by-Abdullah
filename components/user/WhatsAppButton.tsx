@@ -54,8 +54,9 @@ export function WhatsAppFloat({ number }: { number: string }) {
       href={`https://wa.me/${n}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg transition-transform hover:scale-105 md:bottom-[30px] md:right-[30px]"
+      className="fixed bottom-[calc(64px+12px+env(safe-area-inset-bottom))] right-3 z-40 flex h-11 w-11 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg transition-transform hover:scale-105 md:bottom-6"
       aria-label="Chat on WhatsApp"
+      data-floating-action="whatsapp"
     >
       <MessageCircle className="h-7 w-7" />
     </a>

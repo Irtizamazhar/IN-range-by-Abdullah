@@ -1,8 +1,9 @@
 "use client";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import Image from "next/image";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import Link from "@/components/ui/LoadingLink";
+import { useLoadingRouter as useRouter } from "@/hooks/useLoadingRouter";
 import { useEffect, useRef } from "react";
 import {
   ArrowRight,
@@ -119,7 +120,7 @@ export function CartSidebar({
             </div>
           </div>
 
-          <button
+          <LoadingButton
             ref={closeButtonRef}
             type="button"
             onClick={onClose}
@@ -127,7 +128,7 @@ export function CartSidebar({
             aria-label="Close cart"
           >
             <X className="h-4 w-4" />
-          </button>
+          </LoadingButton>
         </header>
 
         <div className="flex min-h-0 flex-1 flex-col">
@@ -143,13 +144,13 @@ export function CartSidebar({
                 <p className="mt-2 max-w-xs text-sm leading-6 text-[#49635f]">
                   Add a few essentials and come back here to continue shopping.
                 </p>
-                <button
+                <LoadingButton
                   type="button"
                   onClick={onClose}
                   className="mt-6 inline-flex items-center justify-center rounded-xl bg-[#bfe364] px-5 py-3 text-sm font-black text-[#072d25] shadow-[0_10px_24px_rgba(191,227,100,0.35)] transition hover:-translate-y-0.5 hover:bg-[#b2dc53] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0b3a2d]"
                 >
                   Start Shopping
-                </button>
+                </LoadingButton>
               </div>
             ) : (
               <div className="space-y-4">
@@ -176,14 +177,14 @@ export function CartSidebar({
                         <p className="line-clamp-2 text-sm font-bold leading-5 text-[#0d2e2a]">
                           {line.name}
                         </p>
-                        <button
+                        <LoadingButton
                           type="button"
                           onClick={() => removeItem(line.productId, line.variant)}
                           className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#49635f] transition hover:bg-[#f5f8f4] hover:text-[#bf3a36] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0b3a2d]"
                           aria-label={`Remove ${line.name}`}
                         >
                           <Trash2 className="h-4 w-4" />
-                        </button>
+                        </LoadingButton>
                       </div>
 
                       {line.serviceId ? (
@@ -210,7 +211,7 @@ export function CartSidebar({
                         </p>
 
                         <div className="flex items-center gap-2 rounded-full border border-[#dfeae4] bg-[#f6faf7] p-1">
-                          <button
+                          <LoadingButton
                             type="button"
                             onClick={() => setQuantity(line.productId, line.quantity - 1, line.variant)}
                             aria-label={`Decrease quantity for ${line.name}`}
@@ -218,11 +219,11 @@ export function CartSidebar({
                             disabled={line.quantity <= 1}
                           >
                             <Minus className="h-3.5 w-3.5" />
-                          </button>
+                          </LoadingButton>
                           <span className="min-w-[1.75rem] text-center text-sm font-bold text-[#0d2e2a]">
                             {line.quantity}
                           </span>
-                          <button
+                          <LoadingButton
                             type="button"
                             onClick={() =>
                               requireCustomer(() => {
@@ -234,7 +235,7 @@ export function CartSidebar({
                             disabled={line.quantity >= line.maxStock}
                           >
                             <Plus className="h-3.5 w-3.5" />
-                          </button>
+                          </LoadingButton>
                         </div>
                       </div>
                     </div>
@@ -256,20 +257,20 @@ export function CartSidebar({
               </p>
 
               <div className="space-y-2.5">
-                <button
+                <LoadingButton
                   type="button"
                   disabled={items.length === 0}
                   onClick={() =>
-                    requireCustomer(() => {
+                    requireCustomer(async () => {
+                      await router.push("/checkout");
                       onClose();
-                      router.push("/checkout");
                     }, "signup")
                   }
                   className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#bfe364] px-4 py-3.5 text-sm font-black text-[#082d25] shadow-[0_10px_24px_rgba(191,227,100,0.32)] transition hover:-translate-y-0.5 hover:bg-[#a7d844] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0b3a2d] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Checkout
                   <ArrowRight className="h-4 w-4" />
-                </button>
+                </LoadingButton>
 
                 <Link
                   href="/cart"

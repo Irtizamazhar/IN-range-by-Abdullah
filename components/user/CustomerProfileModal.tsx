@@ -1,8 +1,10 @@
 "use client";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
-import { Loader2, Lock, Phone, User, X } from "lucide-react";
+import { Lock, Phone, User, X } from "lucide-react";
 import type { ComponentType } from "react";
 
 const transition = { duration: 0.25, ease: [0.4, 0, 0.2, 1] as const };
@@ -63,7 +65,7 @@ export function CustomerProfileModal({
   loading: boolean;
   saving: boolean;
   onSave: () => void | Promise<void>;
-  onLogout: () => void;
+  onLogout: () => void | Promise<unknown>;
 }) {
   return (
     <AnimatePresence>
@@ -94,14 +96,14 @@ export function CustomerProfileModal({
             transition={transition}
           >
             <div className="relative min-h-[140px] shrink-0 bg-gradient-to-br from-darkBlue to-primaryBlue px-6 py-8 text-center text-white">
-              <button
+              <LoadingButton
                 type="button"
                 onClick={onClose}
                 className="absolute right-4 top-4 rounded-full p-1.5 text-white transition-opacity duration-200 hover:opacity-80"
                 aria-label="Close"
               >
                 <X className="h-5 w-5" strokeWidth={2.25} />
-              </button>
+              </LoadingButton>
 
               <div className="mx-auto h-16 w-16 overflow-hidden rounded-full bg-white text-xl font-bold text-primaryBlue shadow-md">
                 {avatarUrl ? (
@@ -133,10 +135,7 @@ export function CustomerProfileModal({
 
             <div className="min-h-0 flex-1 overflow-y-auto bg-white px-6 py-6">
               {loading ? (
-                <div className="flex flex-col items-center justify-center gap-3 py-14 text-gray-500">
-                  <Loader2 className="h-8 w-8 animate-spin text-primaryBlue" />
-                  <p className="text-sm font-medium">Loading…</p>
-                </div>
+                <PageSkeleton label="Loading your profile…" rows={3} />
               ) : (
                 <div className="space-y-4">
                   <Field icon={User}>
@@ -171,26 +170,24 @@ export function CustomerProfileModal({
                     </p>
                   </div>
 
-                  <button
+                  <LoadingButton
                     type="button"
-                    disabled={saving || !name.trim()}
-                    onClick={() => void onSave()}
+                    loading={saving} loadingLabel="Saving…" disabled={!name.trim()}
+                    onClick={() => onSave()}
                     className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-brand-primary text-sm font-semibold text-brand-dark shadow-sm transition duration-200 hover:bg-brand-hover disabled:pointer-events-none disabled:opacity-50"
                   >
-                    {saving ? (
-                      <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
-                    ) : null}
+
                     Save changes
-                  </button>
+                  </LoadingButton>
 
                   <div className="border-t border-gray-200 pt-4">
-                    <button
+                    <LoadingButton
                       type="button"
                       onClick={onLogout}
                       className="w-full py-2.5 text-center text-sm font-semibold text-red-600 transition-colors hover:text-red-700"
                     >
                       Log out
-                    </button>
+                    </LoadingButton>
                   </div>
                 </div>
               )}

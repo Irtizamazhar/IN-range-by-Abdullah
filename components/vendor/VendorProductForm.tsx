@@ -1,8 +1,10 @@
 "use client";
+import { LoadingButton } from "@/components/ui/LoadingButton";
+import { LoadingForm } from "@/components/ui/LoadingForm";
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, type ClipboardEvent, type DragEvent } from "react";
+import { useLoadingRouter as useRouter } from "@/hooks/useLoadingRouter";
+import { useEffect, useMemo, useRef, useState, type ClipboardEvent, type DragEvent } from "react";
 import toast from "react-hot-toast";
 import {
   imageFilesFromClipboard,
@@ -96,15 +98,18 @@ export function VendorProductForm({
     initial?.status ?? "active"
   );
   const [uploading, setUploading] = useState(false);
+  const uploadLock = useRef(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   async function uploadImageFiles(files: File[]) {
+    if (uploadLock.current) return;
     const allowed = files.filter(isAllowedImageFile);
     if (!allowed.length) {
       toast.error("Use JPG, PNG, or WebP images");
       return;
     }
+    uploadLock.current = true;
     setUploading(true);
     try {
       const next = [...images];
@@ -133,7 +138,10 @@ export function VendorProductForm({
           allowed.length > 1 ? `${allowed.length} images added` : "Image added"
         );
       }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not upload images. Please retry.");
     } finally {
+      uploadLock.current = false;
       setUploading(false);
     }
   }
@@ -233,8 +241,7 @@ export function VendorProductForm({
           return;
         }
         toast.success("Product created");
-        router.push("/vendor/dashboard/products");
-        router.refresh();
+        await router.push("/vendor/dashboard/products");
         return;
       }
 
@@ -264,8 +271,7 @@ export function VendorProductForm({
         return;
       }
       toast.success("Product updated");
-      router.push("/vendor/dashboard/products");
-      router.refresh();
+      await router.push("/vendor/dashboard/products");
     } finally {
       setSaving(false);
     }
@@ -286,15 +292,14 @@ export function VendorProductForm({
         return;
       }
       toast.success("Product removed");
-      router.push("/vendor/dashboard/products");
-      router.refresh();
+      await router.push("/vendor/dashboard/products");
     } finally {
       setDeleting(false);
     }
   }
 
   return (
-    <form
+    <LoadingForm
       onSubmit={onSubmit}
       className="mx-auto max-w-2xl space-y-5 rounded-2xl border border-amber-200/80 bg-white p-6 shadow-sm"
     >
@@ -444,7 +449,7 @@ export function VendorProductForm({
             accept="image/jpeg,image/png,image/webp"
             multiple
             disabled={uploading || images.length >= 8}
-            onChange={(e) => onPickFiles(e.target.files)}
+            onChange={(e) => { onPickFiles(e.target.files); e.target.value = ""; }}
             className="mx-auto block w-full max-w-md text-sm"
           />
           {uploading ? (
@@ -462,44 +467,44 @@ export function VendorProductForm({
                 className="h-24 w-24 rounded-lg border object-cover"
                 unoptimized={shouldUnoptimizeImageSrc(url)}
               />
-              <button
+              <LoadingButton
                 type="button"
                 onClick={() => removeImage(idx)}
                 className="absolute -right-2 -top-2 rounded-full bg-red-600 px-2 text-xs font-bold text-white"
               >
                 ×
-              </button>
+              </LoadingButton>
             </div>
           ))}
         </div>
       </div>
 
       <div className="flex flex-wrap gap-3 pt-2">
-        <button
+        <LoadingButton loadingLabel="Saving…"
           type="submit"
           disabled={saving || uploading}
           className="rounded-xl bg-primaryYellow px-6 py-3 font-extrabold text-neutral-900 disabled:opacity-50"
         >
-          {saving ? "Saving…" : mode === "create" ? "Publish product" : "Save changes"}
-        </button>
-        <button
+          {mode === "create" ? "Publish product" : "Save changes"}
+        </LoadingButton>
+        <LoadingButton
           type="button"
           onClick={() => router.push("/vendor/dashboard/products")}
           className="rounded-xl border border-neutral-300 px-6 py-3 font-bold text-neutral-700"
         >
           Cancel
-        </button>
+        </LoadingButton>
         {mode === "edit" ? (
-          <button
+          <LoadingButton loadingLabel="Deleting…"
             type="button"
             disabled={deleting}
-            onClick={() => void onDelete()}
+            onClick={() => onDelete()}
             className="rounded-xl border border-red-300 px-6 py-3 font-bold text-red-700 disabled:opacity-50"
           >
-            {deleting ? "…" : "Delete"}
-          </button>
+            {"Delete"}
+          </LoadingButton>
         ) : null}
       </div>
-    </form>
+    </LoadingForm>
   );
 }

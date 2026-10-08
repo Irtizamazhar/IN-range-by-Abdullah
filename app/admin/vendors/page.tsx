@@ -1,7 +1,10 @@
 "use client";
+import Link from "@/components/ui/LoadingLink";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import Image from "next/image";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 import toast from "react-hot-toast";
 
@@ -82,18 +85,22 @@ export default function AdminVendorsPage() {
   const [filter, setFilter] = useState<"" | VendorStatus>("pending");
   const [rows, setRows] = useState<AdminVendorRow[]>([]);
   const [page, setPage] = useState(1);
+  const pageRef = useRef(1);
+  const requestRef = useRef(0);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
   const [rejectFor, setRejectFor] = useState<AdminVendorRow | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [riskByVendor, setRiskByVendor] = useState<Record<string, RiskMini>>({});
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (showLoading = true, requestedPage = pageRef.current) => {
+    const request = ++requestRef.current;
+    pageRef.current = requestedPage;
+    setPage(requestedPage);
+    if (showLoading) setLoading(true);
     try {
-      const q = `?page=${page}${filter ? `&status=${encodeURIComponent(filter)}` : ""}`;
+      const q = `?page=${requestedPage}${filter ? `&status=${encodeURIComponent(filter)}` : ""}`;
       const r = await fetch(`/api/admin/vendors${q}`, {
         credentials: "same-origin",
       });
@@ -102,6 +109,7 @@ export default function AdminVendorsPage() {
         total?: number;
         error?: string;
       };
+      if (request !== requestRef.current) return;
       if (!r.ok) {
         toast.error(data.error || "Could not load vendors");
         setRows([]);
@@ -113,54 +121,32 @@ export default function AdminVendorsPage() {
       toast.error("Network error");
       setRows([]);
     } finally {
-      setLoading(false);
+      if (request === requestRef.current) setLoading(false);
     }
-  }, [filter, page]);
+  }, [filter]);
 
   useEffect(() => {
-    void load();
+    void load(true, 1);
   }, [load]);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (!rows.length) {
-        setRiskByVendor({});
-        return;
-      }
-      const entries = await Promise.all(
-        rows.filter(r => r.id === expanded).map(async (r) => {
-          try {
-            const res = await fetch(
-              `/api/admin/vendors/${encodeURIComponent(r.id)}/risk-score`
-            );
-            const json = (await res.json()) as
-              | { riskLevel: "GREEN" | "YELLOW" | "RED"; riskScore: number }
-              | { error?: string };
-            if (!res.ok || !("riskLevel" in json)) return [r.id, null] as const;
-            return [r.id, json] as const;
-          } catch {
-            return [r.id, null] as const;
-          }
-        })
-      );
-      if (cancelled) return;
-      const next: Record<string, RiskMini> = {};
-      for (const [id, risk] of entries) {
-        if (risk) next[id] = risk;
-      }
-      setRiskByVendor(next);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [rows, expanded]);
+  function toggleDetails(vendor: AdminVendorRow) {
+    if (expanded === vendor.id) { setExpanded(null); return; }
+    setExpanded(vendor.id);
+    if (riskByVendor[vendor.id]) return;
+    return fetchRisk(vendor.id);
+  }
+
+  async function fetchRisk(vendorId: string) {
+    const response = await fetch(`/api/admin/vendors/${encodeURIComponent(vendorId)}/risk-score`);
+    const data = await response.json();
+    if (!response.ok || !("riskLevel" in data)) throw new Error(data.error || "Could not load vendor risk details");
+    setRiskByVendor(current => ({ ...current, [vendorId]: data as RiskMini }));
+  }
 
   async function patch(
     id: string,
     body: { action: "approve" | "reject" | "suspend"; rejectionReason?: string }
   ) {
-    setBusyId(id);
     try {
       const r = await fetch(`/api/admin/vendors/${encodeURIComponent(id)}`, {
         method: "PATCH",
@@ -176,22 +162,20 @@ export default function AdminVendorsPage() {
       toast.success("Updated");
       setRejectFor(null);
       setRejectReason("");
-      await load();
+      await load(false);
     } catch {
       toast.error("Network error");
-    } finally {
-      setBusyId(null);
     }
   }
 
-  function submitReject() {
+  async function submitReject() {
     if (!rejectFor) return;
     const reason = rejectReason.trim();
     if (reason.length < 3) {
       toast.error("Please enter a rejection reason (at least 3 characters).");
       return;
     }
-    void patch(rejectFor.id, { action: "reject", rejectionReason: reason });
+    await patch(rejectFor.id, { action: "reject", rejectionReason: reason });
   }
 
   return (
@@ -227,7 +211,7 @@ export default function AdminVendorsPage() {
       </div>
 
       {loading ? (
-        <p className="text-darkText/60">Loading…</p>
+        <PageSkeleton rows={3} />
       ) : rows.length === 0 ? (
         <div className="rounded-xl border border-borderGray bg-white p-8 text-center text-darkText/70">
           No vendors in this filter.
@@ -287,36 +271,32 @@ export default function AdminVendorsPage() {
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <a
+                    <Link
                       href={`/admin/vendors/${encodeURIComponent(v.id)}/suspension`}
                       className="rounded-lg border border-primaryBlue px-3 py-2 text-sm font-semibold text-primaryBlue hover:bg-primaryBlue/10"
                     >
                       View Risk Profile
-                    </a>
-                    <button
+                    </Link>
+                    <LoadingButton loadingLabel="Loading..."
                       type="button"
-                      onClick={() =>
-                        setExpanded(open ? null : v.id)
-                      }
+                      onClick={() => toggleDetails(v)}
                       className="rounded-lg border border-borderGray px-3 py-2 text-sm font-semibold hover:bg-lightGray/40"
                     >
                       {open ? "Hide details" : "Details & documents"}
-                    </button>
+                    </LoadingButton>
                     {v.status === "pending" ? (
                       <>
-                        <button
+                        <LoadingButton loadingLabel="Processing…"
                           type="button"
-                          disabled={busyId === v.id}
                           onClick={() =>
-                            void patch(v.id, { action: "approve" })
+                            patch(v.id, { action: "approve" })
                           }
                           className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
                         >
                           Approve
-                        </button>
+                        </LoadingButton>
                         <button
                           type="button"
-                          disabled={busyId === v.id}
                           onClick={() => {
                             setRejectFor(v);
                             setRejectReason("");
@@ -328,28 +308,26 @@ export default function AdminVendorsPage() {
                       </>
                     ) : null}
                     {v.status === "approved" ? (
-                      <button
+                      <LoadingButton loadingLabel="Processing…"
                         type="button"
-                        disabled={busyId === v.id}
                         onClick={() =>
-                          void patch(v.id, { action: "suspend" })
+                          patch(v.id, { action: "suspend" })
                         }
                         className="rounded-lg border border-amber-600 px-3 py-2 text-sm font-bold text-amber-800 hover:bg-amber-50 disabled:opacity-50"
                       >
                         Suspend
-                      </button>
+                      </LoadingButton>
                     ) : null}
                     {(v.status === "rejected" || v.status === "suspended") ? (
-                      <button
+                      <LoadingButton loadingLabel="Processing…"
                         type="button"
-                        disabled={busyId === v.id}
                         onClick={() =>
-                          void patch(v.id, { action: "approve" })
+                          patch(v.id, { action: "approve" })
                         }
                         className="rounded-lg bg-brand-primary px-3 py-2 text-sm font-bold text-brand-dark hover:bg-brand-hover disabled:opacity-50"
                       >
                         Approve again
-                      </button>
+                      </LoadingButton>
                     ) : null}
                   </div>
                 </div>
@@ -476,9 +454,9 @@ export default function AdminVendorsPage() {
       )}
 
       <nav aria-label="Vendor pages" className="my-6 flex flex-wrap items-center gap-3 text-sm">
-        <button disabled={loading || page <= 1} onClick={() => setPage(p => p - 1)} className="rounded-lg border px-4 py-2 disabled:opacity-40">Previous</button>
+        <LoadingButton loadingLabel="Loading..." disabled={page <= 1} onClick={() => load(true, page - 1)} className="rounded-lg border px-4 py-2 disabled:opacity-40">Previous</LoadingButton>
         <span>Page {page} of {Math.max(1, Math.ceil(total / 20))} · {total} vendors</span>
-        <button disabled={loading || page * 20 >= total} onClick={() => setPage(p => p + 1)} className="rounded-lg border px-4 py-2 disabled:opacity-40">Next</button>
+        <LoadingButton loadingLabel="Loading..." disabled={page * 20 >= total} onClick={() => load(true, page + 1)} className="rounded-lg border px-4 py-2 disabled:opacity-40">Next</LoadingButton>
       </nav>
       {rejectFor ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -507,14 +485,13 @@ export default function AdminVendorsPage() {
               >
                 Cancel
               </button>
-              <button
+              <LoadingButton loadingLabel="Rejecting..."
                 type="button"
-                disabled={busyId === rejectFor.id}
                 onClick={() => submitReject()}
                 className="rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
               >
                 Reject vendor
-              </button>
+              </LoadingButton>
             </div>
           </div>
         </div>

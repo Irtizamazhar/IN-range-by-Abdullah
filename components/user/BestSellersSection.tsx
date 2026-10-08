@@ -1,4 +1,5 @@
 "use client";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import {
   useCallback,
@@ -16,6 +17,7 @@ import {
   ProductCardSkeleton,
   type ProductCardData,
 } from "@/components/user/ProductCard";
+import gridStyles from "@/components/user/ProductGrid.module.css";
 
 type ApiBestSellersResponse = {
   products?: ProductCardData[];
@@ -191,28 +193,22 @@ export function BestSellersSection({
           </div>
 
           {hasMore ? (
-            <button
+            <LoadingButton
               type="button"
-              disabled={
-                loading
-              }
+              loading={loading}
               onClick={
                 loadMore
               }
               className="inline-flex shrink-0 items-center gap-1 text-[12px] font-black text-brand-link transition hover:text-brand-dark disabled:opacity-50"
             >
-              {loading
-                ? "Loading..."
-                : "View More"}
+              View More
 
-              {!loading ? (
-                <ArrowRight className="h-3.5 w-3.5" />
-              ) : null}
-            </button>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </LoadingButton>
           ) : null}
         </div>
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-6">
+        <div className={gridStyles.grid}>
           {products.map(
             (product) => (
               <ProductCard
@@ -224,6 +220,7 @@ export function BestSellersSection({
                 }
                 ribbon="TOP PICK"
                 badgePosition="right"
+                variant="marketplace"
               />
             )
           )}
@@ -242,6 +239,7 @@ export function BestSellersSection({
                 ) => (
                   <ProductCardSkeleton
                     key={`best-loading-${index}`}
+                    variant="marketplace"
                   />
                 )
               )

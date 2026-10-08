@@ -1,233 +1,246 @@
 "use client";
+import { PostWantButton } from "@/components/user/PostWantButton";
+import { usePageLoading } from "@/hooks/usePageLoading";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
-import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { ProductCard, ProductCardSkeleton } from "@/components/user/ProductCard";
-import type { ProductCardData } from "@/components/user/ProductCard";
+import Link from "@/components/ui/LoadingLink";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { ArrowRight, ChevronRight, LoaderCircle, PackageSearch, RotateCcw, SlidersHorizontal, Truck, X } from "lucide-react";
+import { ProductCard, ProductCardSkeleton, type ProductCardData } from "@/components/user/ProductCard";
+import { ProductFilters } from "./ProductFilters";
+import { catalogQueryKey, readCatalogFilters, SORT_LABELS, updateCatalogQuery, type CatalogFilters } from "./catalog-filter-state";
+import { formatPKR } from "@/lib/format";
+import styles from "./Products.module.css";
 
-import { ProductFilterSelect } from "@/components/user/ProductFilterSelect";
-
-const PAGE_SIZE = 12;
-
-function normalizeProducts(raw: unknown[]): ProductCardData[] {
+const PAGE_SIZE = 18;
+function normalizeProducts(raw: unknown): ProductCardData[] {
   if (!Array.isArray(raw)) return [];
   return raw.map((item) => {
-    const p = item as ProductCardData & { _id?: unknown; id?: unknown };
-    const rc = Number(p.reviewCount);
-    const ra = Number(p.ratingAvg);
-    return {
-      ...p,
-      _id: String(p._id ?? p.id ?? ""),
-      reviewCount: Number.isFinite(rc) ? rc : 0,
-      ratingAvg: Number.isFinite(ra) ? ra : 0,
-    };
+    const p = item as ProductCardData & { id?: unknown };
+    return { ...p, _id: String(p._id ?? p.id ?? ""), reviewCount: Number(p.reviewCount) || 0, ratingAvg: Number(p.ratingAvg) || 0 };
   });
 }
 
 export function ProductsClient() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [products, setProducts] = useState<ProductCardData[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  usePageLoading(loading);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState("");
+  const [moreError, setMoreError] = useState("");
+  const [retry, setRetry] = useState(0);
+  const [filterReset, setFilterReset] = useState(0);
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
+  const [priceRange, setPriceRange] = useState<{ min: number; max: number } | null>(null);
+  const drawer = useRef<HTMLDialogElement>(null);
+  const filterTrigger = useRef<HTMLButtonElement>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const request = useRef<AbortController | null>(null);
+  const pendingFilters = useRef<Array<() => void>>([]);
+  const fetchingMore = useRef(false);
+  const loadMoreTrigger = useRef<HTMLDivElement>(null);
 
   const search = searchParams?.get("search") || "";
-  const catRaw = searchParams?.get("category");
-  const category =
-    catRaw === null || catRaw === "" ? "" : catRaw || "";
-  const sort = searchParams?.get("sort") || "newest";
+  const filters = readCatalogFilters(searchParams ?? new URLSearchParams());
+  const { category, sort, minPrice, maxPrice, inStock } = filters;
+  const filterCount = Number(Boolean(category)) + Number(minPrice !== null || maxPrice !== null) + Number(inStock) + Number(sort !== "newest");
+  const hasFilters = filterCount > 0;
+  const query = new URLSearchParams();
+  if (search) query.set("search", search);
+  if (category) query.set("category", category);
+  if (minPrice !== null) query.set("minPrice", String(minPrice));
+  if (maxPrice !== null) query.set("maxPrice", String(maxPrice));
+  if (inStock) query.set("inStock", "true");
+  query.set("sort", sort);
+  const filterKey = query.toString();
 
-  const filterKey = `${search}\0${category}\0${sort}`;
-
-  const fetchPage = useCallback(
-    async (pageNum: number) => {
-      const params = new URLSearchParams();
-      if (search) params.set("search", search);
-      if (category) params.set("category", category);
-      params.set("sort", sort);
-      params.set("page", String(pageNum));
-      params.set("limit", String(PAGE_SIZE));
-      const res = await fetch(`/api/products?${params.toString()}`);
-      const data = await res.json();
-      const batch = normalizeProducts(data.products || []);
-      return {
-        batch,
-        totalPages: Math.max(1, Number(data.totalPages) || 1),
-      };
-    },
-    [search, category, sort]
-  );
+  const fetchPage = useCallback(async (pageNum: number, signal: AbortSignal) => {
+    const params = new URLSearchParams(filterKey);
+    params.set("page", String(pageNum));
+    params.set("limit", String(PAGE_SIZE));
+    const res = await fetch(`/api/products?${params}`, { signal });
+    if (!res.ok) throw new Error("Could not load products");
+    const data = await res.json();
+    return { batch: normalizeProducts(data.products), total: Math.max(0, Number(data.total) || 0), totalPages: Math.max(1, Number(data.totalPages) || 1), priceRange: data.priceRange as { min: number; max: number } | undefined };
+  }, [filterKey]);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      setPage(1);
-      try {
-        const { batch, totalPages: tp } = await fetchPage(1);
-        if (cancelled) return;
-        setProducts(batch);
-        setTotalPages(tp);
-      } finally {
-        if (!cancelled) setLoading(false);
+    if (catalogQueryKey(new URLSearchParams(window.location.search)) !== catalogQueryKey(new URLSearchParams(filterKey))) return;
+    const controller = new AbortController();
+    request.current = controller;
+    // Block queued scroll callbacks while the first page for these filters loads.
+    fetchingMore.current = true;
+    setLoading(true); setLoadingMore(false); setMoreError(""); setPage(1);
+    void fetchPage(1, controller.signal).then((data) => {
+      if (controller.signal.aborted) return;
+      setProducts(data.batch); setTotal(data.total); setTotalPages(data.totalPages); setError("");
+      if (data.priceRange && Number.isFinite(data.priceRange.max)) setPriceRange(data.priceRange);
+    }).catch(() => {
+      if (!controller.signal.aborted) { setProducts([]); setError("We couldn't load the collection."); }
+    }).finally(() => {
+      if (!controller.signal.aborted) {
+        fetchingMore.current = false; setLoading(false);
+        pendingFilters.current.splice(0).forEach(resolve => resolve());
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [filterKey, fetchPage]);
+    });
+    return () => controller.abort();
+  }, [fetchPage, filterKey, retry]);
 
-  const loadMore = useCallback(async () => {
-    if (loadingMore || loading || page >= totalPages) return;
-    const next = page + 1;
-    setLoadingMore(true);
-    try {
-      const { batch, totalPages: tp } = await fetchPage(next);
-      setTotalPages(tp);
-      setProducts((prev) => {
-        const seen = new Set(prev.map((p) => p._id));
-        const merged = [...prev];
-        for (const p of batch) {
-          if (!seen.has(p._id)) {
-            seen.add(p._id);
-            merged.push(p);
-          }
-        }
-        return merged;
-      });
-      setPage(next);
-    } finally {
-      setLoadingMore(false);
-    }
-  }, [fetchPage, loading, loadingMore, page, totalPages]);
+  useEffect(() => () => { pendingFilters.current.splice(0).forEach(resolve => resolve()); }, []);
 
-  useEffect(() => {
-    fetch("/api/categories")
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("load failed"))))
-      .then((data: Array<{ name?: string }>) => {
-        const names = Array.isArray(data)
-          ? data
-              .map((x) => String(x?.name || "").trim())
-              .filter(Boolean)
-          : [];
-        setCategoryOptions(names);
-      })
-      .catch(() => {
-        setCategoryOptions([]);
-      });
-  }, []);
-
-  function buildQuery(patch: Partial<{ cat: string; sort: string }>) {
-    const p = new URLSearchParams();
-    if (search) p.set("search", search);
-    const cat = patch.cat !== undefined ? patch.cat : category;
-    if (cat) p.set("category", cat);
-    p.set("sort", patch.sort !== undefined ? patch.sort : sort);
-    return p.toString();
+  function retryProducts() {
+    const operation = new Promise<void>(resolve => pendingFilters.current.push(resolve));
+    setRetry(previous => previous + 1);
+    return operation;
   }
 
-  const unknownCategory =
-    category && !categoryOptions.includes(category) ? category : null;
+  const loadMore = useCallback(async () => {
+    const controller = request.current;
+    if (!controller || controller.signal.aborted || fetchingMore.current || loading || page >= totalPages) return;
+    if (catalogQueryKey(new URLSearchParams(window.location.search)) !== catalogQueryKey(new URLSearchParams(filterKey))) return;
+    fetchingMore.current = true; setLoadingMore(true);
+    try {
+      const data = await fetchPage(page + 1, controller.signal);
+      if (controller.signal.aborted) return;
+      setProducts((previous) => {
+        const seen = new Set(previous.map((product) => product._id));
+        return [...previous, ...data.batch.filter((product) => !seen.has(product._id))];
+      });
+      setTotalPages(data.totalPages); setTotal(data.total); setPage((previous) => previous + 1); setMoreError("");
+    } catch {
+      if (!controller.signal.aborted) setMoreError("Couldn't load more products. Please try again.");
+    } finally {
+      if (!controller.signal.aborted) { fetchingMore.current = false; setLoadingMore(false); }
+    }
+  }, [fetchPage, filterKey, loading, page, totalPages]);
+
+  useEffect(() => {
+    const trigger = loadMoreTrigger.current;
+    if (!trigger || loading || loadingMore || error || moreError || page >= totalPages) return;
+    let active = true;
+    const observer = new IntersectionObserver((entries) => {
+      if (active && entries.some((entry) => entry.isIntersecting)) void loadMore();
+    }, { rootMargin: "0px 0px 300px 0px" });
+    observer.observe(trigger);
+    return () => { active = false; observer.disconnect(); };
+  }, [error, loadMore, loading, loadingMore, moreError, page, totalPages]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch("/api/categories", { signal: controller.signal }).then((response) => {
+      if (!response.ok) throw new Error("Could not load categories");
+      return response.json();
+    }).then((data: Array<{ name?: string }>) => {
+      setCategoryOptions(Array.isArray(data) ? data.map((item) => String(item.name || "").trim()).filter(Boolean) : []);
+    }).catch(() => {});
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    const resetDrafts = () => setFilterReset((previous) => previous + 1);
+    window.addEventListener("popstate", resetDrafts);
+    return () => window.removeEventListener("popstate", resetDrafts);
+  }, []);
+
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const desktop = window.matchMedia("(min-width: 1280px)");
+    const closeOnDesktop = () => { if (desktop.matches) drawer.current?.close(); };
+    desktop.addEventListener("change", closeOnDesktop);
+    return () => { document.body.style.overflow = previousOverflow; desktop.removeEventListener("change", closeOnDesktop); };
+  }, [drawerOpen]);
+
+  function applyFilters(patch: Partial<CatalogFilters>) {
+    return updateUrl(updateCatalogQuery(window.location.search, patch));
+  }
+  function updateUrl(params: URLSearchParams) {
+    const current = new URLSearchParams(window.location.search);
+    let operation: Promise<void> | undefined;
+    if (catalogQueryKey(params) !== catalogQueryKey(current)) {
+      operation = new Promise<void>(resolve => pendingFilters.current.push(resolve));
+      request.current?.abort();
+      setLoading(true);
+      setLoadingMore(false);
+      // Also refetch if two rapid edits return to the original query before React renders.
+      setRetry((previous) => previous + 1);
+    }
+    // Next's native history integration updates useSearchParams without a route reload.
+    window.history.replaceState(null, "", `/products${params.size ? `?${params}` : ""}${window.location.hash}`);
+    return operation;
+  }
+  function clearFilters() {
+    setFilterReset((previous) => previous + 1);
+    return applyFilters({ category: "", sort: "newest", minPrice: null, maxPrice: null, inStock: false });
+  }
+  function browseAll() { setFilterReset((previous) => previous + 1); return updateUrl(new URLSearchParams()); }
+  const formProps = { filters, categories: categoryOptions, priceRange, onApply: applyFilters, resetSignal: filterReset };
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8">
-      <h1 className="text-2xl md:text-3xl font-bold text-darkText mb-6">
-        All Products
-      </h1>
-      <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:gap-4 mb-6 lg:hidden">
-        <div className="min-w-0 flex-1 sm:max-w-xs">
-          <label id="category-mobile-label" htmlFor="category-mobile" className="block font-bold text-darkText mb-2 text-sm">
-            Category
-          </label>
-          <ProductFilterSelect
-              id="category-mobile"
-              value={category}
-              options={[
-                { value: "", label: "All categories" },
-                ...Array.from(new Set([...categoryOptions, ...(unknownCategory ? [unknownCategory] : [])])).map((name) => ({ value: name, label: name })),
-              ]}
-              onChange={(value) => router.push(`/products?${buildQuery({ cat: value })}`)}
-            />
-        </div>
-        <div className="min-w-0 flex-1 sm:max-w-xs">
-          <label id="sort-mobile-label" htmlFor="sort-mobile" className="block font-bold text-darkText mb-2 text-sm">
-            Sort
-          </label>
-          <ProductFilterSelect
-              id="sort-mobile"
-              value={sort}
-              options={[
-                { value: "newest", label: "Newest" },
-                { value: "price_asc", label: "Price: Low to High" },
-                { value: "price_desc", label: "Price: High to Low" },
-              ]}
-              onChange={(value) => router.push(`/products?${buildQuery({ sort: value })}`)}
-            />
-        </div>
-      </div>
-
-      <div className="flex flex-col lg:flex-row gap-8">
-        <aside className="hidden lg:block lg:w-56 shrink-0 space-y-6">
-          <div>
-            <label id="category-desktop-label" htmlFor="category-desktop" className="font-bold text-darkText mb-2 block">
-              Category
-            </label>
-            <ProductFilterSelect
-              id="category-desktop"
-              value={category}
-              options={[
-                { value: "", label: "All categories" },
-                ...Array.from(new Set([...categoryOptions, ...(unknownCategory ? [unknownCategory] : [])])).map((name) => ({ value: name, label: name })),
-              ]}
-              onChange={(value) => router.push(`/products?${buildQuery({ cat: value })}`)}
-            />
-          </div>
-          <div>
-            <label id="sort-desktop-label" htmlFor="sort-desktop" className="font-bold text-darkText mb-2 block">
-              Sort
-            </label>
-            <ProductFilterSelect
-              id="sort-desktop"
-              value={sort}
-              options={[
-                { value: "newest", label: "Newest" },
-                { value: "price_asc", label: "Price: Low to High" },
-                { value: "price_desc", label: "Price: High to Low" },
-              ]}
-              onChange={(value) => router.push(`/products?${buildQuery({ sort: value })}`)}
-            />
-          </div>
-        </aside>
-
-        <div className="flex-1 min-w-0">
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-            {loading
-              ? Array.from({ length: PAGE_SIZE }).map((_, i) => (
-                  <ProductCardSkeleton key={i} />
-                ))
-              : products.map((p) => <ProductCard key={p._id} product={p} />)}
-          </div>
-          {!loading && products.length === 0 ? (
-            <div className="py-12 text-center"><p>No products found.</p><Link href={`/wants/new?title=${encodeURIComponent(search)}`} className="mt-4 inline-block rounded-xl bg-brand-primary p-3 font-bold">Post this as a Want</Link></div>
-          ) : null}
-          {!loading && page < totalPages ? (
-            <div className="mt-10 flex justify-center">
-              <button
-                type="button"
-                disabled={loadingMore}
-                onClick={() => void loadMore()}
-                className="inline-flex min-w-[140px] justify-center rounded-xl border-2 border-primaryBlue bg-white px-10 py-3 font-bold text-primaryBlue shadow-sm transition-colors hover:bg-brand-primary hover:text-white disabled:pointer-events-none disabled:opacity-60"
-              >
-                {loadingMore ? "Loading…" : "More"}
-              </button>
+    <div className={styles.page}>
+      <div className={styles.container}>
+        <nav aria-label="Breadcrumb" className={styles.breadcrumb}><Link href="/">Home</Link><ChevronRight aria-hidden="true" /><span aria-current="page">All Products</span></nav>
+        <header className={styles.heading}>
+          <div><div className={styles.titleRow}><h1>All Products</h1>{!loading && !error && <span className={styles.count}>{total.toLocaleString("en-PK")} products</span>}</div><p>Everyday finds. A little more extraordinary.</p></div>
+          <span className={styles.delivery}><Truck aria-hidden="true" /> Delivered across Pakistan</span>
+        </header>
+        <div className={styles.layout}>
+          <aside aria-label="Product filters" className={styles.sidebar}>
+            <div className={styles.filterHeading}><h2><SlidersHorizontal aria-hidden="true" /> Filters {hasFilters && <span className={styles.filterCount} aria-label={`${filterCount} active filters`}>{filterCount}</span>}</h2>{hasFilters && <LoadingButton type="button" onClick={clearFilters}>Clear all</LoadingButton>}</div>
+            <ProductFilters {...formProps} id="desktop" />
+          </aside>
+          <section aria-labelledby="products-collection-title" className={styles.results}>
+            <div className={styles.toolbar}>
+              <div className={styles.collectionHeading}>
+                <h2 id="products-collection-title">Just For You</h2>
+                <p role="status" aria-live="polite">{loading ? <><LoaderCircle aria-hidden="true" className={styles.filterSpinner} /> Updating products…</> : error ? "Collection unavailable" : <>Showing <strong>{products.length ? `1–${products.length}` : "0"}</strong> of <strong>{total.toLocaleString("en-PK")}</strong> products</>}{search && <span className={styles.searchTerm}> for “{search}”</span>}</p>
+              </div>
+              <span className={styles.sortLabel}>{SORT_LABELS[sort]}</span>
+              <LoadingButton ref={filterTrigger} type="button" className={styles.mobileFilter} aria-haspopup="dialog" aria-controls="product-filter-drawer" onClick={() => { drawer.current?.showModal(); setDrawerOpen(true); }}><SlidersHorizontal aria-hidden="true" /> Filter & sort {filterCount > 0 && <span>{filterCount}</span>}</LoadingButton>
             </div>
-          ) : null}
+            {hasFilters && <div className={styles.chips} aria-label="Active filters">
+              <span className={styles.activeFilterCount}>{filterCount} active {filterCount === 1 ? "filter" : "filters"}</span>
+              {category && <LoadingButton type="button" onClick={() => applyFilters({ category: "" })}>{category}<X aria-label="Remove category filter" /></LoadingButton>}
+              {(minPrice !== null || maxPrice !== null) && <LoadingButton type="button" onClick={() => applyFilters({ minPrice: null, maxPrice: null })}>{minPrice !== null && maxPrice !== null ? `${formatPKR(minPrice)} – ${formatPKR(maxPrice)}` : minPrice !== null ? `From ${formatPKR(minPrice)}` : `Up to ${formatPKR(maxPrice!)}`}<X aria-label="Remove price filter" /></LoadingButton>}
+              {inStock && <LoadingButton type="button" onClick={() => applyFilters({ inStock: false })}>In stock<X aria-label="Remove stock filter" /></LoadingButton>}
+              {sort !== "newest" && <LoadingButton type="button" onClick={() => applyFilters({ sort: "newest" })}>{SORT_LABELS[sort]}<X aria-label="Remove sort filter" /></LoadingButton>}
+              <LoadingButton type="button" className={styles.clearAll} onClick={clearFilters}>Clear all filters</LoadingButton>
+            </div>}
+            <div className={styles.grid} aria-busy={loading || loadingMore}>
+              {loading ? Array.from({ length: PAGE_SIZE }, (_, index) => <ProductCardSkeleton key={index} variant="marketplace" />) : products.map((product) => <ProductCard key={product._id} product={product} variant="marketplace" />)}
+              {loadingMore && Array.from({ length: 6 }, (_, index) => <ProductCardSkeleton key={`more-${index}`} variant="marketplace" />)}
+            </div>
+            {(error || (!loading && products.length === 0)) && <div className={styles.empty}>
+              <div className={styles.emptyIcon}><PackageSearch aria-hidden="true" /></div>
+              <h2>{error || "No matches just yet"}</h2>
+              <p>{error ? "Please check your connection and give it another try." : "Try a different category or a wider price range. Your next great find could be one filter away."}</p>
+              {error ? <LoadingButton type="button" className={styles.primaryButton} onClick={retryProducts}><RotateCcw aria-hidden="true" /> Try again</LoadingButton> : <><LoadingButton type="button" className={styles.primaryButton} onClick={browseAll}>Browse all products <ArrowRight aria-hidden="true" /></LoadingButton><PostWantButton initialTitle={search} className={styles.wantLink}>Looking for something specific? Post a Want</PostWantButton></>}
+            </div>}
+            {!loading && !error && products.length > 0 && <div ref={loadMoreTrigger} className={styles.pagination}>
+              <p>You’ve explored {products.length} of {total.toLocaleString("en-PK")} products</p>
+              <div className={styles.progress} aria-hidden="true"><span style={{ width: `${Math.min(100, products.length / Math.max(1, total) * 100)}%` }} /></div>
+              {moreError && <p role="alert">{moreError}</p>}
+              {page < totalPages && (moreError
+                ? <LoadingButton type="button" className={styles.retryMore} onClick={() => loadMore()}><RotateCcw aria-hidden="true" /> Try again</LoadingButton>
+                : <p role="status" className={styles.scrollStatus}>{loadingMore ? <><LoaderCircle aria-hidden="true" className={styles.filterSpinner} /> Loading more products…</> : "Scroll to discover more"}</p>)}
+            </div>}
+          </section>
         </div>
       </div>
+      <dialog ref={drawer} id="product-filter-drawer" aria-labelledby="filter-drawer-title" className={styles.drawer} onClose={() => { setDrawerOpen(false); filterTrigger.current?.focus({ preventScroll: true }); }} onClick={(event) => { if (event.target === event.currentTarget) drawer.current?.close(); }}>
+        <div className={styles.drawerContent}>
+          <div className={styles.drawerHeading}><div><span>MAKE IT YOURS</span><h2 id="filter-drawer-title">Filter & sort</h2></div><LoadingButton type="button" aria-label="Close filters" onClick={() => drawer.current?.close()}><X aria-hidden="true" /></LoadingButton></div>
+          <p className={styles.drawerStatus} role="status">{loading ? <><LoaderCircle className={styles.filterSpinner} aria-hidden="true" /> Updating products…</> : `${total.toLocaleString("en-PK")} products · ${filterCount} active filters`}</p>
+          <ProductFilters {...formProps} id="mobile" />
+          {hasFilters && <LoadingButton type="button" className={styles.drawerReset} onClick={clearFilters}>Clear all filters</LoadingButton>}
+        </div>
+      </dialog>
     </div>
   );
 }

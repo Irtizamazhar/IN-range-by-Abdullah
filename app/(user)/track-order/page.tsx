@@ -1,4 +1,7 @@
 "use client";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { LoadingButton } from "@/components/ui/LoadingButton";
+import { LoadingForm } from "@/components/ui/LoadingForm";
 
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -112,21 +115,21 @@ export default function TrackOrderPage() {
       <p className="mb-6 text-sm font-normal text-darkText/60">
         Enter your order number and view the latest status timeline.
       </p>
-      <form onSubmit={lookup} className="flex gap-2 mb-10">
+      <LoadingForm onSubmit={lookup} className="flex gap-2 mb-10">
         <input
           className="flex-1 rounded-xl border border-borderGray px-4 py-2.5 text-base font-normal"
           placeholder="Order number (e.g. IRB-001)"
           value={num}
           onChange={(e) => setNum(e.target.value)}
         />
-        <button
+        <LoadingButton
           type="submit"
-          disabled={loading}
+          loadingLabel="Tracking…"
           className="rounded-xl bg-brand-primary px-6 py-2.5 text-base font-semibold text-brand-dark disabled:opacity-50"
         >
-          {loading ? "…" : "Track"}
-        </button>
-      </form>
+          Track
+        </LoadingButton>
+      </LoadingForm>
 
       {myOrders.length > 0 ? (
         <div className="mb-8 rounded-card border border-borderGray bg-white p-4 shadow-card">
@@ -145,16 +148,16 @@ export default function TrackOrderPage() {
                       Status: {String(o.orderStatus || "pending")}
                     </p>
                   </div>
-                  <button
+                  <LoadingButton
                     type="button"
                     onClick={() => {
                       setNum(id);
-                      void lookupByNumber(id);
+                      return lookupByNumber(id);
                     }}
                     className="rounded-lg bg-yellow-400 px-3 py-1.5 text-xs font-medium text-black hover:bg-yellow-500"
                   >
                     Track now
-                  </button>
+                  </LoadingButton>
                 </div>
               );
             })}
@@ -165,6 +168,7 @@ export default function TrackOrderPage() {
         </div>
       ) : null}
 
+      {loading && <PageSkeleton label="Loading order details…" rows={3} />}
       {order ? (
         <div
           ref={detailRef}
@@ -235,13 +239,13 @@ export default function TrackOrderPage() {
           ) : null}
 
           {canCancel ? (
-            <button
+            <LoadingButton
               type="button"
               onClick={cancelOrder}
               className="w-full rounded-lg border-2 border-red-400 py-2.5 font-semibold text-red-500 hover:bg-red-50"
             >
               Cancel order
-            </button>
+            </LoadingButton>
           ) : null}
 
           {blockedMsg && !canCancel && status !== "cancelled" ? (

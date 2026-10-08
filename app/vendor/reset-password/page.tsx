@@ -1,7 +1,9 @@
 "use client";
+import { LoadingButton } from "@/components/ui/LoadingButton";
+import { LoadingForm } from "@/components/ui/LoadingForm";
 
 import { FormEvent, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/LoadingLink";
 import toast from "react-hot-toast";
 
 export default function VendorResetPasswordPage() {
@@ -44,7 +46,7 @@ export default function VendorResetPasswordPage() {
             </Link>
           </div>
         ) : (
-          <form onSubmit={submit} className="mt-6 space-y-4">
+          <LoadingForm onSubmit={submit} className="mt-6 space-y-4">
             <label className="block text-sm font-semibold text-darkText">
               New password
               <input required minLength={8} maxLength={128} type="password" autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} className="mt-1 w-full rounded-xl border border-borderGray px-3 py-2.5" />
@@ -53,10 +55,10 @@ export default function VendorResetPasswordPage() {
               Confirm password
               <input required minLength={8} maxLength={128} type="password" autoComplete="new-password" value={confirm} onChange={(event) => setConfirm(event.target.value)} className="mt-1 w-full rounded-xl border border-borderGray px-3 py-2.5" />
             </label>
-            <button disabled={busy} className="w-full rounded-xl bg-brand-primary px-4 py-3 font-bold text-brand-dark hover:bg-brand-hover disabled:opacity-60">
-              {busy ? "Updating…" : "Update password"}
-            </button>
-          </form>
+            <LoadingButton type="submit" loadingLabel="Updating…" disabled={busy} className="w-full rounded-xl bg-brand-primary px-4 py-3 font-bold text-brand-dark hover:bg-brand-hover disabled:opacity-60">
+              {"Update password"}
+            </LoadingButton>
+          </LoadingForm>
         )}
       </section>
     </main>

@@ -1,4 +1,5 @@
 "use client";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import { useState } from "react";
 
@@ -51,14 +52,14 @@ export default function FaqPage() {
               key={item.q}
               className="overflow-hidden rounded-xl border border-brand-secondary bg-white shadow-card"
             >
-              <button
+              <LoadingButton
                 type="button"
                 onClick={() => setOpenIdx((prev) => (prev === idx ? null : idx))}
                 className="flex w-full items-center justify-between px-4 py-3 text-left"
               >
                 <span className="font-semibold text-darkText">{item.q}</span>
                 <span className="ml-4 text-brand-dark">{open ? "−" : "+"}</span>
-              </button>
+              </LoadingButton>
               {open ? (
                 <div className="border-t border-brand-secondary px-4 py-3 text-sm leading-6 text-darkText/80">
                   {item.a}

@@ -1,7 +1,9 @@
 "use client";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/LoadingLink";
 import { useParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { Download, Printer, X } from "lucide-react";
@@ -64,23 +66,21 @@ export default function VendorShopOrderDetailPage() {
     );
     const j = (await r.json()) as { error?: string };
     if (!r.ok) {
-      toast.error(j.error || "Cancel failed");
-      throw new Error(j.error);
+      throw new Error(j.error || "Cancel failed. Please try again.");
     }
     toast.success("Order cancelled");
     await load();
   }
 
-  if (loading) {
+  if (loading && !data) {
     return (
-      <div className="mx-auto max-w-3xl p-6 text-darkText/60 md:p-8">
-        Loading…
-      </div>
+      <PageSkeleton label="Loading…" rows={3} />
     );
   }
   if (!data) {
     return (
       <div className="mx-auto max-w-3xl p-6 md:p-8">
+        <LoadingButton onClick={load} className="mb-4 block rounded-xl bg-brand-primary px-4 py-2 font-bold">Retry loading order</LoadingButton>
         <Link href="/vendor/dashboard/orders" className="font-bold text-primaryBlue">
           ← Back to orders
         </Link>
@@ -209,14 +209,14 @@ export default function VendorShopOrderDetailPage() {
             <h2 className="text-sm font-bold uppercase tracking-wide text-primaryBlue">
               Shipping Label
             </h2>
-            <button
+            <LoadingButton
               type="button"
               onClick={() => setShowShippingLabel(true)}
               className="inline-flex items-center gap-2 rounded-lg bg-brand-primary px-3 py-2 text-xs font-semibold text-brand-dark transition hover:bg-brand-hover"
             >
               <Printer className="h-4 w-4" />
               Open label
-            </button>
+            </LoadingButton>
           </div>
           <div className="space-y-2 rounded-lg border border-dashed border-borderGray p-3 text-sm">
             <p className="font-bold text-darkText">{data.customerName}</p>
@@ -240,16 +240,16 @@ export default function VendorShopOrderDetailPage() {
             <VendorStatusDropdown
               currentStatus={data.orderStatus as ShopOrderStatusPill}
               statusUrl={`/api/orders/vendor/${encodeURIComponent(id)}/status`}
-              onSuccess={() => void load()}
+              onSuccess={() => load()}
             />
             <div>
-              <button
+              <LoadingButton
                 type="button"
                 onClick={() => setCancelOpen(true)}
                 className="rounded-xl border border-red-300 bg-red-50 px-5 py-2.5 text-sm font-bold text-red-800 hover:bg-red-100"
               >
                 Cancel order
-              </button>
+              </LoadingButton>
             </div>
           </div>
         ) : null}
@@ -274,14 +274,14 @@ export default function VendorShopOrderDetailPage() {
               <h3 className="text-base font-bold text-darkText">
                 Shipping Label
               </h3>
-              <button
+              <LoadingButton
                 type="button"
                 onClick={() => setShowShippingLabel(false)}
                 className="rounded-md p-1.5 text-darkText/70 hover:bg-lightGray"
                 aria-label="Close"
               >
                 <X className="h-4 w-4" />
-              </button>
+              </LoadingButton>
             </div>
 
             <div id="shipping-label-print-area-vendor" className="space-y-4">
@@ -315,22 +315,22 @@ export default function VendorShopOrderDetailPage() {
             </div>
 
             <div className="shipping-label-actions-vendor mt-5 flex flex-wrap gap-3">
-              <button
+              <LoadingButton
                 type="button"
-                onClick={downloadShippingLabel}
+                loadingLabel="Preparing…" onClick={downloadShippingLabel}
                 className="inline-flex items-center gap-2 rounded-lg border border-primaryBlue/20 bg-primaryBlue/10 px-4 py-2 text-sm font-semibold text-primaryBlue hover:bg-primaryBlue/15"
               >
                 <Download className="h-4 w-4" />
                 Download
-              </button>
-              <button
+              </LoadingButton>
+              <LoadingButton
                 type="button"
                 onClick={printShippingLabel}
                 className="inline-flex items-center gap-2 rounded-lg bg-brand-primary px-4 py-2 text-sm font-semibold text-brand-dark hover:bg-brand-hover"
               >
                 <Printer className="h-4 w-4" />
                 Print
-              </button>
+              </LoadingButton>
             </div>
           </aside>
         </div>

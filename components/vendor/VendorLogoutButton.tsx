@@ -1,6 +1,7 @@
 "use client";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
-import { useRouter } from "next/navigation";
+import { useLoadingRouter as useRouter } from "@/hooks/useLoadingRouter";
 import { useState } from "react";
 import { clearVendorLoginRememberPrefs } from "@/lib/vendor-login-remember-prefs";
 
@@ -11,26 +12,26 @@ export function VendorLogoutButton() {
   async function logout() {
     setPending(true);
     try {
-      await fetch("/api/vendor/logout", {
+      const response = await fetch("/api/vendor/logout", {
         method: "POST",
         credentials: "include",
       });
+      if (!response.ok) throw new Error("Could not sign out. Please try again.");
       clearVendorLoginRememberPrefs();
-      router.replace("/vendor/login");
-      router.refresh();
+      await router.replace("/vendor/login");
     } finally {
       setPending(false);
     }
   }
 
   return (
-    <button
+    <LoadingButton loadingLabel="Signing out…"
       type="button"
       disabled={pending}
-      onClick={() => void logout()}
+      onClick={() => logout()}
       className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-amber-400 hover:bg-neutral-800 disabled:opacity-60"
     >
-      {pending ? "Signing out…" : "Sign out"}
-    </button>
+      {"Sign out"}
+    </LoadingButton>
   );
 }

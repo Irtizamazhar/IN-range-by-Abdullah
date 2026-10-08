@@ -1,4 +1,5 @@
 "use client";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
@@ -30,7 +31,7 @@ function stepLabel(status: ShopOrderStatusPill): string {
 type Props = {
   currentStatus: ShopOrderStatusPill;
   statusUrl: string;
-  onSuccess: () => void;
+  onSuccess: () => void | Promise<void>;
 };
 
 /**
@@ -105,7 +106,7 @@ export function VendorStatusDropdown({
         return;
       }
       toast.success("Status update ho gaya");
-      onSuccess();
+      await onSuccess();
     } finally {
       setBusy(false);
     }
@@ -150,14 +151,14 @@ export function VendorStatusDropdown({
         placeholder="Timeline pe note"
       />
 
-      <button
+      <LoadingButton loadingLabel="Saving…"
         type="button"
         disabled={busy || !selected}
-        onClick={() => void submit()}
+        onClick={() => submit()}
         className="mt-4 rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-bold text-brand-dark hover:bg-brand-hover disabled:opacity-50"
       >
-        {busy ? "Saving…" : "Status update karein"}
-      </button>
+        {"Status update karein"}
+      </LoadingButton>
     </div>
   );
 }

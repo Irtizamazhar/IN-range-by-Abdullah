@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useLoadingRouter as useRouter } from "@/hooks/useLoadingRouter";
 import { useVendorAuth } from "@/context/VendorAuthContext";
+import { usePageLoading } from "@/hooks/usePageLoading";
 
 function VendorAuthSkeleton() {
   return (
@@ -23,6 +24,7 @@ export function VendorProtectedRoute({
   children: React.ReactNode;
 }) {
   const { vendor, loading } = useVendorAuth();
+  usePageLoading(loading);
   const router = useRouter();
 
   useEffect(() => {

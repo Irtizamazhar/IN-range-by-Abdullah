@@ -1,7 +1,8 @@
 "use client";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/ui/LoadingLink";
 
 import { LogoMark } from "./LogoMark";
 import { BrandTagline } from "./BrandTagline";
@@ -141,13 +142,13 @@ export function Footer({
               </li>
 
               <li>
-                <a
+                <Link
                   href="/sell"
 
                   className="font-bold text-brand-primary hover:text-white"
                 >
                   Sell on JORO
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -292,7 +293,7 @@ export function Footer({
                       {icon}
                     </a>
                   ) : (
-                    <button
+                    <LoadingButton
                       type="button"
                       disabled
                       aria-label={`${label} (not configured)`}
@@ -300,7 +301,7 @@ export function Footer({
                       className={SOCIAL_BUTTON_CLASS}
                     >
                       {icon}
-                    </button>
+                    </LoadingButton>
                   )}
                 </li>
               );

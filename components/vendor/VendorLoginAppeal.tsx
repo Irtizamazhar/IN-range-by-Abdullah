@@ -1,6 +1,9 @@
 "use client";
+import { LoadingButton } from "@/components/ui/LoadingButton";
+import { LoadingForm } from "@/components/ui/LoadingForm";
+import { navigateDocument } from "@/lib/navigate-document";
 
-import Link from "next/link";
+import Link from "@/components/ui/LoadingLink";
 import { useEffect, useState } from "react";
 import { PasswordToggleInput } from "@/components/ui/PasswordToggleInput";
 import { LogoMark } from "@/components/user/LogoMark";
@@ -47,6 +50,7 @@ export default function VendorLoginPage() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (pending) return;
     setError(null);
     setShowAppeal(false);
     setAppealDone(false);
@@ -88,7 +92,7 @@ export default function VendorLoginPage() {
       // Full page navigation: cookie from login is always sent on the next load.
       // Client router + immediate refresh() could race (session looks empty once) and
       // VendorProtectedRoute sent users back to login — felt like needing two clicks.
-      window.location.assign("/vendor/dashboard");
+      await navigateDocument("/vendor/dashboard");
     } catch {
       setError("Network error. Try again.");
     } finally {
@@ -161,10 +165,10 @@ export default function VendorLoginPage() {
         <div className="vendor-float-3 pointer-events-none absolute left-1/2 top-1/2 h-32 w-32 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/10" />
 
         <div className="relative z-10 w-full max-w-sm">
-          <div className="vendor-logo-float mb-4 inline-flex h-20 w-20 items-center justify-center rounded-full bg-white p-2 shadow-[0_8px_25px_rgba(0,0,0,0.2)]">
+          <div className="vendor-logo-float mb-4 inline-flex h-20 w-44 items-center justify-center rounded-2xl bg-white p-2 shadow-[0_8px_25px_rgba(0,0,0,0.2)]">
             <LogoMark
               href={null}
-              className="[&_img]:max-h-[60px] [&_img]:max-w-[100px] [&_img]:w-auto"
+              className="[&_img]:max-h-[60px] [&_img]:w-auto"
             />
           </div>
 
@@ -296,14 +300,14 @@ export default function VendorLoginPage() {
                     </p>
                   ) : null}
                 </div>
-                <button
+                <LoadingButton loadingLabel="Submitting..."
                   type="button"
                   disabled={appealPending || appealUploading}
-                  onClick={() => void submitAppeal()}
+                  onClick={() => submitAppeal()}
                   className="mt-2 rounded-lg bg-amber-500 px-3 py-2 text-xs font-bold text-white hover:bg-amber-600 disabled:opacity-50"
                 >
-                  {appealPending ? "Submitting..." : "Submit appeal"}
-                </button>
+                  {"Submit appeal"}
+                </LoadingButton>
                 {appealDone ? (
                   <p className="mt-2 text-xs font-medium text-emerald-700">
                     Appeal submitted. Admin will review it soon.
@@ -312,7 +316,7 @@ export default function VendorLoginPage() {
               </div>
             ) : null}
 
-            <form onSubmit={onSubmit} className="mt-6 space-y-4">
+            <LoadingForm onSubmit={onSubmit} className="mt-6 space-y-4">
               <div>
                 <label
                   htmlFor="vendor-email"
@@ -364,15 +368,15 @@ export default function VendorLoginPage() {
                   Forgot password?
                 </Link>
               </div>
-              <button
+              <LoadingButton loading={pending} loadingLabel="Signing in…"
                 type="submit"
                 disabled={pending}
                 className="w-full rounded-xl py-3 text-base font-extrabold text-neutral-900 shadow-sm transition hover:brightness-95 disabled:opacity-60"
                 style={{ backgroundColor: accent }}
               >
-                {pending ? "Signing in…" : "Sign in"}
-              </button>
-            </form>
+                {"Sign in"}
+              </LoadingButton>
+            </LoadingForm>
 
             <p className="mt-6 text-center text-sm text-neutral-600">
               New vendor?{" "}

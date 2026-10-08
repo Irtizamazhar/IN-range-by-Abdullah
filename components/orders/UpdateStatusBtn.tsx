@@ -1,5 +1,7 @@
 "use client";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
+import toast from "react-hot-toast";
 import { useState } from "react";
 import { nextShopStatus } from "@/lib/vendor-shop-order-helpers";
 import type { ShopOrderStatusPill } from "./StatusBadge";
@@ -24,7 +26,7 @@ type Props = {
   currentStatus: ShopOrderStatusPill;
   /** Full URL for PATCH (vendor or admin if you add it later). */
   statusUrl: string;
-  onSuccess: () => void;
+  onSuccess: () => void | Promise<void>;
 };
 
 /**
@@ -63,10 +65,11 @@ export function UpdateStatusBtn({
       if (!r.ok) throw new Error(j.error || "Update failed");
       setNote("");
       setTracking("");
+      toast.success("Order status updated");
+      await onSuccess();
       setOpen(false);
-      onSuccess();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Update failed");
+      toast.error(e instanceof Error ? e.message : "Update failed");
     } finally {
       setBusy(false);
     }
@@ -74,13 +77,13 @@ export function UpdateStatusBtn({
 
   return (
     <>
-      <button
+      <LoadingButton
         type="button"
         onClick={() => setOpen(true)}
         className="rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-bold text-brand-dark hover:bg-brand-hover"
       >
         {actionLabel(next)}
-      </button>
+      </LoadingButton>
 
       {open ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -113,22 +116,22 @@ export function UpdateStatusBtn({
               </>
             ) : null}
             <div className="mt-4 flex justify-end gap-2">
-              <button
+              <LoadingButton
                 type="button"
                 disabled={busy}
                 onClick={() => setOpen(false)}
                 className="rounded-lg border border-borderGray px-4 py-2 text-sm font-semibold"
               >
                 Back
-              </button>
-              <button
+              </LoadingButton>
+              <LoadingButton loadingLabel="Saving…"
                 type="button"
                 disabled={busy}
-                onClick={() => void confirm()}
+                onClick={() => confirm()}
                 className="rounded-lg bg-brand-primary px-4 py-2 text-sm font-bold text-brand-dark disabled:opacity-50"
               >
-                {busy ? "Saving…" : "Confirm"}
-              </button>
+                {"Confirm"}
+              </LoadingButton>
             </div>
           </div>
         </div>

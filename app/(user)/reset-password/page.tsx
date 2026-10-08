@@ -1,7 +1,9 @@
 "use client";
+import { LoadingButton } from "@/components/ui/LoadingButton";
+import { LoadingForm } from "@/components/ui/LoadingForm";
 
 import { FormEvent, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/LoadingLink";
 import toast from "react-hot-toast";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
 
@@ -46,16 +48,16 @@ export default function ResetPasswordPage() {
             <p className="text-darkText/70">
               Your website password has been set and older customer sessions were signed out. You can now sign in with Google or your website email and password.
             </p>
-            <button
+            <LoadingButton
               type="button"
               onClick={() => openAuthModal("login")}
               className="mt-6 w-full rounded-xl bg-brand-primary px-4 py-3 font-bold text-brand-dark hover:bg-brand-hover"
             >
               Sign in
-            </button>
+            </LoadingButton>
           </div>
         ) : (
-          <form onSubmit={submit} className="mt-6 space-y-4">
+          <LoadingForm onSubmit={submit} className="mt-6 space-y-4">
             <label className="block text-sm font-semibold text-darkText">
               New password
               <input
@@ -82,13 +84,13 @@ export default function ResetPasswordPage() {
                 className="mt-1 w-full rounded-xl border border-borderGray px-3 py-2.5"
               />
             </label>
-            <button
-              disabled={busy}
+            <LoadingButton
+              loading={busy} loadingLabel="Saving…"
               className="w-full rounded-xl bg-brand-primary px-4 py-3 font-bold text-brand-dark hover:bg-brand-hover disabled:opacity-60"
             >
-              {busy ? "Saving…" : "Set password"}
-            </button>
-          </form>
+              Set password
+            </LoadingButton>
+          </LoadingForm>
         )}
         <Link href="/" className="mt-5 inline-block text-sm font-semibold text-primaryBlue">
           Back to shop

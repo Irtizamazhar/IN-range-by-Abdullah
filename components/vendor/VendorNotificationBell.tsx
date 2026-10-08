@@ -1,7 +1,10 @@
 "use client";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Bell } from "lucide-react";
+import toast from "react-hot-toast";
 
 type Row = {
   id: string;
@@ -23,13 +26,15 @@ export function VendorNotificationBell() {
     setLoading(true);
     try {
       const r = await fetch("/api/vendor/notifications", { credentials: "include" });
-      if (!r.ok) return;
+      if (!r.ok) throw new Error("Could not load notifications. Please try again.");
       const data = (await r.json()) as {
         unread?: number;
         notifications?: Row[];
       };
       setUnread(Number(data.unread ?? 0));
       setRows(Array.isArray(data.notifications) ? data.notifications : []);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not load notifications");
     } finally {
       setLoading(false);
     }
@@ -50,30 +55,34 @@ export function VendorNotificationBell() {
   }, [open]);
 
   async function markRead(id: string) {
-    await fetch(`/api/vendor/notifications/${id}`, {
+    const response = await fetch(`/api/vendor/notifications/${id}`, {
       method: "PATCH",
       credentials: "include",
     });
-    void load();
+    if (!response.ok) throw new Error("Could not mark this notification as read. Please retry.");
+    await load();
+    toast.success("Notification marked as read");
   }
 
   async function markAllRead() {
-    await fetch("/api/vendor/notifications", {
+    const response = await fetch("/api/vendor/notifications", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify({ markAllRead: true }),
     });
-    void load();
+    if (!response.ok) throw new Error("Could not mark notifications as read. Please retry.");
+    await load();
+    toast.success("Notifications marked as read");
   }
 
   return (
     <div className="relative" ref={panelRef}>
-      <button
+      <LoadingButton
         type="button"
         onClick={() => {
           setOpen((v) => !v);
-          if (!open) void load();
+          if (!open) return load();
         }}
         className="relative rounded-lg p-2 text-white/90 hover:bg-white/10"
         aria-label="Notifications"
@@ -84,7 +93,7 @@ export function VendorNotificationBell() {
             {unread > 99 ? "99+" : unread}
           </span>
         ) : null}
-      </button>
+      </LoadingButton>
 
       {open ? (
         <div className="absolute right-0 top-full z-[80] mt-2 w-[min(100vw-2rem,22rem)] rounded-xl border border-white/10 bg-footerDark shadow-xl">
@@ -93,27 +102,28 @@ export function VendorNotificationBell() {
               Notifications
             </span>
             {unread > 0 ? (
-              <button
+              <LoadingButton
                 type="button"
-                onClick={() => void markAllRead()}
+                loadingLabel="Saving…" onClick={() => markAllRead()}
                 className="text-xs font-medium text-primaryBlue hover:underline"
               >
                 Mark all read
-              </button>
+              </LoadingButton>
             ) : null}
           </div>
           <div className="max-h-80 overflow-y-auto">
             {loading && rows.length === 0 ? (
-              <p className="p-4 text-sm text-white/50">Loading…</p>
+              <PageSkeleton label="Loading…" rows={3} />
             ) : rows.length === 0 ? (
               <p className="p-4 text-sm text-white/50">No notifications yet.</p>
             ) : (
               rows.map((n) => (
-                <button
+                <LoadingButton
                   key={n.id}
                   type="button"
+                  loadingLabel="Saving…"
                   onClick={() => {
-                    if (!n.isRead) void markRead(n.id);
+                    if (!n.isRead) return markRead(n.id);
                   }}
                   className={`block w-full border-b border-white/5 px-3 py-2.5 text-left text-sm transition-colors hover:bg-white/5 ${
                     n.isRead ? "text-white/70" : "bg-white/5 text-white"
@@ -126,7 +136,7 @@ export function VendorNotificationBell() {
                   <p className="mt-1 text-[10px] text-white/40">
                     {new Date(n.createdAt).toLocaleString("en-PK")}
                   </p>
-                </button>
+                </LoadingButton>
               ))
             )}
           </div>

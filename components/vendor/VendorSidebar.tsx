@@ -1,7 +1,9 @@
 "use client";
+import { useLoadingRouter } from "@/hooks/useLoadingRouter";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import type { ComponentType } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/LoadingLink";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
@@ -168,17 +170,12 @@ export function VendorSidebar({
     };
   }, [pathname]);
 
+  const router = useLoadingRouter();
   async function logout() {
-    try {
-      await fetch("/api/vendor/logout", {
-        method: "POST",
-        credentials: "include",
-      });
-    } catch {
-      /* still leave */
-    }
+    const response = await fetch("/api/vendor/logout", { method: "POST", credentials: "include" });
+    if (!response.ok) throw new Error("Could not sign out. Please try again.");
     clearVendorLoginRememberPrefs();
-    window.location.href = "/vendor/login";
+    await router.replace("/vendor/login");
   }
 
   return (
@@ -239,14 +236,14 @@ export function VendorSidebar({
         })}
       </nav>
       <div className="shrink-0 border-t border-white/10 p-3">
-        <button
+        <LoadingButton
           type="button"
-          onClick={() => void logout()}
+          loadingLabel="Signing out…" onClick={() => logout()}
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-base font-medium text-white/80 hover:bg-white/10"
         >
           <LogOut className="h-4 w-4 shrink-0" />
           Logout
-        </button>
+        </LoadingButton>
       </div>
     </aside>
   );

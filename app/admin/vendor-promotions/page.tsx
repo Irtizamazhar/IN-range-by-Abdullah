@@ -1,6 +1,10 @@
 "use client";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { LoadingButton } from "@/components/ui/LoadingButton";
+import { LoadingForm } from "@/components/ui/LoadingForm";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/LoadingLink";
 import toast from "react-hot-toast";
 
 type Vendor = { id: string; shopName: string; ownerName: string; storeSlug: string | null; status: string };
@@ -46,7 +50,6 @@ export default function VendorPromotionsPage() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Campaign | null>(null);
-  const [busy, setBusy] = useState(false);
   const [vendorQuery, setVendorQuery] = useState("");
   const [vendorId, setVendorId] = useState("");
   const [desktopImage, setDesktopImage] = useState("");
@@ -54,8 +57,8 @@ export default function VendorPromotionsPage() {
   const [uploadingDesktop, setUploadingDesktop] = useState(false);
   const [uploadingMobile, setUploadingMobile] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       const r = await fetch("/api/admin/vendor-promotions", { credentials: "same-origin" });
       const d = (await r.json()) as { campaigns?: Campaign[]; vendors?: Vendor[]; error?: string };
@@ -96,7 +99,6 @@ export default function VendorPromotionsPage() {
     const f = new FormData(e.currentTarget);
     const reason = String(f.get("reason") || "").trim();
     if (reason.length < 3) { toast.error("An audit reason is required."); return; }
-    setBusy(true);
     try {
       const endAtRaw = String(f.get("endAt") || "");
       const r = await fetch("/api/admin/vendor-promotions", {
@@ -114,23 +116,20 @@ export default function VendorPromotionsPage() {
       const d = (await r.json()) as { error?: string };
       if (!r.ok) throw new Error(d.error || "Could not save promotion");
       toast.success(editing ? "Promotion updated" : "Promotion created");
-      startEdit(null); await load();
+      startEdit(null); await load(false);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Could not save promotion"); }
-    finally { setBusy(false); }
   }
 
   async function setStatus(c: Campaign, status: string) {
     const reason = window.prompt(`Reason for setting "${c.title}" to ${status}:`, status === "ACTIVE" ? "Enabling promotion." : "Disabling promotion.");
     if (reason === null) return;
     if (reason.trim().length < 3) { toast.error("An audit reason is required."); return; }
-    setBusy(true);
     try {
       const r = await fetch("/api/admin/vendor-promotions", { method: "PUT", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ id: c.id, status, reason: reason.trim() }) });
       const d = (await r.json()) as { error?: string };
       if (!r.ok) throw new Error(d.error || "Could not update status");
-      toast.success("Status updated"); await load();
+      toast.success("Status updated"); await load(false);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Could not update status"); }
-    finally { setBusy(false); }
   }
 
   async function removeCampaign(c: Campaign) {
@@ -138,14 +137,12 @@ export default function VendorPromotionsPage() {
     if (reason === null) return;
     if (reason.trim().length < 3) { toast.error("An audit reason is required."); return; }
     if (!window.confirm(`Permanently delete "${c.title}"? This cannot be undone.`)) return;
-    setBusy(true);
     try {
       const r = await fetch(`/api/admin/vendor-promotions?id=${encodeURIComponent(c.id)}&reason=${encodeURIComponent(reason.trim())}`, { method: "DELETE", credentials: "same-origin" });
       const d = (await r.json()) as { error?: string };
       if (!r.ok) throw new Error(d.error || "Could not delete promotion");
-      toast.success("Promotion deleted"); await load();
+      toast.success("Promotion deleted"); await load(false);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Could not delete promotion"); }
-    finally { setBusy(false); }
   }
 
   return (
@@ -153,7 +150,7 @@ export default function VendorPromotionsPage() {
       <h1 className="text-2xl font-black text-darkText">Vendor Promotions</h1>
       <p className="mt-1 text-sm text-darkText/70">Sponsored / Featured Partner placements. Only approved, public vendors can be selected. These never affect the separate Top Vendors list.</p>
 
-      <form key={editing?.id || "new"} onSubmit={e => void save(e)} className="joro-form mt-6 grid gap-4 rounded-2xl bg-white p-6 shadow-sm sm:grid-cols-2">
+      <LoadingForm key={editing?.id || "new"} onSubmit={e => save(e)} className="joro-form mt-6 grid gap-4 rounded-2xl bg-white p-6 shadow-sm sm:grid-cols-2">
         <h2 className="font-bold sm:col-span-2">{editing ? `Edit: ${editing.title}` : "Create promotion"}</h2>
 
         <div className="relative sm:col-span-2">
@@ -200,10 +197,10 @@ export default function VendorPromotionsPage() {
         <label className="sm:col-span-2">Audit reason<input name="reason" minLength={3} placeholder="Why is this change being made?" required /></label>
 
         <div className="flex items-center gap-3 sm:col-span-2">
-          <button disabled={busy || uploadingDesktop || uploadingMobile} className="rounded-xl bg-brand-primary px-5 py-3 font-bold text-brand-dark disabled:opacity-50">{busy ? "Saving…" : editing ? "Update promotion" : "Create promotion"}</button>
+          <LoadingButton type="submit" loadingLabel="Saving…" disabled={uploadingDesktop || uploadingMobile} className="rounded-xl bg-brand-primary px-5 py-3 font-bold text-brand-dark disabled:opacity-50">{editing ? "Update promotion" : "Create promotion"}</LoadingButton>
           {editing ? <button type="button" onClick={() => startEdit(null)} className="rounded-xl border px-5 py-3 font-bold">Cancel edit</button> : null}
         </div>
-      </form>
+      </LoadingForm>
 
       <div className="mt-8 overflow-x-auto rounded-2xl border bg-white">
         <table className="w-full min-w-[900px] text-left text-sm">
@@ -211,7 +208,7 @@ export default function VendorPromotionsPage() {
             <tr><th className="p-3">Vendor</th><th className="p-3">Placement</th><th className="p-3">Start</th><th className="p-3">End</th><th className="p-3">Priority</th><th className="p-3">Status</th><th className="p-3">Sponsored</th><th className="p-3">Actions</th></tr>
           </thead>
           <tbody>
-            {loading ? <tr><td className="p-4" colSpan={8}>Loading…</td></tr> : campaigns.length === 0 ? <tr><td className="p-4 text-darkText/60" colSpan={8}>No promotions yet.</td></tr> : campaigns.map(c => (
+            {loading ? <tr><td className="p-4" colSpan={8}><PageSkeleton rows={3} variant="table" /></td></tr> : campaigns.length === 0 ? <tr><td className="p-4 text-darkText/60" colSpan={8}>No promotions yet.</td></tr> : campaigns.map(c => (
               <tr key={c.id} className="border-t">
                 <td className="p-3 font-bold">{c.vendor.shopName}{c.vendor.status !== "approved" ? <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-800">{c.vendor.status}</span> : null}</td>
                 <td className="p-3">{PLACEMENTS.find(p => p.value === c.placement)?.label || c.placement}</td>
@@ -222,11 +219,11 @@ export default function VendorPromotionsPage() {
                 <td className="p-3">{c.isSponsored ? "Sponsored" : "Featured Partner"}</td>
                 <td className="p-3">
                   <div className="flex flex-wrap gap-2">
-                    <button disabled={busy} onClick={() => startEdit(c)} className="font-bold text-brand-link underline">Edit</button>
-                    {c.status === "ACTIVE" ? <button disabled={busy} onClick={() => void setStatus(c, "DISABLED")} className="font-bold text-amber-700 underline">Disable</button> : <button disabled={busy} onClick={() => void setStatus(c, "ACTIVE")} className="font-bold text-emerald-700 underline">Enable</button>}
-                    {c.status !== "ARCHIVED" ? <button disabled={busy} onClick={() => void setStatus(c, "ARCHIVED")} className="font-bold text-darkText/60 underline">Archive</button> : null}
+                    <button onClick={() => startEdit(c)} className="font-bold text-brand-link underline">Edit</button>
+                    {c.status === "ACTIVE" ? <LoadingButton loadingLabel="Processing…"  onClick={() => setStatus(c, "DISABLED")} className="font-bold text-amber-700 underline">Disable</LoadingButton> : <LoadingButton loadingLabel="Processing…"  onClick={() => setStatus(c, "ACTIVE")} className="font-bold text-emerald-700 underline">Enable</LoadingButton>}
+                    {c.status !== "ARCHIVED" ? <LoadingButton loadingLabel="Processing…"  onClick={() => setStatus(c, "ARCHIVED")} className="font-bold text-darkText/60 underline">Archive</LoadingButton> : null}
                     <Link href={`/stores/${encodeURIComponent(c.vendor.storeSlug || "")}`} target="_blank" className="font-bold text-darkText/60 underline">Preview</Link>
-                    <button disabled={busy} onClick={() => void removeCampaign(c)} className="font-bold text-red-700 underline">Delete</button>
+                    <LoadingButton loadingLabel="Removing…"  onClick={() => removeCampaign(c)} className="font-bold text-red-700 underline">Delete</LoadingButton>
                   </div>
                 </td>
               </tr>

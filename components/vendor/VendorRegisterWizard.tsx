@@ -1,10 +1,12 @@
 "use client";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
-import Link from "next/link";
+import Link from "@/components/ui/LoadingLink";
 import { useCallback, useEffect, useId, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 
 import { LogoMark } from "@/components/user/LogoMark";
+import { CnicInput } from "@/components/ui/CnicInput";
 import { fetchShopCategoryNameList } from "@/lib/shop-category-names";
 
 const accent = "var(--brand-accent)";
@@ -15,13 +17,6 @@ function formatPkMobile(raw: string): string {
   const d = raw.replace(/\D/g, "").slice(0, 11);
   if (d.length <= 4) return d;
   return `${d.slice(0, 4)}-${d.slice(4)}`;
-}
-
-function formatCnic(raw: string): string {
-  const x = raw.replace(/\D/g, "").slice(0, 13);
-  if (x.length <= 5) return x;
-  if (x.length <= 12) return `${x.slice(0, 5)}-${x.slice(5)}`;
-  return `${x.slice(0, 5)}-${x.slice(5, 12)}-${x.slice(12, 13)}`;
 }
 
 function passwordScore(pw: string): number {
@@ -163,7 +158,7 @@ export function VendorRegisterWizard() {
 
   function canAdvanceFrom2(): boolean {
     if (shopName.trim().length < 1) return false;
-    if (cnic.replace(/\D/g, "").length !== 13) return false;
+    if (!/^\d{5}-\d{7}-\d$/.test(cnic)) return false;
     if (!shopCategories.length || !category.trim()) return false;
     if (businessType === "company" && businessRegNo.trim().length < 2) {
       return false;
@@ -318,10 +313,10 @@ export function VendorRegisterWizard() {
         <div className="pointer-events-none absolute left-1/2 top-1/2 h-32 w-32 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/10 vendor-float-3" />
 
         <div className="relative z-10 w-full max-w-sm">
-          <div className="vendor-logo-float mb-4 inline-flex h-20 w-20 items-center justify-center rounded-full bg-white p-2 shadow-[0_8px_25px_rgba(0,0,0,0.2)]">
+          <div className="vendor-logo-float mb-4 inline-flex h-20 w-44 items-center justify-center rounded-2xl bg-white p-2 shadow-[0_8px_25px_rgba(0,0,0,0.2)]">
             <LogoMark
               href={null}
-              className="[&_img]:max-h-[60px] [&_img]:max-w-[100px] [&_img]:w-auto"
+              className="[&_img]:max-h-[60px] [&_img]:w-auto"
             />
           </div>
 
@@ -431,14 +426,14 @@ export function VendorRegisterWizard() {
                   onChange={(e) => setPassword(e.target.value)}
                   className="h-9 w-full rounded-lg border-[1.5px] border-gray-200 bg-white py-1.5 pl-3 pr-10 text-sm text-neutral-900 outline-none transition-all duration-200 focus:border-[1.5px] focus:border-brand-secondary focus:bg-brand-soft/40 focus:shadow-[0_0_0_3px_rgba(17,17,17,0.15)]"
                 />
-                <button
+                <LoadingButton
                   type="button"
                   onClick={() => setShowPassword((s) => !s)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? <Eye size={18} /> : <EyeOff size={18} />}
-                </button>
+                </LoadingButton>
               </div>
               <div className="mt-1 flex gap-1">
                 {[0, 1, 2, 3].map((i) => (
@@ -531,11 +526,10 @@ export function VendorRegisterWizard() {
               </Field>
             )}
             <Field label="CNIC (00000-0000000-0)" htmlFor="vr-cnic">
-              <input
+              <CnicInput
                 id="vr-cnic"
-                inputMode="numeric"
                 value={cnic}
-                onChange={(e) => setCnic(formatCnic(e.target.value))}
+                onValueChange={setCnic}
                 placeholder="35202-1234567-1"
                 className={inputClass}
               />
@@ -560,21 +554,21 @@ export function VendorRegisterWizard() {
               </select>
             </Field>
             <div className="flex gap-3">
-              <button
+              <LoadingButton
                 type="button"
                 onClick={() => setStep(1)}
                 className="h-10 flex-1 rounded-xl border border-neutral-300 px-3 text-sm font-bold text-neutral-800"
               >
                 Back
-              </button>
-              <button
+              </LoadingButton>
+              <LoadingButton
                 type="button"
                 disabled={!canAdvanceFrom2()}
                 onClick={() => setStep(3)}
                 className="h-10 flex-1 rounded-[10px] bg-brand-primary px-3 text-sm font-semibold text-brand-dark shadow-[0_4px_15px_rgba(17,17,17,0.4)] transition-all duration-200 hover:-translate-y-px hover:shadow-[0_6px_20px_rgba(17,17,17,0.5)] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Continue
-              </button>
+              </LoadingButton>
             </div>
           </div>
           )}
@@ -641,21 +635,21 @@ export function VendorRegisterWizard() {
             />
 
             <div className="flex gap-3 pt-2">
-              <button
+              <LoadingButton
                 type="button"
                 onClick={() => setStep(2)}
                 className="h-10 flex-1 rounded-xl border border-neutral-300 px-3 text-sm font-bold text-neutral-800"
               >
                 Back
-              </button>
-              <button
+              </LoadingButton>
+              <LoadingButton loadingLabel="Submitting…"
                 type="button"
                 disabled={pending || !docsValid()}
-                onClick={() => void submit()}
+                onClick={() => submit()}
                 className="h-10 flex-1 rounded-[10px] bg-brand-primary px-3 text-sm font-semibold text-brand-dark shadow-[0_4px_15px_rgba(17,17,17,0.4)] transition-all duration-200 hover:-translate-y-px hover:shadow-[0_6px_20px_rgba(17,17,17,0.5)] disabled:cursor-not-allowed disabled:opacity-40"
               >
-                {pending ? "Submitting…" : "Submit application"}
-              </button>
+                {"Submit application"}
+              </LoadingButton>
             </div>
           </div>
           )}
@@ -664,14 +658,14 @@ export function VendorRegisterWizard() {
 
         <div className="shrink-0 bg-white px-8 pb-5 pt-3">
           {step === 1 ? (
-            <button
+            <LoadingButton
               type="button"
               disabled={!canAdvanceFrom1()}
               onClick={() => setStep(2)}
               className={primaryBtnClass}
             >
               Continue →
-            </button>
+            </LoadingButton>
           ) : null}
         </div>
       </section>
@@ -846,13 +840,13 @@ function DocDrop({
         />
       </label>
       {file && (
-        <button
+        <LoadingButton
           type="button"
           className="mt-1 text-xs font-semibold text-red-600 hover:underline"
           onClick={() => onFile(null)}
         >
           Remove
-        </button>
+        </LoadingButton>
       )}
     </div>
   );

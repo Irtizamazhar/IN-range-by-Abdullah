@@ -1,7 +1,7 @@
 import { z } from "zod";
+import { pakistanMobileSchema } from "@/lib/pakistan-phone-schema";
 
 const cnicPattern = /^\d{5}-\d{7}-\d{1}$/;
-const phonePattern = /^03\d{2}-\d{7}$/;
 
 const trimString = (val: unknown) =>
   typeof val === "string" ? val.trim() : val;
@@ -11,7 +11,7 @@ export const vendorRegisterFormFieldsSchema = z.object({
   name: z.string().min(1).max(200),
   email: z.string().email().max(255),
   password: z.preprocess(trimString, z.string().min(8).max(128)),
-  phone: z.string().regex(phonePattern, "Use format 03XX-XXXXXXX"),
+  phone: pakistanMobileSchema,
   city: z.string().min(1).max(120),
   address: z.string().min(5).max(2000),
   shopName: z.string().min(1).max(200),

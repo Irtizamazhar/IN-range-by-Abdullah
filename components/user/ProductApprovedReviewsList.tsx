@@ -1,4 +1,6 @@
 "use client";
+import { LoadingButton } from "@/components/ui/LoadingButton";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
 
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
@@ -79,20 +81,21 @@ export function ProductApprovedReviewsList({
 }) {
   const queryString = reviewsQuery(postField);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [data, setData] = useState<ReviewsPayload | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
-    void fetch(`/api/reviews?${queryString}`)
-      .then((r) => (r.ok ? r.json() : null))
+    return fetch(`/api/reviews?${queryString}`)
+      .then((r) => { if (!r.ok) throw new Error("Could not load reviews. Please try again."); return r.json(); })
       .then((d) => {
         if (!d || typeof d !== "object") {
           setData(null);
           return;
         }
-        setData(d as ReviewsPayload);
+        setData(d as ReviewsPayload); setError("");
       })
-      .catch(() => setData(null))
+      .catch(() => setError("Could not load reviews. Please try again."))
       .finally(() => setLoading(false));
   }, [queryString]);
 
@@ -106,13 +109,15 @@ export function ProductApprovedReviewsList({
     return () => window.removeEventListener(PRODUCT_REVIEWS_UPDATED_EVENT, onUpdate);
   }, [load]);
 
-  if (loading && !data) {
+  if (loading && !data && !error) {
     return (
       <section className="mb-6 rounded-xl border border-[#e8e8e8] bg-[#fafafa] p-5 sm:p-6">
-        <p className="text-sm font-normal text-[#757575]">Loading reviews…</p>
+        <PageSkeleton label="Loading reviews…" rows={2} />
       </section>
     );
   }
+
+  if (error && !data) return <section className="mb-6 rounded-xl border border-[#e8e8e8] bg-white p-5"><p role="alert">{error}</p><LoadingButton onClick={load} className="mt-3 rounded-xl bg-brand-soft px-4 py-2">Try again</LoadingButton></section>;
 
   const total = data?.totalCount ?? 0;
   const avg = data?.averageRating ?? 0;

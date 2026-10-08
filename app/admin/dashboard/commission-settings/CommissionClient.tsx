@@ -1,4 +1,6 @@
 "use client";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
@@ -24,10 +26,9 @@ export function CommissionClient() {
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [vEdits, setVEdits] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       const [c, v] = await Promise.all([
         fetch("/api/admin/commission-settings", { credentials: "same-origin" }),
@@ -35,6 +36,7 @@ export function CommissionClient() {
           credentials: "same-origin",
         }),
       ]);
+      if (!c.ok || !v.ok) throw new Error("Could not load commission settings");
       if (c.ok) {
         const d = (await c.json()) as { categories: Cat[] };
         setCategories(d.categories || []);
@@ -56,6 +58,8 @@ export function CommissionClient() {
         }
         setVEdits(ve);
       }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not load data");
     } finally {
       setLoading(false);
     }
@@ -72,8 +76,7 @@ export function CommissionClient() {
       toast.error("Rate must be 0–100");
       return;
     }
-    setBusy(id);
-    try {
+
       const r = await fetch("/api/admin/commission-settings", {
         method: "PATCH",
         credentials: "same-origin",
@@ -85,10 +88,8 @@ export function CommissionClient() {
         return;
       }
       toast.success("Commission updated");
-      void load();
-    } finally {
-      setBusy(null);
-    }
+      await load(false);
+
   }
 
   async function saveVendorCommission(vendorId: string) {
@@ -104,8 +105,7 @@ export function CommissionClient() {
       toast.error("Override must be 0–100 or empty for default");
       return;
     }
-    setBusy(`v-${vendorId}`);
-    try {
+
       const r = await fetch(`/api/admin/vendors/${vendorId}`, {
         method: "PATCH",
         credentials: "same-origin",
@@ -117,14 +117,12 @@ export function CommissionClient() {
         return;
       }
       toast.success("Vendor commission saved");
-      void load();
-    } finally {
-      setBusy(null);
-    }
+      await load(false);
+
   }
 
   if (loading && categories.length === 0) {
-    return <div className="p-8 text-darkText/50">Loading…</div>;
+    return <PageSkeleton rows={3} />;
   }
 
   return (
@@ -166,14 +164,14 @@ export function CommissionClient() {
                   />
                 </td>
                 <td className="p-3">
-                  <button
+                  <LoadingButton loadingLabel="Saving…"
                     type="button"
-                    disabled={busy === c.id}
-                    onClick={() => void saveCategory(c.id)}
+
+                    onClick={() => saveCategory(c.id)}
                     className="rounded-lg bg-primaryYellow px-4 py-1.5 text-xs font-semibold text-brand-dark"
                   >
                     Save
-                  </button>
+                  </LoadingButton>
                 </td>
               </tr>
             ))}
@@ -233,14 +231,14 @@ export function CommissionClient() {
                     />
                   </td>
                   <td className="p-3">
-                    <button
+                    <LoadingButton loadingLabel="Saving…"
                       type="button"
-                      disabled={busy === `v-${v.id}`}
-                      onClick={() => void saveVendorCommission(v.id)}
+
+                      onClick={() => saveVendorCommission(v.id)}
                       className="rounded-lg bg-brand-primary px-4 py-1.5 text-xs font-semibold text-brand-dark"
                     >
                       Save
-                    </button>
+                    </LoadingButton>
                   </td>
                 </tr>
               ))

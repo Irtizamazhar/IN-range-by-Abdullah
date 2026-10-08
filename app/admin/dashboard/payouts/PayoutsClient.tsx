@@ -1,4 +1,6 @@
 "use client";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
@@ -49,15 +51,14 @@ export function PayoutsClient() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState<string | null>(null);
   const [rejectFor, setRejectFor] = useState<Row | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [rejectAdminNote, setRejectAdminNote] = useState("");
   const [payFor, setPayFor] = useState<Row | null>(null);
   const [transferReference, setTransferReference] = useState("");
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       const r = await fetch("/api/admin/payouts", { credentials: "same-origin" });
       if (!r.ok) {
@@ -67,6 +68,8 @@ export function PayoutsClient() {
       const d = (await r.json()) as { stats: Stats; withdrawals: Row[] };
       setStats(d.stats);
       setRows(d.withdrawals || []);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not load data");
     } finally {
       setLoading(false);
     }
@@ -77,8 +80,7 @@ export function PayoutsClient() {
   }, [load]);
 
   async function patch(id: string, body: object) {
-    setBusy(id);
-    try {
+
       const r = await fetch(`/api/admin/payouts/${id}`, {
         method: "PATCH",
         credentials: "same-origin",
@@ -87,18 +89,15 @@ export function PayoutsClient() {
       });
       const data = (await r.json()) as { error?: string };
       if (!r.ok) {
-        toast.error(data.error || "Action failed");
-        return;
+        throw new Error(data.error || "Action failed");
       }
       toast.success("Updated");
-      void load();
-    } finally {
-      setBusy(null);
-    }
+      await load(false);
+
   }
 
   if (loading && !stats) {
-    return <div className="p-8 text-darkText/50">Loading…</div>;
+    return <PageSkeleton rows={3} />;
   }
 
   return (
@@ -220,17 +219,16 @@ export function PayoutsClient() {
                   <td className="p-3 space-y-1">
                     {w.status === "pending" ? (
                       <>
-                        <button
+                        <LoadingButton loadingLabel="Processing…"
                           type="button"
-                          disabled={busy === w.id}
-                          onClick={() => void patch(w.id, { action: "approve" })}
+
+                          onClick={() => patch(w.id, { action: "approve" })}
                           className="mr-2 rounded-lg bg-brand-primary px-3 py-1.5 text-xs font-semibold text-brand-dark"
                         >
                           Approve
-                        </button>
+                        </LoadingButton>
                         <button
                           type="button"
-                          disabled={busy === w.id}
                           onClick={() => setRejectFor(w)}
                           className="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-700"
                         >
@@ -242,7 +240,6 @@ export function PayoutsClient() {
                       <>
                         <button
                           type="button"
-                          disabled={busy === w.id}
                           onClick={() => setPayFor(w)}
                           className="mr-2 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white"
                         >
@@ -250,7 +247,6 @@ export function PayoutsClient() {
                         </button>
                         <button
                           type="button"
-                          disabled={busy === w.id}
                           onClick={() => setRejectFor(w)}
                           className="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-700"
                         >
@@ -304,11 +300,11 @@ export function PayoutsClient() {
               >
                 Cancel
               </button>
-              <button
+              <LoadingButton loadingLabel="Processing…"
                 type="button"
-                disabled={!rejectReason.trim() || busy === rejectFor.id}
+                disabled={!rejectReason.trim()}
                 onClick={() => {
-                  void patch(rejectFor.id, {
+                  return patch(rejectFor.id, {
                     action: "reject",
                     rejectionReason: rejectReason.trim(),
                     ...(rejectAdminNote.trim()
@@ -323,7 +319,7 @@ export function PayoutsClient() {
                 className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
                 Reject
-              </button>
+              </LoadingButton>
             </div>
           </div>
         </div>
@@ -357,11 +353,11 @@ export function PayoutsClient() {
               >
                 Cancel
               </button>
-              <button
+              <LoadingButton loadingLabel="Processing…"
                 type="button"
-                disabled={transferReference.trim().length < 3 || busy === payFor.id}
+                disabled={transferReference.trim().length < 3}
                 onClick={() => {
-                  void patch(payFor.id, {
+                  return patch(payFor.id, {
                     action: "mark_paid",
                     transferReference: transferReference.trim(),
                   }).then(() => {
@@ -372,7 +368,7 @@ export function PayoutsClient() {
                 className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
                 Confirm paid
-              </button>
+              </LoadingButton>
             </div>
           </div>
         </div>

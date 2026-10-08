@@ -1,4 +1,6 @@
 "use client";
+import Link from "@/components/ui/LoadingLink";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
 
 import { useCallback, useEffect, useState } from "react";
 
@@ -68,7 +70,7 @@ export default function AdminNotificationsPage() {
         Vendor appeals with direct links to risk profiles.
       </p>
 
-      {loading ? <p className="mt-6 text-darkText/60">Loading...</p> : null}
+      {loading ? <PageSkeleton rows={3} /> : null}
       {error ? (
         <div className="mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
           {error}
@@ -105,12 +107,12 @@ export default function AdminNotificationsPage() {
                     >
                       {n.resolved ? "Resolved" : "Pending"}
                     </span>
-                    <a
+                    <Link
                       href={`/admin/vendors/${encodeURIComponent(n.vendor.id)}/suspension`}
                       className="rounded-lg border border-primaryBlue px-3 py-1.5 text-xs font-semibold text-primaryBlue hover:bg-primaryBlue/10"
                     >
                       View Risk Profile
-                    </a>
+                    </Link>
                   </div>
                 </div>
 

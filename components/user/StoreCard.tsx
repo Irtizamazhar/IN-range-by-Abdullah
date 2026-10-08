@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/LoadingLink";
 import Image from "next/image";
 import { MapPin, PackageCheck, Store as StoreIcon, Star } from "lucide-react";
 import { StoreFollowButton } from "./StoreFollowButton";

@@ -1,6 +1,8 @@
 "use client";
+import { LoadingButton } from "@/components/ui/LoadingButton";
+import { LoadingForm } from "@/components/ui/LoadingForm";
 
-import Link from "next/link";
+import Link from "@/components/ui/LoadingLink";
 import { useState } from "react";
 
 const accent = "var(--brand-accent)";
@@ -95,7 +97,7 @@ export function VerifyEmailClient({
         )}
 
         {(status === "invalid" || !status) && (
-          <form onSubmit={resend} className="mt-10 text-left">
+          <LoadingForm onSubmit={resend} className="mt-10 text-left">
             <label
               htmlFor="re-email"
               className="block text-sm font-semibold text-neutral-800"
@@ -120,15 +122,15 @@ export function VerifyEmailClient({
                 {msg}
               </p>
             )}
-            <button
+            <LoadingButton loadingLabel="Sending…"
               type="submit"
               disabled={pending}
               className="mt-4 w-full rounded-xl py-3 font-extrabold text-neutral-900 disabled:opacity-50"
               style={{ backgroundColor: accent }}
             >
-              {pending ? "Sending…" : "Resend verification email"}
-            </button>
-          </form>
+              {"Resend verification email"}
+            </LoadingButton>
+          </LoadingForm>
         )}
 
         <Link

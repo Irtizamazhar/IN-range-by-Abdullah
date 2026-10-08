@@ -1,8 +1,12 @@
 "use client";
+import { LoadingForm } from "@/components/ui/LoadingForm";
+
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import Image from "next/image";
 import { useEffect, useRef, useState, type ClipboardEvent, type FormEvent } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/LoadingLink";
+import { useLoadingRouter } from "@/hooks/useLoadingRouter";
 import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 import toast from "react-hot-toast";
 import { uploadImageWithId } from "@/lib/cloudinary-client-upload";
@@ -15,9 +19,9 @@ type ImgEntry = { id: string; url: string };
 type ApiCategory = { id: number; name: string };
 
 export default function AddProductPage() {
+  const router = useLoadingRouter();
   const [images, setImages] = useState<ImgEntry[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [saving, setSaving] = useState(false);
   const submitLockRef = useRef(false);
 
   const [name, setName] = useState("");
@@ -166,7 +170,6 @@ export default function AddProductPage() {
       return;
     }
     submitLockRef.current = true;
-    setSaving(true);
     try {
       const finalImages = [...images];
 
@@ -198,16 +201,15 @@ export default function AddProductPage() {
       const newId = String(data.id || data._id || "");
       toast.success("Product created");
       if (newId) {
-        window.location.href = `/admin/products/${newId}/edit`;
+        await router.push(`/admin/products/${newId}/edit`);
         return;
       }
-      window.location.href = "/admin/products";
+      await router.push("/admin/products");
     } catch {
       toast.error("Could not create product");
     } finally {
       submitLockRef.current = false;
       setUploading(false);
-      setSaving(false);
     }
   }
 
@@ -264,7 +266,7 @@ export default function AddProductPage() {
       <div className="mt-4 mb-6">
         <h1 className="text-2xl font-bold text-darkText">Add Product</h1>
       </div>
-      <form onSubmit={onSubmit} className="space-y-4 rounded-card border border-borderGray bg-white p-6 shadow-card">
+      <LoadingForm onSubmit={onSubmit} className="space-y-4 rounded-card border border-borderGray bg-white p-6 shadow-card">
         <input
           className="w-full rounded-xl border border-borderGray px-4 py-2"
           placeholder="Name"
@@ -338,7 +340,7 @@ export default function AddProductPage() {
               </div>
             ) : null}
             </div>
-            <button
+            <LoadingButton loadingLabel="Removing…"
               type="button"
               onClick={onDeleteCurrentCategory}
               className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-red-300 text-red-600 hover:bg-red-50"
@@ -348,7 +350,7 @@ export default function AddProductPage() {
               <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden="true">
                 <path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm1 7h2v8h-2v-8Zm4 0h2v8h-2v-8ZM7 10h2v8H7v-8Zm1 11a2 2 0 0 1-2-2V8h12v11a2 2 0 0 1-2 2H8Z" />
               </svg>
-            </button>
+            </LoadingButton>
           </div>
 
           {addingCategory ? (
@@ -359,9 +361,9 @@ export default function AddProductPage() {
                 value={newCategory}
                 onChange={(e) => setNewCategory(e.target.value)}
               />
-              <button
+              <LoadingButton loadingLabel="Saving…"
                 type="button"
-                disabled={saving || uploading}
+
                 onClick={async () => {
                   const val = newCategory.trim();
                   if (!val) {
@@ -406,7 +408,7 @@ export default function AddProductPage() {
                 className="rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-brand-dark disabled:opacity-60 sm:w-auto"
               >
                 Add
-              </button>
+              </LoadingButton>
             </div>
           ) : null}
         </div>
@@ -496,15 +498,15 @@ export default function AddProductPage() {
           ) : null}
         </div>
         <div className="flex justify-end">
-          <button
+          <LoadingButton loadingLabel="Saving…"
             type="submit"
-            disabled={saving}
+
             className="rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-semibold text-brand-dark disabled:opacity-60"
           >
-            {saving ? "Saving…" : "Save product"}
-          </button>
+            {"Save product"}
+          </LoadingButton>
         </div>
-      </form>
+      </LoadingForm>
     </div>
   );
 }

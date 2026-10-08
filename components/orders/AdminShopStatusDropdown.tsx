@@ -1,4 +1,5 @@
 "use client";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
@@ -20,7 +21,7 @@ function stepLabel(next: ShopOrderStatusPill): string {
 type Props = {
   currentStatus: ShopOrderStatusPill;
   statusUrl: string;
-  onSuccess: () => void;
+  onSuccess: () => void | Promise<void>;
 };
 
 /** Admin: advance packed→shipped (optional tracking) or shipped→delivered. */
@@ -36,7 +37,6 @@ export function AdminShopStatusDropdown({
   const [selected, setSelected] = useState("");
   const [note, setNote] = useState("");
   const [tracking, setTracking] = useState("");
-  const [busy, setBusy] = useState(false);
 
   const showTracking = allowedNext === "shipped";
 
@@ -61,8 +61,6 @@ export function AdminShopStatusDropdown({
     }
     if (!window.confirm(`Move seller order to "${next}"?`)) return;
 
-    setBusy(true);
-    try {
       const body: Record<string, unknown> = {
         note: note.trim() || undefined,
       };
@@ -86,10 +84,8 @@ export function AdminShopStatusDropdown({
         return;
       }
       toast.success("Status updated");
-      onSuccess();
-    } finally {
-      setBusy(false);
-    }
+      await onSuccess();
+
   }
 
   return (
@@ -137,14 +133,14 @@ export function AdminShopStatusDropdown({
         </>
       ) : null}
 
-      <button
+      <LoadingButton loadingLabel="Saving…"
         type="button"
-        disabled={busy || !selected}
-        onClick={() => void submit()}
+        disabled={!selected}
+        onClick={() => submit()}
         className="mt-4 rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-bold text-brand-dark hover:bg-brand-hover disabled:opacity-50"
       >
-        {busy ? "Saving…" : "Update order status"}
-      </button>
+        {"Update order status"}
+      </LoadingButton>
     </div>
   );
 }

@@ -1,7 +1,8 @@
 "use client";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/ui/LoadingLink";
 import { useSession } from "next-auth/react";
 import { useEffect, useMemo, useState } from "react";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
@@ -127,13 +128,13 @@ export function RateYourProductsSection({
       </div>
       {status === "unauthenticated" ? (
         <p className="mt-3 text-xs text-darkText/60">
-          <button
+          <LoadingButton
             type="button"
             onClick={() => openAuthModal("login")}
             className="font-semibold text-primaryBlue hover:underline"
           >
             Sign in
-          </button>{" "}
+          </LoadingButton>{" "}
           to the customer account that owns this order to manage its reviews.
         </p>
       ) : null}

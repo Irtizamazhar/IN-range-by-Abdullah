@@ -1,6 +1,8 @@
 "use client";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import type { ISettings } from "@/types/settings";
 
@@ -51,12 +53,12 @@ export default function AdminSettingsPage() {
   const [s, setS] = useState<ISettings | null>(null);
   const [cityInput, setCityInput] = useState("");
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [visibleBankSlots, setVisibleBankSlots] = useState<BankSlotKey[]>([]);
 
-  useEffect(() => {
-    fetch("/api/settings")
-      .then((r) => r.json())
+  const loadSettings = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
+    return fetch("/api/settings")
+      .then(async (r) => { const data = await r.json(); if (!r.ok) throw new Error(data.error || "Could not load settings"); return data; })
       .then((data: ISettings) => {
         setS(data);
         const slots: BankSlotKey[] = ["meezanBank", "hbl", "easypaisa", "jazzCash"];
@@ -77,12 +79,17 @@ export default function AdminSettingsPage() {
         });
         setVisibleBankSlots(filled.length ? filled : ["meezanBank"]);
       })
+      .catch((error) => { toast.error(error instanceof Error ? error.message : "Could not load settings"); })
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading || !s) {
-    return <div className="p-8 text-darkText/50">Loading…</div>;
+  useEffect(() => { void loadSettings(); }, [loadSettings]);
+
+  if (loading) {
+    return <PageSkeleton rows={3} />;
   }
+
+  if (!s) return <div className="p-8"><p role="alert">Settings could not be loaded.</p><LoadingButton loadingLabel="Loading..." onClick={() => loadSettings(false)} className="mt-4 rounded-xl bg-brand-primary px-4 py-2 font-bold text-brand-dark">Try again</LoadingButton></div>;
 
   const b = s.bankAccounts;
 
@@ -144,7 +151,6 @@ export default function AdminSettingsPage() {
 
   async function save() {
     if (!s) return;
-    setSaving(true);
     try {
       const res = await fetch("/api/settings", {
         method: "PUT",
@@ -158,8 +164,6 @@ export default function AdminSettingsPage() {
       toast.success("Settings saved");
     } catch {
       toast.error("Could not save settings");
-    } finally {
-      setSaving(false);
     }
   }
 
@@ -385,14 +389,14 @@ export default function AdminSettingsPage() {
         </ul>
       </section>
       <div className="flex justify-end">
-        <button
+        <LoadingButton loadingLabel="Saving…"
           type="button"
           onClick={save}
-          disabled={saving}
+
           className="rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-semibold text-brand-dark disabled:opacity-60"
         >
-          {saving ? "Saving…" : "Save settings"}
-        </button>
+          {"Save settings"}
+        </LoadingButton>
       </div>
     </div>
   );

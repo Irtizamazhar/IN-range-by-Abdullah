@@ -1,7 +1,9 @@
 "use client";
+import { LoadingButton } from "@/components/ui/LoadingButton";
+import { LoadingForm } from "@/components/ui/LoadingForm";
 
 import { FormEvent, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/LoadingLink";
 import toast from "react-hot-toast";
 
 export default function VendorForgotPasswordPage() {
@@ -33,7 +35,7 @@ export default function VendorForgotPasswordPage() {
         {message ? (
           <p className="mt-5 rounded-xl bg-brand-soft p-4 text-sm text-brand-dark">{message}</p>
         ) : (
-          <form onSubmit={submit} className="mt-6 space-y-4">
+          <LoadingForm onSubmit={submit} className="mt-6 space-y-4">
             <label className="block text-sm font-semibold text-darkText">
               Registered email
               <input
@@ -45,13 +47,13 @@ export default function VendorForgotPasswordPage() {
                 className="mt-1 w-full rounded-xl border border-borderGray px-3 py-2.5"
               />
             </label>
-            <button
+            <LoadingButton type="submit" loadingLabel="Sending…"
               disabled={busy}
               className="w-full rounded-xl bg-brand-primary px-4 py-3 font-bold text-brand-dark hover:bg-brand-hover disabled:opacity-60"
             >
-              {busy ? "Sending…" : "Send reset link"}
-            </button>
-          </form>
+              {"Send reset link"}
+            </LoadingButton>
+          </LoadingForm>
         )}
         <Link href="/vendor/login" className="mt-6 inline-block text-sm font-bold text-primaryBlue hover:underline">
           ← Back to sign in

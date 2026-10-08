@@ -1,5 +1,5 @@
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/ui/LoadingLink";
 import { redirect } from "next/navigation";
 import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 import { getVendorFromSession } from "@/lib/vendor-auth-server";

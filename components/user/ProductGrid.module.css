@@ -1,0 +1,26 @@
+.grid {
+  --product-card-width: 150px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, min(100%, var(--product-card-width)));
+  grid-auto-rows: 1fr;
+  align-items: stretch;
+  gap: 10px;
+  min-width: 0;
+}
+
+.grid > * {
+  min-width: 0;
+}
+
+@media (min-width: 1440px) {
+  .grid {
+    --product-card-width: 180px;
+  }
+}
+
+@media (max-width: 639px) {
+  .grid {
+    /* Match two cards even inside the homepage's padded featured panel. */
+    --product-card-width: min(180px, calc((100vw - 64px) / 2));
+  }
+}

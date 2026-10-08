@@ -1,26 +1,160 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { ImagePlus, X } from "lucide-react";
+import { LoadingButton } from "@/components/ui/LoadingButton";
+import { LoadingForm } from "@/components/ui/LoadingForm";
+import { LoadingLink } from "@/components/ui/LoadingLink";
+import { useLoadingRouter } from "@/hooks/useLoadingRouter";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
-export function WantForm({ categories }: { categories: string[] }) {
-  const router = useRouter(); const { isCustomer, openAuthModal } = useCustomerAuth();
-  const [flexible, setFlexible] = useState(false); const [busy, setBusy] = useState(false); const [error, setError] = useState(""); const [photoFile, setPhotoFile] = useState<File | null>(null);
-  async function submit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault(); if (!isCustomer) { openAuthModal("login"); return; }
-    const data = new FormData(event.currentTarget); setBusy(true); setError("");
-    try {
-      let photo: string | null = null;
-      if (photoFile) {
-        const uploadData = new FormData(); uploadData.set("file", photoFile); uploadData.set("folder", "inrange-wants");
-        const uploadRes = await fetch("/api/upload", { method: "POST", body: uploadData });
-        const uploadResult = await uploadRes.json();
-        if (!uploadRes.ok) throw new Error(uploadResult.error || "Could not upload photo.");
-        photo = uploadResult.url;
-      }
-      const needBy = data.get("needBy") ? new Date(String(data.get("needBy"))).toISOString() : null;
-      const r = await fetch("/api/wants", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: data.get("title"), category: data.get("category"), city: data.get("city"), quantity: Number(data.get("quantity")), budgetFlexible: flexible, budgetMin: flexible ? null : Number(data.get("min") || 0), budgetMax: flexible ? null : Number(data.get("max")), description: data.get("description"), condition: data.get("condition"), needBy, photo }) });
-      const result = await r.json(); if (!r.ok) throw new Error(result.error); router.push(`/wants/${result.want.id}`);
-    } catch (e) { setError(e instanceof Error ? e.message : "Could not post Want."); } finally { setBusy(false); }
+import { wantInput } from "@/lib/want-schema";
+
+export type SubmittedWant = { id: string; status: string };
+type WantFormProps = {
+  categories: string[]; initialTitle?: string; formId?: string; hideFooter?: boolean; embedded?: boolean;
+  onSuccess?: (want: SubmittedWant) => void; onDirtyChange?: (dirty: boolean) => void; onBusyChange?: (busy: boolean) => void;
+};
+type WantValues = {
+  title: string; category: string; city: string; quantity: string; min: string; max: string; description: string;
+  condition: "Any" | "New" | "Used" | "Refurbished"; needBy: string; flexible: boolean;
+};
+const emptyValues = (title = ""): WantValues => ({ title, category: "", city: "", quantity: "1", min: "", max: "", description: "", condition: "Any", needBy: "", flexible: false });
+function dateAfter(days: number) {
+  const date = new Date(); date.setDate(date.getDate() + days);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+export function WantForm({ categories, initialTitle, formId, hideFooter = false, embedded = false, onSuccess, onDirtyChange, onBusyChange }: WantFormProps) {
+  const router = useLoadingRouter();
+  const { isCustomer, authLoading, openAuthModal } = useCustomerAuth();
+  const generatedId = useId(); const id = formId || `want-form-${generatedId}`;
+  const initial = useRef(emptyValues(initialTitle));
+  const [values, setValues] = useState<WantValues>(initial.current);
+  const [busy, setBusy] = useState(false); const [error, setError] = useState(""); const [photoError, setPhotoError] = useState("");
+  const [photoFile, setPhotoFile] = useState<File | null>(null); const [preview, setPreview] = useState("");
+  const [submitted, setSubmitted] = useState<SubmittedWant | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null); const lock = useRef(false); const completed = useRef(false);
+  const moreDetails = useRef<HTMLDetailsElement>(null);
+  const errorMessage = useRef<HTMLDivElement>(null);
+  const uploadedPhoto = useRef<{ file: File; url: string } | null>(null);
+  const hadCustomer = useRef(isCustomer); if (isCustomer) hadCustomer.current = true;
+  const dirty = !submitted && (photoFile !== null || JSON.stringify(values) !== JSON.stringify(initial.current));
+
+  useEffect(() => {
+    if (initialTitle !== undefined) return;
+    const title = new URLSearchParams(window.location.search).get("title") || "";
+    if (title) { initial.current = emptyValues(title); setValues(initial.current); }
+  }, [initialTitle]);
+  useEffect(() => {
+    if (!dirty) return;
+    const protectUnsavedWant = (event: BeforeUnloadEvent) => {
+      if (completed.current) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", protectUnsavedWant);
+    return () => window.removeEventListener("beforeunload", protectUnsavedWant);
+  }, [dirty]);
+  useEffect(() => {
+    if (!photoFile) { setPreview(""); return; }
+    const url = URL.createObjectURL(photoFile); setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [photoFile]);
+  useEffect(() => {
+    if (error) { errorMessage.current?.focus({ preventScroll: true }); errorMessage.current?.scrollIntoView({ block: "nearest" }); }
+  }, [error]);
+
+  function change<K extends keyof WantValues>(key: K, value: WantValues[K]) {
+    const next = { ...values, [key]: value };
+    // Escape/backdrop events can arrive before React flushes passive effects.
+    // Notify the dialog during the field event so its dismissal guard is current.
+    onDirtyChange?.(photoFile !== null || JSON.stringify(next) !== JSON.stringify(initial.current));
+    setValues(next);
   }
-  return <form onSubmit={submit} className="joro-form space-y-5 rounded-2xl bg-white p-6"><label>What do you need?<input name="title" required minLength={3} maxLength={160} defaultValue={typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("title") || "" : ""} placeholder="Tell vendors what you are looking for" /></label><label>Category<select name="category" required><option value="">Choose category</option>{categories.map(c => <option key={c}>{c}</option>)}</select></label><label>City<input name="city" required maxLength={100} /></label><label>Quantity<input name="quantity" type="number" min={1} max={10000} defaultValue={1} required /></label><label className="flex items-center gap-2"><input type="checkbox" checked={flexible} onChange={e => setFlexible(e.target.checked)} className="!w-auto" />Budget flexible</label>{!flexible && <div className="grid grid-cols-2 gap-4"><label>Minimum PKR<input name="min" type="number" min={0} step="0.01" /></label><label>Maximum PKR<input name="max" type="number" min={1} step="0.01" required /></label></div>}<details><summary className="cursor-pointer font-bold">Add More Details</summary><label className="mt-4">Description<textarea name="description" maxLength={5000} rows={4} /></label><label className="mt-4">Condition<select name="condition"><option>Any</option><option>New</option><option>Used</option><option>Refurbished</option></select></label><label className="mt-4">Need by (optional)<input name="needBy" type="date" min={new Date(Date.now() + 86400000).toISOString().slice(0, 10)} /></label><label className="mt-4">Photo (optional, max 5MB)<input name="photo" type="file" accept="image/jpeg,image/png,image/webp" onChange={e => setPhotoFile(e.target.files?.[0] || null)} /></label></details><p className="text-sm text-gray-600">Your Want will be reviewed before it becomes public. Do not include your phone, email, or private address. Wants expire after 30 days.</p>{error && <p role="alert" className="text-red-700">{error}</p>}<button disabled={busy} className="rounded-xl bg-brand-primary px-5 py-3 font-bold disabled:opacity-50">{busy ? "Submitting…" : "Submit Want for review"}</button></form>;
+  function choosePhoto(file: File | null) {
+    setPhotoError("");
+    if (file && (!new Set(["image/jpeg", "image/png", "image/webp"]).has(file.type.toLowerCase()) || file.size > 5 * 1024 * 1024)) {
+      setPhotoError("Choose a JPG, PNG, or WebP image up to 5 MB.");
+      if (fileInput.current) fileInput.current.value = "";
+      return;
+    }
+    onDirtyChange?.(file !== null || JSON.stringify(values) !== JSON.stringify(initial.current));
+    uploadedPhoto.current = null; setPhotoFile(file);
+    if (!file && fileInput.current) fileInput.current.value = "";
+  }
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); if (lock.current || completed.current) return;
+    if (!isCustomer) { setError("Your session has expired. Sign in again, then retry. Your Want is still here."); return; }
+    setError("");
+    const input = wantInput.safeParse({
+      title: values.title, category: values.category, city: values.city, quantity: Number(values.quantity), budgetFlexible: values.flexible,
+      budgetMin: values.flexible ? null : Number(values.min || 0), budgetMax: values.flexible ? null : Number(values.max),
+      description: values.description, condition: values.condition, needBy: values.needBy ? new Date(values.needBy).toISOString() : null,
+    });
+    if (!input.success) { setError(input.error.issues[0]?.message || "Please check the supplied fields."); return; }
+    lock.current = true; setBusy(true); onBusyChange?.(true);
+    try {
+      let photo = uploadedPhoto.current?.file === photoFile ? uploadedPhoto.current.url : null;
+      if (photoFile && !photo) {
+        const uploadData = new FormData(); uploadData.set("file", photoFile); uploadData.set("folder", "inrange-wants");
+        const response = await fetch("/api/upload", { method: "POST", body: uploadData });
+        const result = await response.json().catch(() => null);
+        if (!response.ok || typeof result?.url !== "string") throw new Error(result?.error || "Could not upload the photo. Please try again.");
+        photo = result.url; uploadedPhoto.current = { file: photoFile, url: result.url };
+      }
+      const response = await fetch("/api/wants", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...input.data, photo }) });
+      const result = await response.json().catch(() => null);
+      if (!response.ok || typeof result?.want?.id !== "string") throw new Error(result?.error || "Could not submit your Want. Please try again.");
+      const want: SubmittedWant = { id: result.want.id, status: result.want.status };
+      completed.current = true; setSubmitted(want); onDirtyChange?.(false); window.dispatchEvent(new Event("wants-changed"));
+      if (onSuccess) onSuccess(want); else await router.push(`/wants/${want.id}`);
+    } catch (failure) { setError(failure instanceof Error ? failure.message : "Could not submit your Want. Please try again."); }
+    finally { lock.current = false; setBusy(false); onBusyChange?.(false); }
+  }
+
+  if (!hadCustomer.current && (authLoading || !isCustomer)) return <div className="rounded-2xl border border-emerald-100 bg-white p-6 text-brand-dark">
+    {authLoading ? <p role="status" className="animate-pulse">Checking your account…</p> : <><h2 className="text-xl font-bold">Sign in to post a Want</h2><p className="mt-2 text-neutral-600">Use your customer account to tell trusted sellers what you need.</p><LoadingButton type="button" onClick={() => openAuthModal("login")} loadingLabel="Opening…" className="mt-5 rounded-xl bg-brand-primary px-5 py-3 font-bold">Sign in to continue</LoadingButton></>}
+  </div>;
+
+  return <LoadingForm id={id} onSubmit={submit} className={`joro-form space-y-5 ${embedded ? "" : "rounded-2xl bg-white p-6"}`}>
+    <fieldset disabled={busy || !!submitted} className="min-w-0 space-y-5 disabled:opacity-70">
+      <label className="font-semibold text-brand-dark">What do you need? <span aria-hidden="true">*</span><input name="title" autoFocus={embedded} required minLength={3} maxLength={160} value={values.title} onChange={event => change("title", event.target.value)} placeholder="e.g. A study desk for my home office" /></label>
+      <div className="grid gap-5 sm:grid-cols-2">
+        <label className="font-semibold text-brand-dark">Category <span aria-hidden="true">*</span><select name="category" required value={values.category} onChange={event => change("category", event.target.value)}><option value="">Choose a category</option>{categories.map(category => <option key={category}>{category}</option>)}</select></label>
+        <label className="font-semibold text-brand-dark">City <span aria-hidden="true">*</span><input name="city" required maxLength={100} value={values.city} onChange={event => change("city", event.target.value)} placeholder="e.g. Lahore" autoComplete="address-level2" /></label>
+      </div>
+      <div className="grid gap-5 sm:grid-cols-2">
+        <label className="font-semibold text-brand-dark">Quantity <span aria-hidden="true">*</span><input name="quantity" type="number" min={1} max={10000} step={1} required value={values.quantity} onChange={event => change("quantity", event.target.value)} /></label>
+      </div>
+      <div className="rounded-2xl border border-emerald-100 bg-[#f8fbf1] p-4">
+        <label className="!flex cursor-pointer items-center gap-2.5 font-semibold text-brand-dark"><input name="budgetFlexible" type="checkbox" checked={values.flexible} onChange={event => change("flexible", event.target.checked)} className="!h-4 !w-4 accent-emerald-800" /> My budget is flexible</label>
+        {!values.flexible && <div className="mt-4 grid gap-4 sm:grid-cols-2"><label className="font-medium">Minimum budget (PKR)<input name="min" type="number" min={0} max={9999999999} step="0.01" value={values.min} onChange={event => change("min", event.target.value)} placeholder="Optional" /></label><label className="font-medium">Maximum budget (PKR) <span aria-hidden="true">*</span><input name="max" type="number" min="0.01" max={9999999999} step="0.01" required value={values.max} onChange={event => change("max", event.target.value)} placeholder="Your budget" /></label></div>}
+      </div>
+      <details ref={moreDetails} className="rounded-2xl border border-emerald-100 p-4" onInvalidCapture={() => { if (moreDetails.current) moreDetails.current.open = true; }}>
+        <summary className="cursor-pointer rounded-md font-bold text-emerald-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-700">Add More Details</summary>
+        <div className="mt-4 space-y-5">
+          <label className="font-semibold text-brand-dark">Description <span className="font-normal text-neutral-500">(optional)</span><textarea name="description" maxLength={5000} rows={3} value={values.description} onChange={event => change("description", event.target.value)} placeholder="Add the size, brand, colour, or any other details that matter." /></label>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <label className="font-semibold text-brand-dark">Condition<select name="condition" value={values.condition} onChange={event => change("condition", event.target.value as WantValues["condition"])}><option>Any</option><option>New</option><option>Used</option><option>Refurbished</option></select></label>
+            <label className="font-semibold text-brand-dark">Need by <span className="font-normal text-neutral-500">(optional)</span><input name="needBy" type="date" min={dateAfter(1)} max={dateAfter(30)} value={values.needBy} onChange={event => change("needBy", event.target.value)} /></label>
+          </div>
+        </div>
+      </details>
+      <div>
+        <p className="font-semibold text-brand-dark">Reference image <span className="font-normal text-neutral-500">(optional)</span></p><p className="mt-1 text-sm text-neutral-500">JPG, PNG, or WebP. Maximum 5 MB.</p>
+        <label htmlFor={`${id}-photo`} className="mt-3 !flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-emerald-200 bg-emerald-50/40 px-4 py-4 font-semibold text-emerald-900 focus-within:ring-2 focus-within:ring-emerald-700"><ImagePlus size={20} aria-hidden="true" />{photoFile ? "Change image" : "Add an image"}<input id={`${id}-photo`} ref={fileInput} name="photo" type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={event => choosePhoto(event.target.files?.[0] || null)} /></label>
+        {preview && <div className="relative mt-3 overflow-hidden rounded-xl border border-neutral-200 bg-neutral-50">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={preview} alt="Your selected reference" className="mx-auto max-h-52 w-full object-contain" />
+          <button type="button" onClick={() => choosePhoto(null)} className="absolute right-2 top-2 flex items-center gap-1 rounded-lg bg-white px-3 py-2 text-sm font-bold text-brand-dark shadow-sm hover:bg-neutral-100" aria-label="Remove reference image"><X size={16} aria-hidden="true" />Remove</button><p className="truncate border-t border-neutral-200 bg-white px-3 py-2 text-xs text-neutral-500">{photoFile?.name}</p>
+        </div>}
+        {photoError && <p role="alert" className="mt-2 text-sm text-red-700">{photoError}</p>}
+      </div>
+    </fieldset>
+    <p className="rounded-xl bg-neutral-50 px-4 py-3 text-sm leading-relaxed text-neutral-600">Your Want will be reviewed before it becomes public and expires after 30 days. Keep your phone number, email, and private address out of the post.</p>
+    {error && <div ref={errorMessage} tabIndex={-1} role="alert" className="rounded-xl border border-red-100 bg-red-50 p-3 text-sm text-red-800 outline-none">{error}{!isCustomer && <LoadingLink href="/login?role=customer&mode=signin&callbackUrl=%2Fwants" target="_blank" rel="noopener noreferrer" className="mt-2 block font-bold underline">Sign in in a new tab, then retry here</LoadingLink>}</div>}
+    {submitted && !onSuccess && <div role="status" className="rounded-xl bg-lime-50 p-4 text-emerald-900">Your Want has been submitted for review. <LoadingLink href={`/wants/${submitted.id}`} className="font-bold underline">View your Want</LoadingLink></div>}
+    {!hideFooter && <LoadingButton type="submit" loading={busy} disabled={!!submitted} loadingLabel="Saving…" className="rounded-xl bg-brand-primary px-5 py-3 font-bold text-brand-dark disabled:opacity-50">Submit Want for review</LoadingButton>}
+  </LoadingForm>;
 }

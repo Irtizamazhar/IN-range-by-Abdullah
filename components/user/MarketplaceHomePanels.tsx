@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/LoadingLink";
 import Image from "next/image";
 import { activePromotions, promotionHref } from "@/lib/store-service";
 import { StoreFollowButton } from "./StoreFollowButton";

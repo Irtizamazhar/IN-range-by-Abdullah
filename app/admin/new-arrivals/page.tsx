@@ -1,8 +1,10 @@
 "use client";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/LoadingLink";
 import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 import toast from "react-hot-toast";
 import { formatPKR } from "@/lib/format";
@@ -20,9 +22,10 @@ export default function AdminNewArrivalsPage() {
   const [loading, setLoading] = useState(true);
 
   function load() {
-    fetch("/api/new-arrivals")
-      .then((r) => r.json())
+    return fetch("/api/new-arrivals")
+      .then(async (r) => { const data = await r.json(); if (!r.ok) throw new Error(data.error || "Could not load new arrivals"); return data; })
       .then((d) => setRows((d.products || []).filter((x: Row & { isNew?: boolean }) => x.isNew !== false)))
+      .catch((error) => { toast.error(error instanceof Error ? error.message : "Could not load new arrivals"); })
       .finally(() => setLoading(false));
   }
 
@@ -38,10 +41,10 @@ export default function AdminNewArrivalsPage() {
       return;
     }
     toast.success("Deleted");
-    load();
+    await load();
   }
 
-  if (loading) return <div className="p-8 text-darkText/50">Loading…</div>;
+  if (loading) return <PageSkeleton rows={3} />;
 
   return (
     <div className="p-6 md:p-8">
@@ -89,13 +92,13 @@ export default function AdminNewArrivalsPage() {
                   >
                     Edit
                   </Link>
-                  <button
+                  <LoadingButton loadingLabel="Removing…"
                     type="button"
                     onClick={() => remove(p.id)}
                     className="font-semibold text-red-600"
                   >
                     Delete
-                  </button>
+                  </LoadingButton>
                 </td>
               </tr>
             ))}

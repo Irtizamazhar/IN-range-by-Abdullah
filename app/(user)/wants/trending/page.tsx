@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/LoadingLink";
 import { wantTrendService } from "@/lib/want-trend-service";
 import { WantCard } from "@/components/user/WantCard";
 export const dynamic = "force-dynamic";

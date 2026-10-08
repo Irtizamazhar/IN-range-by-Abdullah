@@ -1,15 +1,16 @@
 "use client";
+import { LoadingButton } from "@/components/ui/LoadingButton";
+import { LoadingForm } from "@/components/ui/LoadingForm";
 
 import Image from "next/image";
 import { BrandTagline } from "./BrandTagline";
 import { CategoryNavigation, useNavCategories } from "./CategoryNavigation";
 import { MarketplaceNav } from "./MarketplaceNav";
-import Link from "next/link";
-import {
-  usePathname,
-  useRouter,
-  useSearchParams,
-} from "next/navigation";
+import { PostWantButton } from "./PostWantButton";
+import Link from "@/components/ui/LoadingLink";
+import { usePathname,
+  useSearchParams } from "next/navigation";
+import { useLoadingRouter as useRouter } from "@/hooks/useLoadingRouter";
 import {
   useEffect,
   useMemo,
@@ -337,7 +338,7 @@ export function Navbar({
      SEARCH SUBMIT
   ======================================================= */
 
-  function submitSearch() {
+  async function submitSearch() {
     const query =
       searchQuery.trim();
 
@@ -345,7 +346,7 @@ export function Navbar({
       return;
     }
 
-    router.push(
+    await router.push(
       `/products?search=${encodeURIComponent(
         query
       )}`
@@ -373,7 +374,7 @@ export function Navbar({
               </span>
 
               {session ? (
-                <button
+                <LoadingButton
                   type="button"
                   onClick={() =>
                     openProfileModal()
@@ -382,7 +383,7 @@ export function Navbar({
                   aria-label="Open profile"
                 >
                   <User className="h-4 w-4" />
-                </button>
+                </LoadingButton>
               ) : null}
             </div>
           </div>
@@ -404,33 +405,33 @@ export function Navbar({
 
   return (
     <>
-      <header className="sticky top-10 z-40 w-full bg-white shadow-[0_5px_22px_rgba(17,17,17,0.055)]">
+      <header className="sticky top-10 z-40 w-full bg-white shadow-[0_4px_18px_rgba(11,46,31,0.06)]">
         {/* =================================================
             MAIN ROW
         ================================================= */}
 
-        <div className="border-b border-black/[0.06] bg-white">
-          <div className="mx-auto max-w-7xl px-4 py-[5.5px] sm:px-6">
-            <div className="flex flex-wrap items-center gap-3 lg:flex-nowrap lg:gap-4">
+        <div className="border-b border-black/[0.08] bg-white">
+          <div className="mx-auto max-w-7xl px-4 py-2.5 sm:px-6">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 lg:flex-nowrap lg:gap-6">
               {/* MOBILE MENU */}
 
-              <button
+              <LoadingButton
                 type="button"
                 onClick={() =>
                   setMobileOpen(true)
                 }
-                className="order-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-black/[0.08] bg-white text-brand-dark shadow-sm transition hover:bg-brand-soft lg:hidden"
+                className="order-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-black/[0.08] bg-white text-brand-link transition hover:bg-brand-soft focus-visible:bg-brand-soft focus-visible:outline-brand-link lg:hidden"
                 aria-label="Open menu"
               >
                 <Menu className="h-[18px] w-[18px]" />
-              </button>
+              </LoadingButton>
 
               {/* =================================================
                   LOGO
               ================================================= */}
 
               <div className="order-2 flex shrink-0 flex-col items-center">
-                <LogoMark href="/" />
+                <LogoMark href="/" className="rounded-md focus-visible:outline-brand-link" />
 
                 <BrandTagline />
               </div>
@@ -443,7 +444,7 @@ export function Navbar({
                 ref={searchRef}
                 className="order-4 relative z-50 w-full lg:order-3 lg:min-w-0 lg:flex-1"
               >
-                <form
+                <LoadingForm
                   action="/products"
                   method="get"
                   role="search"
@@ -451,10 +452,10 @@ export function Navbar({
                     event
                   ) => {
                     event.preventDefault();
-                    submitSearch();
+                    return submitSearch();
                   }}
                 >
-                  <div className="flex h-[44px] overflow-hidden rounded-xl border border-black/[0.09] bg-white shadow-[0_3px_14px_rgba(17,17,17,0.045)] transition duration-200 focus-within:border-brand-primary focus-within:ring-2 focus-within:ring-brand-primary/20">
+                  <div className="flex h-11 overflow-hidden rounded-xl border border-black/10 bg-white transition duration-200 focus-within:border-brand-primary focus-within:ring-2 focus-within:ring-brand-primary/30">
                     <input
                       type="search"
                       name="search"
@@ -485,15 +486,15 @@ export function Navbar({
                       className="min-w-0 flex-1 border-0 bg-transparent px-4 text-[12px] font-medium text-brand-dark outline-none placeholder:text-black/35 sm:text-[12px]"
                     />
 
-                    <button
+                    <LoadingButton
                       type="submit"
                       aria-label="Search products"
                       className="flex w-[50px] shrink-0 items-center justify-center bg-brand-primary text-brand-dark transition hover:bg-brand-hover"
                     >
                       <Search className="h-[19px] w-[19px]" />
-                    </button>
+                    </LoadingButton>
                   </div>
-                </form>
+                </LoadingForm>
 
                 {/* SEARCH DROPDOWN */}
 
@@ -519,8 +520,8 @@ export function Navbar({
                           Apni Want post karo aur sellers ko batao kya chahiye.
                         </p>
 
-                        <Link
-                          href="/wants/new"
+                        <PostWantButton
+                          initialTitle={searchQuery.trim()}
                           onClick={() =>
                             setShowDropdown(
                               false
@@ -529,19 +530,19 @@ export function Navbar({
                           className="mt-3 inline-flex h-9 items-center rounded-lg bg-brand-primary px-3 text-[12px] font-black text-brand-dark transition hover:bg-brand-hover"
                         >
                           Want Post Karo
-                        </Link>
+                        </PostWantButton>
                       </div>
                     ) : null}
 
                     {suggestions.map(
                       (product) => (
-                        <button
+                        <LoadingButton
                           key={
                             product.id
                           }
                           type="button"
-                          onClick={() => {
-                            router.push(
+                          onClick={async () => {
+                            await router.push(
                               `/products/${product.id}`
                             );
 
@@ -602,13 +603,13 @@ export function Navbar({
                               product.price
                             )}
                           </span>
-                        </button>
+                        </LoadingButton>
                       )
                     )}
 
                     {suggestions.length >
                     0 ? (
-                      <button
+                      <LoadingButton
                         type="button"
                         onClick={
                           submitSearch
@@ -616,7 +617,7 @@ export function Navbar({
                         className="mt-1 flex h-9 w-full items-center justify-center rounded-xl bg-brand-dark text-[12px] font-black text-white transition hover:bg-black"
                       >
                         View All Results
-                      </button>
+                      </LoadingButton>
                     ) : null}
                   </div>
                 ) : null}
@@ -632,39 +633,39 @@ export function Navbar({
 
                 <Link
                   href="/wants"
-                  className="group relative flex h-10 items-center gap-1.5 rounded-xl px-2.5 text-brand-dark transition hover:bg-brand-soft"
+                  className="group relative flex h-11 items-center gap-1.5 rounded-xl px-2 text-brand-link focus-visible:outline-brand-link sm:px-2.5"
                   aria-label="Wants"
                 >
                   <Heart className="h-[19px] w-[19px] transition-transform group-hover:scale-105" />
 
-                  <span className="hidden text-[12px] font-black xl:inline">
+                  <span className="hidden text-[12px] font-black decoration-2 underline-offset-4 group-hover:underline group-focus-visible:underline xl:inline">
                     Wants
                   </span>
                 </Link>
 
-                <Link href="/together" aria-label="Together" className="hidden h-10 items-center rounded-xl px-2 text-xs font-bold hover:bg-brand-soft md:flex">Together</Link>
-                <Link href="/stores" aria-label="Stores" className="hidden h-10 items-center rounded-xl px-2 text-xs font-bold hover:bg-brand-soft md:flex">Stores</Link>
+                <Link href="/together" aria-label="Together" className="hidden h-11 items-center rounded-xl px-2 text-xs font-semibold text-brand-link decoration-2 underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-brand-link md:flex">Together</Link>
+                <Link href="/stores" aria-label="Stores" className="hidden h-11 items-center rounded-xl px-2 text-xs font-semibold text-brand-link decoration-2 underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-brand-link md:flex">Stores</Link>
                 {/* SELLER CTA */}
 
                 <Link
                   href="/sell"
-                  className="ml-1 hidden h-10 items-center justify-center rounded-xl bg-brand-primary px-4 text-[12px] font-black text-brand-dark shadow-[0_6px_18px_rgba(183,227,58,0.18)] transition duration-200 hover:-translate-y-0.5 hover:bg-brand-hover md:flex"
+                  className="ml-1 hidden h-10 items-center justify-center rounded-xl bg-brand-primary px-4 text-[12px] font-black text-brand-dark shadow-[0_6px_18px_rgba(183,227,58,0.18)] !no-underline hover:!bg-[rgb(var(--brand-primary-rgb))] hover:!no-underline focus-visible:!no-underline focus-visible:outline-brand-link md:flex"
                 >
                   Sell on JORO
                 </Link>
                 {/* CART */}
 
-                <button
+                <LoadingButton
                   type="button"
                   onClick={() =>
                     setCartOpen(true)
                   }
-                  className="group relative flex h-10 items-center gap-1.5 rounded-xl px-2.5 text-brand-dark transition hover:bg-brand-soft"
+                  className="group relative flex h-11 items-center gap-1.5 rounded-xl px-2 text-brand-link focus-visible:outline-brand-link sm:px-2.5"
                   aria-label="Open cart"
                 >
                   <ShoppingCart className="h-[20px] w-[20px] transition-transform group-hover:scale-105" />
 
-                  <span className="hidden text-[12px] font-black xl:inline">
+                  <span className="hidden text-[12px] font-black decoration-2 underline-offset-4 group-hover:underline group-focus-visible:underline xl:inline">
                     Cart
                   </span>
 
@@ -675,33 +676,33 @@ export function Navbar({
                         : totalQty}
                     </span>
                   ) : null}
-                </button>
+                </LoadingButton>
 
                 {/* ACCOUNT */}
 
                 {!session ? (
-                  <button
+                  <LoadingButton
                     type="button"
                     onClick={() =>
                       openAuthModal(
                         "login"
                       )
                     }
-                    className="group flex h-10 items-center gap-1.5 rounded-xl px-2.5 text-brand-dark transition hover:bg-brand-soft"
+                    className="group flex h-11 items-center gap-1.5 rounded-xl px-2 text-brand-link focus-visible:outline-brand-link sm:px-2.5"
                     aria-label="Account"
                   >
                     <User className="h-[19px] w-[19px] transition-transform group-hover:scale-105" />
 
-                    <span className="hidden text-[12px] font-black xl:inline">
+                    <span className="hidden text-[12px] font-black decoration-2 underline-offset-4 group-hover:underline group-focus-visible:underline xl:inline">
                       Account
                     </span>
-                  </button>
+                  </LoadingButton>
                 ) : (
                   <div
                     ref={profileRef}
                     className="relative"
                   >
-                    <button
+                    <LoadingButton
                       type="button"
                       onClick={() =>
                         setProfileOpen(
@@ -709,7 +710,7 @@ export function Navbar({
                             !value
                         )
                       }
-                      className="flex h-10 items-center gap-1.5 rounded-xl px-2.5 text-brand-dark transition hover:bg-brand-soft"
+                      className="group flex h-11 items-center gap-1.5 rounded-xl px-2 text-brand-link focus-visible:outline-brand-link sm:px-2.5"
                       aria-label="Account menu"
                     >
                       {session.user
@@ -733,36 +734,30 @@ export function Navbar({
                         <User className="h-[19px] w-[19px]" />
                       )}
 
-                      <span className="max-w-[120px] truncate text-[12px] font-black">
+                      <span className="hidden max-w-[120px] truncate text-[12px] font-semibold decoration-2 underline-offset-4 group-hover:underline group-focus-visible:underline xl:inline">
                         {session.user
                           ?.name ||
                           "Account"}
                       </span>
-                    </button>
+                    </LoadingButton>
 
                     {profileOpen ? (
                       <div className="absolute right-0 top-[calc(100%+7px)] z-50 min-w-[175px] rounded-xl border border-black/[0.08] bg-white p-2 text-brand-dark shadow-[0_18px_45px_rgba(0,0,0,0.14)]">
                         {session.user
                           ?.role !==
                         "admin" ? (
-                          <button
+                          <LoadingButton
                             type="button"
-                            onClick={() => {
-                              setProfileOpen(
-                                false
-                              );
-
-                              openProfileModal();
-                            }}
+                            onClick={async () => { await openProfileModal(); setProfileOpen(false); }}
                             className="w-full rounded-lg px-3 py-2.5 text-left text-[12px] font-bold transition hover:bg-brand-soft"
                           >
                             My Profile
-                          </button>
+                          </LoadingButton>
                         ) : null}
 
                         <Link
                           href="/account"
-                          onClick={() =>
+                          onNavigateComplete={() =>
                             setProfileOpen(
                               false
                             )
@@ -774,7 +769,7 @@ export function Navbar({
 
                         <Link
                           href="/my-stuff"
-                          onClick={() => setProfileOpen(false)}
+                          onNavigateComplete={() => setProfileOpen(false)}
                           className="block rounded-lg px-3 py-2.5 text-left text-[12px] font-bold transition hover:bg-brand-soft"
                         >
                           My Stuff
@@ -782,28 +777,19 @@ export function Navbar({
 
                         <Link
                           href="/account/notifications"
-                          onClick={() => setProfileOpen(false)}
+                          onNavigateComplete={() => setProfileOpen(false)}
                           className="block rounded-lg px-3 py-2.5 text-left text-[12px] font-bold transition hover:bg-brand-soft"
                         >
                           Notifications
                         </Link>
 
-                        <button
+                        <LoadingButton
                           type="button"
-                          onClick={() => {
-                            setProfileOpen(
-                              false
-                            );
-
-                            void signOut({
-                              callbackUrl:
-                                "/",
-                            });
-                          }}
+                          onClick={async () => { await signOut({ redirect: false }); await router.push("/"); await router.refresh(); setProfileOpen(false); }}
                           className="w-full rounded-lg px-3 py-2.5 text-left text-[12px] font-bold text-red-600 transition hover:bg-red-50"
                         >
                           Logout
-                        </button>
+                        </LoadingButton>
                       </div>
                     ) : null}
                   </div>
@@ -836,7 +822,7 @@ export function Navbar({
               <BrandTagline />
             </div>
 
-            <button
+            <LoadingButton
               type="button"
               onClick={() =>
                 setMobileOpen(false)
@@ -845,7 +831,7 @@ export function Navbar({
               aria-label="Close menu"
             >
               <X className="h-[18px] w-[18px]" />
-            </button>
+            </LoadingButton>
           </div>
 
           {/* MENU BODY */}
@@ -858,7 +844,7 @@ export function Navbar({
             <div className="space-y-2">
               <Link
                 href="/products"
-                onClick={() =>
+                onNavigateComplete={() =>
                   setMobileOpen(
                     false
                   )
@@ -870,25 +856,24 @@ export function Navbar({
                 Shop Products
               </Link>
 
-              <Link
-                href="/wants/new"
+              <PostWantButton
                 onClick={() =>
                   setMobileOpen(
                     false
                   )
                 }
-                className="flex items-center justify-between rounded-xl bg-brand-primary px-4 py-3.5 text-[14px] font-black text-brand-dark"
+                className="flex w-full items-center justify-between rounded-xl bg-brand-primary px-4 py-3.5 text-[14px] font-black text-brand-dark"
               >
                 <span className="flex items-center gap-3">
                   <Heart className="h-4 w-4" />
 
                   Want Post Karo
                 </span>
-              </Link>
+              </PostWantButton>
 
               <Link
                 href="/wants/trending"
-                onClick={() =>
+                onNavigateComplete={() =>
                   setMobileOpen(
                     false
                   )
@@ -900,12 +885,12 @@ export function Navbar({
 
               <Link
                 href="/sell"
-                onClick={() =>
+                onNavigateComplete={() =>
                   setMobileOpen(
                     false
                   )
                 }
-                className="flex items-center gap-3 rounded-xl bg-brand-dark px-4 py-3.5 text-[14px] font-black text-white"
+                className="flex items-center gap-3 rounded-xl bg-brand-dark px-4 py-3.5 text-[14px] font-black text-white !no-underline hover:!no-underline focus-visible:!no-underline"
               >
                 <Store className="h-4 w-4 text-brand-primary" />
 
@@ -914,8 +899,8 @@ export function Navbar({
             </div>
 
             <div className="mt-2 grid grid-cols-2 gap-2">
-              <Link href="/together" onClick={() => setMobileOpen(false)} className="rounded-xl bg-brand-soft px-4 py-3 text-sm font-bold text-brand-link">Together</Link>
-              <Link href="/stores" onClick={() => setMobileOpen(false)} className="rounded-xl bg-brand-soft px-4 py-3 text-sm font-bold text-brand-link">Stores</Link>
+              <Link href="/together" onNavigateComplete={() => setMobileOpen(false)} className="rounded-xl bg-brand-soft px-4 py-3 text-sm font-bold text-brand-link">Together</Link>
+              <Link href="/stores" onNavigateComplete={() => setMobileOpen(false)} className="rounded-xl bg-brand-soft px-4 py-3 text-sm font-bold text-brand-link">Stores</Link>
             </div>
             {/* CATEGORIES */}
 
@@ -935,7 +920,7 @@ export function Navbar({
                     href={`/products?category=${encodeURIComponent(
                       category
                     )}`}
-                    onClick={() =>
+                    onNavigateComplete={() =>
                       setMobileOpen(
                         false
                       )
@@ -955,7 +940,7 @@ export function Navbar({
             <div className="space-y-1">
               <Link
                 href="/track-order"
-                onClick={() =>
+                onNavigateComplete={() =>
                   setMobileOpen(
                     false
                   )
@@ -989,77 +974,55 @@ export function Navbar({
 
             {!session ? (
               <div className="grid grid-cols-2 gap-2">
-                <button
+                <LoadingButton
                   type="button"
-                  onClick={() => {
-                    setMobileOpen(
-                      false
-                    );
-
-                    openAuthModal(
-                      "login"
-                    );
-                  }}
+                  onClick={async () => { await openAuthModal("login"); setMobileOpen(false); }}
                   className="rounded-xl border border-black/[0.1] px-4 py-3 text-[12px] font-black text-brand-dark"
                 >
                   Login
-                </button>
+                </LoadingButton>
 
-                <button
+                <LoadingButton
                   type="button"
-                  onClick={() => {
-                    setMobileOpen(
-                      false
-                    );
-
-                    openAuthModal(
-                      "signup"
-                    );
-                  }}
+                  onClick={async () => { await openAuthModal("signup"); setMobileOpen(false); }}
                   className="rounded-xl bg-brand-primary px-4 py-3 text-[12px] font-black text-brand-dark"
                 >
                   Sign Up
-                </button>
+                </LoadingButton>
               </div>
             ) : (
               <div className="space-y-2">
                 {session.user
                   ?.role !==
                 "admin" ? (
-                  <button
+                  <LoadingButton
                     type="button"
-                    onClick={() => {
-                      setMobileOpen(
-                        false
-                      );
-
-                      openProfileModal();
-                    }}
+                    onClick={async () => { await openProfileModal(); setMobileOpen(false); }}
                     className="w-full rounded-xl bg-brand-background px-4 py-3 text-left text-[12px] font-black text-brand-dark"
                   >
                     My Profile
-                  </button>
+                  </LoadingButton>
                 ) : null}
 
                 {session.user?.role !== "admin" ? (
                   <>
                     <Link
                       href="/account"
-                      onClick={() => setMobileOpen(false)}
+                      onNavigateComplete={() => setMobileOpen(false)}
                       className="block w-full rounded-xl bg-brand-soft px-4 py-3 text-left text-[13px] font-black text-brand-dark"
                     >
                       My Account
                     </Link>
                     <Link
                       href="/my-stuff"
-                      onClick={() => setMobileOpen(false)}
+                      onNavigateComplete={() => setMobileOpen(false)}
                       className="block w-full rounded-xl bg-brand-soft px-4 py-3 text-left text-[13px] font-black text-brand-dark"
                     >
                       My Stuff
                     </Link>
                     <Link
                       href="/account/notifications"
-                      onClick={() => setMobileOpen(false)}
+                      onNavigateComplete={() => setMobileOpen(false)}
                       className="block w-full rounded-xl bg-brand-soft px-4 py-3 text-left text-[13px] font-black text-brand-dark"
                     >
                       Notifications
@@ -1067,22 +1030,13 @@ export function Navbar({
                   </>
                 ) : null}
 
-                <button
+                <LoadingButton
                   type="button"
-                  onClick={() => {
-                    setMobileOpen(
-                      false
-                    );
-
-                    void signOut({
-                      callbackUrl:
-                        "/",
-                    });
-                  }}
+                  onClick={async () => { await signOut({ redirect: false }); await router.push("/"); await router.refresh(); setMobileOpen(false); }}
                   className="w-full rounded-xl px-4 py-3 text-left text-[12px] font-black text-red-600"
                 >
                   Logout
-                </button>
+                </LoadingButton>
               </div>
             )}
           </div>

@@ -1,4 +1,6 @@
 "use client";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
@@ -31,10 +33,9 @@ function formatShort(iso: string) {
 export default function AdminReviewsPage() {
   const [reviews, setReviews] = useState<AdminReview[]>([]);
   const [loading, setLoading] = useState(true);
-  const [busyKey, setBusyKey] = useState<string | null>(null);
 
-  async function load() {
-    setLoading(true);
+  async function load(showLoading = true) {
+    if (showLoading) setLoading(true);
     try {
       const r = await fetch("/api/admin/reviews", { credentials: "same-origin" });
       const data = (await r.json()) as { reviews?: AdminReview[]; error?: string };
@@ -57,8 +58,6 @@ export default function AdminReviewsPage() {
   }, []);
 
   async function toggleApproved(review: AdminReview, next: boolean) {
-    const key = `${review.scope ?? "product"}-${review.id}`;
-    setBusyKey(key);
     try {
       const scope = review.scope === "newArrival" ? "newArrival" : "product";
       const r = await fetch(
@@ -85,15 +84,11 @@ export default function AdminReviewsPage() {
       toast.success(next ? "Review approved" : "Review hidden");
     } catch {
       toast.error("Network error");
-    } finally {
-      setBusyKey(null);
     }
   }
 
   async function remove(review: AdminReview) {
     if (!window.confirm("Remove this review from public view? The original record will be preserved.")) return;
-    const key = `${review.scope ?? "product"}-${review.id}`;
-    setBusyKey(key);
     try {
       const scope = review.scope === "newArrival" ? "newArrival" : "product";
       const r = await fetch(
@@ -118,8 +113,6 @@ export default function AdminReviewsPage() {
       toast.success("Review removed; its history was preserved");
     } catch {
       toast.error("Network error");
-    } finally {
-      setBusyKey(null);
     }
   }
 
@@ -132,9 +125,7 @@ export default function AdminReviewsPage() {
       </p>
 
       {loading ? (
-        <div className="rounded-xl border border-borderGray bg-white p-12 text-center text-darkText/50">
-          Loading reviews…
-        </div>
+        <PageSkeleton rows={3} />
       ) : reviews.length === 0 ? (
         <div className="rounded-xl border border-dashed border-borderGray bg-lightGray/40 p-12 text-center text-darkText/60">
           No reviews yet.
@@ -194,13 +185,12 @@ export default function AdminReviewsPage() {
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <button
+                  <LoadingButton loadingLabel="Processing…"
                     type="button"
                     disabled={
-                      busyKey === `${rev.scope ?? "product"}-${rev.id}` ||
                       (!rev.approved && (!rev.verifiedPurchase || rev.withdrawn))
                     }
-                    onClick={() => void toggleApproved(rev, !rev.approved)}
+                    onClick={() => toggleApproved(rev, !rev.approved)}
                     className="rounded-lg bg-brand-primary px-3 py-2 text-xs font-bold text-brand-dark hover:bg-brand-hover disabled:opacity-50"
                   >
                     {rev.approved
@@ -210,18 +200,17 @@ export default function AdminReviewsPage() {
                         : rev.verifiedPurchase
                           ? "Approve"
                           : "Not eligible"}
-                  </button>
-                  <button
+                  </LoadingButton>
+                  <LoadingButton loadingLabel="Removing…"
                     type="button"
                     disabled={
-                      busyKey === `${rev.scope ?? "product"}-${rev.id}` ||
                       rev.withdrawn
                     }
-                    onClick={() => void remove(rev)}
+                    onClick={() => remove(rev)}
                     className="rounded-lg border border-red-300 px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 disabled:opacity-50"
                   >
                     {rev.scope === "newArrival" ? "Hide legacy" : "Withdraw"}
-                  </button>
+                  </LoadingButton>
                 </div>
               </div>
               {rev.imageUrl ? (

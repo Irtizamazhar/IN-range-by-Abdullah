@@ -1,6 +1,8 @@
 "use client";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { OrderCard } from "@/components/orders/OrderCard";
@@ -22,33 +24,32 @@ function VendorOrdersPageInner() {
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<(typeof TABS)[number]>("all");
 
-  useEffect(() => {
-    const s = searchParams?.get("status")?.toLowerCase();
-    if (s && TABS.includes(s as (typeof TABS)[number])) {
-      setTab(s as (typeof TABS)[number]);
-    }
-  }, [searchParams]);
+  const selectedTab = useRef<(typeof TABS)[number]>("all");
+  const previousStatus = useRef<string | undefined>();
+  const requestVersion = useRef(0);
   const [q, setQ] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
   const [rows, setRows] = useState<ShopOrderListRow[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQ(q.trim()), 300);
     return () => clearTimeout(t);
   }, [q]);
 
-  const queryString = useMemo(() => {
+  const load = useCallback(async (nextTab: (typeof TABS)[number], search: string) => {
+    const version = ++requestVersion.current;
+    selectedTab.current = nextTab;
+    setTab(nextTab);
     const p = new URLSearchParams();
-    if (tab !== "all") p.set("status", tab);
-    if (debouncedQ) p.set("q", debouncedQ);
+    if (nextTab !== "all") p.set("status", nextTab);
+    if (search) p.set("q", search);
     const s = p.toString();
-    return s ? `?${s}` : "";
-  }, [tab, debouncedQ]);
-
-  const load = useCallback(async () => {
+    const queryString = s ? `?${s}` : "";
     setLoading(true);
+    setError("");
     try {
       const r = await fetch(`/api/orders/vendor${queryString}`, {
         credentials: "include",
@@ -58,8 +59,11 @@ function VendorOrdersPageInner() {
         counts?: Record<string, number>;
         error?: string;
       };
+      if (version !== requestVersion.current) return;
       if (!r.ok) {
-        toast.error(data.error || "Could not load orders");
+        const message = data.error || "Could not load orders";
+        toast.error(message);
+        setError(message);
         setRows([]);
         setCounts({});
         return;
@@ -67,17 +71,22 @@ function VendorOrdersPageInner() {
       setRows(data.orders ?? []);
       setCounts(data.counts ?? {});
     } catch {
+      if (version !== requestVersion.current) return;
       toast.error("Network error");
+      setError("Could not load orders. Check your connection and retry.");
       setRows([]);
       setCounts({});
     } finally {
-      setLoading(false);
+      if (version === requestVersion.current) setLoading(false);
     }
-  }, [queryString]);
+  }, []);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    const status = searchParams?.get("status")?.toLowerCase();
+    const nextTab = status !== previousStatus.current && status && TABS.includes(status as (typeof TABS)[number]) ? status as (typeof TABS)[number] : selectedTab.current;
+    previousStatus.current = status;
+    void load(nextTab, debouncedQ);
+  }, [load, debouncedQ, searchParams]);
 
   return (
     <div className="mx-auto max-w-6xl p-6 md:p-8">
@@ -108,10 +117,10 @@ function VendorOrdersPageInner() {
               ? counts.all ?? 0
               : counts[t] ?? 0;
           return (
-            <button
+            <LoadingButton
               key={t}
               type="button"
-              onClick={() => setTab(t)}
+              onClick={() => load(t, debouncedQ)}
               className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold capitalize sm:text-sm ${
                 tab === t
                   ? "bg-brand-primary text-brand-dark"
@@ -126,13 +135,15 @@ function VendorOrdersPageInner() {
               >
                 {n}
               </span>
-            </button>
+            </LoadingButton>
           );
         })}
       </div>
 
+      {error && <div className="mb-4 rounded-xl bg-red-50 p-4"><p role="alert" className="text-sm text-red-700">{error}</p><LoadingButton onClick={() => load(tab, debouncedQ)} className="mt-2 font-bold text-brand-link">Retry</LoadingButton></div>}
+
       {loading ? (
-        <p className="text-center text-darkText/50">Loading…</p>
+        <PageSkeleton label="Loading…" rows={3} />
       ) : (
         <>
           <OrderTable
@@ -153,9 +164,7 @@ export default function VendorOrdersPage() {
   return (
     <Suspense
       fallback={
-        <div className="mx-auto max-w-6xl p-8 text-center text-darkText/50">
-          Loading…
-        </div>
+        <PageSkeleton label="Loading…" rows={3} />
       }
     >
       <VendorOrdersPageInner />

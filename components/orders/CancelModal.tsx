@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
 type Props = {
   open: boolean;
@@ -69,14 +70,15 @@ export function CancelModal({
           >
             Back
           </button>
-          <button
+          <LoadingButton
             type="button"
             disabled={busy || !reason.trim()}
-            onClick={() => void submit()}
+            loadingLabel="Cancelling…"
+            onClick={submit}
             className="rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-50"
           >
-            {busy ? "Cancelling…" : "Confirm cancel"}
-          </button>
+            Confirm cancel
+          </LoadingButton>
         </div>
       </div>
     </div>

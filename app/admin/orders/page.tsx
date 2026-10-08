@@ -1,8 +1,10 @@
 "use client";
+import { LoadingButton } from "@/components/ui/LoadingButton";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "@/components/ui/LoadingLink";
+import { useLoadingRouter as useRouter } from "@/hooks/useLoadingRouter";
 import toast from "react-hot-toast";
 import { formatPKR } from "@/lib/format";
 
@@ -29,11 +31,14 @@ export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const requestRef = useRef<AbortController | null>(null);
+  const load = useCallback(async (nextTab: string) => {
+    setTab(nextTab);
     setLoading(true);
+    requestRef.current?.abort();
     const ac = new AbortController();
-    const q = tab === "all" ? "" : `?status=${tab}`;
-    (async () => {
+    requestRef.current = ac;
+    const q = nextTab === "all" ? "" : `?status=${nextTab}`;
       try {
         const r = await fetch(`/api/orders${q}`, {
           signal: ac.signal,
@@ -52,6 +57,7 @@ export default function AdminOrdersPage() {
           setOrders([]);
           return;
         }
+        if (ac.signal.aborted) return;
         const list = (data.orders || []) as Record<string, unknown>[];
         setOrders(list);
 
@@ -78,19 +84,22 @@ export default function AdminOrdersPage() {
       } finally {
         if (!ac.signal.aborted) setLoading(false);
       }
-    })();
-    return () => ac.abort();
-  }, [tab]);
+  }, []);
+
+  useEffect(() => {
+    void load("all");
+    return () => requestRef.current?.abort();
+  }, [load]);
 
   return (
     <div className="p-6 md:p-8">
       <h1 className="text-2xl font-bold text-darkText mb-6">Orders</h1>
       <div className="flex gap-2 overflow-x-auto pb-3 mb-6">
         {TABS.map((t) => (
-          <button
+          <LoadingButton loadingLabel="Loading..."
             key={t}
             type="button"
-            onClick={() => setTab(t)}
+            onClick={() => load(t)}
             className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold capitalize ${
               tab === t
                 ? "bg-brand-primary text-brand-dark"
@@ -98,11 +107,11 @@ export default function AdminOrdersPage() {
             }`}
           >
             {t}
-          </button>
+          </LoadingButton>
         ))}
       </div>
       {loading ? (
-        <p className="text-darkText/50">Loading…</p>
+        <PageSkeleton rows={3} />
       ) : (
         <div className="rounded-card border border-borderGray bg-white overflow-x-auto shadow-card">
           <table className="w-full text-sm text-left min-w-[640px]">

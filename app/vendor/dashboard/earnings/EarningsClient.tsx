@@ -1,4 +1,6 @@
 "use client";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
@@ -47,6 +49,7 @@ export function EarningsClient({
     { id: string; requestedAmount: number; status: string; requestedAt: string }[]
   >([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [modal, setModal] = useState(false);
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
@@ -60,6 +63,7 @@ export function EarningsClient({
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError("");
     try {
       const [er, bk] = await Promise.all([
         fetch("/api/vendor/earnings", { credentials: "include" }),
@@ -67,6 +71,7 @@ export function EarningsClient({
       ]);
       if (!er.ok) {
         toast.error("Could not load earnings");
+        setLoadError("Could not load earnings. Please retry.");
         return;
       }
       const data = (await er.json()) as {
@@ -93,6 +98,10 @@ export function EarningsClient({
           });
         }
       }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not load earnings";
+      setLoadError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -138,18 +147,19 @@ export function EarningsClient({
         return;
       }
       toast.success("Withdrawal request submitted");
+      await load();
       setModal(false);
       setAmount("");
       setNotes("");
-      void load();
     } finally {
       setSubmitting(false);
     }
   }
 
   if (loading && !summary) {
-    return <div className="p-8 text-darkText/50">Loading…</div>;
+    return <PageSkeleton label="Loading…" rows={3} />;
   }
+  if (loadError && !summary) return <div className="max-w-6xl p-6 md:p-8"><p role="alert" className="text-sm text-red-700">{loadError}</p><LoadingButton onClick={load} className="mt-4 rounded-xl bg-brand-primary px-4 py-2 font-bold">Retry</LoadingButton></div>;
 
   return (
     <div className="max-w-6xl p-6 md:p-8">
@@ -219,7 +229,7 @@ export function EarningsClient({
         <div
           className={`flex flex-wrap items-center gap-3 ${focusWithdrawals ? "mt-6" : "mt-4"}`}
         >
-          <button
+          <LoadingButton
             type="button"
             disabled={
               !summary ||
@@ -231,7 +241,7 @@ export function EarningsClient({
             className="rounded-xl bg-brand-primary px-6 py-2.5 font-semibold text-brand-dark disabled:pointer-events-none disabled:opacity-50 hover:bg-brand-hover"
           >
             Request withdrawal
-          </button>
+          </LoadingButton>
           {!bank ? (
             <p className="text-sm text-amber-700">
               Add bank details in Settings before withdrawing.
@@ -365,21 +375,21 @@ export function EarningsClient({
               />
             </label>
             <div className="mt-6 flex gap-2 justify-end">
-              <button
+              <LoadingButton
                 type="button"
                 onClick={() => setModal(false)}
                 className="rounded-xl border border-borderGray px-4 py-2 font-semibold text-darkText"
               >
                 Cancel
-              </button>
-              <button
+              </LoadingButton>
+              <LoadingButton loadingLabel="Submitting…"
                 type="button"
                 disabled={submitting}
-                onClick={() => void submitWithdrawal()}
+                onClick={() => submitWithdrawal()}
                 className="rounded-xl bg-primaryYellow px-4 py-2 font-semibold text-brand-dark disabled:opacity-50"
               >
-                {submitting ? "Submitting…" : "Confirm"}
-              </button>
+                {"Confirm"}
+              </LoadingButton>
             </div>
           </div>
         </div>

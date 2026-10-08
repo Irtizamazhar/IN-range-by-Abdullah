@@ -1,10 +1,11 @@
 "use client";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 import { ProductServices } from "@/components/user/ProductServices";
 
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/ui/LoadingLink";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useLoadingRouter as useRouter } from "@/hooks/useLoadingRouter";
 import toast from "react-hot-toast";
 import {
   MapPin,
@@ -15,6 +16,7 @@ import {
   Plus,
 } from "lucide-react";
 import { ProductCard, ProductCardData } from "@/components/user/ProductCard";
+import gridStyles from "@/components/user/ProductGrid.module.css";
 import {
   ProductApprovedReviewsList,
   type ReviewDisplayField,
@@ -214,7 +216,7 @@ export function ProductDetailClient({
 
   function handleAddCart() {
     if (!validateAdd()) return;
-    requireCustomer(() => {
+    return requireCustomer(() => {
       addItem({
         productId: product._id,
         name: product.name,
@@ -230,7 +232,7 @@ export function ProductDetailClient({
 
   function handleBuyNow() {
     if (!validateAdd()) return;
-    requireCustomer(() => {
+    return requireCustomer(() => {
       clear();
       addItem({
         productId: product._id,
@@ -241,7 +243,7 @@ export function ProductDetailClient({
         variant,
         quantity: totalUnits,
       });
-      router.push("/checkout");
+      return router.push("/checkout");
     }, "signup");
   }
 
@@ -283,7 +285,7 @@ export function ProductDetailClient({
               {product.images.length > 1 ? (
                 <div className="flex gap-2 overflow-x-auto border-t border-[#f0f0f0] p-2 sm:p-3">
                   {product.images.map((im, i) => (
-                    <button
+                    <LoadingButton
                       key={i}
                       type="button"
                       onClick={() => setIdx(i)}
@@ -297,7 +299,7 @@ export function ProductDetailClient({
                         className="object-cover"
                         sizes="72px"
                       />
-                    </button>
+                    </LoadingButton>
                   ))}
                 </div>
               ) : null}
@@ -344,7 +346,7 @@ export function ProductDetailClient({
               <div className="mt-4 flex flex-wrap items-end gap-2 gap-y-1">
                 <span
                   className="text-[28px] font-semibold leading-none"
-                  style={{ color: DARAZ_ORANGE }}
+                  style={{ color: "var(--brand-link)" }}
                 >
                   {formatPKR(displayPrice)}
                 </span>
@@ -358,7 +360,7 @@ export function ProductDetailClient({
                     {discountPct > 0 ? (
                       <span
                         className="text-[13px] font-medium"
-                        style={{ color: DARAZ_ORANGE }}
+                        style={{ color: "var(--brand-link)" }}
                       >
                         -{discountPct}%
                       </span>
@@ -386,7 +388,7 @@ export function ProductDetailClient({
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {product.variants.map((v) => (
-                      <button
+                      <LoadingButton
                         key={v}
                         type="button"
                         onClick={() => setVariant(v)}
@@ -397,7 +399,7 @@ export function ProductDetailClient({
                         }`}
                       >
                         {v}
-                      </button>
+                      </LoadingButton>
                     ))}
                   </div>
                 </div>
@@ -408,7 +410,7 @@ export function ProductDetailClient({
                   Quantity
                 </p>
                 <div className="inline-flex items-stretch rounded border border-[#e0e0e0] bg-white">
-                  <button
+                  <LoadingButton
                     type="button"
                     disabled={product.stock < 1 || quantityClamped <= 1}
                     onClick={() =>
@@ -418,7 +420,7 @@ export function ProductDetailClient({
                     aria-label="Decrease quantity"
                   >
                     <Minus className="h-4 w-4" />
-                  </button>
+                  </LoadingButton>
                   <input
                     type="number"
                     min={1}
@@ -435,7 +437,7 @@ export function ProductDetailClient({
                     className="w-14 min-w-[3rem] border-0 bg-transparent py-2 text-center text-[15px] font-semibold text-[#333] tabular-nums outline-none focus:ring-0 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                     aria-label="Quantity"
                   />
-                  <button
+                  <LoadingButton
                     type="button"
                     disabled={
                       product.stock < 1 || quantityClamped >= product.stock
@@ -449,7 +451,7 @@ export function ProductDetailClient({
                     aria-label="Increase quantity"
                   >
                     <Plus className="h-4 w-4" />
-                  </button>
+                  </LoadingButton>
                 </div>
                 <p className="mt-1.5 text-[11px] text-[#757575]">
                   {quantityClamped} unit{quantityClamped !== 1 ? "s" : ""} per pack
@@ -505,7 +507,7 @@ export function ProductDetailClient({
                             {t === 1 ? (
                               <span
                                 className="text-[16px] font-bold"
-                                style={{ color: DARAZ_ORANGE }}
+                                style={{ color: "var(--brand-link)" }}
                               >
                                 {formatPKR(basePrice)}
                               </span>
@@ -513,7 +515,7 @@ export function ProductDetailClient({
                               <>
                                 <div
                                   className="text-[16px] font-bold"
-                                  style={{ color: DARAZ_ORANGE }}
+                                  style={{ color: "var(--brand-link)" }}
                                 >
                                   {formatPKR(lineTotal(t))}
                                 </div>
@@ -533,7 +535,7 @@ export function ProductDetailClient({
               </div>
 
               <div className="flex gap-3">
-                <button
+                <LoadingButton
                   type="button"
                   onClick={handleBuyNow}
                   disabled={
@@ -545,8 +547,8 @@ export function ProductDetailClient({
                   style={{ backgroundColor: BUY_NOW_BLUE }}
                 >
                   Buy Now
-                </button>
-                <button
+                </LoadingButton>
+                <LoadingButton
                   type="button"
                   onClick={handleAddCart}
                   disabled={
@@ -558,7 +560,7 @@ export function ProductDetailClient({
                   style={{ backgroundColor: DARAZ_ORANGE }}
                 >
                   Add to Cart
-                </button>
+                </LoadingButton>
               </div>
             </div>
           </div>
@@ -576,7 +578,7 @@ export function ProductDetailClient({
                   <div className="min-w-0 flex-1">
                     <p className="leading-snug">
                       Pakistan{" "}
-                      <button
+                      <LoadingButton
                         type="button"
                         className="text-primaryBlue hover:underline"
                         onClick={() =>
@@ -584,7 +586,7 @@ export function ProductDetailClient({
                         }
                       >
                         CHANGE
-                      </button>
+                      </LoadingButton>
                     </p>
                   </div>
                 </div>
@@ -699,7 +701,7 @@ export function ProductDetailClient({
             <h2 className="mb-4 text-[18px] font-semibold text-[#333]">
               Related Products
             </h2>
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+            <div className={gridStyles.grid}>
               {related.map((p) => (
                 <ProductCard key={p._id} product={p} />
               ))}

@@ -1,8 +1,9 @@
 "use client";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import Image from "next/image";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import Link from "@/components/ui/LoadingLink";
+import { useLoadingRouter as useRouter } from "@/hooks/useLoadingRouter";
 import { useCart } from "@/context/CartContext";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
 import { formatPKR } from "@/lib/format";
@@ -58,7 +59,7 @@ export default function CartPage() {
                     {formatPKR(line.price)}
                   </p>
                   <div className="flex items-center gap-2 mt-3">
-                    <button
+                    <LoadingButton
                       type="button"
                       className="rounded-lg border border-borderGray p-1.5"
                       onClick={() =>
@@ -70,11 +71,11 @@ export default function CartPage() {
                       }
                     >
                       <Minus className="h-4 w-4" />
-                    </button>
+                    </LoadingButton>
                     <span className="w-8 text-center text-sm font-medium">
                       {line.quantity}
                     </span>
-                    <button
+                    <LoadingButton
                       type="button"
                       className="rounded-lg border border-borderGray p-1.5"
                       onClick={() =>
@@ -88,8 +89,8 @@ export default function CartPage() {
                       }
                     >
                       <Plus className="h-4 w-4" />
-                    </button>
-                    <button
+                    </LoadingButton>
+                    <LoadingButton
                       type="button"
                       className="ml-auto text-red-600 p-1"
                       onClick={() =>
@@ -97,7 +98,7 @@ export default function CartPage() {
                       }
                     >
                       <Trash2 className="h-5 w-5" />
-                    </button>
+                    </LoadingButton>
                   </div>
                 </div>
               </div>
@@ -113,7 +114,7 @@ export default function CartPage() {
           <p className="text-xs text-darkText/50 mb-6">
             Shipping and COD fees may be added at checkout.
           </p>
-          <button
+          <LoadingButton
             type="button"
             disabled={items.length === 0}
             onClick={() =>
@@ -126,16 +127,16 @@ export default function CartPage() {
             }`}
           >
             Proceed to Checkout
-          </button>
+          </LoadingButton>
           <p className="text-xs text-darkText/50 text-center mt-2">
             An{" "}
-            <button
+            <LoadingButton
               type="button"
               className="text-primaryBlue font-semibold underline"
               onClick={() => openAuthModal("signup")}
             >
               account
-            </button>{" "}
+            </LoadingButton>{" "}
             is required for checkout.
           </p>
         </aside>

@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/ui/LoadingLink";
 import { formatPKR } from "@/lib/format";
 import type { ShopOrderListRow } from "./shop-order-types";
 import { StatusBadge, type ShopOrderStatusPill } from "./StatusBadge";

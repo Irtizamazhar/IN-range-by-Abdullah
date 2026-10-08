@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
+import { useLoadingRouter } from "@/hooks/useLoadingRouter";
 import { signOut, useSession } from "next-auth/react";
 import toast from "react-hot-toast";
 
@@ -31,11 +31,11 @@ const CustomerProfileModal = dynamic(
 type Tab = "signup" | "login";
 
 type CustomerAuthContextValue = {
-  openAuthModal: (tab?: Tab) => void;
+  openAuthModal: (tab?: Tab) => Promise<void>;
   closeAuthModal: () => void;
-  openProfileModal: () => void;
+  openProfileModal: () => Promise<void>;
   closeProfileModal: () => void;
-  requireCustomer: (action: () => void, tab?: Tab) => void;
+  requireCustomer: (action: () => unknown, tab?: Tab) => unknown;
   isCustomer: boolean;
   authLoading: boolean;
 };
@@ -61,7 +61,7 @@ export function CustomerAuthProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const router = useRouter();
+  const router = useLoadingRouter();
   const { data: session, status, update } = useSession();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("signup");
@@ -78,7 +78,7 @@ export function CustomerAuthProvider({
   const authLoading = status === "loading";
 
   const openAuthModal = useCallback((t: Tab = "signup") => {
-    router.push("/login?role=customer&mode=" + (t === "signup" ? "signup" : "signin") + "&callbackUrl=" + encodeURIComponent(window.location.pathname + window.location.search));
+    return router.push("/login?role=customer&mode=" + (t === "signup" ? "signup" : "signin") + "&callbackUrl=" + encodeURIComponent(window.location.pathname + window.location.search));
   }, [router]);
 
   const closeAuthModal = useCallback(() => {
@@ -119,7 +119,7 @@ export function CustomerAuthProvider({
 
   const handleOpenProfile = useCallback(() => {
     setProfileOpen(true);
-    void loadProfile();
+    return loadProfile();
   }, [loadProfile]);
 
   const handleSaveProfile = useCallback(async () => {
@@ -160,13 +160,12 @@ export function CustomerAuthProvider({
   }, [pfName, pfPhone, update]);
 
   const requireCustomer = useCallback(
-    (action: () => void, preferTab: Tab = "signup") => {
+    (action: () => unknown, preferTab: Tab = "signup") => {
       if (authLoading) return;
       if (session?.user?.role === "customer") {
-        action();
-        return;
+        return action();
       }
-      openAuthModal(preferTab);
+      return openAuthModal(preferTab);
     },
     [session, authLoading, openAuthModal]
   );
@@ -217,9 +216,11 @@ export function CustomerAuthProvider({
         loading={profileLoad}
         saving={profileSaving}
         onSave={handleSaveProfile}
-        onLogout={() => {
+        onLogout={async () => {
+          await signOut({ redirect: false });
           closeProfileModal();
-          void signOut({ callbackUrl: "/" });
+          await router.push("/");
+          await router.refresh();
         }}
       />
     </CustomerAuthContext.Provider>

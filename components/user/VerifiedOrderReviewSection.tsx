@@ -1,8 +1,12 @@
 "use client";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { LoadingButton } from "@/components/ui/LoadingButton";
+import { LoadingForm } from "@/components/ui/LoadingForm";
 
 import Image from "next/image";
 import { useSession } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { useLoadingRouter as useRouter } from "@/hooks/useLoadingRouter";
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
@@ -92,7 +96,7 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
   if (status === "loading") {
     return (
       <section className="mb-6 rounded-xl border border-[#e8e8e8] bg-white p-5 shadow-sm">
-        <p className="text-sm text-[#757575]">Loading…</p>
+        <PageSkeleton label="Loading review details…" rows={2} />
       </section>
     );
   }
@@ -104,13 +108,13 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
         <p className="mt-2 text-sm text-[#555]">
           Sign in with the customer account that owns this order to submit a review.
         </p>
-        <button
+        <LoadingButton
           type="button"
           onClick={() => openAuthModal("login")}
           className="mt-4 rounded-lg bg-brand-primary px-5 py-2.5 text-sm font-bold text-brand-dark hover:bg-brand-hover"
         >
           Sign in
-        </button>
+        </LoadingButton>
       </section>
     );
   }
@@ -118,7 +122,7 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
   if (eligible === null) {
     return (
       <section className="mb-6 rounded-xl border border-[#e8e8e8] bg-white p-5 shadow-sm">
-        <p className="text-sm text-[#757575]">Checking purchase eligibility...</p>
+        <PageSkeleton label="Checking purchase eligibility…" rows={2} />
       </section>
     );
   }
@@ -142,7 +146,7 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
             ? "Your verified review is published."
             : "Your review has been saved and is awaiting moderation."}
         </p>
-        <button
+        <LoadingButton
           type="button"
           onClick={() => {
             setEditing(true);
@@ -151,7 +155,7 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
           className="mt-3 rounded-lg border border-emerald-300 px-4 py-2 text-sm font-bold text-emerald-900 hover:bg-emerald-100"
         >
           Edit review
-        </button>
+        </LoadingButton>
       </section>
     );
   }
@@ -246,7 +250,7 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
       setAlreadyReviewed(true);
       setDone(true);
       setEditing(false);
-      router.refresh();
+      await router.refresh();
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event(PRODUCT_REVIEWS_UPDATED_EVENT));
       }
@@ -271,7 +275,7 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
         Reviews are moderated before they appear on this product page.
       </p>
 
-      <form onSubmit={(e) => void onSubmit(e)} className="mt-5 space-y-4">
+      <LoadingForm onSubmit={(e) => onSubmit(e)} className="mt-5 space-y-4">
         <div>
           <p className="text-sm font-medium text-[#333]">Your rating</p>
           <div
@@ -280,7 +284,7 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
             aria-label={`Star rating: ${rating} of 5`}
           >
             {([1, 2, 3, 4, 5] as const).map((n) => (
-              <button
+              <LoadingButton
                 key={n}
                 type="button"
                 onClick={() => setRating(n)}
@@ -291,7 +295,7 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
                 aria-pressed={n <= rating}
               >
                 ★
-              </button>
+              </LoadingButton>
             ))}
           </div>
         </div>
@@ -354,29 +358,27 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
                   sizes="128px"
                 />
               </div>
-              <button
+              <LoadingButton
                 type="button"
                 onClick={clearExistingPhoto}
                 className="mt-2 text-sm font-semibold text-red-600 hover:underline"
               >
                 Remove current photo
-              </button>
+              </LoadingButton>
             </div>
           ) : null}
         </div>
 
-        <button
+        <LoadingButton
           type="submit"
-          disabled={submitting}
+          loading={submitting} loadingLabel="Submitting…"
           className="min-h-11 w-full rounded-lg bg-brand-primary px-8 py-3 text-base font-bold text-brand-dark hover:bg-brand-hover disabled:opacity-50 sm:w-auto"
         >
-          {submitting
-            ? "Saving..."
-            : alreadyReviewed
+          {alreadyReviewed
               ? "Save review changes"
               : "Submit review"}
-        </button>
-      </form>
+        </LoadingButton>
+      </LoadingForm>
     </section>
   );
 }

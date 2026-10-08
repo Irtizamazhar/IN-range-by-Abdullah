@@ -1,10 +1,11 @@
 "use client";
+import { LoadingButton } from "@/components/ui/LoadingButton";
+import { LoadingForm } from "@/components/ui/LoadingForm";
 
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Eye,
   EyeOff,
-  Loader2,
   Lock,
   Mail,
   Phone,
@@ -110,7 +111,6 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
   const titleId = useId();
   const [view, setView] = useState<AuthModalView>(initialTab);
   const [showPassword, setShowPassword] = useState(false);
-  const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
 
   const [loginEmail, setLoginEmail] = useState("");
@@ -180,7 +180,6 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
       setErrors(next);
       return;
     }
-    setBusy(true);
     try {
       const res = await signIn("credentials", {
         email: em,
@@ -206,9 +205,7 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
       toast.success("Welcome back!");
       setLoginPass("");
       onClose();
-    } finally {
-      setBusy(false);
-    }
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Could not reach the server. Please try again."); }
   }
 
   async function onSignup(e: React.FormEvent) {
@@ -227,7 +224,6 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
       setErrors(next);
       return;
     }
-    setBusy(true);
     try {
       const res = await fetch("/api/customer/register", {
         method: "POST",
@@ -265,9 +261,7 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
       }
       setSuPass("");
       onClose();
-    } finally {
-      setBusy(false);
-    }
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Could not reach the server. Please try again."); }
   }
 
   async function onForgot(e: React.FormEvent) {
@@ -281,7 +275,6 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
       setErrors(next);
       return;
     }
-    setBusy(true);
     try {
       const res = await fetch("/api/customer/forgot-password", {
         method: "POST",
@@ -296,9 +289,7 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
       toast.success(data.message || "Check your inbox for next steps.");
       setView("login");
       setLoginEmail(em);
-    } finally {
-      setBusy(false);
-    }
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Could not reach the server. Please try again."); }
   }
 
   const primaryBtnClass =
@@ -336,20 +327,20 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
           >
             {/* Brand header */}
             <div className="relative min-h-[140px] shrink-0 bg-gradient-to-br from-darkBlue to-primaryBlue px-6 py-8 text-center text-white">
-              <button
+              <LoadingButton
                 type="button"
                 onClick={onClose}
                 className="absolute right-4 top-4 rounded-full p-1.5 text-white transition-opacity duration-200 hover:opacity-80"
                 aria-label="Close"
               >
                 <X className="h-5 w-5" strokeWidth={2.25} />
-              </button>
+              </LoadingButton>
 
               <div className="mx-auto mb-4 flex justify-center">
                 <LogoMark
                   href={null}
                   compact
-                  className="justify-center [&_img]:h-10 [&_img]:max-h-10 [&_img]:w-auto [&_img]:brightness-0 [&_img]:invert"
+                  className="justify-center [&_img]:h-10 [&_img]:max-h-10 [&_img]:w-auto"
                 />
               </div>
               <h2
@@ -373,7 +364,7 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
                     exit={{ opacity: 0, y: -8 }}
                     transition={transition}
                   >
-                    <form onSubmit={(e) => void onLogin(e)} className="space-y-4">
+                    <LoadingForm onSubmit={(e) => onLogin(e)} className="space-y-4">
                       <AuthField icon={Mail}>
                         <input
                           type="email"
@@ -407,7 +398,7 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
                           }}
                           className={inputPasswordClass}
                         />
-                        <button
+                        <LoadingButton
                           type="button"
                           tabIndex={-1}
                           className="absolute right-2 top-1/2 z-20 -translate-y-1/2 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
@@ -421,7 +412,7 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
                           ) : (
                             <EyeOff className="h-[18px] w-[18px]" />
                           )}
-                        </button>
+                        </LoadingButton>
                       </AuthField>
                       {errors.loginPass ? (
                         <p className="-mt-2 text-xs text-red-600">
@@ -430,7 +421,7 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
                       ) : null}
 
                       <div className="flex justify-end">
-                        <button
+                        <LoadingButton
                           type="button"
                           className="text-xs font-medium text-primaryBlue transition-opacity hover:opacity-80"
                           onClick={() => {
@@ -439,26 +430,24 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
                           }}
                         >
                           Forgot password?
-                        </button>
+                        </LoadingButton>
                       </div>
 
-                      <button type="submit" disabled={busy} className={primaryBtnClass}>
-                        {busy ? (
-                          <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
-                        ) : null}
+                      <LoadingButton type="submit" loadingLabel="Submitting…" className={primaryBtnClass}>
+
                         Log in
-                      </button>
-                    </form>
+                      </LoadingButton>
+                    </LoadingForm>
                     <p className="rounded-lg bg-emerald-50 p-3 text-xs leading-5 text-emerald-950">
                       Signed up with Google? Continue with Google, or use Forgot Password to set a website password. Your Google password won&apos;t work here.
                     </p>
 
                     <OrDivider />
-                    <button
+                    <LoadingButton
                       type="button"
                       className={socialBtnClass}
                       onClick={() =>
-                        void signIn("google", {
+                        signIn("google", {
                           callbackUrl: "/",
                         }, {
                           prompt: "select_account",
@@ -467,11 +456,11 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
                     >
                       <GoogleIcon className="h-5 w-5" />
                       Sign in with Google
-                    </button>
+                    </LoadingButton>
 
                     <p className="text-center text-sm text-gray-600">
                       Don&apos;t have an account?{" "}
-                      <button
+                      <LoadingButton
                         type="button"
                         className="font-semibold text-primaryBlue hover:underline"
                         onClick={() => {
@@ -480,7 +469,7 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
                         }}
                       >
                         Sign up
-                      </button>
+                      </LoadingButton>
                     </p>
                   </motion.div>
                 ) : null}
@@ -493,7 +482,7 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
                     exit={{ opacity: 0, y: -8 }}
                     transition={transition}
                   >
-                    <form onSubmit={(e) => void onSignup(e)} className="space-y-4">
+                    <LoadingForm onSubmit={(e) => onSignup(e)} className="space-y-4">
                       {(
                         [
                           {
@@ -562,7 +551,7 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
                           }}
                           className={inputPasswordClass}
                         />
-                        <button
+                        <LoadingButton
                           type="button"
                           tabIndex={-1}
                           className="absolute right-2 top-1/2 z-20 -translate-y-1/2 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
@@ -576,26 +565,24 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
                           ) : (
                             <EyeOff className="h-[18px] w-[18px]" />
                           )}
-                        </button>
+                        </LoadingButton>
                       </AuthField>
                       {errors.suPass ? (
                         <p className="mt-1 text-xs text-red-600">{errors.suPass}</p>
                       ) : null}
 
-                      <button type="submit" disabled={busy} className={primaryBtnClass}>
-                        {busy ? (
-                          <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
-                        ) : null}
+                      <LoadingButton type="submit" className={primaryBtnClass}>
+
                         Create account
-                      </button>
-                    </form>
+                      </LoadingButton>
+                    </LoadingForm>
 
                     <OrDivider />
-                    <button
+                    <LoadingButton
                       type="button"
                       className={socialBtnClass}
                       onClick={() =>
-                        void signIn("google", {
+                        signIn("google", {
                           callbackUrl:
                             typeof window !== "undefined"
                               ? window.location.pathname + window.location.search
@@ -607,11 +594,11 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
                     >
                       <GoogleIcon className="h-5 w-5" />
                       Sign up with Google
-                    </button>
+                    </LoadingButton>
 
                     <p className="text-center text-sm text-gray-600">
                       Already have an account?{" "}
-                      <button
+                      <LoadingButton
                         type="button"
                         className="font-semibold text-primaryBlue hover:underline"
                         onClick={() => {
@@ -620,7 +607,7 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
                         }}
                       >
                         Log in
-                      </button>
+                      </LoadingButton>
                     </p>
                   </motion.div>
                 ) : null}
@@ -633,7 +620,7 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
                     exit={{ opacity: 0, y: -8 }}
                     transition={transition}
                   >
-                    <form onSubmit={(e) => void onForgot(e)} className="space-y-4">
+                    <LoadingForm onSubmit={(e) => onForgot(e)} className="space-y-4">
                       <AuthField icon={Mail}>
                         <input
                           type="email"
@@ -654,14 +641,12 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
                         </p>
                       ) : null}
 
-                      <button type="submit" disabled={busy} className={primaryBtnClass}>
-                        {busy ? (
-                          <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
-                        ) : null}
-                        Send reset link
-                      </button>
+                      <LoadingButton type="submit" className={primaryBtnClass}>
 
-                      <button
+                        Send reset link
+                      </LoadingButton>
+
+                      <LoadingButton
                         type="button"
                         className="w-full pt-1 text-center text-sm font-medium text-gray-500 transition-colors hover:text-primaryBlue"
                         onClick={() => {
@@ -670,8 +655,8 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
                         }}
                       >
                         ← Back to log in
-                      </button>
-                    </form>
+                      </LoadingButton>
+                    </LoadingForm>
                   </motion.div>
                 ) : null}
               </AnimatePresence>

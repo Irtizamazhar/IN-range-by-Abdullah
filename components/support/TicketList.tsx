@@ -1,6 +1,8 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
+import { LoadingButton } from "@/components/ui/LoadingButton";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "@/components/ui/LoadingLink";
 
 type Ticket = { id: string; ticketNumber: string; subject: string; category: string; status: string; relatedResourceType: string | null; lastActivityAt: string };
 
@@ -27,16 +29,25 @@ export function TicketList({ apiBase, ticketsHref, newTicketHref }: { apiBase: s
   const [total, setTotal] = useState(0);
   const [pageSize, setPageSize] = useState(20);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const requestVersion = useRef(0);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (nextFilter: string, nextPage: number) => {
+    const version = ++requestVersion.current;
+    setFilter(nextFilter);
+    setPage(nextPage);
     setLoading(true);
+    setError("");
     try {
-      const r = await fetch(`${apiBase}/tickets?filter=${filter}&page=${page}`, { credentials: "same-origin" });
+      const r = await fetch(`${apiBase}/tickets?filter=${nextFilter}&page=${nextPage}`, { credentials: "same-origin" });
       const d = await r.json();
-      if (r.ok) { setTickets(d.tickets || []); setTotal(d.total || 0); setPageSize(d.pageSize || 20); }
-    } finally { setLoading(false); }
-  }, [apiBase, filter, page]);
-  useEffect(() => { void load(); }, [load]);
+      if (!r.ok) throw new Error(d.error || "Could not load tickets. Please retry.");
+      if (version === requestVersion.current) { setTickets(d.tickets || []); setTotal(d.total || 0); setPageSize(d.pageSize || 20); }
+    } catch (error) {
+      if (version === requestVersion.current) setError(error instanceof Error ? error.message : "Could not load tickets. Please retry.");
+    } finally { if (version === requestVersion.current) setLoading(false); }
+  }, [apiBase]);
+  useEffect(() => { void load("all", 1); }, [load]);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -49,9 +60,10 @@ export function TicketList({ apiBase, ticketsHref, newTicketHref }: { apiBase: s
 
       <div className="mt-4 flex flex-wrap gap-2">
         {FILTERS.map(f => (
-          <button key={f.value} onClick={() => { setFilter(f.value); setPage(1); }} className={`rounded-full px-3.5 py-1.5 text-sm font-bold ${filter === f.value ? "bg-brand-primary text-brand-dark" : "border border-borderGray text-darkText"}`}>{f.label}</button>
+          <LoadingButton type="button" key={f.value} onClick={() => load(f.value, 1)} className={`rounded-full px-3.5 py-1.5 text-sm font-bold ${filter === f.value ? "bg-brand-primary text-brand-dark" : "border border-borderGray text-darkText"}`}>{f.label}</LoadingButton>
         ))}
       </div>
+      {error && <div className="mt-4 rounded-xl bg-red-50 p-4"><p role="alert" className="text-sm text-red-700">{error}</p><LoadingButton onClick={() => load(filter, page)} className="mt-2 font-bold text-brand-link">Retry</LoadingButton></div>}
 
       <div className="mt-5 overflow-x-auto rounded-2xl border bg-white">
         <table className="w-full min-w-[640px] text-left text-sm">
@@ -59,7 +71,7 @@ export function TicketList({ apiBase, ticketsHref, newTicketHref }: { apiBase: s
             <tr><th className="p-3">Ticket #</th><th className="p-3">Subject</th><th className="p-3">Category</th><th className="p-3">Status</th><th className="p-3">Last Updated</th><th className="p-3" /></tr>
           </thead>
           <tbody>
-            {loading ? <tr><td className="p-4" colSpan={6}>Loading…</td></tr> : tickets.length === 0 ? <tr><td className="p-4 text-darkText/60" colSpan={6}>No tickets in this filter.</td></tr> : tickets.map(t => (
+            {loading ? <tr><td className="p-4" colSpan={6}><PageSkeleton label="Loading tickets…" variant="table" rows={4} /></td></tr> : tickets.length === 0 ? <tr><td className="p-4 text-darkText/60" colSpan={6}>No tickets in this filter.</td></tr> : tickets.map(t => (
               <tr key={t.id} className="border-t">
                 <td className="p-3 font-bold">{t.ticketNumber}</td>
                 <td className="p-3">{t.subject}</td>
@@ -75,9 +87,9 @@ export function TicketList({ apiBase, ticketsHref, newTicketHref }: { apiBase: s
 
       {totalPages > 1 ? (
         <div className="mt-4 flex items-center justify-center gap-3">
-          <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="rounded-lg border px-3 py-1.5 text-sm font-bold disabled:opacity-40">Previous</button>
+          <LoadingButton type="button" disabled={page <= 1} onClick={() => load(filter, page - 1)} className="rounded-lg border px-3 py-1.5 text-sm font-bold disabled:opacity-40">Previous</LoadingButton>
           <span className="text-sm text-darkText/70">Page {page} of {totalPages}</span>
-          <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="rounded-lg border px-3 py-1.5 text-sm font-bold disabled:opacity-40">Next</button>
+          <LoadingButton type="button" disabled={page >= totalPages} onClick={() => load(filter, page + 1)} className="rounded-lg border px-3 py-1.5 text-sm font-bold disabled:opacity-40">Next</LoadingButton>
         </div>
       ) : null}
     </div>

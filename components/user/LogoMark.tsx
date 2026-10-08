@@ -1,5 +1,6 @@
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/ui/LoadingLink";
+import brandLogo from "@/public/branding/joro-logo.png";
 
 type LogoMarkProps = {
   className?: string;
@@ -20,17 +21,6 @@ export function LogoMark({
   inverse = false,
   href = "/",
 }: LogoMarkProps) {
-  /*
-   * Currently one transparent logo is used on both
-   * light and dark backgrounds.
-   *
-   * Later, if you create a separate white version,
-   * you can change this to:
-   *
-   * inverse ? "/logo-white.png" : "/logo.png"
-   */
-  const logoSrc = "/logo.png";
-
   const logo = (
     <div
       className={`
@@ -47,10 +37,9 @@ export function LogoMark({
 
       {/* Actual transparent PNG */}
       <Image
-        src={logoSrc}
-        alt="JORO"
-        width={420}
-        height={140}
+        src={brandLogo}
+        alt="JORO.pk"
+        sizes={compact ? "115px" : "138px"}
         priority
         className="
           joro-image-logo__image

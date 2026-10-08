@@ -1,4 +1,6 @@
 "use client";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
@@ -33,6 +35,8 @@ export function VendorNotificationsClient() {
       };
       setUnread(Number(data.unread ?? 0));
       setRows(Array.isArray(data.notifications) ? data.notifications : []);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not load notifications");
     } finally {
       setLoading(false);
     }
@@ -43,21 +47,25 @@ export function VendorNotificationsClient() {
   }, [load]);
 
   async function markRead(id: string) {
-    await fetch(`/api/vendor/notifications/${id}`, {
+    const response = await fetch(`/api/vendor/notifications/${id}`, {
       method: "PATCH",
       credentials: "include",
     });
-    void load();
+    if (!response.ok) throw new Error("Could not mark this notification as read. Please retry.");
+    await load();
+    toast.success("Notification marked as read");
   }
 
   async function markAllRead() {
-    await fetch("/api/vendor/notifications", {
+    const response = await fetch("/api/vendor/notifications", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify({ markAllRead: true }),
     });
-    void load();
+    if (!response.ok) throw new Error("Could not mark notifications as read. Please retry.");
+    await load();
+    toast.success("Notifications marked as read");
   }
 
   return (
@@ -79,29 +87,30 @@ export function VendorNotificationsClient() {
           </p>
         </div>
         {unread > 0 ? (
-          <button
+          <LoadingButton
             type="button"
-            onClick={() => void markAllRead()}
+            loadingLabel="Saving…" onClick={() => markAllRead()}
             className="rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-brand-dark hover:bg-brand-hover"
           >
             Mark all read
-          </button>
+          </LoadingButton>
         ) : null}
       </div>
 
       <div className="overflow-hidden rounded-card border border-borderGray bg-white shadow-card">
-        {loading ? (
-          <p className="p-8 text-center text-darkText/50">Loading…</p>
+        {loading && rows.length === 0 ? (
+          <PageSkeleton label="Loading…" rows={3} />
         ) : rows.length === 0 ? (
           <p className="p-8 text-center text-darkText/50">No notifications yet.</p>
         ) : (
           <ul className="divide-y divide-borderGray">
             {rows.map((n) => (
               <li key={n.id}>
-                <button
+                <LoadingButton
                   type="button"
+                  loadingLabel="Saving…"
                   onClick={() => {
-                    if (!n.isRead) void markRead(n.id);
+                    if (!n.isRead) return markRead(n.id);
                   }}
                   className={`w-full px-4 py-4 text-left transition-colors hover:bg-lightGray/50 ${
                     n.isRead ? "bg-white" : "bg-brand-soft/80"
@@ -117,7 +126,7 @@ export function VendorNotificationsClient() {
                       </span>
                     ) : null}
                   </p>
-                </button>
+                </LoadingButton>
               </li>
             ))}
           </ul>

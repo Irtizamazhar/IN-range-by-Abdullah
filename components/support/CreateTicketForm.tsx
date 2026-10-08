@@ -1,6 +1,9 @@
 "use client";
+import { LoadingButton } from "@/components/ui/LoadingButton";
+import { LoadingForm } from "@/components/ui/LoadingForm";
 import { useCallback, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { useLoadingRouter as useRouter } from "@/hooks/useLoadingRouter";
 import toast from "react-hot-toast";
 
 type Resource = { id: string; label: string };
@@ -61,13 +64,13 @@ export function CreateTicketForm({
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "Could not create ticket");
       toast.success(`Ticket ${d.ticket.ticketNumber} created`);
-      router.push(`${ticketsHref}/${d.ticket.id}`);
+      await router.push(`${ticketsHref}/${d.ticket.id}`);
     } catch (e) { setMessage(e instanceof Error ? e.message : "Could not create ticket"); }
     finally { setBusy(false); }
   }
 
   return (
-    <form onSubmit={e => void submit(e)} className="joro-form mx-auto mt-6 grid max-w-2xl gap-4 rounded-2xl bg-white p-6 shadow-sm">
+    <LoadingForm onSubmit={e => submit(e)} className="joro-form mx-auto mt-6 grid max-w-2xl gap-4 rounded-2xl bg-white p-6 shadow-sm">
       <h1 className="text-xl font-black text-darkText">Create Support Ticket</h1>
       <p className="my-1 text-sm" role="status">{message}</p>
 
@@ -84,7 +87,7 @@ export function CreateTicketForm({
       {hasLockedResource ? (
         <div className="rounded-xl border border-brand-primary/40 bg-brand-soft p-3 text-sm">
           <p className="font-bold text-darkText">Attached: {resourceLabel || `${RESOURCE_TYPE_LABELS[resourceType] || resourceType} reference`}</p>
-          <button type="button" onClick={() => { setResourceType(""); setResourceId(""); }} className="mt-1 text-xs font-bold text-brand-link underline">Remove attachment</button>
+          <LoadingButton type="button" onClick={() => { setResourceType(""); setResourceId(""); }} className="mt-1 text-xs font-bold text-brand-link underline">Remove attachment</LoadingButton>
         </div>
       ) : (
         <>
@@ -107,7 +110,7 @@ export function CreateTicketForm({
 
       <label>Attachment (optional — JPG, PNG, or WebP, max 5MB)<input type="file" name="attachment" accept="image/png,image/jpeg,image/webp" /></label>
 
-      <button disabled={busy} className="rounded-xl bg-brand-primary px-5 py-3 font-bold text-brand-dark disabled:opacity-50">{busy ? "Creating…" : "Create Ticket"}</button>
-    </form>
+      <LoadingButton type="submit" loadingLabel="Creating…" disabled={busy} className="rounded-xl bg-brand-primary px-5 py-3 font-bold text-brand-dark disabled:opacity-50">{"Create Ticket"}</LoadingButton>
+    </LoadingForm>
   );
 }

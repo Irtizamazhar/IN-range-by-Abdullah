@@ -1,31 +1,31 @@
 "use client";
+import { LoadingButton } from "@/components/ui/LoadingButton";
+import { LoadingForm } from "@/components/ui/LoadingForm";
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { LogoMark } from "@/components/user/LogoMark";
 import { PasswordToggleInput } from "@/components/ui/PasswordToggleInput";
+import { navigateDocument } from "@/lib/navigate-document";
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    setLoading(true);
     const res = await signIn("credentials", {
       email,
       password,
       redirect: false,
     });
-    setLoading(false);
-    if (res?.error) {
+    if (!res || res.error) {
       setError("Invalid email or password");
       return;
     }
-    window.location.href = "/admin/dashboard";
+    await navigateDocument("/admin/dashboard");
   }
 
   return (
@@ -40,7 +40,7 @@ export default function AdminLoginPage() {
         <h1 className="text-xl font-bold text-center text-darkText mb-6">
           Admin Login
         </h1>
-        <form onSubmit={onSubmit} className="space-y-4">
+        <LoadingForm onSubmit={onSubmit} className="space-y-4">
           <input
             type="email"
             required
@@ -60,14 +60,14 @@ export default function AdminLoginPage() {
           {error ? (
             <p className="text-sm text-red-600 text-center">{error}</p>
           ) : null}
-          <button
+          <LoadingButton loadingLabel="Signing in…"
             type="submit"
-            disabled={loading}
+
             className="w-full rounded-xl bg-brand-primary py-3 font-bold text-brand-dark hover:bg-brand-hover disabled:opacity-50"
           >
-            {loading ? "…" : "Sign in"}
-          </button>
-        </form>
+            {"Sign in"}
+          </LoadingButton>
+        </LoadingForm>
       </div>
     </div>
   );

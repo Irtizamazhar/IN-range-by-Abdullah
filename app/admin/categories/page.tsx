@@ -1,4 +1,8 @@
 "use client";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { LoadingForm } from "@/components/ui/LoadingForm";
+
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import Image from "next/image";
 import { ClipboardEvent, FormEvent, useEffect, useMemo, useState } from "react";
@@ -20,7 +24,6 @@ const ALLOWED_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/jpg", "ima
 export default function AdminCategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [mode, setMode] = useState<Mode>("add");
   const [editingId, setEditingId] = useState<number | null>(null);
 
@@ -114,8 +117,6 @@ export default function AdminCategoriesPage() {
       toast.error("Please provide image URL or upload a file");
       return;
     }
-
-    setSaving(true);
     try {
       let finalImage = imageUrl.trim();
       if (imageFile) {
@@ -155,8 +156,6 @@ export default function AdminCategoriesPage() {
       resetForm();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong");
-    } finally {
-      setSaving(false);
     }
   }
 
@@ -201,7 +200,7 @@ export default function AdminCategoriesPage() {
     <div className="max-w-6xl p-6 md:p-8">
       <h1 className="mb-6 text-2xl font-bold text-darkText">Categories</h1>
 
-      <form
+      <LoadingForm
         onSubmit={onSubmit}
         onPaste={onImagePaste}
         className="mb-8 space-y-4 rounded-card border border-borderGray bg-white p-6 shadow-card"
@@ -295,19 +294,15 @@ export default function AdminCategoriesPage() {
         )}
 
         <div className="flex gap-3">
-          <button
+          <LoadingButton loadingLabel="Saving…"
             type="submit"
-            disabled={saving}
+
             className="rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-semibold text-brand-dark disabled:opacity-60"
           >
-            {saving
-              ? mode === "add"
-                ? "Adding..."
-                : "Saving..."
-              : mode === "add"
+            {mode === "add"
                 ? "Submit"
                 : "Save changes"}
-          </button>
+          </LoadingButton>
           {mode === "edit" && (
             <button
               type="button"
@@ -318,13 +313,13 @@ export default function AdminCategoriesPage() {
             </button>
           )}
         </div>
-      </form>
+      </LoadingForm>
 
       <div className="rounded-card border border-borderGray bg-white p-4 shadow-card">
         <h2 className="mb-4 text-lg font-bold text-darkText">All Categories</h2>
 
         {loading ? (
-          <p className="p-4 text-darkText/60">Loading...</p>
+          <PageSkeleton rows={3} />
         ) : categories.length === 0 ? (
           <p className="p-4 text-darkText/60">No categories yet.</p>
         ) : (
@@ -390,8 +385,9 @@ export default function AdminCategoriesPage() {
                           } catch {
                             setCategories(prev);
                             toast.error("Could not update selector");
+                          } finally {
+                            setTogglingId(null);
                           }
-                          setTogglingId(null);
                         }}
                       />
                     </td>
@@ -403,13 +399,13 @@ export default function AdminCategoriesPage() {
                       >
                         Edit
                       </button>
-                      <button
+                      <LoadingButton loadingLabel="Removing…"
                         type="button"
                         onClick={() => onDelete(category.id)}
                         className="font-semibold text-red-600"
                       >
                         Delete
-                      </button>
+                      </LoadingButton>
                     </td>
                   </tr>
                 ))}

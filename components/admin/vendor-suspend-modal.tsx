@@ -1,4 +1,5 @@
 "use client";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import { useState } from "react";
 
@@ -16,7 +17,6 @@ export function VendorSuspendModal({ open, onClose, onConfirm }: Props) {
   const [reason, setReason] = useState("");
   const [type, setType] = useState<"permanent" | "temporary">("permanent");
   const [until, setUntil] = useState("");
-  const [busy, setBusy] = useState(false);
 
   if (!open) return null;
 
@@ -71,13 +71,12 @@ export function VendorSuspendModal({ open, onClose, onConfirm }: Props) {
           >
             Cancel
           </button>
-          <button
+          <LoadingButton loadingLabel="Saving…"
             type="button"
-            disabled={busy}
+
             onClick={async () => {
               if (!reason.trim()) return;
-              setBusy(true);
-              try {
+
                 await onConfirm({
                   reason: reason.trim(),
                   suspensionType: type,
@@ -86,14 +85,12 @@ export function VendorSuspendModal({ open, onClose, onConfirm }: Props) {
                 setReason("");
                 setType("permanent");
                 setUntil("");
-              } finally {
-                setBusy(false);
-              }
+
             }}
             className="rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
           >
-            {busy ? "Saving..." : "Confirm Suspension"}
-          </button>
+            {"Confirm Suspension"}
+          </LoadingButton>
         </div>
       </div>
     </div>

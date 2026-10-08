@@ -1,8 +1,10 @@
 "use client";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/ui/LoadingLink";
 import toast from "react-hot-toast";
 import { formatPKR } from "@/lib/format";
 
@@ -18,68 +20,54 @@ export default function AdminProductsPage() {
       .includes(q)
   );
 
-  function reload() {
-    fetch("/api/products?admin=1&limit=500")
-      .then((r) => r.json())
-      .then((d) => setProducts(d.products || []))
-      .finally(() => setLoading(false));
+  async function reload() {
+    try {
+      const response = await fetch("/api/products?admin=1&limit=500");
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not load products");
+      setProducts(data.products || []);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not load products");
+    } finally {
+      setLoading(false);
+    }
   }
 
-  useEffect(() => {
-    reload();
-  }, []);
+  useEffect(() => { void reload(); }, []);
 
   async function toggleActive(p: Record<string, unknown>) {
     const id = String(p._id);
     const next = !p.isActive;
-    setProducts((list) =>
-      list.map((x) => (String(x._id) === id ? { ...x, isActive: next } : x))
-    );
-    const res = await fetch(`/api/products/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
+    const response = await fetch(`/api/products/${id}`, {
+      method: "PUT", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ isActive: next }),
     });
-    if (!res.ok) {
-      toast.error("Failed");
-      reload();
-      return;
-    }
+    if (!response.ok) throw new Error("Could not update product visibility");
+    setProducts(list => list.map(item => String(item._id) === id ? { ...item, isActive: next } : item));
+    toast.success(next ? "Product activated" : "Product hidden");
   }
 
   async function toggleBestSeller(p: Record<string, unknown>) {
     const id = String(p._id);
-    const prev = Boolean(p.isBestSeller);
-    const next = !prev;
-    setProducts((list) =>
-      list.map((x) =>
-        String(x._id) === id ? { ...x, isBestSeller: next } : x
-      )
-    );
-    const res = await fetch(`/api/admin/products/${encodeURIComponent(id)}/bestseller`, {
-      method: "PATCH",
-      credentials: "same-origin",
+    const next = !Boolean(p.isBestSeller);
+    const response = await fetch(`/api/admin/products/${encodeURIComponent(id)}/bestseller`, {
+      method: "PATCH", credentials: "same-origin",
     });
-    if (!res.ok) {
-      toast.error("Could not update best seller");
-      reload();
-      return;
-    }
+    if (!response.ok) throw new Error("Could not update best seller");
+    setProducts(list => list.map(item => String(item._id) === id ? { ...item, isBestSeller: next } : item));
     toast.success(next ? "Marked best seller" : "Removed from best sellers");
   }
 
   async function del(id: string) {
     if (!confirm("Delete this product?")) return;
-    const res = await fetch(`/api/products/${id}`, { method: "DELETE" });
-    if (!res.ok) toast.error("Delete failed");
-    else {
-      toast.success("Deleted");
-      reload();
-    }
+    const response = await fetch(`/api/products/${id}`, { method: "DELETE" });
+    if (!response.ok) throw new Error("Could not delete product");
+    toast.success("Product deleted");
+    await reload();
   }
 
   if (loading) {
-    return <div className="p-8 text-darkText/50">Loading…</div>;
+    return <PageSkeleton rows={3} />;
   }
 
   return (
@@ -162,7 +150,7 @@ export default function AdminProductsPage() {
                 </td>
                 <td className="p-3">{String(p.stock)}</td>
                 <td className="p-3">
-                  <button
+                  <LoadingButton loadingLabel="Processing…"
                     type="button"
                     onClick={() => toggleActive(p)}
                     className={`rounded-full px-3 py-1 text-xs font-bold ${
@@ -172,12 +160,12 @@ export default function AdminProductsPage() {
                     }`}
                   >
                     {p.isActive ? "ON" : "OFF"}
-                  </button>
+                  </LoadingButton>
                 </td>
                 <td className="p-3">
-                  <button
+                  <LoadingButton loadingLabel="Processing…"
                     type="button"
-                    onClick={() => void toggleBestSeller(p)}
+                    onClick={() => toggleBestSeller(p)}
                     className={`rounded-full px-3 py-1 text-xs font-bold ${
                       p.isBestSeller
                         ? "bg-green-100 text-green-800"
@@ -185,7 +173,7 @@ export default function AdminProductsPage() {
                     }`}
                   >
                     {p.isBestSeller ? "ON" : "OFF"}
-                  </button>
+                  </LoadingButton>
                 </td>
                 <td className="p-3 space-x-2">
                   <Link
@@ -194,13 +182,13 @@ export default function AdminProductsPage() {
                   >
                     Edit
                   </Link>
-                  <button
+                  <LoadingButton loadingLabel="Removing…"
                     type="button"
                     onClick={() => del(String(p._id))}
                     className="text-red-600 font-semibold"
                   >
                     Delete
-                  </button>
+                  </LoadingButton>
                 </td>
               </tr>
             ))}

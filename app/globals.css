@@ -1087,91 +1087,6 @@
 }
 
 /* =========================================================
-   HERO FLOATING PRODUCTS
-========================================================= */
-
-.joro-v4-product {
-  border:
-    1px solid
-    rgba(17, 17, 17, 0.065);
-
-  box-shadow:
-    0 15px 32px
-    rgba(0, 0, 0, 0.18);
-
-  animation:
-    joroV4ProductFloat
-    5.5s ease-in-out infinite;
-
-  transition:
-    border-color 220ms ease,
-    box-shadow 220ms ease;
-}
-
-.joro-v4-product:hover {
-  border-color:
-    rgba(183, 227, 58, 0.5);
-
-  box-shadow:
-    0 22px 42px
-    rgba(0, 0, 0, 0.24);
-}
-
-.joro-v4-product-one {
-  animation-delay: 0s;
-}
-
-.joro-v4-product-two {
-  animation-delay: -1.8s;
-}
-
-.joro-v4-product-three {
-  animation-delay: -3.2s;
-}
-
-@keyframes joroV4ProductFloat {
-  0%,
-  100% {
-    transform:
-      translateY(0)
-      rotate(-0.4deg);
-  }
-
-  50% {
-    transform:
-      translateY(-5px)
-      rotate(0.4deg);
-  }
-}
-
-/* =========================================================
-   HERO JORO MESSAGE
-========================================================= */
-
-.joro-v4-message {
-  box-shadow:
-    0 14px 30px
-    rgba(0, 0, 0, 0.17);
-
-  animation:
-    joroV4MessageFloat
-    6s ease-in-out infinite;
-}
-
-@keyframes joroV4MessageFloat {
-  0%,
-  100% {
-    transform:
-      translateY(0);
-  }
-
-  50% {
-    transform:
-      translateY(-4px);
-  }
-}
-
-/* =========================================================
    POST YOUR WANT
 ========================================================= */
 
@@ -1286,10 +1201,6 @@
     border-bottom-width: 7px;
   }
 
-  .joro-v4-product,
-  .joro-v4-message {
-    animation-duration: 6.5s;
-  }
 }
 
 /* =========================================================
@@ -1352,8 +1263,6 @@
   .joro-logo__shine,
   .joro-v4-ring::before,
   .joro-v4-laptop-motion,
-  .joro-v4-product,
-  .joro-v4-message,
   .joro-v3-want-icon,
   .scroll-top-ring,
   .scroll-top-dot {

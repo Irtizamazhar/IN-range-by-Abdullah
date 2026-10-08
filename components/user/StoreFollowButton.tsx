@@ -1,4 +1,5 @@
 "use client";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import { useState } from "react";
 import toast from "react-hot-toast";
@@ -20,7 +21,7 @@ export function StoreFollowButton({
   const [busy, setBusy] = useState(false);
 
   async function toggle() {
-    if (!isCustomer) { openAuthModal("login"); return; }
+    if (!isCustomer) { return openAuthModal("login"); }
     setBusy(true);
     try {
       const response = await fetch(`/api/stores/${vendorId}/follow`, {
@@ -29,6 +30,7 @@ export function StoreFollowButton({
       const data = (await response.json()) as { error?: string; following?: boolean; followers?: number };
       if (!response.ok) return toast.error(data.error || "Could not update follow");
       setFollowing(!!data.following);
+      toast.success(data.following ? "Store followed" : "Store unfollowed");
       setFollowers(typeof data.followers === "number" ? data.followers : followers);
     } finally {
       setBusy(false);
@@ -36,10 +38,10 @@ export function StoreFollowButton({
   }
 
   return (
-    <button
+    <LoadingButton
       type="button"
-      disabled={busy || authLoading}
-      onClick={() => void toggle()}
+      loading={busy} loadingLabel="Saving…" disabled={authLoading}
+      onClick={() => toggle()}
       aria-pressed={following}
       className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition disabled:opacity-60 ${
         following
@@ -49,6 +51,6 @@ export function StoreFollowButton({
     >
       <Heart className={`h-4 w-4 ${following ? "fill-current" : ""}`} />
       {following ? "Following" : "Follow"} · {followers}
-    </button>
+    </LoadingButton>
   );
 }

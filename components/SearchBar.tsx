@@ -1,7 +1,9 @@
 "use client";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useLoadingRouter as useRouter } from "@/hooks/useLoadingRouter";
 import { ChevronDown, Package, Search } from "lucide-react";
 
 const CATEGORIES: { value: string; label: string }[] = [
@@ -110,8 +112,8 @@ export function SearchBar() {
   }, []);
 
   function navigateSearch() {
-    router.push(buildProductsHref(query, category));
     setSuggestionsOpen(false);
+    return router.push(buildProductsHref(query, category));
   }
 
   function handleInputChange(v: string) {
@@ -119,10 +121,10 @@ export function SearchBar() {
     setSuggestionsOpen(v.trim().length > 0);
   }
 
-  function handleSuggestionPick(text: string) {
+  async function handleSuggestionPick(text: string) {
+    await router.push(buildProductsHref(text, category));
     setQuery(text);
     setSuggestionsOpen(false);
-    router.push(buildProductsHref(text, category));
   }
 
   const showDropdown = suggestionsOpen && query.trim().length > 0;
@@ -187,9 +189,9 @@ export function SearchBar() {
           className="h-10 min-w-0 flex-1 border-0 bg-white px-4 text-sm font-normal text-[#333] outline-none placeholder:text-[#999999]"
         />
 
-        <button
+        <LoadingButton
           type="button"
-          onClick={navigateSearch}
+          loadingLabel="Searching…" onClick={navigateSearch}
           className="hidden h-10 shrink-0 items-center justify-center border-0 text-sm font-semibold text-brand-dark transition-colors md:flex"
           style={{
             width: 80,
@@ -204,12 +206,12 @@ export function SearchBar() {
           }}
         >
           SEARCH
-        </button>
+        </LoadingButton>
 
         {/* Mobile: icon-only search button */}
-        <button
+        <LoadingButton
           type="button"
-          onClick={navigateSearch}
+          loadingLabel="Searching…" onClick={navigateSearch}
           className="flex h-10 w-10 shrink-0 items-center justify-center border-0 text-brand-dark transition-colors md:hidden"
           style={{
             backgroundColor: "var(--brand-accent)",
@@ -224,7 +226,7 @@ export function SearchBar() {
           }}
         >
           <Search className="h-5 w-5" strokeWidth={2.5} />
-        </button>
+        </LoadingButton>
       </div>
 
       {showDropdown ? (
@@ -238,7 +240,7 @@ export function SearchBar() {
           }}
         >
           {filteredSuggestions.map((text) => (
-            <button
+            <LoadingButton
               key={text}
               type="button"
               className="flex w-full cursor-pointer items-center gap-2.5 px-4 py-2.5 text-left text-sm font-normal transition-colors"
@@ -254,7 +256,7 @@ export function SearchBar() {
             >
               <Search className="h-3.5 w-3.5 shrink-0" style={{ color: "#999" }} />
               {text}
-            </button>
+            </LoadingButton>
           ))}
 
           <div
@@ -267,7 +269,7 @@ export function SearchBar() {
             </span>
           </div>
           {POPULAR_SEARCHES.map((text) => (
-            <button
+            <LoadingButton
               key={text}
               type="button"
               className="flex w-full cursor-pointer items-center gap-2.5 px-4 py-2.5 pl-10 text-left text-sm font-normal transition-colors"
@@ -282,7 +284,7 @@ export function SearchBar() {
               }}
             >
               {text}
-            </button>
+            </LoadingButton>
           ))}
         </div>
       ) : null}

@@ -1,7 +1,9 @@
 "use client";
+import { LoadingButton } from "@/components/ui/LoadingButton";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "@/components/ui/LoadingLink";
 import toast from "react-hot-toast";
 import { OrderCard } from "@/components/orders/OrderCard";
 import { OrderTable } from "@/components/orders/OrderTable";
@@ -62,6 +64,8 @@ function toCsv(rows: ShopOrderListRow[]): string {
 /** Admin overview of all seller bundles + CSV export. */
 export default function AdminVendorOrdersPage() {
   const [status, setStatus] = useState<(typeof STATUSES)[number]>("all");
+  const statusRef = useRef<(typeof STATUSES)[number]>("all");
+  const requestRef = useRef(0);
   const [vendorId, setVendorId] = useState("");
   const [q, setQ] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
@@ -96,25 +100,30 @@ export default function AdminVendorOrdersPage() {
 
   const queryString = useMemo(() => {
     const p = new URLSearchParams();
-    if (status !== "all") p.set("status", status);
     if (vendorId) p.set("vendorId", vendorId);
     if (debouncedQ) p.set("q", debouncedQ);
     if (dateFrom) p.set("dateFrom", dateFrom);
     if (dateTo) p.set("dateTo", dateTo);
     const s = p.toString();
     return s ? `?${s}` : "";
-  }, [status, vendorId, debouncedQ, dateFrom, dateTo]);
+  }, [vendorId, debouncedQ, dateFrom, dateTo]);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (nextStatus = statusRef.current) => {
+    const request = ++requestRef.current;
+    statusRef.current = nextStatus;
+    setStatus(nextStatus);
+    const requestParams = new URLSearchParams(queryString);
+    if (nextStatus !== "all") requestParams.set("status", nextStatus);
     setLoading(true);
     try {
-      const r = await fetch(`/api/orders/admin/all${queryString}`, {
+      const r = await fetch(`/api/orders/admin/all?${requestParams}`, {
         credentials: "same-origin",
       });
       const data = (await r.json()) as {
         orders?: ShopOrderListRow[];
         error?: string;
       };
+      if (request !== requestRef.current) return;
       if (!r.ok) {
         toast.error(data.error || "Could not load");
         setRows([]);
@@ -125,7 +134,7 @@ export default function AdminVendorOrdersPage() {
       toast.error("Network error");
       setRows([]);
     } finally {
-      setLoading(false);
+      if (request === requestRef.current) setLoading(false);
     }
   }, [queryString]);
 
@@ -206,10 +215,10 @@ export default function AdminVendorOrdersPage() {
 
       <div className="mb-4 flex flex-wrap gap-2">
         {STATUSES.map((s) => (
-          <button
+          <LoadingButton loadingLabel="Loading..."
             key={s}
             type="button"
-            onClick={() => setStatus(s)}
+            onClick={() => load(s)}
             className={`rounded-lg px-3 py-2 text-xs font-bold capitalize sm:text-sm ${
               status === s
                 ? "bg-brand-primary text-brand-dark"
@@ -217,12 +226,12 @@ export default function AdminVendorOrdersPage() {
             }`}
           >
             {s}
-          </button>
+          </LoadingButton>
         ))}
       </div>
 
       {loading ? (
-        <p className="text-darkText/50">Loading…</p>
+        <PageSkeleton rows={3} />
       ) : (
         <>
           <OrderTable

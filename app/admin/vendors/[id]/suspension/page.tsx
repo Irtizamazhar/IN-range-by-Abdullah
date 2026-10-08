@@ -1,6 +1,8 @@
 "use client";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
-import Link from "next/link";
+import Link from "@/components/ui/LoadingLink";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
@@ -88,11 +90,10 @@ export default function AdminVendorSuspensionPage() {
   const [data, setData] = useState<VendorDataResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [suspendOpen, setSuspendOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (showLoading = true) => {
     if (!id) return;
-    setLoading(true);
+    if (showLoading) setLoading(true);
     try {
       const [riskRes, dataRes] = await Promise.all([
         fetch(`/api/admin/vendors/${encodeURIComponent(id)}/risk-score`),
@@ -129,9 +130,11 @@ export default function AdminVendorSuspensionPage() {
     [data]
   );
 
-  if (loading || !risk || !data) {
-    return <div className="mx-auto max-w-7xl p-6 md:p-8">Loading…</div>;
+  if (loading) {
+    return <PageSkeleton rows={3} />;
   }
+
+  if (!risk || !data) return <div className="p-8"><p role="alert">Vendor suspension details could not be loaded.</p><LoadingButton loadingLabel="Loading..." onClick={() => load(false)} className="mt-4 rounded-xl bg-brand-primary px-4 py-2 font-bold text-brand-dark">Try again</LoadingButton></div>;
 
   const v = data.vendor;
 
@@ -254,11 +257,10 @@ export default function AdminVendorSuspensionPage() {
               Suspended: {v.suspensionReason || "No reason"}
             </p>
             <p className="text-xs text-red-700/80">At: {fmtDate(v.suspendedAt)}</p>
-            <button
+            <LoadingButton loadingLabel="Processing…"
               type="button"
-              disabled={busy}
+
               onClick={async () => {
-                setBusy(true);
                 try {
                   const r = await fetch(
                     `/api/admin/vendors/${encodeURIComponent(id)}`,
@@ -270,17 +272,15 @@ export default function AdminVendorSuspensionPage() {
                   );
                   if (!r.ok) throw new Error("Unsuspend failed");
                   toast.success("Vendor unsuspended");
-                  await load();
+                  await load(false);
                 } catch (e) {
                   toast.error(e instanceof Error ? e.message : "Unsuspend failed");
-                } finally {
-                  setBusy(false);
                 }
               }}
               className="mt-3 rounded-lg bg-green-600 px-4 py-2 text-sm font-bold text-white hover:bg-green-700 disabled:opacity-50"
             >
               Unsuspend Vendor
-            </button>
+            </LoadingButton>
           </div>
         )}
       </section>
@@ -305,7 +305,7 @@ export default function AdminVendorSuspensionPage() {
                   <p className="text-sm text-amber-900">
                     {String(details.message || "No message")}
                   </p>
-                  <button
+                  <LoadingButton loadingLabel="Processing…"
                     type="button"
                     onClick={async () => {
                       const r = await fetch(
@@ -317,12 +317,12 @@ export default function AdminVendorSuspensionPage() {
                         return;
                       }
                       toast.success("Appeal marked resolved");
-                      await load();
+                      await load(false);
                     }}
                     className="mt-2 rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-900"
                   >
                     Mark resolved
-                  </button>
+                  </LoadingButton>
                 </div>
               );
             })}
@@ -342,7 +342,7 @@ export default function AdminVendorSuspensionPage() {
           if (!r.ok) throw new Error("Suspend failed");
           toast.success("Vendor suspended");
           setSuspendOpen(false);
-          await load();
+          await load(false);
         }}
       />
     </div>

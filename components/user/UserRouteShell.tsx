@@ -7,6 +7,7 @@ import { Footer } from "@/components/user/Footer";
 import { WhatsAppFloat } from "@/components/user/WhatsAppButton";
 import { CartProvider } from "@/context/CartContext";
 import { CustomerAuthProvider } from "@/context/CustomerAuthContext";
+import { PostWantProvider } from "@/context/PostWantContext";
 import type { ISettings } from "@/types/settings";
 
 type FooterSettings = Pick<ISettings, "whatsappNumber" | "shopName">;
@@ -23,6 +24,7 @@ export function UserRouteShell({
   return (
     <CartProvider>
       <CustomerAuthProvider>
+        <PostWantProvider>
         <div className="flex min-h-screen flex-col overflow-x-clip bg-white pb-16 md:pb-0">
           <AnnouncementBar />
           <Suspense
@@ -39,6 +41,7 @@ export function UserRouteShell({
           <Footer settings={footerSettings} />
           <WhatsAppFloat number={whatsappNumber} />
         </div>
+        </PostWantProvider>
       </CustomerAuthProvider>
     </CartProvider>
   );

@@ -1,6 +1,8 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
+import { LoadingButton } from "@/components/ui/LoadingButton";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "@/components/ui/LoadingLink";
 import toast from "react-hot-toast";
 
 type Ticket = {
@@ -37,6 +39,8 @@ export default function AdminSupportQueuePage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const pageRef = useRef(1);
+  const requestRef = useRef(0);
   const [pageSize, setPageSize] = useState(20);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState("");
@@ -44,21 +48,25 @@ export default function AdminSupportQueuePage() {
   const [priority, setPriority] = useState("");
   const [q, setQ] = useState("");
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (showLoading = true, requestedPage = pageRef.current) => {
+    const request = ++requestRef.current;
+    pageRef.current = requestedPage;
+    setPage(requestedPage);
+    if (showLoading) setLoading(true);
     try {
-      const params = new URLSearchParams({ page: String(page) });
+      const params = new URLSearchParams({ page: String(requestedPage) });
       if (status) params.set("status", status);
       if (actorType) params.set("actorType", actorType);
       if (priority) params.set("priority", priority);
       if (q.trim()) params.set("q", q.trim());
       const r = await fetch(`/api/admin/support/tickets?${params.toString()}`, { credentials: "same-origin" });
       const d = await r.json();
+      if (request !== requestRef.current) return;
       if (!r.ok) { toast.error(d.error || "Could not load queue"); return; }
       setTickets(d.tickets || []); setTotal(d.total || 0); setPageSize(d.pageSize || 20);
-    } catch { toast.error("Network error"); } finally { setLoading(false); }
-  }, [page, status, actorType, priority, q]);
-  useEffect(() => { void load(); }, [load]);
+    } catch { toast.error("Network error"); } finally { if (request === requestRef.current) setLoading(false); }
+  }, [status, actorType, priority, q]);
+  useEffect(() => { void load(true, 1); }, [load]);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -94,7 +102,7 @@ export default function AdminSupportQueuePage() {
             </tr>
           </thead>
           <tbody>
-            {loading ? <tr><td className="p-4" colSpan={11}>Loading…</td></tr> : tickets.length === 0 ? <tr><td className="p-4 text-darkText/60" colSpan={11}>No tickets match these filters.</td></tr> : tickets.map(t => (
+            {loading ? <tr><td className="p-4" colSpan={11}><PageSkeleton rows={3} variant="table" /></td></tr> : tickets.length === 0 ? <tr><td className="p-4 text-darkText/60" colSpan={11}>No tickets match these filters.</td></tr> : tickets.map(t => (
               <tr key={t.id} className="border-t">
                 <td className="p-3 font-bold">{t.ticketNumber}</td>
                 <td className="p-3">{t.actorType === "CUSTOMER" ? (t.customer?.name || "—") : (t.vendor?.shopName || "—")}</td>
@@ -115,9 +123,9 @@ export default function AdminSupportQueuePage() {
 
       {totalPages > 1 ? (
         <div className="mt-4 flex items-center justify-center gap-3">
-          <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="rounded-lg border px-3 py-1.5 text-sm font-bold disabled:opacity-40">Previous</button>
+          <LoadingButton loadingLabel="Loading..." disabled={page <= 1} onClick={() => load(true, page - 1)} className="rounded-lg border px-3 py-1.5 text-sm font-bold disabled:opacity-40">Previous</LoadingButton>
           <span className="text-sm text-darkText/70">Page {page} of {totalPages}</span>
-          <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="rounded-lg border px-3 py-1.5 text-sm font-bold disabled:opacity-40">Next</button>
+          <LoadingButton loadingLabel="Loading..." disabled={page >= totalPages} onClick={() => load(true, page + 1)} className="rounded-lg border px-3 py-1.5 text-sm font-bold disabled:opacity-40">Next</LoadingButton>
         </div>
       ) : null}
     </div>

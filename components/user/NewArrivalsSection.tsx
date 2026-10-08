@@ -1,21 +1,16 @@
 "use client";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
-import {
-  ArrowRight,
-  Zap,
-} from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ArrowRight, Zap } from "lucide-react";
 
 import {
   ProductCard,
   ProductCardSkeleton,
   type ProductCardData,
 } from "@/components/user/ProductCard";
+import gridStyles from "@/components/user/ProductGrid.module.css";
+import styles from "@/components/user/NewArrivalsSection.module.css";
 
 type ApiNewArrivalsResponse = {
   products?: ProductCardData[];
@@ -32,139 +27,117 @@ export function NewArrivalsSection({
   totalCount: number;
   pageSize: number;
 }) {
-  const [
-    products,
-    setProducts,
-  ] =
-    useState<ProductCardData[]>(
-      initialProducts
-    );
+  const [products, setProducts] = useState(initialProducts);
+  const productsRef = useRef(products);
+  const [total, setTotal] = useState(totalCount);
+  const totalRef = useRef(totalCount);
+  const [loadingCount, setLoadingCount] = useState(0);
+  const requestInFlightRef = useRef(false);
+  const autoLoadBlockedRef = useRef(false);
+  const [error, setError] = useState<string | null>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [columns, setColumns] = useState(0);
 
-  const productsRef =
-    useRef(products);
-
-  const [total, setTotal] =
-    useState(totalCount);
-
-  const [
-    loading,
-    setLoading,
-  ] = useState(false);
-
-  const [
-    error,
-    setError,
-  ] =
-    useState<string | null>(
-      null
-    );
+  const loading = loadingCount > 0;
+  const hasMore = products.length < total;
 
   useEffect(() => {
-    productsRef.current =
-      products;
-  }, [products]);
+    const grid = gridRef.current;
+    if (!grid) return;
 
-  const hasMore =
-    products.length < total;
+    const measureColumns = () => {
+      const template = window.getComputedStyle(grid).gridTemplateColumns;
+      setColumns(
+        template && template !== "none"
+          ? template.trim().split(/\s+/).length
+          : 0
+      );
+    };
 
-  const loadMore =
-    useCallback(async () => {
-      if (
-        loading ||
-        !hasMore
-      ) {
-        return;
+    measureColumns();
+    const observer = new ResizeObserver(measureColumns);
+    observer.observe(grid);
+    // A media query can change card widths while the container stays the same size.
+    window.addEventListener("resize", measureColumns);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measureColumns);
+    };
+  }, [totalCount]);
+
+  const loadProducts = useCallback(async (requestedCount: number) => {
+    const current = productsRef.current;
+    const count = Math.min(requestedCount, totalRef.current - current.length, 48);
+    if (requestInFlightRef.current || count <= 0) return;
+
+    requestInFlightRef.current = true;
+    setLoadingCount(count);
+    setError(null);
+
+    try {
+      const params = new URLSearchParams({
+        offset: String(current.length),
+        limit: String(count),
+      });
+      const response = await fetch(`/api/products/new-arrivals?${params.toString()}`);
+      const data = (await response.json()) as ApiNewArrivalsResponse;
+
+      if (!response.ok) {
+        throw new Error(data.error || "Could not load more");
       }
 
-      setLoading(true);
-      setError(null);
+      const nextTotal = typeof data.total === "number" ? data.total : totalRef.current;
+      const seen = new Set(current.map((product) => product._id));
+      const merged = [...current];
 
-      try {
-        const params =
-          new URLSearchParams({
-            offset: String(
-              productsRef.current
-                .length
-            ),
-            limit: String(
-              pageSize
-            ),
-          });
-
-        const response =
-          await fetch(
-            `/api/products/new-arrivals?${params.toString()}`
-          );
-
-        const data =
-          (await response.json()) as ApiNewArrivalsResponse;
-
-        if (!response.ok) {
-          throw new Error(
-            data.error ||
-              "Could not load more"
-          );
+      for (const product of data.products ?? []) {
+        if (!seen.has(product._id)) {
+          seen.add(product._id);
+          merged.push(product);
         }
-
-        const batch =
-          data.products ?? [];
-
-        setTotal(
-          typeof data.total ===
-            "number"
-            ? data.total
-            : total
-        );
-
-        setProducts(
-          (previous) => {
-            const seen =
-              new Set(
-                previous.map(
-                  (product) =>
-                    product._id
-                )
-              );
-
-            const merged = [
-              ...previous,
-            ];
-
-            for (const product of batch) {
-              if (
-                !seen.has(
-                  product._id
-                )
-              ) {
-                seen.add(
-                  product._id
-                );
-
-                merged.push(
-                  product
-                );
-              }
-            }
-
-            return merged;
-          }
-        );
-      } catch (err) {
-        setError(
-          err instanceof
-            Error
-            ? err.message
-            : "Something went wrong"
-        );
-      } finally {
-        setLoading(false);
       }
-    }, [
-      hasMore,
-      loading,
-      pageSize,
+
+      // Stop automatic requests if an empty or duplicate batch makes no progress.
+      autoLoadBlockedRef.current = merged.length === current.length;
+      if (autoLoadBlockedRef.current && merged.length < nextTotal) {
+        setError("Could not load additional products. Please try again.");
+      }
+
+      productsRef.current = merged;
+      totalRef.current = nextTotal;
+      setProducts(merged);
+      setTotal(nextTotal);
+    } catch (err) {
+      autoLoadBlockedRef.current = true;
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      requestInFlightRef.current = false;
+      setLoadingCount(0);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!columns || loading || !hasMore || autoLoadBlockedRef.current) return;
+
+    const filledCount = Math.min(
       total,
-    ]);
+      Math.ceil(Math.max(pageSize, products.length) / columns) * columns
+    );
+    if (filledCount > products.length) {
+      void loadProducts(filledCount - products.length);
+    }
+  }, [columns, hasMore, loading, loadProducts, pageSize, products.length, total]);
+
+  const loadMore = () => {
+    if (requestInFlightRef.current) return;
+
+    const rowSize = Math.max(columns, 1);
+    const currentCount = productsRef.current.length;
+    const filledCount = Math.ceil((currentCount + pageSize) / rowSize) * rowSize;
+    autoLoadBlockedRef.current = false;
+    return loadProducts(filledCount - currentCount);
+  };
 
   return (
     <section className="bg-brand-background py-9 sm:py-11">
@@ -173,7 +146,6 @@ export function NewArrivalsSection({
           <div>
             <div className="mb-1.5 inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.15em] text-brand-link">
               <Zap className="h-3.5 w-3.5" />
-
               Just added
             </div>
 
@@ -183,24 +155,15 @@ export function NewArrivalsSection({
           </div>
 
           {hasMore ? (
-            <button
+            <LoadingButton
               type="button"
-              disabled={
-                loading
-              }
-              onClick={
-                loadMore
-              }
+              loading={loading}
+              onClick={loadMore}
               className="inline-flex shrink-0 items-center gap-1 text-[12px] font-black text-brand-link transition hover:text-brand-dark disabled:opacity-50"
             >
-              {loading
-                ? "Loading..."
-                : "View More"}
-
-              {!loading ? (
-                <ArrowRight className="h-3.5 w-3.5" />
-              ) : null}
-            </button>
+              View More
+              <ArrowRight className="h-3.5 w-3.5" />
+            </LoadingButton>
           ) : null}
         </div>
 
@@ -209,40 +172,27 @@ export function NewArrivalsSection({
             No new arrivals at the moment.
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-6">
-            {products.map(
-              (product) => (
-                <ProductCard
-                  key={
-                    product._id
-                  }
-                  product={
-                    product
-                  }
-                  ribbon="NEW"
-                  badgePosition="right"
-                />
-              )
-            )}
+          <div
+            ref={gridRef}
+            className={`${gridStyles.grid} ${styles.grid}`}
+            aria-busy={loading}
+          >
+            {products.map((product) => (
+              <ProductCard
+                key={product._id}
+                product={product}
+                ribbon="NEW"
+                badgePosition="right"
+                variant="marketplace"
+              />
+            ))}
 
-            {loading
-              ? Array.from({
-                  length:
-                    Math.min(
-                      pageSize,
-                      6
-                    ),
-                }).map(
-                  (
-                    _,
-                    index
-                  ) => (
-                    <ProductCardSkeleton
-                      key={`new-loading-${index}`}
-                    />
-                  )
-                )
-              : null}
+            {Array.from({ length: loadingCount }).map((_, index) => (
+              <ProductCardSkeleton
+                key={`new-loading-${index}`}
+                variant="marketplace"
+              />
+            ))}
           </div>
         )}
 

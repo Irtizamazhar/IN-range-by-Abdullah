@@ -1,4 +1,7 @@
 "use client";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { LoadingButton } from "@/components/ui/LoadingButton";
+import { LoadingForm } from "@/components/ui/LoadingForm";
 
 import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
@@ -11,12 +14,14 @@ export function SettingsClient() {
   const [iban, setIban] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError("");
     try {
       const r = await fetch("/api/vendor/bank", { credentials: "include" });
-      if (!r.ok) return;
+      if (!r.ok) throw new Error("Could not load bank details. Please retry.");
       const d = (await r.json()) as {
         bankName?: string;
         accountTitle?: string;
@@ -27,6 +32,10 @@ export function SettingsClient() {
       setAccountTitle(d.accountTitle || "");
       setAccountNumber(d.accountNumber || "");
       setIban(d.iban || "");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not load bank details";
+      setLoadError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -63,8 +72,9 @@ export function SettingsClient() {
   }
 
   if (loading) {
-    return <div className="p-8 text-darkText/50">Loading…</div>;
+    return <PageSkeleton label="Loading…" rows={3} />;
   }
+  if (loadError) return <div className="max-w-xl p-6 md:p-8"><p role="alert" className="text-sm text-red-700">{loadError}</p><LoadingButton onClick={load} className="mt-4 rounded-xl bg-brand-primary px-4 py-2 font-bold">Retry</LoadingButton></div>;
 
   return (
     <div className="max-w-xl p-6 md:p-8">
@@ -80,7 +90,7 @@ export function SettingsClient() {
         the request. Updating here does not change past requests.
       </div>
 
-      <form onSubmit={(e) => void save(e)} className="mt-8 space-y-4">
+      <LoadingForm onSubmit={(e) => save(e)} className="mt-8 space-y-4">
         <div>
           <label className="block text-sm font-semibold text-darkText">
             Bank name
@@ -138,14 +148,14 @@ export function SettingsClient() {
             className="mt-1 w-full rounded-xl border border-borderGray px-3 py-2.5 font-mono text-sm"
           />
         </div>
-        <button
+        <LoadingButton loadingLabel="Saving…"
           type="submit"
           disabled={saving}
           className="rounded-xl bg-brand-primary px-6 py-2.5 font-semibold text-brand-dark hover:bg-brand-hover disabled:opacity-50"
         >
-          {saving ? "Saving…" : "Save bank details"}
-        </button>
-      </form>
+          {"Save bank details"}
+        </LoadingButton>
+      </LoadingForm>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/ui/LoadingLink";
 import { getApprovedPublicReviews } from "@/lib/public-reviews-list";
 
 export const dynamic = "force-dynamic";

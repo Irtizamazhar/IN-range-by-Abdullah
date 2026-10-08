@@ -1,6 +1,10 @@
 "use client";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { LoadingButton } from "@/components/ui/LoadingButton";
+import { LoadingForm } from "@/components/ui/LoadingForm";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/LoadingLink";
 import toast from "react-hot-toast";
 
 type Vendor = { id: string; shopName: string; ownerName: string; storeSlug: string | null; status: string };
@@ -17,13 +21,12 @@ export default function TopVendorsPage() {
   const [rows, setRows] = useState<TopVendorRow[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
   const [vendorQuery, setVendorQuery] = useState("");
   const [vendorId, setVendorId] = useState("");
   const [priorities, setPriorities] = useState<Record<string, number>>({});
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       const r = await fetch("/api/admin/top-vendors", { credentials: "same-origin" });
       const d = (await r.json()) as { topVendors?: TopVendorRow[]; vendors?: Vendor[]; error?: string };
@@ -43,18 +46,17 @@ export default function TopVendorsPage() {
   async function addVendor(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!vendorId) { toast.error("Choose an approved vendor from the list first."); return; }
-    const f = new FormData(e.currentTarget);
+    const form = e.currentTarget;
+    const f = new FormData(form);
     const reason = String(f.get("reason") || "").trim();
     if (reason.length < 3) { toast.error("An audit reason is required."); return; }
-    setBusy(true);
     try {
       const r = await fetch("/api/admin/top-vendors", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ vendorId, priority: Number(f.get("priority")) || 0, label: f.get("label"), reason }) });
       const d = (await r.json()) as { error?: string };
       if (!r.ok) throw new Error(d.error || "Could not add Top Vendor");
       toast.success("Added to Top Vendors");
-      setVendorId(""); setVendorQuery(""); e.currentTarget.reset(); await load();
+      setVendorId(""); setVendorQuery(""); form.reset(); await load(false);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Could not add Top Vendor"); }
-    finally { setBusy(false); }
   }
 
   async function savePriority(row: TopVendorRow) {
@@ -62,41 +64,35 @@ export default function TopVendorsPage() {
     if (priority === row.priority) return;
     const reason = askReason(`Reason for changing "${row.vendor.shopName}"'s priority to ${priority}:`, "Reordering Top Vendors.");
     if (reason === null) return;
-    setBusy(true);
     try {
       const r = await fetch("/api/admin/top-vendors", { method: "PATCH", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ id: row.id, priority, reason }) });
       const d = (await r.json()) as { error?: string };
       if (!r.ok) throw new Error(d.error || "Could not update priority");
-      toast.success("Priority updated"); await load();
+      toast.success("Priority updated"); await load(false);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Could not update priority"); }
-    finally { setBusy(false); }
   }
 
   async function toggleEnabled(row: TopVendorRow) {
     const next = !row.enabled;
     const reason = askReason(`Reason for ${next ? "enabling" : "disabling"} "${row.vendor.shopName}":`, next ? "Re-enabling Top Vendor." : "Temporarily disabling Top Vendor.");
     if (reason === null) return;
-    setBusy(true);
     try {
       const r = await fetch("/api/admin/top-vendors", { method: "PATCH", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ id: row.id, enabled: next, reason }) });
       const d = (await r.json()) as { error?: string };
       if (!r.ok) throw new Error(d.error || "Could not update status");
-      toast.success(next ? "Enabled" : "Disabled"); await load();
+      toast.success(next ? "Enabled" : "Disabled"); await load(false);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Could not update status"); }
-    finally { setBusy(false); }
   }
 
   async function removeVendor(row: TopVendorRow) {
     const reason = askReason(`Reason for removing "${row.vendor.shopName}" from Top Vendors:`, "No longer a Top Vendor.");
     if (reason === null) return;
-    setBusy(true);
     try {
       const r = await fetch(`/api/admin/top-vendors?id=${encodeURIComponent(row.id)}&reason=${encodeURIComponent(reason)}`, { method: "DELETE", credentials: "same-origin" });
       const d = (await r.json()) as { error?: string };
       if (!r.ok) throw new Error(d.error || "Could not remove Top Vendor");
-      toast.success("Removed from Top Vendors"); await load();
+      toast.success("Removed from Top Vendors"); await load(false);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Could not remove Top Vendor"); }
-    finally { setBusy(false); }
   }
 
   return (
@@ -104,7 +100,7 @@ export default function TopVendorsPage() {
       <h1 className="text-2xl font-black text-darkText">Top Vendors</h1>
       <p className="mt-1 text-sm text-darkText/70">Admin-curated homepage &quot;Top Vendors&quot; selection. Independent of sponsored promotions — adding a vendor here never makes them sponsored, and sponsoring a vendor never adds them here.</p>
 
-      <form onSubmit={e => void addVendor(e)} className="joro-form relative mt-6 grid gap-4 rounded-2xl bg-white p-6 shadow-sm sm:grid-cols-2">
+      <LoadingForm onSubmit={e => addVendor(e)} className="joro-form relative mt-6 grid gap-4 rounded-2xl bg-white p-6 shadow-sm sm:grid-cols-2">
         <h2 className="font-bold sm:col-span-2">Add a vendor to Top Vendors</h2>
         <div className="relative sm:col-span-2">
           <label htmlFor="tvVendorSearch">Approved vendor / store</label>
@@ -123,8 +119,8 @@ export default function TopVendorsPage() {
         <label>Priority (higher shows first)<input name="priority" type="number" defaultValue={0} min={0} max={1000} required /></label>
         <label>Display label (optional)<input name="label" maxLength={60} placeholder="e.g. Community favourite" /></label>
         <label className="sm:col-span-2">Audit reason<input name="reason" minLength={3} placeholder="Why is this vendor being added?" required /></label>
-        <button disabled={busy} className="rounded-xl bg-brand-primary px-5 py-3 font-bold text-brand-dark disabled:opacity-50 sm:col-span-2">Add to Top Vendors</button>
-      </form>
+        <LoadingButton type="submit" loadingLabel="Adding…"  className="rounded-xl bg-brand-primary px-5 py-3 font-bold text-brand-dark disabled:opacity-50 sm:col-span-2">Add to Top Vendors</LoadingButton>
+      </LoadingForm>
 
       <div className="mt-8 overflow-x-auto rounded-2xl border bg-white">
         <table className="w-full min-w-[800px] text-left text-sm">
@@ -132,23 +128,23 @@ export default function TopVendorsPage() {
             <tr><th className="p-3">Vendor</th><th className="p-3">Store</th><th className="p-3">Priority</th><th className="p-3">Status</th><th className="p-3">Public/Approved</th><th className="p-3">Actions</th></tr>
           </thead>
           <tbody>
-            {loading ? <tr><td className="p-4" colSpan={6}>Loading…</td></tr> : rows.length === 0 ? <tr><td className="p-4 text-darkText/60" colSpan={6}>No Top Vendors yet.</td></tr> : rows.map(row => (
+            {loading ? <tr><td className="p-4" colSpan={6}><PageSkeleton rows={3} variant="table" /></td></tr> : rows.length === 0 ? <tr><td className="p-4 text-darkText/60" colSpan={6}>No Top Vendors yet.</td></tr> : rows.map(row => (
               <tr key={row.id} className="border-t">
                 <td className="p-3 font-bold">{row.vendor.shopName}{row.label ? <span className="ml-2 rounded-full bg-brand-soft px-2 py-0.5 text-[10px] font-bold text-brand-link">{row.label}</span> : null}</td>
                 <td className="p-3">/stores/{row.vendor.storeSlug || row.vendorId}</td>
                 <td className="p-3">
                   <div className="flex items-center gap-2">
                     <input type="number" min={0} max={1000} value={priorities[row.id] ?? row.priority} onChange={e => setPriorities(p => ({ ...p, [row.id]: Number(e.target.value) }))} className="w-20 rounded-lg border px-2 py-1" />
-                    <button disabled={busy} onClick={() => void savePriority(row)} className="font-bold text-brand-link underline">Save</button>
+                    <LoadingButton loadingLabel="Saving…"  onClick={() => savePriority(row)} className="font-bold text-brand-link underline">Save</LoadingButton>
                   </div>
                 </td>
                 <td className="p-3"><span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${row.enabled ? "bg-emerald-100 text-emerald-800" : "bg-neutral-200 text-neutral-800"}`}>{row.enabled ? "Enabled" : "Disabled"}</span></td>
                 <td className="p-3">{row.vendor.status === "approved" ? <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-800">Approved / Public</span> : <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-bold text-red-800">Hidden — {row.vendor.status}</span>}</td>
                 <td className="p-3">
                   <div className="flex flex-wrap gap-2">
-                    <button disabled={busy} onClick={() => void toggleEnabled(row)} className={`font-bold underline ${row.enabled ? "text-amber-700" : "text-emerald-700"}`}>{row.enabled ? "Disable" : "Enable"}</button>
+                    <LoadingButton loadingLabel="Processing…"  onClick={() => toggleEnabled(row)} className={`font-bold underline ${row.enabled ? "text-amber-700" : "text-emerald-700"}`}>{row.enabled ? "Disable" : "Enable"}</LoadingButton>
                     <Link href={`/stores/${encodeURIComponent(row.vendor.storeSlug || row.vendorId)}`} target="_blank" className="font-bold text-darkText/60 underline">Open Store</Link>
-                    <button disabled={busy} onClick={() => void removeVendor(row)} className="font-bold text-red-700 underline">Remove</button>
+                    <LoadingButton loadingLabel="Removing…"  onClick={() => removeVendor(row)} className="font-bold text-red-700 underline">Remove</LoadingButton>
                   </div>
                 </td>
               </tr>

@@ -1,8 +1,9 @@
 "use client";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import Link from "@/components/ui/LoadingLink";
+import { useLoadingRouter as useRouter } from "@/hooks/useLoadingRouter";
 import toast from "react-hot-toast";
 import { formatPKR } from "@/lib/format";
 
@@ -108,7 +109,7 @@ export default function AdminDashboardPage() {
 
   if (loading) {
     return (
-      <div className="p-8 animate-pulse text-darkText/50">Loading dashboard…</div>
+      <PageSkeleton rows={3} />
     );
   }
 

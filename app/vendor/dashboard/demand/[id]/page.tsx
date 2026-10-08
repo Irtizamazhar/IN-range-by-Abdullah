@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/LoadingLink";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getVendorFromSession } from "@/lib/vendor-auth-server";

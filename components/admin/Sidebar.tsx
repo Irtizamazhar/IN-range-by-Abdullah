@@ -1,6 +1,8 @@
 "use client";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
-import Link from "next/link";
+import Link from "@/components/ui/LoadingLink";
+import { navigateDocument } from "@/lib/navigate-document";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { signOut } from "next-auth/react";
@@ -292,16 +294,17 @@ export function AdminSidebar() {
         })}
       </nav>
       <div className="shrink-0 border-t border-white/10 p-3">
-        <button
+        <LoadingButton loadingLabel="Processing…"
           type="button"
-          onClick={() =>
-            signOut({ callbackUrl: "/admin/login" })
-          }
+          onClick={async () => {
+            await signOut({ redirect: false });
+            await navigateDocument("/admin/login");
+          }}
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-base font-medium text-white/80 hover:bg-white/10"
         >
           <LogOut className="h-4 w-4" />
           Log out
-        </button>
+        </LoadingButton>
       </div>
     </aside>
   );

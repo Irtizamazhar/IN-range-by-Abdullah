@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/ui/LoadingLink";
 import { useEffect, useRef } from "react";
 
 import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";

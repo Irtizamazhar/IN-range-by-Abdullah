@@ -1,4 +1,9 @@
 "use client";
+import { useAsyncActions } from "@/hooks/useAsyncActions";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { LoadingButton } from "@/components/ui/LoadingButton";
+import { LoadingForm } from "@/components/ui/LoadingForm";
+
 import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
@@ -24,12 +29,12 @@ export default function AdminTicketDetailPage({ params }: { params: { id: string
   const [messages, setMessages] = useState<Message[]>([]);
   const [assignees, setAssignees] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
+  const actions = useAsyncActions();
   const [replyBody, setReplyBody] = useState("");
   const [isInternalNote, setIsInternalNote] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       const [tr, ar] = await Promise.all([
         fetch(`/api/admin/support/tickets/${params.id}`, { credentials: "same-origin" }),
@@ -45,34 +50,35 @@ export default function AdminTicketDetailPage({ params }: { params: { id: string
 
   async function sendReply(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setBusy(true);
     try {
-      const fd = new FormData(e.currentTarget);
+      const form = e.currentTarget;
+      const fd = new FormData(form);
       fd.set("isInternalNote", isInternalNote ? "true" : "false");
       const r = await fetch(`/api/admin/support/tickets/${params.id}/messages`, { method: "POST", body: fd, credentials: "same-origin" });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "Could not send message");
-      setReplyBody(""); (e.target as HTMLFormElement).reset();
-      toast.success(isInternalNote ? "Internal note added" : "Reply sent"); await load();
+      setReplyBody(""); form.reset();
+      toast.success(isInternalNote ? "Internal note added" : "Reply sent"); await load(false);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Could not send message"); }
-    finally { setBusy(false); }
   }
 
-  async function patchTicket(changes: Record<string, unknown>, confirmLabel: string) {
+  function patchTicket(changes: Record<string, unknown>, confirmLabel: string) {
+    return actions.run(Object.keys(changes)[0], async () => {
     const reason = window.prompt(`Reason for ${confirmLabel}:`, confirmLabel);
     if (reason === null) return;
     if (reason.trim().length < 3) { toast.error("An audit reason is required."); return; }
-    setBusy(true);
     try {
       const r = await fetch(`/api/admin/support/tickets/${params.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ ...changes, reason: reason.trim() }) });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "Could not update ticket");
-      toast.success("Ticket updated"); await load();
+      toast.success("Ticket updated"); await load(false);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Could not update ticket"); }
-    finally { setBusy(false); }
+
+
+    });
   }
 
-  if (loading) return <p className="p-8" role="status">Loading…</p>;
+  if (loading) return <PageSkeleton rows={3} />;
   if (!ticket) return <p className="p-8" role="status">Ticket not found.</p>;
 
   return (
@@ -87,17 +93,17 @@ export default function AdminTicketDetailPage({ params }: { params: { id: string
 
       <div className="mt-5 grid gap-4 rounded-2xl border bg-white p-5 sm:grid-cols-3">
         <label className="text-sm font-bold text-darkText/70">Status
-          <select disabled={busy} value={ticket.status} onChange={e => void patchTicket({ status: e.target.value }, `changing status to ${e.target.value}`)} className="mt-1 block w-full rounded-lg border border-borderGray px-3 py-2 text-sm">
+          <select disabled={actions.isPending("status")} aria-busy={actions.isPending("status")} value={ticket.status} onChange={e => void patchTicket({ status: e.target.value }, `changing status to ${e.target.value}`)} className="mt-1 block w-full rounded-lg border border-borderGray px-3 py-2 text-sm">
             {STATUSES.map(s => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
           </select>
         </label>
         <label className="text-sm font-bold text-darkText/70">Priority
-          <select disabled={busy} value={ticket.priority} onChange={e => void patchTicket({ priority: e.target.value }, `setting priority to ${e.target.value}`)} className="mt-1 block w-full rounded-lg border border-borderGray px-3 py-2 text-sm">
+          <select disabled={actions.isPending("priority")} aria-busy={actions.isPending("priority")} value={ticket.priority} onChange={e => void patchTicket({ priority: e.target.value }, `setting priority to ${e.target.value}`)} className="mt-1 block w-full rounded-lg border border-borderGray px-3 py-2 text-sm">
             {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
           </select>
         </label>
         <label className="text-sm font-bold text-darkText/70">Assigned To
-          <select disabled={busy} value={ticket.assignedTo?.id || ""} onChange={e => void patchTicket({ assignedToId: e.target.value || null }, e.target.value ? "reassigning ticket" : "unassigning ticket")} className="mt-1 block w-full rounded-lg border border-borderGray px-3 py-2 text-sm">
+          <select disabled={actions.isPending("assignedToId")} aria-busy={actions.isPending("assignedToId")} value={ticket.assignedTo?.id || ""} onChange={e => void patchTicket({ assignedToId: e.target.value || null }, e.target.value ? "reassigning ticket" : "unassigning ticket")} className="mt-1 block w-full rounded-lg border border-borderGray px-3 py-2 text-sm">
             <option value="">Unassigned</option>
             {assignees.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
           </select>
@@ -115,7 +121,7 @@ export default function AdminTicketDetailPage({ params }: { params: { id: string
         ))}
       </div>
 
-      <form onSubmit={e => void sendReply(e)} className="joro-form mt-6 grid gap-3 rounded-2xl border bg-white p-4">
+      <LoadingForm onSubmit={e => sendReply(e)} className="joro-form mt-6 grid gap-3 rounded-2xl border bg-white p-4">
         <div className="flex flex-wrap gap-2">
           {CANNED_REPLIES.map(t => <button type="button" key={t} onClick={() => setReplyBody(t)} className="rounded-full border border-borderGray px-3 py-1 text-xs font-bold text-darkText hover:bg-brand-soft">{t}</button>)}
         </div>
@@ -125,9 +131,9 @@ export default function AdminTicketDetailPage({ params }: { params: { id: string
         <label>Attachment (optional)<input type="file" name="attachment" accept="image/png,image/jpeg,image/webp" /></label>
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-sm font-bold text-darkText"><input type="checkbox" checked={isInternalNote} onChange={e => setIsInternalNote(e.target.checked)} /> Internal note (not sent to customer/vendor)</label>
-          <button disabled={busy} className={`rounded-xl px-5 py-2.5 font-bold disabled:opacity-50 ${isInternalNote ? "bg-amber-400 text-amber-950" : "bg-brand-primary text-brand-dark"}`}>{busy ? "Sending…" : isInternalNote ? "Add Internal Note" : "Send Reply"}</button>
+          <LoadingButton type="submit" loadingLabel="Adding…"  className={`rounded-xl px-5 py-2.5 font-bold disabled:opacity-50 ${isInternalNote ? "bg-amber-400 text-amber-950" : "bg-brand-primary text-brand-dark"}`}>{isInternalNote ? "Add Internal Note" : "Send Reply"}</LoadingButton>
         </div>
-      </form>
+      </LoadingForm>
     </div>
   );
 }

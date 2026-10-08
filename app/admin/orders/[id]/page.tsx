@@ -1,9 +1,11 @@
 "use client";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import Image from "next/image";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/LoadingLink";
 import toast from "react-hot-toast";
 import { formatPKR } from "@/lib/format";
 import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
@@ -22,29 +24,31 @@ import {
 export default function AdminOrderDetailPage() {
   const params = useParams();
   const id = String((params?.id as string | undefined) ?? "");
+  const [loading, setLoading] = useState(true);
   const [order, setOrder] = useState<Record<string, unknown> | null>(null);
   const [status, setStatus] = useState("");
   const [payStatus, setPayStatus] = useState("");
   const [tracking, setTracking] = useState("");
-  const [savingStatus, setSavingStatus] = useState(false);
   const [showShippingLabel, setShowShippingLabel] = useState(false);
 
-  const load = useCallback(async () => {
-    const res = await fetch(`/api/orders/${id}?admin=1`);
-    const data = await res.json();
-    if (!res.ok) {
-      toast.error("Order not found");
-      return;
-    }
-    setOrder(data);
-    setStatus(String(data.orderStatus));
-    setPayStatus(String(data.paymentStatus));
-    setTracking(String(data.trackingNumber || ""));
-    await fetch(`/api/orders/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isRead: true }),
-    });
+  const load = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
+    try {
+      const response = await fetch(`/api/orders/${id}?admin=1`);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not load order");
+      setOrder(data);
+      setStatus(String(data.orderStatus));
+      setPayStatus(String(data.paymentStatus));
+      setTracking(String(data.trackingNumber || ""));
+      const readResponse = await fetch(`/api/orders/${id}`, {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isRead: true }),
+      });
+      if (!readResponse.ok) toast.error("Order loaded, but its read status could not be saved");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not load order");
+    } finally { setLoading(false); }
   }, [id]);
 
   useEffect(() => {
@@ -52,8 +56,7 @@ export default function AdminOrderDetailPage() {
   }, [id, load]);
 
   async function saveStatus() {
-    setSavingStatus(true);
-    try {
+
       const res = await fetch(`/api/orders/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -68,19 +71,19 @@ export default function AdminOrderDetailPage() {
         return;
       }
       toast.success("Changes saved");
-      await load();
-    } finally {
-      setSavingStatus(false);
-    }
+      await load(false);
+
   }
 
+  if (loading) return <PageSkeleton rows={3} />;
   if (!order) {
     return (
       <div className="p-8 text-darkText/50">
         <Link href="/admin/orders" className="text-primaryBlue">
           ← Orders
         </Link>
-        <p className="mt-4">Loading…</p>
+        <p className="mt-4" role="alert">This order could not be loaded.</p>
+        <LoadingButton loadingLabel="Loading..." onClick={() => load(false)} className="mt-4 rounded-xl bg-brand-primary px-4 py-2 font-bold text-brand-dark">Try again</LoadingButton>
       </div>
     );
   }
@@ -354,7 +357,7 @@ export default function AdminOrderDetailPage() {
                     value={tracking}
                     onChange={(e) => setTracking(e.target.value)}
                   />
-                  <button
+                  <LoadingButton loadingLabel="Processing…"
                     type="button"
                     onClick={copyTrackingNumber}
                     className="inline-flex items-center gap-2 border-l border-gray-200 bg-gray-50 px-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
@@ -362,18 +365,17 @@ export default function AdminOrderDetailPage() {
                   >
                     <Clipboard className="h-4 w-4" />
                     Copy
-                  </button>
+                  </LoadingButton>
                 </div>
               </div>
 
-              <button
+              <LoadingButton loadingLabel="Saving…"
                 type="button"
                 onClick={saveStatus}
-                disabled={savingStatus}
                 className="rounded-lg bg-brand-primary px-4 py-2.5 text-sm font-semibold text-brand-dark transition hover:bg-brand-primary disabled:opacity-60"
               >
-                {savingStatus ? "Saving…" : "Save changes"}
-              </button>
+                Save changes
+              </LoadingButton>
             </div>
           </div>
 
@@ -550,14 +552,14 @@ export default function AdminOrderDetailPage() {
               </div>
 
               <div className="shipping-label-actions mt-5 flex flex-wrap gap-3">
-                <button
+                <LoadingButton loadingLabel="Processing…"
                   type="button"
                   onClick={downloadShippingLabel}
                   className="inline-flex items-center gap-2 rounded-lg border border-brand-secondary bg-brand-soft px-4 py-2 text-sm font-semibold text-brand-dark hover:bg-brand-soft"
                 >
                   <Download className="h-4 w-4" />
                   Download
-                </button>
+                </LoadingButton>
                 <button
                   type="button"
                   onClick={printShippingLabel}

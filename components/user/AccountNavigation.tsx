@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import Link from "@/components/ui/LoadingLink";
 import { usePathname, useSearchParams } from "next/navigation";
 export const accountDestinations = [
   ["overview","Overview","/account"], ["orders","Orders","/account?tab=orders"], ["wants","My Wants","/account?tab=wants"],

@@ -1,0 +1,10 @@
+:where(.control) { position: relative; }
+.content { display: contents; }
+.hidden { visibility: hidden; }
+.indicator { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 0.4em; padding-inline: 0.35em; overflow: hidden; pointer-events: none; border-radius: inherit; }
+.label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.spinner { display: inline-block; flex: 0 0 auto; width: 1em; height: 1em; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: loading-control-spin 700ms linear infinite; }
+.control[data-loading="true"] { cursor: wait; }
+.srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+@keyframes loading-control-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; border-style: dotted; } }

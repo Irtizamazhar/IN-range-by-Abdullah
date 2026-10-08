@@ -1,10 +1,14 @@
 "use client";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { LoadingButton } from "@/components/ui/LoadingButton";
+import { LoadingForm } from "@/components/ui/LoadingForm";
 
 import Image from "next/image";
-import { useEffect, useRef, useState, type ClipboardEvent, type FormEvent } from "react";
-import Link from "next/link";
+import { useCallback, useEffect, useRef, useState, type ClipboardEvent, type FormEvent } from "react";
+import Link from "@/components/ui/LoadingLink";
 import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
+import { useLoadingRouter as useRouter } from "@/hooks/useLoadingRouter";
 import toast from "react-hot-toast";
 import {
   imageFilesFromClipboard,
@@ -30,35 +34,28 @@ export default function EditNewArrivalPage() {
   const router = useRouter();
   const id = String(params?.id || "");
 
+  const [loadError, setLoadError] = useState(false);
   const [item, setItem] = useState<Item | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
-  const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const submitLockRef = useRef(false);
 
-  useEffect(() => {
+  const loadItem = useCallback(async () => {
     if (!id) return;
-    fetch(`/api/new-arrivals/${id}`)
-      .then((r) => r.json())
-      .then((p) =>
-        setItem({
-          ...(p as Item),
-          images: Array.isArray((p as Item).images)
-            ? (p as Item).images
-            : (p as Item).image
-              ? [(p as Item).image]
-              : [],
-        })
-      );
-    fetch("/api/categories")
-      .then((r) => r.json())
-      .then((list: Array<{ name?: string }>) => {
-        const names = (list || [])
-          .map((x) => String(x.name || "").trim())
-          .filter(Boolean);
-        setCategories(names);
-      });
+    try {
+      const [response, categoryResponse] = await Promise.all([fetch(`/api/new-arrivals/${id}`), fetch("/api/categories")]);
+      const product = await response.json();
+      if (!response.ok || !product.id) throw new Error(product.error || "Could not load new arrival");
+      setItem({ ...product, images: Array.isArray(product.images) ? product.images : product.image ? [product.image] : [] });
+      if (!categoryResponse.ok) throw new Error("Could not load categories");
+      const list = await categoryResponse.json() as Array<{ name?: string }>;
+      setCategories(list.map(category => String(category.name || "").trim()).filter(Boolean));
+    } catch (error) {
+      setLoadError(true);
+      toast.error(error instanceof Error ? error.message : "Could not load new arrival");
+    }
   }, [id]);
+  useEffect(() => { void loadItem(); }, [loadItem]);
 
   async function onUpload(files: File[]) {
     setUploading(true);
@@ -113,7 +110,6 @@ export default function EditNewArrivalPage() {
         : [];
 
     submitLockRef.current = true;
-    setSaving(true);
     try {
       const res = await fetch(`/api/new-arrivals/${item.id}`, {
         method: "PUT",
@@ -130,10 +126,9 @@ export default function EditNewArrivalPage() {
         return;
       }
       toast.success("Updated");
-      router.push("/admin/new-arrivals");
+      await router.push("/admin/new-arrivals");
     } finally {
       submitLockRef.current = false;
-      setSaving(false);
     }
   }
 
@@ -150,7 +145,7 @@ export default function EditNewArrivalPage() {
     void uploadAndAppendFiles(allowed);
   }
 
-  if (!item) return <div className="p-8 text-darkText/50">Loading…</div>;
+  if (!item) return loadError ? <div className="p-8"><p role="alert">New arrival could not be loaded.</p><LoadingButton loadingLabel="Loading..." onClick={loadItem} className="mt-4 rounded-xl bg-brand-primary px-4 py-2 font-bold text-brand-dark">Try again</LoadingButton></div> : <PageSkeleton rows={3} />;
 
   return (
     <div className="max-w-2xl p-6 md:p-8">
@@ -159,7 +154,7 @@ export default function EditNewArrivalPage() {
       </Link>
       <h1 className="mb-6 mt-4 text-2xl font-bold text-darkText">Edit New Arrival</h1>
 
-      <form onSubmit={onSubmit} className="space-y-4 rounded-card border border-borderGray bg-white p-6 shadow-card">
+      <LoadingForm onSubmit={onSubmit} className="space-y-4 rounded-card border border-borderGray bg-white p-6 shadow-card">
         <input
           className="w-full rounded-xl border border-borderGray px-4 py-2"
           value={item.name}
@@ -300,14 +295,14 @@ export default function EditNewArrivalPage() {
           In stock status: <span className="font-semibold">{item.stock > 0 ? "Yes" : "No"}</span>
         </p>
 
-        <button
+        <LoadingButton loadingLabel="Saving…"
           type="submit"
-          disabled={saving || uploading}
+          disabled={uploading}
           className="rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-semibold text-brand-dark disabled:opacity-50"
         >
-          {saving ? "Saving…" : "Save"}
-        </button>
-      </form>
+          {"Save"}
+        </LoadingButton>
+      </LoadingForm>
     </div>
   );
 }

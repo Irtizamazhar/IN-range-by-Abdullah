@@ -1,7 +1,9 @@
 "use client";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/LoadingLink";
 import { useParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { CancelModal } from "@/components/orders/CancelModal";
@@ -20,11 +22,10 @@ export default function AdminVendorOrderDetailPage() {
   const [loading, setLoading] = useState(true);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [trackEdit, setTrackEdit] = useState("");
-  const [trackBusy, setTrackBusy] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (showLoading = true) => {
     if (!id) return;
-    setLoading(true);
+    if (showLoading) setLoading(true);
     try {
       const r = await fetch(
         `/api/orders/admin/shop/${encodeURIComponent(id)}`,
@@ -54,8 +55,7 @@ export default function AdminVendorOrderDetailPage() {
 
   async function saveTrackingOnly() {
     if (!id) return;
-    setTrackBusy(true);
-    try {
+
       const r = await fetch(
         `/api/orders/admin/shop/${encodeURIComponent(id)}/status`,
         {
@@ -74,10 +74,8 @@ export default function AdminVendorOrderDetailPage() {
         return;
       }
       toast.success("Tracking saved");
-      await load();
-    } finally {
-      setTrackBusy(false);
-    }
+      await load(false);
+
   }
 
   async function forceCancel(reason: string) {
@@ -93,15 +91,14 @@ export default function AdminVendorOrderDetailPage() {
     );
     const j = (await r.json()) as { error?: string };
     if (!r.ok) {
-      toast.error(j.error || "Cancel failed");
-      throw new Error(j.error);
+      throw new Error(j.error || "Cancel failed. Please try again.");
     }
     toast.success("Order cancelled");
-    await load();
+    await load(false);
   }
 
   if (loading) {
-    return <div className="p-8 text-darkText/60">Loading…</div>;
+    return <PageSkeleton rows={3} />;
   }
   if (!data) {
     return (
@@ -152,7 +149,7 @@ export default function AdminVendorOrderDetailPage() {
             <AdminShopStatusDropdown
               currentStatus={data.orderStatus as ShopOrderStatusPill}
               statusUrl={`/api/orders/admin/shop/${encodeURIComponent(id)}/status`}
-              onSuccess={() => void load()}
+              onSuccess={() => load(false)}
             />
             {data.orderStatus === "shipped" ? (
               <div>
@@ -166,14 +163,13 @@ export default function AdminVendorOrderDetailPage() {
                     className="min-w-[200px] flex-1 rounded-lg border border-borderGray px-3 py-2 text-sm"
                     placeholder="Courier tracking number"
                   />
-                  <button
+                  <LoadingButton loadingLabel="Saving…"
                     type="button"
-                    disabled={trackBusy}
-                    onClick={() => void saveTrackingOnly()}
+                    onClick={() => saveTrackingOnly()}
                     className="rounded-xl border border-borderGray bg-white px-4 py-2 text-sm font-bold disabled:opacity-50"
                   >
                     Save tracking
-                  </button>
+                  </LoadingButton>
                 </div>
               </div>
             ) : null}

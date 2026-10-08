@@ -1,19 +1,16 @@
 "use client";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import Image from "next/image";
-import Link from "next/link";
-import { memo } from "react";
-import {
-  ArrowRight,
-  Heart,
-  ShoppingCart,
-  Star,
-} from "lucide-react";
+import Link from "@/components/ui/LoadingLink";
+import { memo, type CSSProperties } from "react";
+import { ArrowRight, Heart, ShoppingCart, Star } from "lucide-react";
 
 import { useCart } from "@/context/CartContext";
 import { useSavedProducts } from "@/lib/use-saved-products";
 import { formatPKR } from "@/lib/format";
 import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
+import styles from "./ProductCard.module.css";
 
 export type ProductCardData = {
   _id: string;
@@ -28,32 +25,42 @@ export type ProductCardData = {
   reviewCount?: number;
   stock?: number;
   inStock?: boolean;
+  available?: boolean;
   variants?: string[];
 };
 
-function ProductRating({
-  rating,
-  count,
-}: {
-  rating: number;
-  count: number;
-}) {
-  const safeRating = Math.max(
-    0,
-    Math.min(5, Number(rating) || 0)
-  );
+function ProductRating({ rating, count }: { rating: number; count: number }) {
+  const safeRating = Math.max(0, Math.min(5, Number(rating) || 0));
+  const label = `${safeRating.toFixed(1)} out of 5 from ${count.toLocaleString("en-PK")} reviews`;
 
   return (
-    <div className="flex items-center gap-1">
-      <Star className="h-3 w-3 fill-[#F5A623] text-[#F5A623]" />
-
-      <span className="text-[12px] font-bold text-brand-dark">
-        {safeRating.toFixed(1)}
+    <span className={styles.rating} aria-label={label} title={label}>
+      <Star aria-hidden="true" className={styles.star} />
+      <span>{safeRating.toFixed(1)}</span>
+      <span className={styles.reviewCount}>
+        ({count.toLocaleString("en-PK", { notation: "compact", maximumFractionDigits: 1 })})
       </span>
+    </span>
+  );
+}
 
-      <span className="text-[11px] font-medium text-black/40">
-        ({count})
+function MarketplaceRating({ rating, count }: { rating: number; count: number }) {
+  const safeRating = count > 0 ? Math.max(0, Math.min(5, Number(rating) || 0)) : 0;
+  const label = `${safeRating.toFixed(1)} out of 5 from ${count.toLocaleString("en-PK")} reviews`;
+
+  return (
+    <div className={styles.marketplaceRating} role="img" aria-label={label} title={label}>
+      <span className={styles.ratingStars} aria-hidden="true">
+        {Array.from({ length: 5 }, (_, index) => (
+          <span key={index} className={styles.ratingStar}>
+            <Star className={styles.emptyStar} />
+            <span className={styles.starFill} style={{ width: `${Math.max(0, Math.min(1, safeRating - index)) * 100}%` }}>
+              <Star />
+            </span>
+          </span>
+        ))}
       </span>
+      <span className={styles.marketplaceReviewCount} aria-hidden="true">({count.toLocaleString("en-PK")})</span>
     </div>
   );
 }
@@ -61,296 +68,180 @@ function ProductRating({
 export const ProductCard = memo(function ProductCard({
   product,
   ribbon,
+  variant: presentation = "marketplace",
 }: {
   product: ProductCardData;
   ribbon?: string;
   badgePosition?: "left" | "right";
+  variant?: "default" | "featured" | "compact" | "marketplace";
 }) {
   const { items, addItem } = useCart();
   const { ids, toggle, saving, loading: savedLoading } = useSavedProducts();
   const saved = ids.includes(String(product._id));
+  const image = product.images?.[0];
+  const available = product.available !== false;
+  const detailHref = product.href || `/products/${product._id}`;
+  const hasDiscount = Boolean(product.originalPrice && product.originalPrice > product.price);
+  const discountPercent = product.discountPercent ??
+    (hasDiscount && product.originalPrice ? Math.round((1 - product.price / product.originalPrice) * 100) : 0);
+  const reviews = Math.max(0, Math.floor(Number(product.reviewCount) || 0));
+  const rating = Number(product.ratingAvg) || 0;
+  const marketplace = presentation === "marketplace";
+  const marketplaceDiscount = Math.max(0, Math.round(Number(discountPercent) || 0));
+  const marketplaceDiscountLabel = marketplaceDiscount > 0 ? `-${marketplaceDiscount}%` : "0%";
 
-  const image =
-    product.images?.[0];
-
-  const imageLocal =
-    Boolean(
-      image &&
-        shouldUnoptimizeImageSrc(
-          image
-        )
-    );
-
-  const detailHref =
-    product.href ||
-    `/products/${product._id}`;
-
-  const hasDiscount =
-    Boolean(
-      product.originalPrice &&
-        product.originalPrice >
-          product.price
-    );
-
-  const discountPercent =
-    product.discountPercent ??
-    (hasDiscount &&
-    product.originalPrice
-      ? Math.round(
-          (1 -
-            product.price /
-              product.originalPrice) *
-            100
-        )
-      : 0);
-
-  const reviews = Math.max(
-    0,
-    Math.floor(
-      Number(
-        product.reviewCount
-      ) || 0
-    )
+  const stockKnown = typeof product.stock === "number" && Number.isFinite(product.stock);
+  const maxStock = stockKnown ? Math.max(0, Number(product.stock)) : 99;
+  const canAdd = available && (stockKnown ? maxStock > 0 : product.inStock !== false);
+  const availability = !canAdd ? "out" : stockKnown || product.inStock === true ? "in" : "unknown";
+  const stockLabel = availability === "out" ? "Out of stock" : availability === "in" ? "In stock" : "Check availability";
+  const variants = Array.isArray(product.variants) ? product.variants.filter(Boolean) : [];
+  const requiresVariant = variants.length > 1;
+  const variant = variants.length === 1 ? variants[0] : undefined;
+  const existing = items.find((line) =>
+    line.productId === String(product._id) && (line.variant || "") === (variant || "")
+  );
+  const currentPrice = formatPKR(product.price);
+  // Keep the full amount readable in narrow cards, including the catalog's largest prices.
+  const priceStyle = { "--price-fit": Math.max(8, currentPrice.length * 0.62) } as CSSProperties;
+  const imageContent = image ? (
+    <Image
+      src={image}
+      alt={product.name}
+      fill
+      unoptimized={shouldUnoptimizeImageSrc(image)}
+      sizes={presentation === "featured"
+        ? "(max-width: 359px) 90vw, (max-width: 639px) 46vw, 280px"
+        : presentation === "compact"
+        ? "(max-width: 639px) 47vw, (max-width: 1023px) 31vw, (max-width: 1279px) 21vw, 240px"
+        : marketplace
+        ? "(max-width: 639px) 47vw, (max-width: 1023px) 31vw, 17vw"
+        : "(max-width: 639px) calc(100vw - 40px), (max-width: 1023px) calc((100vw - 64px) / 2), 280px"}
+      className={styles.image}
+    />
+  ) : (
+    <span className={styles.imagePlaceholder}>Product image</span>
   );
 
-  const rating =
-    Number(
-      product.ratingAvg
-    ) || 0;
-
-  const stockKnown =
-    typeof product.stock ===
-    "number";
-
-  const maxStock =
-    stockKnown
-      ? Math.max(
-          0,
-          Number(
-            product.stock
-          )
-        )
-      : 99;
-
-  const canAdd =
-    stockKnown
-      ? maxStock > 0
-      : product.inStock !==
-        false;
-
-  const variants =
-    Array.isArray(
-      product.variants
-    )
-      ? product.variants.filter(
-          Boolean
-        )
-      : [];
-
-  const requiresVariant =
-    variants.length > 1;
-
-  const variant =
-    variants.length === 1
-      ? variants[0]
-      : undefined;
-
-  const existing =
-    items.find(
-      (line) =>
-        line.productId ===
-          String(
-            product._id
-          ) &&
-        (line.variant || "") ===
-          (variant || "")
-    );
-
   function handleAddToCart() {
-    if (
-      !canAdd ||
-      requiresVariant
-    ) {
-      return;
-    }
-
-    const currentQuantity =
-      existing?.quantity ||
-      0;
-
+    if (!canAdd || requiresVariant) return;
     addItem({
-      productId:
-        String(
-          product._id
-        ),
-
-      name:
-        product.name,
-
-      price:
-        product.price,
-
-      image:
-        image ||
-        "/logo.png",
-
+      productId: String(product._id),
+      name: product.name,
+      price: product.price,
+      image: image || "/branding/joro-logo.png",
       maxStock,
-
       variant,
-
-      quantity:
-        Math.min(
-          currentQuantity +
-            1,
-          maxStock
-        ),
+      quantity: Math.min((existing?.quantity || 0) + 1, maxStock),
     });
   }
 
-  async function saveProduct() { await toggle(String(product._id)); }
-
   return (
-    <article className="group flex min-w-0 flex-col overflow-hidden rounded-[16px] border border-black/[0.06] bg-white shadow-xs transition-all duration-250 hover:-translate-y-0.5 hover:border-brand-primary/40 hover:shadow-cardHover">
-      {/* IMAGE */}
-
-      <Link
-        href={detailHref}
-        className="block"
-      >
-        <div className="relative h-[145px] overflow-hidden bg-gradient-to-b from-[#FBFCF9] to-[#F5F7F1] sm:h-[155px]">
-          <button
-            type="button"
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              void saveProduct();
-            }}
-            disabled={saving || savedLoading}
-            aria-label={saved ? `Remove ${product.name} from saved products` : `Save ${product.name}`}
-            aria-pressed={saved}
-            className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/95 text-brand-link shadow-sm transition hover:bg-brand-soft disabled:opacity-60"
+    <article
+      data-product-card={product._id}
+      data-variant={presentation}
+      className={`${styles.card}${presentation === "default" ? "" : ` ${styles[presentation]}`}`}
+    >
+      <div data-product-image className={styles.media}>
+        {available ? (
+          <Link
+            href={detailHref}
+            className={styles.imageLink}
+            aria-label={`View ${product.name}`}
+            aria-hidden={marketplace || undefined}
+            tabIndex={marketplace ? -1 : undefined}
           >
-            <Heart className={`h-4 w-4 ${saved ? "fill-current" : ""}`} />
-          </button>
-          {image ? (
-            <Image
-              src={image}
-              alt={
-                product.name
-              }
-              fill
-              unoptimized={
-                imageLocal
-              }
-              sizes="(max-width:640px) 50vw, (max-width:1024px) 33vw, 18vw"
-              className="object-contain p-3 transition-transform duration-300 group-hover:scale-[1.05]"
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center text-[12px] font-semibold text-black/30">
-              Product image
-            </div>
-          )}
-
-          {discountPercent >
-          0 ? (
-            <span className="absolute left-2 top-2 rounded-full bg-brand-primary px-2 py-1 text-[11px] font-black text-brand-dark">
-              -
-              {
-                discountPercent
-              }
-              %
-            </span>
-          ) : ribbon ? (
-            <span className="absolute left-2 top-2 rounded-full bg-brand-primary px-2 py-1 text-[11px] font-black text-brand-dark">
-              {ribbon}
-            </span>
-          ) : null}
-        </div>
-      </Link>
-
-      {/* CONTENT */}
-
-      <div className="flex flex-1 flex-col p-3">
-        <p className="truncate text-[11px] font-bold uppercase tracking-[0.07em] text-brand-link/70">
-          {product.category ||
-            "Marketplace"}
-        </p>
-
-        <Link
-          href={
-            detailHref
-          }
+            {imageContent}
+            <span data-product-view className={styles.viewHint} aria-hidden="true">View</span>
+          </Link>
+        ) : (
+          <div className={styles.imageLink}>{imageContent}</div>
+        )}
+        {marketplace || discountPercent > 0 ? (
+          <span className={styles.badge}>{marketplace ? marketplaceDiscountLabel : `-${discountPercent}%`}</span>
+        ) : ribbon ? (
+          <span className={styles.badge}>{ribbon}</span>
+        ) : null}
+        <LoadingButton
+          type="button"
+          onClick={() => toggle(String(product._id))}
+          loading={saving} loadingLabel="Saving…" disabled={savedLoading}
+          aria-label={saved ? `Remove ${product.name} from saved products` : `Save ${product.name}`}
+          title={saved ? "Remove from wishlist" : "Add to wishlist"}
+          aria-pressed={saved}
+          className={styles.wishlist}
         >
-          <h3 className="mt-1 line-clamp-2 min-h-[40px] text-[14px] font-bold leading-5 text-brand-dark transition group-hover:text-brand-link">
-            {
-              product.name
-            }
-          </h3>
-        </Link>
+          <Heart aria-hidden="true" className={saved ? styles.savedHeart : undefined} />
+        </LoadingButton>
+      </div>
 
-        <div className="mt-1.5 flex flex-wrap items-baseline gap-1.5">
-          <span className="text-[16px] font-black leading-none text-brand-dark">
-            {formatPKR(
-              product.price
-            )}
+      <div className={styles.body}>
+        {!marketplace && (
+          <div data-product-category className={styles.categoryRow}>
+            <p className={styles.category} title={product.category || "Marketplace"}>
+              {product.category || "Marketplace"}
+            </p>
+            {reviews > 0 && <ProductRating rating={rating} count={reviews} />}
+          </div>
+        )}
+        {available ? (
+          <Link
+            href={detailHref}
+            className={styles.titleLink}
+            title={product.name}
+            aria-label={marketplace ? `${product.name}, ${stockLabel}` : undefined}
+          >
+            <h3 data-product-title className={styles.title}>{product.name}</h3>
+          </Link>
+        ) : (
+          <div className={styles.titleLink} title={product.name}>
+            <h3 data-product-title className={styles.title}>{product.name}</h3>
+          </div>
+        )}
+
+        <div data-product-price className={styles.price}>
+          <span data-product-current-price className={styles.currentPrice} style={priceStyle}>
+            {currentPrice}
           </span>
-
-          {hasDiscount &&
-          product.originalPrice ? (
-            <span className="text-[11px] font-medium text-black/35 line-through">
-              {formatPKR(
-                product.originalPrice
-              )}
-            </span>
-          ) : null}
-        </div>
-
-        <div className="mt-1.5 min-h-[16px]">
-          {reviews > 0 ? (
-            <ProductRating
-              rating={
-                rating
-              }
-              count={
-                reviews
-              }
-            />
+          {marketplace ? (
+            <span className={styles.marketplaceDiscount}>{marketplaceDiscountLabel}</span>
           ) : (
-            <span className="text-[11px] font-medium text-black/40">
-              Available now
+            <span data-product-original-price className={styles.originalPrice} aria-hidden={!hasDiscount}>
+              {hasDiscount && product.originalPrice ? <del>{formatPKR(product.originalPrice)}</del> : null}
             </span>
           )}
         </div>
 
-        <div className="mt-2">
-          {requiresVariant ? (
-            <Link
-              href={
-                detailHref
-              }
-              className="flex h-9 w-full items-center justify-center gap-1 rounded-lg bg-brand-dark text-[12px] font-bold text-white transition hover:bg-brand-primary hover:text-brand-dark"
-            >
-              View Options
+        {!available ? (
+          <p className={styles.unavailable}>Currently unavailable.</p>
+        ) : marketplace ? (
+          <MarketplaceRating rating={rating} count={reviews} />
+        ) : (
+          <p data-product-stock data-availability={availability} className={styles.stock}>
+            <span aria-hidden="true" className={styles.stockDot} />
+            {stockLabel}
+          </p>
+        )}
 
-              <ArrowRight className="h-3 w-3" />
+        <div data-product-actions className={styles.actions}>
+          {!available ? (
+            <LoadingButton
+              type="button"
+              loading={saving} loadingLabel="Saving…" disabled={savedLoading || !saved}
+              onClick={() => toggle(String(product._id))}
+              className={styles.action}
+            >
+              Unsave product
+            </LoadingButton>
+          ) : requiresVariant && canAdd ? (
+            <Link href={detailHref} className={styles.action}>
+              View Options <ArrowRight aria-hidden="true" />
             </Link>
           ) : (
-            <button
-              type="button"
-              disabled={
-                !canAdd
-              }
-              onClick={
-                handleAddToCart
-              }
-              className="flex h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-brand-primary text-[12px] font-bold text-brand-dark transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-black/[0.06] disabled:text-black/30"
-            >
-              <ShoppingCart className="h-3.5 w-3.5" />
-
-              {canAdd
-                ? "Add to Cart"
-                : "Out of Stock"}
-            </button>
+            <LoadingButton type="button" disabled={!canAdd} onClick={handleAddToCart} className={styles.action}>
+              <ShoppingCart aria-hidden="true" />
+              {canAdd ? "Add to Cart" : "Out of Stock"}
+            </LoadingButton>
           )}
         </div>
       </div>
@@ -358,27 +249,35 @@ export const ProductCard = memo(function ProductCard({
   );
 });
 
-/* =========================================================
-   COMPACT SKELETON
-========================================================= */
-
-export function ProductCardSkeleton() {
+export function ProductCardSkeleton({ variant = "marketplace" }: { variant?: "default" | "featured" | "compact" | "marketplace" } = {}) {
+  const marketplace = variant === "marketplace";
   return (
-    <div className="overflow-hidden rounded-[16px] border border-black/[0.055] bg-white shadow-xs">
-      <div className="h-[145px] animate-pulse bg-[#F3F4F0] sm:h-[155px]" />
-
-      <div className="space-y-2 p-3">
-        <div className="h-2 w-1/3 animate-pulse rounded-full bg-black/[0.06]" />
-
-        <div className="h-3 animate-pulse rounded-full bg-black/[0.07]" />
-
-        <div className="h-3 w-4/5 animate-pulse rounded-full bg-black/[0.07]" />
-
-        <div className="h-4 w-1/2 animate-pulse rounded-full bg-black/[0.08]" />
-
-        <div className="h-3 w-1/3 animate-pulse rounded-full bg-black/[0.05]" />
-
-        <div className="h-8 animate-pulse rounded-lg bg-black/[0.06]" />
+    <div
+      className={`${styles.card} ${styles.skeleton}${variant === "default" ? "" : ` ${styles[variant]}`}`}
+      data-variant={variant}
+      aria-hidden="true"
+    >
+      <div className={styles.media}>
+        <div className={`${styles.imageLink} ${styles.placeholder}`} />
+      </div>
+      <div className={styles.body}>
+        {!marketplace && <div className={styles.categoryRow}><span className={styles.placeholder} style={{ width: "42%", height: 12 }} /></div>}
+        <div className={styles.titleLink}>
+          <div className={styles.title}>
+            <span className={styles.placeholder} style={{ width: "92%", height: 12, marginTop: 4 }} />
+            <span className={styles.placeholder} style={{ width: "70%", height: 12, marginTop: 8 }} />
+          </div>
+        </div>
+        <div className={styles.price}>
+          <div className={styles.currentPrice}><span className={styles.placeholder} style={{ width: marketplace ? "100%" : "55%", height: marketplace ? 16 : 21 }} /></div>
+          {marketplace
+            ? <span className={styles.placeholder} style={{ width: "20%", height: 12 }} />
+            : <div className={styles.originalPrice}><span className={styles.placeholder} style={{ width: "35%", height: 12, marginTop: 4 }} /></div>}
+        </div>
+        {marketplace
+          ? <div className={styles.marketplaceRating}><span className={styles.placeholder} style={{ width: "65%", height: 12 }} /></div>
+          : <div className={styles.stock}><span className={styles.placeholder} style={{ width: "40%", height: 11 }} /></div>}
+        <div className={styles.actions}><span className={`${styles.action} ${styles.placeholder}`} /></div>
       </div>
     </div>
   );

@@ -1,5 +1,8 @@
 import Image from "next/image";
 import { LogoMark } from "@/components/user/LogoMark";
+import parcelStack from "@/public/branding/auth/auth-parcel-stack.png";
+import mobileMarketplace from "@/public/branding/auth/auth-mobile-marketplace.png";
+import shoppingBag from "@/public/branding/auth/auth-shopping-bag.png";
 
 /** Extremely subtle Minar-e-Pakistan silhouette -- decorative line art, not a flag/poster element. */
 function MinarSilhouette({ className }: { className?: string }) {
@@ -67,7 +70,7 @@ export function AuthBrandPanel({ className = "" }: { className?: string }) {
         {/* Marketplace artwork composition */}
         <div className="joro-auth-art relative mt-4 min-h-[180px] flex-1">
           <Image
-            src="/branding/auth/auth-parcel-stack.png"
+            src={parcelStack}
             alt=""
             width={1254}
             height={1254}
@@ -83,7 +86,7 @@ export function AuthBrandPanel({ className = "" }: { className?: string }) {
             className="pointer-events-none absolute bottom-0 left-0 z-10 w-[40%] max-w-[260px] object-contain drop-shadow-[0_16px_22px_rgba(0,0,0,0.4)]"
           />
           <Image
-            src="/branding/auth/auth-mobile-marketplace.png"
+            src={mobileMarketplace}
             alt="JORO marketplace app on a phone"
             width={1254}
             height={1254}
@@ -91,7 +94,7 @@ export function AuthBrandPanel({ className = "" }: { className?: string }) {
             className="pointer-events-none absolute bottom-0 left-1/2 z-20 w-[46%] max-w-[300px] -translate-x-1/2 object-contain drop-shadow-[0_18px_26px_rgba(0,0,0,0.45)]"
           />
           <Image
-            src="/branding/auth/auth-shopping-bag.png"
+            src={shoppingBag}
             alt="JORO branded shopping bag"
             width={1254}
             height={1254}

@@ -1,28 +1,15 @@
-import Link from "next/link";
+import { PostWantButton } from "@/components/user/PostWantButton";
+import Link from "@/components/ui/LoadingLink";
 import { VendorSpotlight } from "@/components/user/MarketplaceHomePanels";
 import type { Prisma } from "@prisma/client";
 import {bestSellers} from "@/lib/best-sellers";
 
-import {
-  ArrowRight,
-  Flame,
-  MapPin,
-  Megaphone,
-  Sparkles,
-  Store,
-  TrendingUp,
-} from "lucide-react";
+import { ArrowRight, Megaphone } from "lucide-react";
 
-import {
-  ProductCard,
-  ProductCardSkeleton,
-  type ProductCardData,
-} from "@/components/user/ProductCard";
+import type { ProductCardData } from "@/components/user/ProductCard";
+import { HomeMarketplace } from "@/components/user/HomeMarketplace";
 
-import {
-  HeroSection,
-  type HeroProductPreview,
-} from "@/components/user/HeroSection";
+import { HeroSection } from "@/components/user/HeroSection";
 
 import { CategoryAutoScroll } from "@/components/user/CategoryAutoScroll";
 import { NewArrivalsSection } from "@/components/user/NewArrivalsSection";
@@ -94,7 +81,7 @@ async function getNewArrivalsInitial(): Promise<{
 /* =========================================================
    BEST SELLERS
 
-   Used for hero / homepage picks.
+   Used for homepage picks.
 ========================================================= */
 
 async function getBestSellersInitial(): Promise<{
@@ -276,7 +263,7 @@ export default async function HomePage() {
         expiresAt: { gt: new Date() },
       },
       orderBy: [{ offers: { _count: "desc" } }, { createdAt: "desc" }],
-      take: 3,
+      take: 4,
       select: {
         id: true,
         title: true,
@@ -321,45 +308,13 @@ export default async function HomePage() {
       ? bestSellers.initial
       : featured;
 
-  /* -------------------------------------------------------
-     Products for Hero Floating Cards
-  ------------------------------------------------------- */
-
-  const heroProducts:
-    HeroProductPreview[] =
-    homepageProducts
-      .slice(0, 3)
-      .map((product) => ({
-        name:
-          product.name,
-
-        price:
-          product.price,
-
-        image:
-          product.images?.[0] ??
-          null,
-
-        href:
-          product.href ||
-          `/products/${product._id}`,
-
-        discountPercent:
-          product.discountPercent,
-      }));
-
   return (
     <>
       {/* =====================================================
           HERO SECTION
       ====================================================== */}
 
-      <HeroSection
-        sellNowHref="/sell"
-        heroProducts={
-          heroProducts
-        }
-      />
+      <HeroSection sellNowHref="/sell" />
 
       <main className="bg-brand-background">
         {/* =================================================
@@ -397,12 +352,12 @@ export default async function HomePage() {
               {/* RIGHT */}
 
               <div className="flex flex-1 flex-col gap-2 sm:flex-row">
-                <Link
-                  href="/wants/new"
+                <PostWantButton
+
                   className="flex h-11 flex-1 items-center rounded-xl border border-black/[0.07] bg-white/75 px-4 text-[12px] font-medium text-black/45 transition hover:border-brand-primary/50"
                 >
                   e.g. Gaming laptop under 250k
-                </Link>
+                </PostWantButton>
 
                 <Link
                   href="/wants"
@@ -460,258 +415,11 @@ export default async function HomePage() {
             MAIN MARKETPLACE AREA
         ================================================= */}
 
-        <section className="mx-auto max-w-7xl px-4 pb-7 sm:px-6">
-          <div className="grid items-start gap-3 xl:grid-cols-[minmax(0,1fr)_285px_210px]">
-            {/* =============================================
-                FEATURED PRODUCTS
-            ============================================== */}
-
-            <div className="rounded-[22px] border border-black/[0.055] bg-white p-4 shadow-panel">
-              {/* HEADER */}
-
-              <div className="mb-3.5 flex items-center justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-brand-soft text-brand-link">
-                      <Sparkles className="h-3.5 w-3.5" />
-                    </span>
-
-                    <p className="text-[12px] font-black uppercase tracking-[0.1em] text-brand-link">
-                      Popular Picks
-                    </p>
-                  </div>
-
-                  <h2 className="mt-1.5 text-[20px] font-black tracking-[-0.035em] text-brand-dark">
-                    Featured Products
-                  </h2>
-                </div>
-
-                <Link
-                  href="/products"
-                  className="inline-flex h-8 shrink-0 items-center gap-1 rounded-lg bg-brand-background px-3 text-[12px] font-bold text-brand-link transition hover:bg-brand-soft"
-                >
-                  View All
-
-                  <ArrowRight className="h-3 w-3" />
-                </Link>
-              </div>
-
-              {/* PRODUCT GRID */}
-
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
-                {homepageProducts.length ===
-                0
-                  ? Array.from({
-                      length: 4,
-                    }).map(
-                      (_, index) => (
-                        <ProductCardSkeleton
-                          key={index}
-                        />
-                      )
-                    )
-                  : homepageProducts
-                      .slice(0, 4)
-                      .map(
-                        (product) => (
-                          <ProductCard
-                            key={
-                              product._id
-                            }
-                            product={
-                              product
-                            }
-                          />
-                        )
-                      )}
-              </div>
-            </div>
-
-            {/* =============================================
-                TRENDING WANTS
-            ============================================== */}
-
-            <div
-              id="trending-wants"
-              className="rounded-[22px] border border-black/[0.055] bg-white p-4 shadow-panel"
-            >
-              {/* HEADER */}
-
-              <div className="mb-3">
-                <p className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.1em] text-brand-link">
-                  <TrendingUp className="h-3.5 w-3.5" />
-
-                  What People Need
-                </p>
-
-                <h2 className="mt-1 flex items-center gap-1 text-[20px] font-black tracking-[-0.035em] text-brand-dark">
-                  Trending Wants
-
-                  <Flame className="h-4 w-4 fill-[#FF7900] text-[#FF7900]" />
-                </h2>
-              </div>
-
-              {/* WANT CARDS */}
-
-              <div className="space-y-2">
-                {wantExamples.length ? wantExamples.map(
-                  (want) => (
-                    <Link
-                      key={want.id}
-                      href={`/wants/${want.id}`}
-                      className="rounded-[14px] border border-black/[0.055] bg-[#FBFCF8] p-2.5 transition duration-200 hover:border-brand-primary/40 hover:bg-brand-soft/20"
-                    >
-                      <div className="flex items-start gap-2">
-                        {/* ICON */}
-
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand-link">
-                          <Flame className="h-3.5 w-3.5" />
-                        </span>
-
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-start justify-between gap-1.5">
-                            <p className="line-clamp-2 text-[12px] font-bold leading-[17px] text-brand-dark">
-                              {
-                                want.title
-                              }
-                            </p>
-
-                            <span className="shrink-0 rounded-full bg-brand-primary px-2 py-0.5 text-[9px] font-black text-brand-dark">
-                              Open
-                            </span>
-                          </div>
-
-                          {/* META */}
-
-                          <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[10px] font-medium text-black/40">
-                            <span className="inline-flex items-center gap-1">
-                              <MapPin className="h-2.5 w-2.5" />
-
-                              {
-                                want.city
-                              }
-                            </span>
-
-                            <span>
-                              •
-                            </span>
-
-                            <span>
-                              {
-                                want._count.offers
-                              }{" "}
-                              offers
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  )
-                ) : (
-                  <div className="rounded-[14px] border border-dashed border-black/[0.08] bg-[#FBFCF8] p-5 text-center text-[11px] font-semibold text-black/40">
-                    No moderated Wants yet.
-                  </div>
-                )}
-              </div>
-
-              {/* CTA */}
-
-              <Link
-                href="/wants"
-                className="mt-3 flex h-9 w-full items-center justify-center gap-1 rounded-lg bg-brand-soft text-[11px] font-bold text-brand-link transition hover:bg-brand-primary hover:text-brand-dark"
-              >
-                Explore Wants
-
-                <ArrowRight className="h-3 w-3" />
-              </Link>
-            </div>
-
-            {/* =============================================
-                TOP STORES
-            ============================================== */}
-
-            <div
-              id="stores"
-              className="rounded-[22px] bg-[#123D27] p-4 text-white shadow-panel"
-            >
-              {/* HEADER */}
-
-              <div className="mb-3">
-                <p className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.1em] text-brand-primary">
-                  <Store className="h-3.5 w-3.5" />
-
-                  Seller Network
-                </p>
-
-                <h2 className="mt-1 text-[20px] font-black tracking-[-0.035em]">
-                  Top Vendors
-                </h2>
-
-                <p className="mt-0.5 text-[10px] font-medium text-white/50">
-                  Discover trusted stores selected on JORO
-                </p>
-              </div>
-
-              {/* STORE LIST */}
-
-              <div className="space-y-2">
-                {storeExamples.length ? storeExamples.map(
-                  (store) => (
-                    <Link
-                      key={store.id}
-                      href={`/stores/${store.storeSlug || store.id}`}
-                      className="flex items-center gap-2 rounded-[13px] border border-white/[0.08] bg-white/[0.055] p-2.5 transition duration-200 hover:border-brand-primary/30 hover:bg-white/[0.09]"
-                    >
-                      {/* STORE INITIALS */}
-
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-primary text-[10px] font-black text-brand-dark">
-                        {
-                          store.shopName.slice(0, 2).toUpperCase()
-                        }
-                      </span>
-
-                      {/* STORE INFO */}
-
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[11px] font-bold text-white">
-                          {
-                            store.shopName
-                          }
-                        </p>
-
-                        <p className="mt-0.5 truncate text-[9px] font-medium text-white/50">
-                          {store.primaryCategory}
-                          {store.rating.reviewCount ? ` · ★ ${store.rating.ratingAvg.toFixed(1)} (${store.rating.reviewCount})` : " · No rating yet"}
-                        </p>
-                      </div>
-
-                      {/* TOP VENDOR BADGE */}
-
-                      <span className="shrink-0 rounded-full bg-brand-primary/15 px-1.5 py-0.5 text-[8px] font-black uppercase text-brand-primary">
-                        {store.label || "Top Vendor"}
-                      </span>
-                    </Link>
-                  )
-                ) : (
-                  <div className="rounded-[13px] border border-white/[0.08] p-4 text-center text-[10px] font-semibold text-white/50">
-                    No Top Vendors selected yet.
-                  </div>
-                )}
-              </div>
-
-              {/* SELLER CTA */}
-
-              <Link
-                href="/stores"
-                className="mt-3 flex h-9 items-center justify-center gap-1 rounded-lg bg-brand-primary text-[11px] font-black text-brand-dark transition hover:bg-brand-hover"
-              >
-                Browse Stores
-
-                <ArrowRight className="h-3 w-3" />
-              </Link>
-            </div>
-          </div>
-        </section>
+        <HomeMarketplace
+          products={homepageProducts}
+          wants={wantExamples}
+          stores={storeExamples}
+        />
         <VendorSpotlight />
 
         {/* =================================================

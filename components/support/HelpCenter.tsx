@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/LoadingLink";
 import type { Faq } from "@/lib/support-faq";
 
 export function HelpCenterBody({

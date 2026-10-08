@@ -1,5 +1,8 @@
-﻿"use client";
-import Link from "next/link";
+"use client";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { LoadingButton } from "@/components/ui/LoadingButton";
+import { LoadingForm } from "@/components/ui/LoadingForm";
+import Link from "@/components/ui/LoadingLink";
 import { useCallback, useEffect, useState } from "react";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
 import { useCart, type CartLine } from "@/context/CartContext";
@@ -15,7 +18,6 @@ export default function RoomPage({ params }: { params: { id: string } }) {
   const [memberId, setMemberId] = useState("");
   const [owner, setOwner] = useState(false);
   const [message, setMessage] = useState("Loading...");
-  const [busy, setBusy] = useState(false);
   const [invite, setInvite] = useState("");
   const [editing, setEditing] = useState<string | null>(null);
   const load = useCallback(async () => {
@@ -26,7 +28,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
   }, [params.id]);
   useEffect(() => { if (isCustomer) void load().then(() => setMessage("")).catch(e => setMessage(e.message)); }, [isCustomer, load]);
   async function action(body: Record<string, unknown>) {
-    setBusy(true); setMessage("");
+    setMessage("");
     try {
       const response = await fetch(`/api/together/${params.id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const data = await response.json();
@@ -40,21 +42,22 @@ export default function RoomPage({ params }: { params: { id: string } }) {
       } else { await load(); setMessage(data.alreadyShared ? "This product and variant are already shared." : "Saved."); }
       return true;
     } catch (error) { setMessage(error instanceof Error ? error.message : "Could not update room."); return false; }
-    finally { setBusy(false); }
   }
-  if (!isCustomer) return <main className="p-6"><button onClick={() => openAuthModal("login")} className={`${button} bg-brand-primary`}>Sign in to open this private room</button></main>;
+  if (!isCustomer) return <main className="p-6"><LoadingButton onClick={() => openAuthModal("login")} className={`${button} bg-brand-primary`}>Sign in to open this private room</LoadingButton></main>;
   return <main className="mx-auto w-full max-w-6xl min-w-0 px-4 py-8">
     <p className="text-sm font-semibold text-brand-primary">Family Cart / Shop Together</p>
     <h1 className="mt-2 break-words text-3xl font-bold">{room?.name || "Family Cart"}</h1>
     <p role="status" className="my-3 break-words">{message}</p>
+    {!room && message === "Loading..." && <PageSkeleton label="Loading shopping room…" variant="cards" rows={3} />}
+    {!room && message !== "Loading..." && <LoadingButton onClick={async () => { try { await load(); setMessage(""); } catch (error) { setMessage(error instanceof Error ? error.message : "Could not load room."); } }} className={button}>Try again</LoadingButton>}
     {room && <>
       <p className="text-sm text-gray-600">{room.members.length} members · {room.archived ? "Archived room" : "Each member shops and checks out independently."}</p>
       <div className="my-4 flex flex-wrap gap-2">
-        {owner && !room.archived && <button disabled={busy} onClick={() => void action({ action: "invite" })} className={`${button} bg-brand-primary`}>Copy Invite Link</button>}
+        {owner && !room.archived && <LoadingButton onClick={() => action({ action: "invite" })} className={`${button} bg-brand-primary`}>Copy Invite Link</LoadingButton>}
         <Link href="/products" className={button}>Browse products</Link><Link href="/cart" className={button}>My cart</Link>
       </div>
       {invite && <label className="mb-5 block text-sm">Invite link (expires in 7 days)<input aria-label="Invitation link" readOnly value={invite} onFocus={e => e.currentTarget.select()} className="mt-1 w-full min-w-0 rounded-xl border p-2" /></label>}
-      {!room.archived && <form className="joro-form mb-6 grid min-w-0 gap-3 rounded-2xl border bg-white p-4 sm:grid-cols-2 lg:grid-cols-4" onSubmit={async e => {
+      {!room.archived && <LoadingForm className="joro-form mb-6 grid min-w-0 gap-3 rounded-2xl border bg-white p-4 sm:grid-cols-2 lg:grid-cols-4" onSubmit={async e => {
         e.preventDefault(); const form = e.currentTarget; const f = new FormData(form);
         const raw = String(f.get("product")).trim(); const productId = raw.split("/products/").pop()?.split(/[?#]/)[0] || raw;
         if (await action({ action: "add", productId, quantity: Number(f.get("quantity")), variant: String(f.get("variant")).trim() })) form.reset();
@@ -62,8 +65,8 @@ export default function RoomPage({ params }: { params: { id: string } }) {
         <label className="min-w-0">Product link or ID<input name="product" required className="w-full min-w-0" /></label>
         <label className="min-w-0">Variant (if applicable)<input name="variant" maxLength={200} className="w-full min-w-0" /></label>
         <label className="min-w-0">Quantity<input name="quantity" type="number" min={1} max={1000} defaultValue={1} required className="w-full min-w-0" /></label>
-        <button disabled={busy} className={`${button} self-end bg-brand-primary`}>Add product</button>
-      </form>}
+        <LoadingButton className={`${button} self-end bg-brand-primary`}>Add product</LoadingButton>
+      </LoadingForm>}
       <div className="grid min-w-0 gap-5 md:grid-cols-2">{room.items.map(item => {
         const p = item.product; const vp = p.vendorPublication;
         const validVariant = Array.isArray(p.variants) && (p.variants.length ? p.variants.includes(item.variant) : !item.variant);
@@ -77,26 +80,26 @@ export default function RoomPage({ params }: { params: { id: string } }) {
           <div className="my-4 flex flex-wrap gap-2">
             <Link href={`/products/${item.productId}`} className={button}>View Product</Link>
             {vp?.vendor.storeSlug && <Link href={`/stores/${vp.vendor.storeSlug}`} className={button}>View Store</Link>}
-            <button disabled={busy || !available || room.archived} className={`${button} bg-brand-primary`} onClick={() => {
+            <LoadingButton disabled={!available || room.archived} className={`${button} bg-brand-primary`} onClick={() => {
               const existing = cartItems.find(line => line.productId === item.productId && (line.variant || "") === item.variant);
-              void action({ action: "cart", itemIds: [item.id], quantity: (existing?.quantity || 0) + item.quantity });
-            }}>Add to My Cart</button>
-            {owner && !room.archived && <button disabled={busy} className={button} onClick={() => void action({ action: "remove", itemId: item.id })}>Remove product</button>}
+              return action({ action: "cart", itemIds: [item.id], quantity: (existing?.quantity || 0) + item.quantity });
+            }}>Add to My Cart</LoadingButton>
+            {owner && !room.archived && <LoadingButton className={button} onClick={() => action({ action: "remove", itemId: item.id })}>Remove product</LoadingButton>}
           </div>
           <h3 className="mb-2 font-semibold">Comments</h3>
           {!item.comments.length && <p className="mb-3 text-sm text-gray-500">No comments yet. Start the conversation.</p>}
           <ol className="max-h-96 space-y-3 overflow-y-auto">{item.comments.map(comment => <li key={comment.id} className="min-w-0 rounded-xl bg-gray-50 p-3 text-sm">
             <strong className="break-words">{comment.member.customer.name}</strong><time dateTime={comment.createdAt} className="mt-1 block text-xs text-gray-500">{new Date(comment.createdAt).toLocaleString("en-PK")}</time>
-            {editing === comment.id ? <form className="joro-form mt-2" onSubmit={async e => { e.preventDefault(); if (await action({ action: "editComment", itemId: item.id, commentId: comment.id, text: new FormData(e.currentTarget).get("text") })) setEditing(null); }}>
+            {editing === comment.id ? <LoadingForm className="joro-form mt-2" onSubmit={async e => { e.preventDefault(); if (await action({ action: "editComment", itemId: item.id, commentId: comment.id, text: new FormData(e.currentTarget).get("text") })) setEditing(null); }}>
               <textarea aria-label="Edit comment" name="text" defaultValue={comment.text} maxLength={2000} required className="w-full min-w-0" />
-              <div className="mt-2 flex gap-2"><button disabled={busy} className={button}>Save comment</button><button type="button" onClick={() => setEditing(null)} className={button}>Cancel</button></div>
-            </form> : <p className="mt-2 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{comment.text}</p>}
-            {comment.memberId === memberId && !room.archived && editing !== comment.id && <div className="mt-2 flex gap-4"><button disabled={busy} onClick={() => setEditing(comment.id)} className="underline">Edit</button><button disabled={busy} onClick={() => void action({ action: "deleteComment", itemId: item.id, commentId: comment.id })} className="underline">Delete</button></div>}
+              <div className="mt-2 flex gap-2"><LoadingButton className={button}>Save comment</LoadingButton><LoadingButton type="button" onClick={() => setEditing(null)} className={button}>Cancel</LoadingButton></div>
+            </LoadingForm> : <p className="mt-2 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{comment.text}</p>}
+            {comment.memberId === memberId && !room.archived && editing !== comment.id && <div className="mt-2 flex gap-4"><LoadingButton onClick={() => setEditing(comment.id)} className="underline">Edit</LoadingButton><LoadingButton onClick={() => action({ action: "deleteComment", itemId: item.id, commentId: comment.id })} className="underline">Delete</LoadingButton></div>}
           </li>)}</ol>
-          {!room.archived && <form className="joro-form mt-4" onSubmit={async e => { e.preventDefault(); const form = e.currentTarget; if (await action({ action: "comment", itemId: item.id, text: new FormData(form).get("text") })) form.reset(); }}>
+          {!room.archived && <LoadingForm className="joro-form mt-4" onSubmit={async e => { e.preventDefault(); const form = e.currentTarget; if (await action({ action: "comment", itemId: item.id, text: new FormData(form).get("text") })) form.reset(); }}>
             <label className="block">Add a comment<textarea name="text" maxLength={2000} required rows={2} className="w-full min-w-0" /></label>
-            <button disabled={busy} className={`${button} mt-2 bg-brand-soft`}>Post comment</button>
-          </form>}
+            <LoadingButton className={`${button} mt-2 bg-brand-soft`}>Post comment</LoadingButton>
+          </LoadingForm>}
         </article>;
       })}</div>
       {!room.items.length && <p className="rounded-xl bg-brand-soft p-5">No shared products yet. Add a product link to get started.</p>}

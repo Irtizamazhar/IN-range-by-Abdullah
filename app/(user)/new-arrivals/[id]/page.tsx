@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { LoadingButton } from "@/components/ui/LoadingButton";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { useParams } from "next/navigation";
 import {
   ProductDetailClient,
@@ -80,21 +82,22 @@ export default function NewArrivalDetailPage() {
   const [item, setItem] = useState<NewArrival | null>(null);
   const [related, setRelated] = useState<ProductCardData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  useEffect(() => {
+  const load = useCallback(async (signal?: AbortSignal) => {
     if (!id) return;
-    let cancelled = false;
-    (async () => {
+    setLoading(true);
       try {
         const [detailRes, listRes] = await Promise.all([
-          fetch(`/api/new-arrivals/${id}`),
-          fetch(`/api/new-arrivals`),
+          fetch(`/api/new-arrivals/${id}`, { signal }),
+          fetch(`/api/new-arrivals`, { signal }),
         ]);
-        if (!detailRes.ok) throw new Error("Not found");
+        if (!detailRes.ok) throw new Error(detailRes.status === 404 ? "Product not found." : "Could not load the product. Please try again.");
         const data = (await detailRes.json()) as NewArrival;
         const listJson = listRes.ok ? await listRes.json() : { products: [] };
         const products = (listJson.products || []) as StoreRow[];
-        if (cancelled) return;
+        if (signal?.aborted) return;
+        setError("");
         setItem({
           ...data,
           images: normalizeImages(data),
@@ -105,32 +108,26 @@ export default function NewArrivalDetailPage() {
             .slice(0, 8)
             .map(rowToCard)
         );
-      } catch {
-        if (!cancelled) {
+      } catch (error) {
+        if (!signal?.aborted) {
           setItem(null);
           setRelated([]);
+          setError(error instanceof Error ? error.message : "Could not load the product. Please try again.");
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!signal?.aborted) setLoading(false);
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
   }, [id]);
 
-  if (loading) {
-    return (
-      <div className="mx-auto max-w-7xl px-4 py-8 text-darkText/60">
-        Loading…
-      </div>
-    );
-  }
+  useEffect(() => { const controller = new AbortController(); void load(controller.signal); return () => controller.abort(); }, [load]);
+
+  if (loading && !item && !error) return <PageSkeleton label="Loading product…" />;
 
   if (!item) {
     return (
       <div className="mx-auto max-w-7xl px-4 py-8 text-darkText/60">
-        Product not found.
+        <p role="alert">{error || "Product not found."}</p>
+        <LoadingButton onClick={() => load()} className="mt-4 rounded-xl bg-brand-primary px-4 py-2 font-semibold">Try again</LoadingButton>
       </div>
     );
   }

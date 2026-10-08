@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import Image from "next/image";
 import { MapPin, PackageCheck, ShieldCheck, Star, FileText, Globe2 } from "lucide-react";
 import { ProductCard, type ProductCardData } from "@/components/user/ProductCard";
+import gridStyles from "@/components/user/ProductGrid.module.css";
 import { StoreFollowButton } from "@/components/user/StoreFollowButton";
 import { CopyStoreLink } from "@/components/user/CopyStoreLink";
 import { catalogProductSelect } from "@/lib/catalog-product-select";
@@ -180,7 +181,7 @@ export default async function StorePage({ params }: { params: { slug: string } }
           <span className="text-sm font-semibold text-darkText/50">{cards.length} items</span>
         </div>
         {cards.length ? (
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <div className={gridStyles.grid}>
             {cards.map((product) => <ProductCard key={product._id} product={product} />)}
           </div>
         ) : (

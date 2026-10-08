@@ -1,0 +1,55 @@
+.headline {
+  position: relative;
+  container-type: inline-size;
+}
+
+.words {
+  position: relative;
+  display: block;
+  /* Keep the existing size unless a narrow column needs a smaller two-line fit. */
+  font-size: min(1em, 11cqw);
+  line-height: 0.98;
+  white-space: nowrap;
+}
+
+.word {
+  position: relative;
+  display: inline-block;
+  visibility: hidden;
+  white-space: nowrap;
+}
+
+.word[data-visible="true"] {
+  visibility: visible;
+}
+
+.cursor {
+  position: absolute;
+  top: 0.1em;
+  left: calc(100% + 0.07em);
+  width: 0.24em;
+  height: 0.8em;
+  visibility: hidden;
+  pointer-events: none;
+  background: rgb(var(--brand-primary-rgb));
+  animation: blink-cursor 1s step-end infinite;
+}
+
+.cursor[data-active="true"] {
+  visibility: visible;
+}
+
+.initialCursor {
+  left: 0;
+}
+
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cursor {
+    animation: none !important;
+  }
+}

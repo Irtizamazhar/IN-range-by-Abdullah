@@ -1,9 +1,11 @@
 import { z } from "zod";
 import { isReservedOrInvalidSlug } from "@/lib/store-slug";
 import { sanitizePlainText } from "@/lib/security/sanitize";
+import { PAKISTAN_MOBILE_ERROR } from "@/lib/pakistan-phone";
+import { optionalPakistanMobileSchema, pakistanMobileSchema } from "@/lib/pakistan-phone-schema";
 
 const text = (max: number) => z.string().trim().max(max).transform(value => sanitizePlainText(value, max));
-const phone = text(20).pipe(z.string().regex(/^03\d{2}-\d{7}$/, "Use 03XX-XXXXXXX."));
+const phone = pakistanMobileSchema;
 const required = (max: number, min = 1) => text(max).pipe(z.string().min(min, "This field is required."));
 const bool = z.preprocess(v => v === "true" ? true : v === "false" ? false : v, z.boolean());
 const step = z.coerce.number().int().min(0).max(4);
@@ -20,7 +22,7 @@ export const vendorSetupFields = {
   returnSameAsPickup: bool.default(true), returnAddress: text(2000).optional().default(""),
   returnCity: text(120).optional().default(""), returnProvince: text(120).optional().default(""),
   returnPostalCode: text(20).optional().default(""), returnContactName: text(200).optional().default(""),
-  returnPhone: text(20).optional().default(""), bankName: required(120), accountTitle: required(200),
+  returnPhone: optionalPakistanMobileSchema, bankName: required(120), accountTitle: required(200),
   accountNumber: required(40, 5), iban: text(34).refine(v => !v || /^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/.test(v), "Enter an IBAN without spaces, or leave it blank.").optional().default(""),
   step: step.default(0), declarationAccepted: bool.default(false),
 };
@@ -33,7 +35,7 @@ export const vendorSetupSchema = z.object(vendorSetupFields).superRefine((input,
   if (!input.returnSameAsPickup) {
     for (const key of ["returnAddress","returnCity","returnProvince","returnContactName"] as const)
       if (!input[key]) issue(key, "Complete the separate return address.");
-    if (!/^03\d{2}-\d{7}$/.test(input.returnPhone)) issue("returnPhone", "Use 03XX-XXXXXXX.");
+    if (!input.returnPhone) issue("returnPhone", PAKISTAN_MOBILE_ERROR);
   }
   if (!input.declarationAccepted) issue("declarationAccepted", "Confirm that your details are accurate before submitting.");
 });

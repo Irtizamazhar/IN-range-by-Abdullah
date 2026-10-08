@@ -1,4 +1,5 @@
 "use client";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown } from "lucide-react";
@@ -77,7 +78,7 @@ export function ProductFilterSelect({
     <div ref={root} className="relative" onBlur={(event) => {
       if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOpen(false);
     }}>
-      <button
+      <LoadingButton
         ref={trigger}
         id={id}
         type="button"
@@ -87,11 +88,14 @@ export function ProductFilterSelect({
         aria-haspopup="listbox"
         aria-controls={`${id}-options`}
         aria-activedescendant={open ? `${id}-option-${active}` : undefined}
-        className="flex w-full items-center justify-between gap-2 rounded-xl border border-borderGray bg-white px-3 py-2.5 text-left text-sm text-darkText shadow-sm focus-visible:border-primaryBlue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primaryBlue/20"
+        className="flex min-h-11 w-full min-w-0 items-center justify-between gap-2 rounded-xl border border-borderGray bg-[#FAFBF7] px-3 py-2.5 text-left text-[13px] font-medium text-brand-green transition-colors hover:border-brand-green/40 hover:bg-white focus-visible:border-brand-green focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-green/20 motion-reduce:transition-none"
         onClick={() => open ? setOpen(false) : show()}
         onKeyDown={(event) => {
           if (event.key === "Tab") { setOpen(false); return; }
-          if (event.key === "Escape") { event.preventDefault(); setOpen(false); return; }
+          if (event.key === "Escape") {
+            if (open) { event.preventDefault(); event.stopPropagation(); setOpen(false); }
+            return;
+          }
           if (["Enter", " ", "ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
             event.preventDefault();
             if (!open) { show(); return; }
@@ -111,15 +115,15 @@ export function ProductFilterSelect({
         }}
       >
         <span className="truncate">{options[selected]?.label}</span>
-        <ChevronDown aria-hidden="true" className={`h-4 w-4 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
-      </button>
+        <ChevronDown aria-hidden="true" className={`h-4 w-4 shrink-0 text-brand-muted transition-transform motion-reduce:transition-none ${open ? "rotate-180" : ""}`} />
+      </LoadingButton>
       {open && (
         <ul
           ref={list}
           id={`${id}-options`}
           role="listbox"
           aria-labelledby={`${id}-label`}
-          className="absolute left-0 top-full z-30 mt-2 w-full overflow-y-auto overscroll-contain rounded-xl border border-borderGray bg-white p-1 shadow-lg"
+          className="absolute left-0 top-full z-30 mt-2 w-full overflow-y-auto overscroll-contain rounded-xl border border-borderGray bg-white p-1.5 shadow-panel"
           style={{ maxHeight }}
         >
           {options.map((option, index) => (
@@ -128,7 +132,7 @@ export function ProductFilterSelect({
               id={`${id}-option-${index}`}
               role="option"
               aria-selected={option.value === value}
-              className={`flex cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-sm text-darkText ${index === active ? "bg-brand-soft" : "hover:bg-brand-soft"}`}
+              className={`flex min-h-11 cursor-pointer items-center justify-between gap-2 rounded-lg px-2.5 py-2.5 text-[13px] font-medium text-brand-green ${index === active ? "bg-brand-soft" : "hover:bg-brand-soft"}`}
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => choose(index)}
             >

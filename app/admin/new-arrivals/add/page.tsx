@@ -1,10 +1,12 @@
 "use client";
+import { LoadingButton } from "@/components/ui/LoadingButton";
+import { LoadingForm } from "@/components/ui/LoadingForm";
 
 import Image from "next/image";
 import { useEffect, useRef, useState, type ClipboardEvent, type FormEvent } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/LoadingLink";
 import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
-import { useRouter } from "next/navigation";
+import { useLoadingRouter as useRouter } from "@/hooks/useLoadingRouter";
 import toast from "react-hot-toast";
 import {
   imageFilesFromClipboard,
@@ -22,7 +24,6 @@ export default function AddNewArrivalPage() {
   const [description, setDescription] = useState("");
   const [isFeatured, setIsFeatured] = useState(false);
   const [stock, setStock] = useState("0");
-  const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const submitLockRef = useRef(false);
 
@@ -88,7 +89,6 @@ export default function AddNewArrivalPage() {
       return;
     }
     submitLockRef.current = true;
-    setSaving(true);
     try {
       const res = await fetch("/api/new-arrivals", {
         method: "POST",
@@ -111,10 +111,9 @@ export default function AddNewArrivalPage() {
         return;
       }
       toast.success("New arrival added");
-      router.push("/admin/new-arrivals");
+      await router.push("/admin/new-arrivals");
     } finally {
       submitLockRef.current = false;
-      setSaving(false);
     }
   }
 
@@ -138,7 +137,7 @@ export default function AddNewArrivalPage() {
       </Link>
       <h1 className="mb-6 mt-4 text-2xl font-bold text-darkText">Add New Arrival</h1>
 
-      <form onSubmit={onSubmit} className="space-y-4 rounded-card border border-borderGray bg-white p-6 shadow-card">
+      <LoadingForm onSubmit={onSubmit} className="space-y-4 rounded-card border border-borderGray bg-white p-6 shadow-card">
         <input
           className="w-full rounded-xl border border-borderGray px-4 py-2"
           placeholder="Product Name"
@@ -263,14 +262,14 @@ export default function AddNewArrivalPage() {
           />
           Is Featured?
         </label>
-        <button
+        <LoadingButton loadingLabel="Saving…"
           type="submit"
-          disabled={saving || uploading}
+          disabled={uploading}
           className="rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-semibold text-brand-dark disabled:opacity-50"
         >
-          {saving ? "Saving…" : "Submit"}
-        </button>
-      </form>
+          {"Submit"}
+        </LoadingButton>
+      </LoadingForm>
     </div>
   );
 }

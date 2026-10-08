@@ -1,4 +1,5 @@
 "use client";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import { useEffect, useState } from "react";
 
@@ -23,17 +24,18 @@ export function ScrollToTopButton() {
 
   return (
     <div
-      className={`group fixed z-[9999] bottom-[calc(1.25rem+3.5rem+0.75rem)] right-5 transition-all duration-300 md:bottom-[calc(30px+3.5rem+12px)] md:right-[30px] ${
+      className={`group fixed z-[9999] bottom-[calc(64px+12px+44px+12px+env(safe-area-inset-bottom))] right-3 transition-all duration-300 md:bottom-20 ${
         visible ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-3 opacity-0"
       }`}
     >
      
 
-      <button
+      <LoadingButton
         type="button"
         onClick={onClick}
         aria-label="Scroll to top"
-        className={`group relative flex h-11 w-11 md:h-[50px] md:w-[50px] items-center justify-center rounded-full border-2 border-white/30 bg-gradient-to-br from-[#0EA5E9] to-[#0284C7] text-white shadow-[0_4px_20px_rgba(14,165,233,0.5)] transition-all duration-300 hover:from-[#F59E0B] hover:to-[#F59E0B] hover:shadow-[0_4px_22px_rgba(245,158,11,0.55)] ${
+        data-floating-action="scroll-top"
+        className={`group relative flex h-11 w-11 items-center justify-center rounded-full border-2 border-white/30 bg-gradient-to-br from-[#0EA5E9] to-[#0284C7] text-white shadow-[0_4px_20px_rgba(14,165,233,0.5)] transition-all duration-300 hover:from-[#F59E0B] hover:to-[#F59E0B] hover:shadow-[0_4px_22px_rgba(245,158,11,0.55)] ${
           pressed ? "scale-90" : "scale-100"
         }`}
       >
@@ -49,7 +51,7 @@ export function ScrollToTopButton() {
             fill="currentColor"
           />
         </svg>
-      </button>
+      </LoadingButton>
     </div>
   );
 }

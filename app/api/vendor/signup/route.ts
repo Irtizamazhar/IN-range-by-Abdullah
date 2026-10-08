@@ -4,9 +4,10 @@ import { prisma } from "@/lib/prisma";
 import { api, ApiError, sameOrigin } from "@/lib/marketplace-api";
 import { sanitizePlainText } from "@/lib/security/sanitize";
 import { consumeOrReject, createRegisterRateLimiter } from "@/lib/security/rate-limit";
+import { pakistanMobileSchema } from "@/lib/pakistan-phone-schema";
 export const dynamic = "force-dynamic";
 const limiter = createRegisterRateLimiter();
-const input = z.object({ phone: z.string().regex(/^03\d{2}-\d{7}$/, "Use 03XX-XXXXXXX."), name: z.string().max(200).transform(v=>sanitizePlainText(v,200)).pipe(z.string().min(1)), email: z.string().trim().email().max(255).transform(v=>v.toLowerCase()), password: z.string().min(8).max(72).refine(v=>Buffer.byteLength(v,"utf8")<=72,"Password is too long") });
+const input = z.object({ phone: pakistanMobileSchema, name: z.string().max(200).transform(v=>sanitizePlainText(v,200)).pipe(z.string().min(1)), email: z.string().trim().email().max(255).transform(v=>v.toLowerCase()), password: z.string().min(8).max(72).refine(v=>Buffer.byteLength(v,"utf8")<=72,"Password is too long") });
 export async function POST(request: Request) { return api(async()=>{
   sameOrigin(request);
   const limited = await consumeOrReject(limiter, `vendor-basic:${request.headers.get("x-forwarded-for")?.split(",")[0] || "local"}`);
