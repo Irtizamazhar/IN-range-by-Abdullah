@@ -1,0 +1,49 @@
+/* JORO logo: predictable, unanimated dimensions avoid overlap with top strip. */
+.root {
+  display: inline-flex;
+  width: 164px;
+  height: 92px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  margin-block: 4px;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 2px rgba(0, 49, 25, 0.08));
+}
+
+.compact {
+  width: 116px;
+  height: 66px;
+}
+
+.inverse {
+  width: 176px;
+  height: 100px;
+}
+
+@media (max-width: 639px) {
+  .root {
+    width: 118px;
+    height: 68px;
+    margin-block: 3px;
+  }
+
+  .compact {
+    width: 106px;
+    height: 60px;
+  }
+
+  .inverse {
+    width: 150px;
+    height: 85px;
+  }
+}

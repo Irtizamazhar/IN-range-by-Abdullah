@@ -6,13 +6,36 @@ import { createPortal } from "react-dom";
 import Image from "next/image";
 import Link from "@/components/ui/LoadingLink";
 import { usePathname, useSearchParams } from "next/navigation";
-import { ArrowRight, ChevronDown, LayoutGrid, Package, X } from "lucide-react";
+import {
+  ArrowRight,
+  ChevronDown,
+  ClipboardList,
+  Flame,
+  Gift,
+  House,
+  LayoutGrid,
+  Package,
+  ShoppingBag,
+  UsersRound,
+  Wrench,
+  X,
+} from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 import styles from "./CategoryNavigation.module.css";
 
 type NavCategory = { id: number; name: string; image?: string | null };
+
+const NAV_ITEMS = [
+  { label: "Shop Products", href: "/products", Icon: ShoppingBag },
+  { label: "Services", href: "/services", Icon: Wrench },
+  { label: "Gifts", href: "/gifts", Icon: Gift },
+  { label: "MyHome", href: "/myhome", Icon: House },
+  { label: "JORO Connect", href: "/joro-connect", Icon: UsersRound },
+  { label: "Requests", href: "/wants/new", Icon: ClipboardList },
+  { label: "Deals", href: "/deals", Icon: Flame },
+] as const;
 
 export function useNavCategories() {
   return useQuery<NavCategory[]>({
@@ -178,26 +201,46 @@ export function CategoryNavigation() {
           Categories
           <ChevronDown aria-hidden="true" className={`${styles.chevron} ${open ? styles.chevronOpen : ""}`} />
         </LoadingButton>
-        <nav aria-label="Category strip" className={styles.strip}>
-          <Link
-            href="/products"
-            aria-current={pathname === "/products" && !selectedCategory ? "page" : undefined}
-            onNavigateComplete={() => setOpen(false)}
-            className={styles.stripLink}
-          >
-            All products
-          </Link>
-          {categories.map((category) => (
-            <Link
-              key={category.id}
-              href={`/products?category=${encodeURIComponent(category.name)}`}
-              onNavigateComplete={() => setOpen(false)}
-              aria-current={selectedCategory === category.name ? "page" : undefined}
-              className={styles.stripLink}
-            >
-              {category.name}
-            </Link>
-          ))}
+        <nav aria-label="JORO marketplace sections" className={styles.strip}>
+          {NAV_ITEMS.map(({ label, href, Icon }) => {
+            const active =
+              href === "/products"
+                ? pathname === "/products" || pathname?.startsWith("/products/")
+                : href === "/joro-connect"
+                  ? pathname === "/joro-connect" || pathname === "/wants" || pathname?.startsWith("/wants/trending")
+                  : href === "/wants/new"
+                    ? pathname === "/wants/new"
+                    : href !== null && pathname === href;
+
+            const contents = (
+              <>
+                <Icon aria-hidden="true" className={styles.stripIcon} strokeWidth={1.9} />
+                <span>{label}</span>
+              </>
+            );
+
+            return href ? (
+              <Link
+                key={label}
+                href={href}
+                onNavigateComplete={() => setOpen(false)}
+                aria-current={active ? "page" : undefined}
+                className={styles.stripLink}
+              >
+                {contents}
+              </Link>
+            ) : (
+              <span
+                key={label}
+                className={`${styles.stripLink} ${styles.plannedLink}`}
+                title={`${label} — coming soon`}
+                aria-label={`${label}, coming soon`}
+              >
+                {contents}
+                <span className={styles.soonDot} aria-hidden="true" />
+              </span>
+            );
+          })}
         </nav>
       </div>
 

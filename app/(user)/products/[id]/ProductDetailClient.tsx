@@ -45,14 +45,6 @@ export type ProductDetailProduct = {
   warrantyMonths?: number | null;
 };
 
-type SiteSettings = {
-  shopName?: string;
-  codCharges?: number;
-};
-
-const DARAZ_ORANGE = "var(--brand-ink)";
-const BUY_NOW_BLUE = "#40C4FF";
-
 function StarRowDaraz({ rating, count }: { rating: number; count: number }) {
   const r = Math.min(5, Math.max(0, Math.round(rating)));
   const avg =
@@ -77,10 +69,12 @@ function StarRowDaraz({ rating, count }: { rating: number; count: number }) {
 export function ProductDetailClient({
   product,
   related,
+  seller,
   reviewsPostField,
 }: {
   product: ProductDetailProduct;
   related: ProductCardData[];
+  seller?: { name: string; storeSlug: string | null } | null;
   /** Default: DB `productId`. Use `{ newArrivalId }` for JSON new-arrival detail. */
   reviewsPostField?: ReviewDisplayField;
 }) {
@@ -92,20 +86,10 @@ export function ProductDetailClient({
   type BuyTierKey = "buy1" | "buy3" | "buy5";
 
   const [quantity, setQuantity] = useState(1);
-  const [settings, setSettings] = useState<SiteSettings | null>(null);
 
   const { addItem, clear } = useCart();
   const { requireCustomer } = useCustomerAuth();
   const router = useRouter();
-
-  useEffect(() => {
-    fetch("/api/settings")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (d && typeof d === "object") setSettings(d as SiteSettings);
-      })
-      .catch(() => {});
-  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -119,7 +103,6 @@ export function ProductDetailClient({
     return () => window.clearTimeout(t);
   }, []);
 
-  const shopName = settings?.shopName?.trim() || "In Range By Abdullah";
   const mainImg = product.images[idx] || product.images[0];
   const mainLocal = mainImg ? isLocalProductImageSrc(mainImg) : false;
   const hasDiscount =
@@ -256,15 +239,15 @@ export function ProductDetailClient({
   const thumbRing = (active: boolean) =>
     active
       ? "ring-2 ring-brand-primary ring-offset-2 ring-offset-white"
-      : "ring-1 ring-[#e8e8e8] hover:ring-[#ccc]";
+      : "ring-1 ring-[#DFEDE5] hover:ring-[#005235]";
 
   return (
-    <div className="min-h-screen bg-brand-background">
-      <div className="mx-auto mt-8 max-w-[1200px] px-4 py-4 sm:mt-10">
+    <div className="min-h-screen bg-[#F7F8F2]">
+      <div className="mx-auto max-w-[1280px] px-4 py-8 sm:px-6">
         <div className="flex flex-col gap-4 lg:grid lg:grid-cols-12 lg:gap-5">
           {/* LEFT — gallery ~40% */}
           <div className="order-1 lg:order-none lg:col-span-5">
-            <div className="overflow-hidden border border-[#f0f0f0] bg-white">
+            <div className="overflow-hidden rounded-2xl border border-[#DFEDE5] bg-white shadow-sm">
               <div className="relative aspect-square w-full bg-white p-1 sm:p-2">
                 {mainImg ? (
                   <Image
@@ -283,7 +266,7 @@ export function ProductDetailClient({
                 )}
               </div>
               {product.images.length > 1 ? (
-                <div className="flex gap-2 overflow-x-auto border-t border-[#f0f0f0] p-2 sm:p-3">
+                <div className="flex gap-2 overflow-x-auto border-t border-[#DFEDE5] p-2 sm:p-3">
                   {product.images.map((im, i) => (
                     <LoadingButton
                       key={i}
@@ -308,15 +291,15 @@ export function ProductDetailClient({
 
           {/* MIDDLE ~35% */}
           <div className="order-2 lg:order-none lg:col-span-4 lg:col-start-6">
-            <div className="border border-[#e8e8e8] bg-white p-4 lg:border-0 lg:bg-transparent lg:p-0">
+            <div className="rounded-2xl border border-[#DFEDE5] bg-white p-5 shadow-sm">
               <nav className="mb-2 text-[12px] text-[#757575]">
-                <Link href="/" className="hover:text-primaryBlue">
+                <Link href="/" className="hover:text-[#005235]">
                   Home
                 </Link>
                 <span className="mx-1.5">/</span>
                 <Link
                   href={`/products?category=${encodeURIComponent(product.category)}`}
-                  className="hover:text-primaryBlue"
+                  className="hover:text-[#005235]"
                 >
                   {product.category}
                 </Link>
@@ -324,7 +307,7 @@ export function ProductDetailClient({
                 <span className="line-clamp-1 text-[#999]">{product.name}</span>
               </nav>
 
-              <h1 className="line-clamp-3 text-lg font-semibold leading-snug text-[#333]">
+              <h1 className="line-clamp-3 text-xl font-black leading-snug text-[#063D2B]">
                 {product.name}
               </h1>
 
@@ -336,16 +319,11 @@ export function ProductDetailClient({
                 <p className="mt-2 text-[13px] text-[#757575]">No ratings yet</p>
               )}
 
-              <p className="mt-3 text-[13px] text-[#757575]">
-                Brand:{" "}
-                <Link href="/" className="text-primaryBlue hover:underline">
-                  {shopName}
-                </Link>
-              </p>
+              <p className="mt-3 text-[13px] text-[#506257]">Sold by {seller?.storeSlug ? <Link href={`/stores/${encodeURIComponent(seller.storeSlug)}`} className="font-bold text-[#005235] hover:underline">{seller.name}</Link> : <span className="font-bold text-[#005235]">{seller?.name || "Marketplace listing"}</span>}</p>
 
               <div className="mt-4 flex flex-wrap items-end gap-2 gap-y-1">
                 <span
-                  className="text-[28px] font-semibold leading-none"
+                  className="text-[30px] font-black leading-none"
                   style={{ color: "var(--brand-link)" }}
                 >
                   {formatPKR(displayPrice)}
@@ -359,7 +337,7 @@ export function ProductDetailClient({
                     ) : null}
                     {discountPct > 0 ? (
                       <span
-                        className="text-[13px] font-medium"
+                        className="rounded-full bg-[#EFFBF4] px-2 py-1 text-[12px] font-bold"
                         style={{ color: "var(--brand-link)" }}
                       >
                         -{discountPct}%
@@ -379,7 +357,7 @@ export function ProductDetailClient({
                 </span>
               )}
 
-              <div className="my-5 border-t border-[#e8e8e8]" />
+              <div className="my-5 border-t border-[#DFEDE5]" />
 
               {product.variants?.length ? (
                 <div className="mb-5">
@@ -394,7 +372,7 @@ export function ProductDetailClient({
                         onClick={() => setVariant(v)}
                         className={`rounded-full border px-3 py-1.5 text-[13px] font-medium transition-colors ${
                           variant === v
-                            ? "border-brand-primary bg-brand-soft text-[#333]"
+                            ? "border-[#005235] bg-[#EFFBF4] text-[#005235]"
                             : "border-[#e0e0e0] bg-white text-[#333] hover:border-[#ccc]"
                         }`}
                       >
@@ -409,7 +387,7 @@ export function ProductDetailClient({
                 <p className="mb-2 text-[13px] font-medium text-[#333]">
                   Quantity
                 </p>
-                <div className="inline-flex items-stretch rounded border border-[#e0e0e0] bg-white">
+                <div className="inline-flex items-stretch rounded-xl border border-[#DFEDE5] bg-white">
                   <LoadingButton
                     type="button"
                     disabled={product.stock < 1 || quantityClamped <= 1}
@@ -460,7 +438,7 @@ export function ProductDetailClient({
                 </p>
               </div>
 
-              <div className="mb-5 mt-2 border border-[#e8e8e8] bg-white p-4 lg:border-0 lg:bg-transparent lg:p-0">
+              <div className="mb-5 mt-2 rounded-xl border border-[#DFEDE5] bg-[#F7FAF7] p-4">
                 <div className="border-b border-[#e0e0e0] pb-2 text-center text-[14px] font-semibold text-[#333] lg:text-left">
                   Buy More Save More
                 </div>
@@ -486,7 +464,7 @@ export function ProductDetailClient({
                           disabled={disabled}
                           onChange={() => setQuantity(t)}
                           className="mt-1 h-4 w-4 shrink-0"
-                          style={{ accentColor: "#3B82F6" }}
+                          style={{ accentColor: "#005235" }}
                         />
                         <div className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                           <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -534,7 +512,7 @@ export function ProductDetailClient({
                 </div>
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row">
                 <LoadingButton
                   type="button"
                   onClick={handleBuyNow}
@@ -543,8 +521,7 @@ export function ProductDetailClient({
                     quantityClamped < 1 ||
                     quantityClamped > product.stock
                   }
-                  className="h-11 flex-1 rounded text-[15px] font-semibold text-white transition-opacity hover:opacity-95 disabled:opacity-45"
-                  style={{ backgroundColor: BUY_NOW_BLUE }}
+                  className="h-11 flex-1 rounded-xl bg-[#B7E33A] text-[15px] font-bold text-[#063D2B] transition hover:brightness-95 disabled:opacity-45"
                 >
                   Buy Now
                 </LoadingButton>
@@ -556,8 +533,7 @@ export function ProductDetailClient({
                     quantityClamped < 1 ||
                     quantityClamped > product.stock
                   }
-                  className="h-11 flex-1 rounded text-[15px] font-semibold text-white transition-opacity hover:opacity-95 disabled:opacity-45"
-                  style={{ backgroundColor: DARAZ_ORANGE }}
+                  className="h-11 flex-1 rounded-xl bg-[#005235] text-[15px] font-bold text-white transition hover:bg-[#063D2B] disabled:opacity-45"
                 >
                   Add to Cart
                 </LoadingButton>
@@ -565,12 +541,12 @@ export function ProductDetailClient({
             </div>
           </div>
 
-          <div className="order-4 col-span-full"><ProductServices line={{ productId: product._id, name: product.name, price: product.price, image: product.images[0] || "", quantity: totalUnits, maxStock: product.stock, variant }} /></div>
+          <div className="order-4 col-span-full"><ProductServices line={{ productId: product._id, name: product.name, price: unitPriceForCart, image: product.images[0] || "", quantity: totalUnits, maxStock: product.stock, variant }} /></div>
           {/* RIGHT ~25% */}
           <div className="order-3 lg:order-none lg:col-span-3 lg:col-start-10">
             <div className="space-y-3">
-              <div className="border border-[#e8e8e8] bg-white p-4">
-                <p className="mb-3 text-[13px] font-semibold text-[#333]">
+              <div className="rounded-2xl border border-[#DFEDE5] bg-white p-4 shadow-sm">
+                <p className="mb-3 text-[13px] font-bold text-[#005235]">
                   Delivery Options
                 </p>
                 <div className="flex gap-2 text-[13px] text-[#333]">
@@ -580,7 +556,7 @@ export function ProductDetailClient({
                       Pakistan{" "}
                       <LoadingButton
                         type="button"
-                        className="text-primaryBlue hover:underline"
+                        className="text-[#005235] hover:underline"
                         onClick={() =>
                           toast("Update delivery location from checkout.")
                         }
@@ -606,8 +582,8 @@ export function ProductDetailClient({
                 </div>
               </div>
 
-              <div className="border border-[#e8e8e8] bg-white p-4">
-                <p className="mb-2 text-[13px] font-semibold text-[#333]">
+              <div className="rounded-2xl border border-[#DFEDE5] bg-white p-4 shadow-sm">
+                <p className="mb-2 text-[13px] font-bold text-[#005235]">
                   Return &amp; Warranty
                 </p>
                 <div className="flex gap-2 text-[12px] text-[#333]">
@@ -620,29 +596,22 @@ export function ProductDetailClient({
                 </div>
               </div>
 
-              <div className="border border-[#e8e8e8] bg-white p-4">
+              <div className="rounded-2xl border border-[#DFEDE5] bg-white p-4 shadow-sm">
                 <p className="text-[12px] text-[#757575]">Sold by</p>
                 <div className="mt-1">
-                  <span className="text-[14px] font-semibold text-[#333]">
-                    {shopName}
-                  </span>
+                  <span className="text-[14px] font-bold text-[#005235]">{seller?.name || "Marketplace listing"}</span>
                 </div>
                 <p className="mt-2 text-[11px] leading-relaxed text-[#757575]">
                   Browse the current catalog for availability, delivery, and warranty details.
                 </p>
-                <Link
-                  href="/products"
-                  className="mt-3 inline-block text-[12px] font-semibold text-primaryBlue hover:underline"
-                >
-                  GO TO STORE
-                </Link>
+                {seller?.storeSlug && <Link href={`/stores/${encodeURIComponent(seller.storeSlug)}`} className="mt-3 inline-block text-[12px] font-bold text-[#005235] hover:underline">Visit store</Link>}
               </div>
             </div>
           </div>
         </div>
 
         {/* Description: text on top, full-width images below (when admin adds details) */}
-        <div className="mt-4 border border-[#e8e8e8] bg-white p-4 sm:p-6">
+        <div className="mt-5 rounded-2xl border border-[#DFEDE5] bg-white p-4 shadow-sm sm:p-6">
           {detailDescription.length > 0 ? (
             <>
               <h2 className="mb-3 border-b border-[#f0f0f0] pb-2 text-[16px] font-semibold leading-snug text-[#333]">
@@ -697,7 +666,7 @@ export function ProductDetailClient({
         </div>
 
         {related.length > 0 ? (
-          <section className="mt-6 border border-[#e8e8e8] bg-white p-4 sm:p-6">
+          <section className="mt-6 rounded-2xl border border-[#DFEDE5] bg-white p-4 shadow-sm sm:p-6">
             <h2 className="mb-4 text-[18px] font-semibold text-[#333]">
               Related Products
             </h2>

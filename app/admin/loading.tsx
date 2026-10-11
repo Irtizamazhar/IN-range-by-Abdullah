@@ -1,2 +1,2 @@
-import { PageSkeleton } from "@/components/ui/PageSkeleton";
-export default function Loading() { return <PageSkeleton label="Loading admin page…" variant="table" />; }
+import { RouteLoading } from "@/components/ui/RouteLoading";
+export default function Loading() { return <RouteLoading routeHint="/admin/dashboard" />; }

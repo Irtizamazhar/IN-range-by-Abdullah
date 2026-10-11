@@ -1,0 +1,59 @@
+.footer { margin-top: auto; padding: 8px 18px; background: #f2fff8; color: #123d27; }
+.panel { max-width: 1280px; margin: auto; overflow: hidden; border: 1px solid #dfede5; border-radius: 27px; background: #fff; box-shadow: 0 14px 32px -27px #006b39a6; }
+.desktop { display: grid; grid-template-columns: 1.35fr 1fr 1fr 1.15fr; gap: 26px; padding: 22px 36px 0; }
+.brand { min-width: 0; }
+.brand p { max-width: 275px; margin: 6px 0 12px; font-size: 13px; line-height: 1.55; }
+.badge { display: inline-flex; align-items: center; gap: 7px; border: 1px solid #d6f1e1; border-radius: 30px; background: #e9fbf1; padding: 7px 11px; font-size: 12px; font-weight: 800; color: #005235; }
+.badge span { display: grid; width: 22px; height: 22px; place-items: center; border-radius: 50%; background: #005235; color: #fff; font-size: 15px; }
+.column { min-width: 0; border-left: 1px solid #dfede5; padding-left: 22px; }
+.column h2 { margin: 2px 0 16px; color: #005235; font-size: 13px; font-weight: 900; letter-spacing: .07em; text-transform: uppercase; }
+.column h2::after { content: ""; display: block; width: 30px; height: 3px; margin-top: 8px; border-radius: 3px; background: #b7e33a; }
+.links { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; font-size: 13px; }
+.links a { display: inline-flex; align-items: center; gap: 11px; color: #123d27; text-decoration: none; transition: color .2s ease; }
+.links a svg { width: 17px; height: 17px; flex: none; color: #005235; stroke-width: 1.8; }
+.links a:hover, .motto a:hover { color: #008b3b; text-decoration: underline; }
+.links a:focus-visible, .contact:focus-visible, .socialIcon:focus-visible, .motto a:focus-visible, .accordion summary:focus-visible { outline: 2px solid #128546; outline-offset: 3px; }
+.payment, .contact { display: flex; align-items: center; gap: 11px; min-height: 55px; border: 1px solid #dfede5; border-radius: 14px; background: #fff; padding: 9px 11px; font-size: 12px; line-height: 1.35; color: #123d27; }
+.payment > svg, .contact > svg:first-child { width: 24px; height: 24px; flex: none; color: #008b3b; }
+.payment span { display: grid; gap: 2px; }
+.payment strong, .contact strong { color: #005235; }
+.payment small { font-size: 11px; color: #4f675a; }
+.contact { margin-top: 10px; text-decoration: none; }
+.contactArrow { width: 16px; height: 16px; margin-left: auto; flex: none; }
+.skyline { position: relative; height: 80px; margin-top: -6px; pointer-events: none; }
+.skylineImage { top: auto !important; bottom: 0 !important; height: 90px !important; object-fit: contain; object-position: center bottom; }
+.bottom { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; min-height: 62px; border-top: 1px solid #dfede5; padding: 9px 36px; font-size: 12px; }
+.socials { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.socialIcon { display: grid; width: 40px; height: 40px; place-items: center; border: 1px solid #e6eee9; border-radius: 50%; background: #fff; box-shadow: 0 4px 11px #004f2414; transition: transform .2s ease, box-shadow .2s ease; }
+.socialIcon:hover:not(.socialDisabled) { transform: translateY(-2px); box-shadow: 0 7px 14px #004f2421; }
+.socialDisabled { cursor: default; }
+.socialImage { width: 28px; height: 28px; object-fit: contain; }
+.motto { display: flex; justify-content: flex-end; align-items: center; gap: 10px; white-space: nowrap; }
+.motto a { color: #123d27; text-decoration: none; }
+.motto b { color: #009a47; }
+.mobile { display: none; }
+@media (max-width: 1050px) and (min-width: 640px) { .desktop { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 25px; } .column:nth-child(3) { border-left: 0; padding-left: 0; } .skyline { height: 65px; } }
+@media (max-width: 639px) {
+  .footer { padding: 16px 10px; }
+  .panel { display: grid; border-radius: 24px; }
+  .desktop { display: none; }
+  .mobile { order: 1; display: grid; gap: 8px; padding: 18px 15px 0; }
+  .mobile .brand { display: grid; justify-items: center; text-align: center; margin-bottom: 6px; }
+  .mobile .brand p { max-width: 310px; margin: 3px 0 10px; font-size: 12px; }
+  .accordion { border: 1px solid #dfede5; border-radius: 12px; background: #fff; }
+  .accordion summary { display: flex; align-items: center; gap: 10px; min-height: 45px; padding: 9px 12px; cursor: pointer; list-style: none; font-size: 13px; font-weight: 800; }
+  .accordion summary::-webkit-details-marker { display: none; }
+  .accordion summary svg { width: 18px; height: 18px; color: #005235; }
+  .accordion summary svg:last-child { margin-left: auto; transition: transform .2s ease; }
+  .accordion[open] summary svg:last-child { transform: rotate(180deg); }
+  .accordion .links { padding: 3px 14px 14px 39px; }
+  .accordion .payment { margin: 0 10px 10px; }
+  .mobile > .contact { margin-top: 2px; }
+  .skyline { order: 3; height: 82px; margin-top: 0; }
+  .skylineImage { top: 0 !important; height: 100% !important; }
+  .bottom { display: contents; }
+  .socials { order: 2; margin-top: 12px; border-top: 1px solid #dfede5; padding: 12px 0 0; }
+  .copyright { order: 4; padding: 8px 14px 0; text-align: center; font-size: 12px; }
+  .motto { order: 5; justify-content: center; padding: 0 14px 16px; font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) { .links a, .socialIcon, .accordion summary svg:last-child { transition: none; } .socialIcon:hover:not(.socialDisabled) { transform: none; } }

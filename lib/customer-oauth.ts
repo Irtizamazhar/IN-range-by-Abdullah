@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { sanitizePlainText } from "@/lib/security/sanitize";
 export type CustomerOAuthProvider = "google";
@@ -48,6 +48,7 @@ export async function resolveCustomerOAuth(input: { provider: CustomerOAuthProvi
           // Non-bcrypt, random, unusable for password login. Password reset remains the recovery path.
           passwordHash: `oauth-only:${randomBytes(32).toString("hex")}`,
           oauthAccounts: { create: key },
+          notifications: { create: { type: "WELCOME_ONBOARDING", title: "Welcome to JORO", message: "Your marketplace journey starts here.", link: "/", idempotencyKey: `customer-welcome:${createHash("sha256").update(email).digest("hex")}` } },
         } });
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     } catch (error) {

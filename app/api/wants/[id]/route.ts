@@ -5,7 +5,7 @@ import { sanitizePlainText } from "@/lib/security/sanitize";
 export const dynamic = "force-dynamic";
 type Context = { params: { id: string } };
 export async function GET(_request: Request, { params }: Context) { return api(async () => {
-  const want = await prisma.want.findUnique({ where: { id: params.id }, select: { id: true, customerId: true, title: true, category: true, city: true, budgetMin: true, budgetMax: true, budgetFlexible: true, quantity: true, description: true, condition: true, photo: true, needBy: true, status: true, expiresAt: true, createdAt: true, _count: { select: { interests: true } } } });
+  const want = await prisma.want.findUnique({ where: { id: params.id }, select: { id: true, customerId: true, title: true, requestType: true, occasion: true, category: true, city: true, budgetMin: true, budgetMax: true, budgetFlexible: true, quantity: true, description: true, condition: true, photo: true, needBy: true, status: true, expiresAt: true, createdAt: true, _count: { select: { interests: true, offers: true } } } });
   if (!want) throw new ApiError(404, "Want not found.");
   let isOwner = false;
   try { const customer = await customerActor(); isOwner = customer.id === want.customerId; } catch { /* anonymous viewer */ }

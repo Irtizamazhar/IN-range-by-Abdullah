@@ -18,6 +18,7 @@ export function catalogProductSelect(
     originalPrice: true,
     discountPercent: true,
     category: true,
+    categoryRecordId: true,
     stock: true,
     warrantyMonths: true,
     variants: true,

@@ -1,27 +1,21 @@
 "use client";
 import { LoadingButton } from "@/components/ui/LoadingButton";
-import { LoadingForm } from "@/components/ui/LoadingForm";
 
 import Image from "next/image";
-import { BrandTagline } from "./BrandTagline";
 import { CategoryNavigation, useNavCategories } from "./CategoryNavigation";
 import { MarketplaceNav } from "./MarketplaceNav";
 import { PostWantButton } from "./PostWantButton";
 import Link from "@/components/ui/LoadingLink";
-import { usePathname,
-  useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useLoadingRouter as useRouter } from "@/hooks/useLoadingRouter";
 import {
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react";
 import {
   Heart,
   Menu,
-  Package,
-  Search,
   ShoppingCart,
   Store,
   User,
@@ -38,20 +32,13 @@ import { LogoMark } from "./LogoMark";
 import { useCart } from "@/context/CartContext";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
 
-import { formatPKR } from "@/lib/format";
+import { SearchBar } from "@/components/SearchBar";
 
 
 /* =========================================================
    TYPES
 ========================================================= */
 
-type SearchSuggestion = {
-  id: string;
-  name: string;
-  category: string;
-  price: number;
-  image: string | null;
-};
 
 /* =========================================================
    SECOND NAV CATEGORIES
@@ -72,10 +59,6 @@ export function Navbar({
   const navCategories = categoryRows.map(category => category.name);
   const pathname = usePathname();
   const router = useRouter();
-  const searchParams = useSearchParams();
-
-  const searchRef =
-    useRef<HTMLDivElement | null>(null);
 
   const profileRef =
     useRef<HTMLDivElement | null>(null);
@@ -99,26 +82,6 @@ export function Navbar({
     setProfileOpen,
   ] = useState(false);
 
-  const [
-    searchQuery,
-    setSearchQuery,
-  ] = useState("");
-
-  const [
-    suggestions,
-    setSuggestions,
-  ] = useState<SearchSuggestion[]>([]);
-
-  const [
-    showDropdown,
-    setShowDropdown,
-  ] = useState(false);
-
-  const [
-    loading,
-    setLoading,
-  ] = useState(false);
-
   /* =======================================================
      CONTEXT
   ======================================================= */
@@ -134,36 +97,6 @@ export function Navbar({
     useSession();
 
   /* =======================================================
-     CURRENT SEARCH QUERY
-  ======================================================= */
-
-  const urlSearchQuery =
-    useMemo(() => {
-      if (
-        !pathname?.startsWith(
-          "/products"
-        )
-      ) {
-        return "";
-      }
-
-      return (
-        searchParams?.get(
-          "search"
-        ) || ""
-      ).trim();
-    }, [
-      pathname,
-      searchParams,
-    ]);
-
-  useEffect(() => {
-    setSearchQuery(
-      urlSearchQuery
-    );
-  }, [urlSearchQuery]);
-
-  /* =======================================================
      CLOSE DROPDOWNS ON OUTSIDE CLICK
   ======================================================= */
 
@@ -171,17 +104,6 @@ export function Navbar({
     function handleOutsideClick(
       event: MouseEvent
     ) {
-      if (
-        searchRef.current &&
-        event.target instanceof
-          Node &&
-        !searchRef.current.contains(
-          event.target
-        )
-      ) {
-        setShowDropdown(false);
-      }
-
       if (
         profileRef.current &&
         event.target instanceof
@@ -218,7 +140,6 @@ export function Navbar({
       if (
         event.key === "Escape"
       ) {
-        setShowDropdown(false);
         setProfileOpen(false);
         setMobileOpen(false);
       }
@@ -236,124 +157,6 @@ export function Navbar({
       );
     };
   }, []);
-
-  /* =======================================================
-     LIVE PRODUCT SEARCH
-  ======================================================= */
-
-  useEffect(() => {
-    const query =
-      searchQuery.trim();
-
-    if (
-      query.length < 2 ||
-      pathname?.startsWith(
-        "/track-order"
-      )
-    ) {
-      setSuggestions([]);
-      setLoading(false);
-
-      return;
-    }
-
-    const controller =
-      new AbortController();
-
-    const timer =
-      window.setTimeout(
-        async () => {
-          setLoading(true);
-          setShowDropdown(true);
-
-          try {
-            const response =
-              await fetch(
-                `/api/products/search?q=${encodeURIComponent(
-                  query
-                )}&limit=6`,
-                {
-                  signal:
-                    controller.signal,
-                }
-              );
-
-            if (!response.ok) {
-              throw new Error(
-                "Search failed"
-              );
-            }
-
-            const data =
-              (await response.json()) as {
-                products?: SearchSuggestion[];
-              };
-
-            if (
-              controller.signal
-                .aborted
-            ) {
-              return;
-            }
-
-            setSuggestions(
-              Array.isArray(
-                data.products
-              )
-                ? data.products
-                : []
-            );
-          } catch {
-            if (
-              !controller.signal
-                .aborted
-            ) {
-              setSuggestions([]);
-            }
-          } finally {
-            if (
-              !controller.signal
-                .aborted
-            ) {
-              setLoading(false);
-            }
-          }
-        },
-        280
-      );
-
-    return () => {
-      window.clearTimeout(
-        timer
-      );
-
-      controller.abort();
-    };
-  }, [
-    searchQuery,
-    pathname,
-  ]);
-
-  /* =======================================================
-     SEARCH SUBMIT
-  ======================================================= */
-
-  async function submitSearch() {
-    const query =
-      searchQuery.trim();
-
-    if (!query) {
-      return;
-    }
-
-    await router.push(
-      `/products?search=${encodeURIComponent(
-        query
-      )}`
-    );
-
-    setShowDropdown(false);
-  }
 
   /* =======================================================
      CHECKOUT NAV
@@ -412,7 +215,7 @@ export function Navbar({
 
         <div className="border-b border-black/[0.08] bg-white">
           <div className="mx-auto max-w-7xl px-4 py-2.5 sm:px-6">
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3 lg:flex-nowrap lg:gap-6">
+            <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3 lg:flex-nowrap lg:gap-3 xl:gap-5">
               {/* MOBILE MENU */}
 
               <LoadingButton
@@ -430,197 +233,16 @@ export function Navbar({
                   LOGO
               ================================================= */}
 
-              <div className="order-2 flex shrink-0 flex-col items-center">
+              <div className="order-2 flex shrink-0 items-center">
                 <LogoMark href="/" className="rounded-md focus-visible:outline-brand-link" />
-
-                <BrandTagline />
               </div>
 
               {/* =================================================
                   SEARCH
               ================================================= */}
 
-              <div
-                ref={searchRef}
-                className="order-4 relative z-50 w-full lg:order-3 lg:min-w-0 lg:flex-1"
-              >
-                <LoadingForm
-                  action="/products"
-                  method="get"
-                  role="search"
-                  onSubmit={(
-                    event
-                  ) => {
-                    event.preventDefault();
-                    return submitSearch();
-                  }}
-                >
-                  <div className="flex h-11 overflow-hidden rounded-xl border border-black/10 bg-white transition duration-200 focus-within:border-brand-primary focus-within:ring-2 focus-within:ring-brand-primary/30">
-                    <input
-                      type="search"
-                      name="search"
-                      value={
-                        searchQuery
-                      }
-                      onChange={(
-                        event
-                      ) =>
-                        setSearchQuery(
-                          event.target
-                            .value
-                        )
-                      }
-                      onFocus={() => {
-                        if (
-                          searchQuery.trim()
-                            .length >=
-                          2
-                        ) {
-                          setShowDropdown(
-                            true
-                          );
-                        }
-                      }}
-                      placeholder="Search products, brands or your want..."
-                      autoComplete="off"
-                      className="min-w-0 flex-1 border-0 bg-transparent px-4 text-[12px] font-medium text-brand-dark outline-none placeholder:text-black/35 sm:text-[12px]"
-                    />
-
-                    <LoadingButton
-                      type="submit"
-                      aria-label="Search products"
-                      className="flex w-[50px] shrink-0 items-center justify-center bg-brand-primary text-brand-dark transition hover:bg-brand-hover"
-                    >
-                      <Search className="h-[19px] w-[19px]" />
-                    </LoadingButton>
-                  </div>
-                </LoadingForm>
-
-                {/* SEARCH DROPDOWN */}
-
-                {showDropdown &&
-                searchQuery.trim()
-                  .length >= 2 ? (
-                  <div className="animate-search-suggest-in absolute left-0 right-0 top-[calc(100%+7px)] max-h-[390px] overflow-y-auto rounded-2xl border border-black/[0.08] bg-white p-1.5 text-brand-dark shadow-[0_20px_55px_rgba(0,0,0,0.15)]">
-                    {loading ? (
-                      <div className="px-4 py-4 text-[12px] font-semibold text-black/40">
-                        Searching…
-                      </div>
-                    ) : null}
-
-                    {!loading &&
-                    suggestions.length ===
-                      0 ? (
-                      <div className="p-4">
-                        <p className="text-[14px] font-black text-brand-dark">
-                          Product nahi mila?
-                        </p>
-
-                        <p className="mt-1 text-[12px] font-medium text-black/45">
-                          Apni Want post karo aur sellers ko batao kya chahiye.
-                        </p>
-
-                        <PostWantButton
-                          initialTitle={searchQuery.trim()}
-                          onClick={() =>
-                            setShowDropdown(
-                              false
-                            )
-                          }
-                          className="mt-3 inline-flex h-9 items-center rounded-lg bg-brand-primary px-3 text-[12px] font-black text-brand-dark transition hover:bg-brand-hover"
-                        >
-                          Want Post Karo
-                        </PostWantButton>
-                      </div>
-                    ) : null}
-
-                    {suggestions.map(
-                      (product) => (
-                        <LoadingButton
-                          key={
-                            product.id
-                          }
-                          type="button"
-                          onClick={async () => {
-                            await router.push(
-                              `/products/${product.id}`
-                            );
-
-                            setShowDropdown(
-                              false
-                            );
-                          }}
-                          className="flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition hover:bg-brand-soft/70"
-                        >
-                          <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl bg-brand-background">
-                            {product.image ? (
-                              <Image
-                                src={
-                                  product.image
-                                }
-                                alt={
-                                  product.name
-                                }
-                                fill
-                                sizes="44px"
-                                className="object-contain p-1"
-                                unoptimized={
-                                  product.image.startsWith(
-                                    "/api/"
-                                  ) ||
-                                  product.image.startsWith(
-                                    "/uploads/"
-                                  ) ||
-                                  product.image.startsWith(
-                                    "blob:"
-                                  ) ||
-                                  product.image.startsWith(
-                                    "data:"
-                                  )
-                                }
-                              />
-                            ) : (
-                              <Package className="absolute inset-0 m-auto h-4 w-4 text-black/20" />
-                            )}
-                          </div>
-
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-[12px] font-black text-brand-dark">
-                              {
-                                product.name
-                              }
-                            </p>
-
-                            <p className="mt-0.5 truncate text-[12px] font-medium text-black/35">
-                              {
-                                product.category
-                              }
-                            </p>
-                          </div>
-
-                          <span className="shrink-0 text-[12px] font-black text-brand-link">
-                            {formatPKR(
-                              product.price
-                            )}
-                          </span>
-                        </LoadingButton>
-                      )
-                    )}
-
-                    {suggestions.length >
-                    0 ? (
-                      <LoadingButton
-                        type="button"
-                        onClick={
-                          submitSearch
-                        }
-                        className="mt-1 flex h-9 w-full items-center justify-center rounded-xl bg-brand-dark text-[12px] font-black text-white transition hover:bg-black"
-                      >
-                        View All Results
-                      </LoadingButton>
-                    ) : null}
-                  </div>
-                ) : null}
+              <div className="order-4 relative z-50 w-full min-w-0 lg:order-3 lg:flex-1">
+                <SearchBar />
               </div>
 
               {/* =================================================
@@ -816,10 +438,8 @@ export function Navbar({
           {/* HEADER */}
 
           <div className="flex items-center justify-between border-b border-black/[0.08] px-5 py-4">
-            <div className="flex flex-col items-center">
+            <div className="flex items-center">
               <LogoMark compact />
-
-              <BrandTagline />
             </div>
 
             <LoadingButton

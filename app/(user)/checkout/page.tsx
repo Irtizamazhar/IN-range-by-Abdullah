@@ -337,38 +337,31 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="bg-brand-background pb-12">
-      <div className="bg-brand-primary py-2 text-xs font-semibold tracking-wide text-brand-dark">
-        <div className="overflow-hidden whitespace-nowrap">
-          <p className="inline-block min-w-full animate-[checkoutMarquee_18s_linear_infinite]">
-            CASH ON DELIVERY AVAILABLE | DELIVERY CHARGES SHOWN AT CHECKOUT |
-            EASY RETURNS & EXCHANGES | JORO.pk SHOP
-          </p>
-        </div>
-      </div>
-
-      <div className="mx-auto max-w-[1120px] px-4 pt-8">
-<h1 className="mb-6 text-2xl font-bold text-darkText">Checkout</h1><div className="mb-4 space-y-2">{items.filter(i => i.serviceId).map(i => <p className="rounded-xl bg-white p-3 text-sm" key={`${i.productId}:${i.variant || ""}`}>{i.name} — {i.serviceName}: {formatPKR((i.servicePrice || 0) * i.quantity)} service add-on</p>)}</div>
+    <main className="bg-[#F7F8F2] pb-12">
+      <div className="mx-auto max-w-[1280px] px-4 pt-8 sm:px-6">
+        <p className="text-xs font-black uppercase tracking-widest text-[#005235]">Secure JORO checkout</p>
+        <h1 className="mb-6 mt-1 text-3xl font-black text-[#063D2B]">Checkout</h1>
 
         <LoadingForm
           onSubmit={handleCheckoutSubmit}
-          className="grid gap-6 lg:h-[calc(100vh-170px)] lg:grid-cols-[minmax(0,560px)_300px] lg:justify-center lg:overflow-hidden"
+          className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.85fr)_minmax(280px,1fr)]"
         >
-          <div className="space-y-6 lg:max-w-[560px] lg:overflow-y-auto lg:pr-2">
-            <section className="space-y-5 rounded-card border border-borderGray bg-white p-6 shadow-card">
-              <h2 className="text-lg font-bold text-darkText">Contact</h2>
+          <div className="min-w-0 space-y-6">
+            <section className="space-y-5 rounded-2xl border border-[#DFEDE5] bg-white p-5 shadow-sm sm:p-6">
+              <h2 className="text-lg font-bold text-[#005235]">Contact</h2>
               <input
                 required
                 type="email"
-                className="w-full rounded-md border border-borderGray px-3 py-2.5"
-                placeholder="Email or mobile phone number"
+                aria-label="Email address"
+                className="w-full rounded-xl border border-[#DFEDE5] px-3 py-2.5 focus:border-[#005235] focus:outline-none focus:ring-2 focus:ring-[#B7E33A]/40"
+                placeholder="Email address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
               <label className="flex items-center gap-2 text-sm text-darkText">
                 <input
                   type="checkbox"
-                  className="h-4 w-4 accent-primaryBlue"
+                  className="h-4 w-4 accent-[#005235]"
                   checked={marketingOptIn}
                   onChange={(e) => setMarketingOptIn(e.target.checked)}
                 />
@@ -376,9 +369,10 @@ export default function CheckoutPage() {
               </label>
             </section>
 
-            <section className="space-y-5 rounded-card border border-borderGray bg-white p-6 shadow-card">
-              <h2 className="text-lg font-bold text-darkText">Delivery</h2>
+            <section className="space-y-5 rounded-2xl border border-[#DFEDE5] bg-white p-5 shadow-sm sm:p-6">
+              <h2 className="text-lg font-bold text-[#005235]">Delivery address</h2>
               <select
+                aria-label="Delivery country"
                 className="w-full rounded-md border border-borderGray px-3 py-2.5"
                 value={country}
                 onChange={(e) => setCountry(e.target.value)}
@@ -388,12 +382,14 @@ export default function CheckoutPage() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <input
                   required
+                  aria-label="First name"
                   className="w-full rounded-md border border-borderGray px-3 py-2.5"
                   placeholder="First name"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                 />
                 <input
+                  aria-label="Last name"
                   className="w-full rounded-md border border-borderGray px-3 py-2.5"
                   placeholder="Last name"
                   value={lastName}
@@ -402,12 +398,14 @@ export default function CheckoutPage() {
               </div>
               <input
                 required
+                aria-label="Street address"
                 className="w-full rounded-md border border-borderGray px-3 py-2.5"
                 placeholder="Address"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
               />
               <input
+                aria-label="Apartment or suite"
                 className="w-full rounded-md border border-borderGray px-3 py-2.5"
                 placeholder="Apartment, suite, etc. (optional)"
                 value={apartment}
@@ -416,6 +414,7 @@ export default function CheckoutPage() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <select
                   required
+                  aria-label="Delivery city"
                   className="w-full rounded-md border border-borderGray px-3 py-2.5"
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
@@ -428,6 +427,7 @@ export default function CheckoutPage() {
                   ))}
                 </select>
                 <input
+                  aria-label="Postal code"
                   className="w-full rounded-md border border-borderGray px-3 py-2.5"
                   placeholder="Postal code (optional)"
                   value={postalCode}
@@ -438,6 +438,7 @@ export default function CheckoutPage() {
                 <div className="flex items-stretch">
                   <input
                     required
+                    aria-label="Phone number"
                     className="w-full border-0 px-3 py-2.5 focus:outline-none"
                     placeholder="Phone"
                     value={phone}
@@ -462,9 +463,9 @@ export default function CheckoutPage() {
               </label>
             </section>
 
-            <section className="space-y-6 rounded-card border border-borderGray bg-white p-6 shadow-card">
+            <section className="space-y-6 rounded-2xl border border-[#DFEDE5] bg-white p-5 shadow-sm sm:p-6">
               <div>
-                <h2 className="text-lg font-bold text-darkText">Shipping method</h2>
+                <h2 className="text-lg font-bold text-[#005235]">Shipping method</h2>
                 <div className="mt-3 rounded-md border border-brand-primary bg-brand-soft px-4 py-3">
                   <div className="flex items-center justify-between gap-3">
                     <span className="font-medium text-darkText">Cash on Delivery</span>
@@ -475,7 +476,7 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              <h2 className="text-lg font-bold text-darkText">Payment</h2>
+              <h2 className="text-lg font-bold text-[#005235]">Payment</h2>
               <p className="-mt-3 text-sm text-darkText/70">
                 All transactions are secure and encrypted.
               </p>
@@ -488,7 +489,7 @@ export default function CheckoutPage() {
                 </p>
               </div>
               <div className="space-y-3">
-                <h3 className="text-lg font-bold text-darkText">Billing address</h3>
+                <h3 className="text-lg font-bold text-[#005235]">Billing address</h3>
                 <div className="overflow-hidden rounded-md border border-borderGray">
                   <label className="flex cursor-pointer items-center gap-3 border-b border-borderGray bg-brand-soft px-4 py-3 text-darkText">
                     <input
@@ -513,6 +514,7 @@ export default function CheckoutPage() {
                   <div className="rounded-md border border-borderGray bg-white p-3">
                     <div className="space-y-3">
                       <select
+                        aria-label="Billing country"
                         className="w-full rounded-md border border-borderGray px-3 py-2.5"
                         value={billingCountry}
                         onChange={(e) => setBillingCountry(e.target.value)}
@@ -521,12 +523,14 @@ export default function CheckoutPage() {
                       </select>
                       <div className="grid gap-3 sm:grid-cols-2">
                         <input
+                          aria-label="Billing first name"
                           className="w-full rounded-md border border-borderGray px-3 py-2.5"
                           placeholder="First name"
                           value={billingFirstName}
                           onChange={(e) => setBillingFirstName(e.target.value)}
                         />
                         <input
+                          aria-label="Billing last name"
                           className="w-full rounded-md border border-borderGray px-3 py-2.5"
                           placeholder="Last name"
                           value={billingLastName}
@@ -534,12 +538,14 @@ export default function CheckoutPage() {
                         />
                       </div>
                       <input
+                        aria-label="Billing street address"
                         className="w-full rounded-md border border-borderGray px-3 py-2.5"
                         placeholder="Address"
                         value={billingAddress}
                         onChange={(e) => setBillingAddress(e.target.value)}
                       />
                       <input
+                        aria-label="Billing apartment or suite"
                         className="w-full rounded-md border border-borderGray px-3 py-2.5"
                         placeholder="Apartment, suite, etc. (optional)"
                         value={billingApartment}
@@ -547,6 +553,7 @@ export default function CheckoutPage() {
                       />
                       <div className="grid gap-3 sm:grid-cols-2">
                         <select
+                          aria-label="Billing city"
                           className="w-full rounded-md border border-borderGray px-3 py-2.5"
                           value={billingCity}
                           onChange={(e) => setBillingCity(e.target.value)}
@@ -559,6 +566,7 @@ export default function CheckoutPage() {
                           ))}
                         </select>
                         <input
+                          aria-label="Billing postal code"
                           className="w-full rounded-md border border-borderGray px-3 py-2.5"
                           placeholder="Postal code (optional)"
                           value={billingPostalCode}
@@ -566,6 +574,7 @@ export default function CheckoutPage() {
                         />
                       </div>
                       <input
+                        aria-label="Billing phone number"
                         className="w-full rounded-md border border-borderGray px-3 py-2.5"
                         placeholder="Phone (optional)"
                         value={billingPhone}
@@ -588,8 +597,8 @@ export default function CheckoutPage() {
             </section>
           </div>
 
-          <aside className="h-fit rounded-card border border-borderGray bg-white p-5 shadow-card lg:w-[300px]">
-            <h3 className="mb-4 text-lg font-bold text-darkText">Order Summary</h3>
+          <aside className="min-w-0 rounded-2xl border border-[#DFEDE5] bg-white p-5 shadow-sm lg:sticky lg:top-24 lg:self-start sm:p-6">
+            <h2 className="mb-4 text-lg font-bold text-[#005235]">Order summary</h2>
             <div className="space-y-3">
               {items.map((item) => (
                 <div
@@ -613,9 +622,10 @@ export default function CheckoutPage() {
                       {item.name}
                     </p>
                     <p className="text-xs text-darkText/60">Qty: {item.quantity}</p>
-                    <p className="text-sm font-bold text-primaryBlue">
+                    <p className="text-sm font-bold text-[#005235]">
                       {formatPKR(item.price * item.quantity)}
                     </p>
+                    {item.serviceId && <p className="mt-1 text-xs text-[#005235]">{item.serviceName || "Service add-on"}: {formatPKR((item.servicePrice || 0) * item.quantity)}</p>}
                   </div>
                 </div>
               ))}
@@ -639,16 +649,6 @@ export default function CheckoutPage() {
           </aside>
         </LoadingForm>
       </div>
-      <style jsx>{`
-        @keyframes checkoutMarquee {
-          0% {
-            transform: translateX(100%);
-          }
-          100% {
-            transform: translateX(-100%);
-          }
-        }
-      `}</style>
-    </div>
+    </main>
   );
 }

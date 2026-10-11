@@ -984,6 +984,8 @@ model Want {
   customer         Customer       @relation(fields: [customerId], references: [id], onDelete: Restrict)
   title            String         @db.VarChar(160)
   category         String
+  requestType      String         @default("PRODUCT") @db.VarChar(16)
+  occasion         String?        @db.VarChar(100)
   city             String
   budgetMin        Decimal?       @db.Decimal(12, 2)
   budgetMax        Decimal?       @db.Decimal(12, 2)
@@ -1005,6 +1007,7 @@ model Want {
   @@index([status, expiresAt, createdAt])
   @@index([customerId, createdAt])
   @@index([category, city])
+  @@index([requestType, status, expiresAt])
 }
 
 model WantInterest {
@@ -1217,6 +1220,8 @@ model ServiceOffering {
   warranty          String                @db.VarChar(1000)
   cancellationTerms String                @db.Text
   active            Boolean               @default(true)
+  moderationStatus  String                @default("APPROVED") @db.VarChar(16)
+  moderationReason  String?               @db.VarChar(1000)
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
   products          ProductServiceAddon[]

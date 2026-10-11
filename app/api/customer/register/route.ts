@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 import bcrypt from "bcryptjs";
+import { createHash } from "node:crypto";
 import {z} from "zod";
 import {prisma} from "@/lib/prisma";
 import {api,ApiError,sameOrigin} from "@/lib/marketplace-api";
@@ -13,6 +14,6 @@ export async function POST(request:Request){return api(async()=>{
  const data=input.parse(await request.json());
  if(data.email===process.env.ADMIN_EMAIL?.trim().toLowerCase())throw new ApiError(400,"This email cannot be used for customer registration.");
  if(await prisma.customer.findUnique({where:{email:data.email},select:{id:true}}))throw new ApiError(409,"An account with this email already exists. Please sign in.");
- const {password,...profile}=data;await prisma.customer.create({data:{...profile,passwordHash:await bcrypt.hash(password,12)}});
+ const {password,...profile}=data;await prisma.customer.create({data:{...profile,passwordHash:await bcrypt.hash(password,12),notifications:{create:{type:"WELCOME_ONBOARDING",title:"Welcome to JORO",message:"Your marketplace journey starts here.",link:"/",idempotencyKey:`customer-welcome:${createHash("sha256").update(data.email).digest("hex")}`}}}});
  return {ok:true};
 });}

@@ -8,6 +8,15 @@ export type ShopCategory = {
   showOnHome?: boolean;
 };
 
+/** Full canonical catalogue, including categories without a legacy admin ID. */
+export async function readActiveProductCategories() {
+  return prisma.category.findMany({
+    where: { isActive: true },
+    select: { id: true, name: true, slug: true, image: true, showOnHome: true, sortOrder: true },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+  });
+}
+
 function slugify(value: string) {
   return value
     .trim()

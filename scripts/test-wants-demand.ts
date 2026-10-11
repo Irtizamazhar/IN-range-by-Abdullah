@@ -239,7 +239,7 @@ async function main() {
 
   await page.goto(`${base}/wants/new`); await page.getByLabel("What do you need?").waitFor();
   await page.goto(`${base}/wants/${wantId}`); await page.getByRole("heading", { name: "Want details" }).waitFor();
-  await page.goto(`${base}/wants`); await page.getByRole("heading", { name: "Wants", exact: true }).waitFor();
+  await page.goto(`${base}/wants`); await page.getByRole("heading", { name: "Discover what people need" }).waitFor();
   await page.goto(`${base}/wants/trending`); await page.getByRole("heading", { name: "Trending Wants" }).waitFor();
   await page.goto(`${base}/account?tab=wants`); await page.getByText("Need a gaming laptop for work").waitFor();
   pass("signed-in browser can reach /wants, /wants/new, /wants/[id], /wants/trending and My Wants");

@@ -1,0 +1,15 @@
+import { notFound } from "next/navigation";
+import Link from "@/components/ui/LoadingLink";
+import { prisma } from "@/lib/prisma";
+import { serviceCities } from "@/lib/public-services";
+import { publicServices } from "@/lib/public-services";
+import { ServiceCard } from "@/components/user/services/ServiceCard";
+
+export const dynamic = "force-dynamic";
+export default async function ServiceDetailPage({ params }: { params: { id: string } }) {
+  const service = await prisma.serviceOffering.findFirst({ where: { id: params.id, active: true, moderationStatus: "APPROVED", vendor: { status: "approved" } }, select: { id: true, name: true, description: true, type: true, price: true, cities: true, durationMinutes: true, leadDays: true, warranty: true, cancellationTerms: true, vendor: { select: { id: true, shopName: true, storeSlug: true } } } });
+  if (!service) notFound();
+  const related = (await publicServices({ category: service.type, take: 8 }))
+    .filter((item) => item.id !== service.id).slice(0, 4);
+  return <main className="mx-auto max-w-4xl px-4 py-10"><Link href="/services" className="font-bold text-emerald-800">← All services</Link><article className="mt-5 rounded-3xl border bg-white p-6 sm:p-9"><p className="text-sm font-bold uppercase text-emerald-700">{service.type}</p><h1 className="mt-2 text-3xl font-black text-emerald-950">{service.name}</h1><Link href={`/stores/${service.vendor.storeSlug || service.vendor.id}`} className="mt-3 inline-block font-bold text-emerald-700 underline">{service.vendor.shopName}</Link><p className="mt-6 whitespace-pre-wrap leading-7 text-gray-700">{service.description}</p><dl className="mt-7 grid gap-4 rounded-2xl bg-emerald-50 p-5 sm:grid-cols-2"><div><dt className="text-sm text-gray-600">Starting price</dt><dd className="font-bold">PKR {Number(service.price).toLocaleString("en-PK")}</dd></div><div><dt className="text-sm text-gray-600">Coverage</dt><dd className="font-bold">{serviceCities(service.cities).join(", ")}</dd></div><div><dt className="text-sm text-gray-600">Estimated duration</dt><dd className="font-bold">{service.durationMinutes} minutes</dd></div><div><dt className="text-sm text-gray-600">Lead time</dt><dd className="font-bold">{service.leadDays} days</dd></div></dl><h2 className="mt-7 text-xl font-bold">Warranty</h2><p className="mt-2 whitespace-pre-wrap">{service.warranty || "No warranty stated"}</p><h2 className="mt-6 text-xl font-bold">Cancellation terms</h2><p className="mt-2 whitespace-pre-wrap">{service.cancellationTerms}</p><p className="mt-7 text-sm text-gray-600">To request this service, post a moderated requirement. Approved providers can respond with private offers.</p><Link href={`/wants/new?type=service&title=${encodeURIComponent(service.name)}`} className="mt-3 inline-block rounded-xl bg-brand-primary px-5 py-3 font-bold text-brand-dark">Request this service</Link></article>{related.length > 0 && <section className="mt-10"><h2 className="mb-4 text-2xl font-black text-emerald-950">Related Services</h2><div className="grid gap-4 sm:grid-cols-2">{related.map(item => <ServiceCard key={item.id} service={item} />)}</div></section>}</main>;
+}

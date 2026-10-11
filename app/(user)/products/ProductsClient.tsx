@@ -132,7 +132,7 @@ export function ProductsClient() {
 
   useEffect(() => {
     const controller = new AbortController();
-    void fetch("/api/categories", { signal: controller.signal }).then((response) => {
+    void fetch("/api/product-categories", { signal: controller.signal }).then((response) => {
       if (!response.ok) throw new Error("Could not load categories");
       return response.json();
     }).then((data: Array<{ name?: string }>) => {

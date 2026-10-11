@@ -7,6 +7,7 @@ import { vendorProductCreateSchema } from "@/lib/vendor-product-schemas";
 import { sanitizePlainText, sanitizeDescriptionHtml } from "@/lib/security/sanitize";
 import { prisma } from "@/lib/prisma";
 import { syncVendorProductStorefront } from "@/lib/sync-vendor-product-storefront";
+import { activeProductCategory } from "@/lib/active-product-category";
 
 export async function GET() {
   const auth = await requireApprovedVendorApi();
@@ -67,6 +68,8 @@ export async function POST(req: NextRequest) {
       { status: 400 }
     );
   }
+  const activeCategory = await activeProductCategory(category);
+  if (!activeCategory) return NextResponse.json({ error: "Choose an active product category." }, { status: 400 });
 
   try {
     const created = await prisma.$transaction(async (tx) => {
@@ -80,7 +83,7 @@ export async function POST(req: NextRequest) {
             d.originalPrice != null
               ? new Prisma.Decimal(d.originalPrice.toFixed(2))
               : undefined,
-          category,
+          category: activeCategory.name,
           stock: d.stock,
           warrantyMonths: d.warrantyMonths ?? null,
           images: d.images as unknown as Prisma.InputJsonValue,

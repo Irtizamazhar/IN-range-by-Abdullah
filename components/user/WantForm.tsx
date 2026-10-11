@@ -11,24 +11,26 @@ import { wantInput } from "@/lib/want-schema";
 
 export type SubmittedWant = { id: string; status: string };
 type WantFormProps = {
-  categories: string[]; initialTitle?: string; formId?: string; hideFooter?: boolean; embedded?: boolean;
+  categories: string[]; initialTitle?: string; initialType?: "PRODUCT" | "SERVICE" | "GIFT"; formId?: string; hideFooter?: boolean; embedded?: boolean;
   onSuccess?: (want: SubmittedWant) => void; onDirtyChange?: (dirty: boolean) => void; onBusyChange?: (busy: boolean) => void;
 };
 type WantValues = {
+  requestType: "PRODUCT" | "SERVICE" | "GIFT";
+  occasion: string;
   title: string; category: string; city: string; quantity: string; min: string; max: string; description: string;
   condition: "Any" | "New" | "Used" | "Refurbished"; needBy: string; flexible: boolean;
 };
-const emptyValues = (title = ""): WantValues => ({ title, category: "", city: "", quantity: "1", min: "", max: "", description: "", condition: "Any", needBy: "", flexible: false });
+const emptyValues = (title = "", requestType: WantValues["requestType"] = "PRODUCT"): WantValues => ({ requestType, occasion: "", title, category: "", city: "", quantity: "1", min: "", max: "", description: "", condition: "Any", needBy: "", flexible: false });
 function dateAfter(days: number) {
   const date = new Date(); date.setDate(date.getDate() + days);
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
-export function WantForm({ categories, initialTitle, formId, hideFooter = false, embedded = false, onSuccess, onDirtyChange, onBusyChange }: WantFormProps) {
+export function WantForm({ categories, initialTitle, initialType = "PRODUCT", formId, hideFooter = false, embedded = false, onSuccess, onDirtyChange, onBusyChange }: WantFormProps) {
   const router = useLoadingRouter();
   const { isCustomer, authLoading, openAuthModal } = useCustomerAuth();
   const generatedId = useId(); const id = formId || `want-form-${generatedId}`;
-  const initial = useRef(emptyValues(initialTitle));
+  const initial = useRef(emptyValues(initialTitle, initialType));
   const [values, setValues] = useState<WantValues>(initial.current);
   const [busy, setBusy] = useState(false); const [error, setError] = useState(""); const [photoError, setPhotoError] = useState("");
   const [photoFile, setPhotoFile] = useState<File | null>(null); const [preview, setPreview] = useState("");
@@ -43,8 +45,8 @@ export function WantForm({ categories, initialTitle, formId, hideFooter = false,
   useEffect(() => {
     if (initialTitle !== undefined) return;
     const title = new URLSearchParams(window.location.search).get("title") || "";
-    if (title) { initial.current = emptyValues(title); setValues(initial.current); }
-  }, [initialTitle]);
+    if (title) { initial.current = emptyValues(title, initialType); setValues(initial.current); }
+  }, [initialTitle, initialType]);
   useEffect(() => {
     if (!dirty) return;
     const protectUnsavedWant = (event: BeforeUnloadEvent) => {
@@ -88,6 +90,8 @@ export function WantForm({ categories, initialTitle, formId, hideFooter = false,
     if (!isCustomer) { setError("Your session has expired. Sign in again, then retry. Your Want is still here."); return; }
     setError("");
     const input = wantInput.safeParse({
+      requestType: values.requestType,
+      occasion: values.requestType === "GIFT" ? values.occasion : null,
       title: values.title, category: values.category, city: values.city, quantity: Number(values.quantity), budgetFlexible: values.flexible,
       budgetMin: values.flexible ? null : Number(values.min || 0), budgetMax: values.flexible ? null : Number(values.max),
       description: values.description, condition: values.condition, needBy: values.needBy ? new Date(values.needBy).toISOString() : null,
@@ -119,9 +123,12 @@ export function WantForm({ categories, initialTitle, formId, hideFooter = false,
 
   return <LoadingForm id={id} onSubmit={submit} className={`joro-form space-y-5 ${embedded ? "" : "rounded-2xl bg-white p-6"}`}>
     <fieldset disabled={busy || !!submitted} className="min-w-0 space-y-5 disabled:opacity-70">
+      <label className="font-semibold text-brand-dark">Request type <select name="requestType" value={values.requestType} onChange={event => change("requestType", event.target.value as WantValues["requestType"])}><option value="PRODUCT">Product requirement</option><option value="SERVICE">Service requirement</option><option value="GIFT">Gift requirement</option></select></label>
+      {values.requestType === "GIFT" && <label className="font-semibold text-brand-dark">Occasion <span aria-hidden="true">*</span><input name="occasion" required value={values.occasion} onChange={event => change("occasion", event.target.value)} maxLength={100} placeholder="Birthday, wedding, anniversary..." /></label>}
+      {values.requestType !== "PRODUCT" && <label className="font-semibold text-brand-dark">Description <span aria-hidden="true">*</span><textarea name="description" required minLength={10} maxLength={5000} rows={4} value={values.description} onChange={event => change("description", event.target.value)} placeholder={values.requestType === "SERVICE" ? "Describe the work, location and timing you need." : "Describe the gift, customization and delivery timing you need."} /></label>}
       <label className="font-semibold text-brand-dark">What do you need? <span aria-hidden="true">*</span><input name="title" autoFocus={embedded} required minLength={3} maxLength={160} value={values.title} onChange={event => change("title", event.target.value)} placeholder="e.g. A study desk for my home office" /></label>
       <div className="grid gap-5 sm:grid-cols-2">
-        <label className="font-semibold text-brand-dark">Category <span aria-hidden="true">*</span><select name="category" required value={values.category} onChange={event => change("category", event.target.value)}><option value="">Choose a category</option>{categories.map(category => <option key={category}>{category}</option>)}</select></label>
+        <label className="font-semibold text-brand-dark">Category <span aria-hidden="true">*</span>{values.requestType === "PRODUCT" && categories.length ? <select name="category" required value={values.category} onChange={event => change("category", event.target.value)}><option value="">Choose a category</option>{categories.map(category => <option key={category}>{category}</option>)}</select> : <input name="category" required maxLength={100} value={values.category} onChange={event => change("category", event.target.value)} placeholder={values.requestType === "SERVICE" ? "e.g. AC Repair" : values.requestType === "GIFT" ? "e.g. Birthday Gifts" : "Product category"} />}</label>
         <label className="font-semibold text-brand-dark">City <span aria-hidden="true">*</span><input name="city" required maxLength={100} value={values.city} onChange={event => change("city", event.target.value)} placeholder="e.g. Lahore" autoComplete="address-level2" /></label>
       </div>
       <div className="grid gap-5 sm:grid-cols-2">
@@ -134,7 +141,7 @@ export function WantForm({ categories, initialTitle, formId, hideFooter = false,
       <details ref={moreDetails} className="rounded-2xl border border-emerald-100 p-4" onInvalidCapture={() => { if (moreDetails.current) moreDetails.current.open = true; }}>
         <summary className="cursor-pointer rounded-md font-bold text-emerald-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-700">Add More Details</summary>
         <div className="mt-4 space-y-5">
-          <label className="font-semibold text-brand-dark">Description <span className="font-normal text-neutral-500">(optional)</span><textarea name="description" maxLength={5000} rows={3} value={values.description} onChange={event => change("description", event.target.value)} placeholder="Add the size, brand, colour, or any other details that matter." /></label>
+          {values.requestType === "PRODUCT" && <label className="font-semibold text-brand-dark">Description <span className="font-normal text-neutral-500">(optional)</span><textarea name="description" maxLength={5000} rows={3} value={values.description} onChange={event => change("description", event.target.value)} placeholder="Add the size, brand, colour, or any other details that matter." /></label>}
           <div className="grid gap-5 sm:grid-cols-2">
             <label className="font-semibold text-brand-dark">Condition<select name="condition" value={values.condition} onChange={event => change("condition", event.target.value as WantValues["condition"])}><option>Any</option><option>New</option><option>Used</option><option>Refurbished</option></select></label>
             <label className="font-semibold text-brand-dark">Need by <span className="font-normal text-neutral-500">(optional)</span><input name="needBy" type="date" min={dateAfter(1)} max={dateAfter(30)} value={values.needBy} onChange={event => change("needBy", event.target.value)} /></label>

@@ -6,6 +6,7 @@ import { parseImagesJson } from "@/lib/vendor-product-schemas";
 type StorefrontDb = {
   vendorProduct: typeof prisma.vendorProduct;
   product: typeof prisma.product;
+  category: typeof prisma.category;
 };
 
 /**
@@ -27,6 +28,7 @@ export async function syncVendorProductStorefront(
     urls.length > 0 ? (urls as Prisma.InputJsonValue) : undefined;
 
   const isActive = vp.status === "active";
+  const categoryRecord = await db.category.findUnique({ where: { name: vp.category }, select: { id: true } });
 
   const priceNum = Number(vp.price);
   const originalNum =
@@ -43,6 +45,7 @@ export async function syncVendorProductStorefront(
         : null,
     discountPercent,
     category: vp.category,
+    categoryRecordId: categoryRecord?.id ?? null,
     stock: vp.stock,
     warrantyMonths: vp.warrantyMonths,
     variants: [] as Prisma.InputJsonValue,

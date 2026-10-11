@@ -1,113 +1,16 @@
 import Link from "@/components/ui/LoadingLink";
-import {
-  ArrowRight, CarFront, Flame, Laptop, MapPin, PackageSearch,
-  Shirt, Sofa, Sparkles, Store, TrendingUp,
-} from "lucide-react";
-import { ProductCard, ProductCardSkeleton, type ProductCardData } from "./ProductCard";
-import styles from "./HomeMarketplace.module.css";
+import Image from "next/image";
+import { ProductCard, type ProductCardData } from "./ProductCard";
+import { ServiceCard, type PublicService } from "./services/ServiceCard";
 
-type MarketplaceWant = {
-  id: string;
-  title: string;
-  city: string;
-  _count: { offers: number };
-};
-
-type MarketplaceStore = {
-  id: string;
-  shopName: string;
-  storeSlug: string | null;
-  primaryCategory: string | null;
-  label: string | null;
-  rating: { ratingAvg: number; reviewCount: number };
-};
-
-function wantIcon(title: string) {
-  if (/\b(car|auto|vehicle|bike|motor)\b/i.test(title)) return CarFront;
-  if (/\b(laptop|computer|charger|phone|mobile|tablet)\b/i.test(title)) return Laptop;
-  if (/\b(sofa|chair|furniture|couch|bed)\b/i.test(title)) return Sofa;
-  if (/\b(shirt|dress|clothes|clothing|jacket)\b/i.test(title)) return Shirt;
-  return PackageSearch;
-}
-
-function storeInitials(name: string) {
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  return (words.length > 1 ? `${words[0][0]}${words[words.length - 1][0]}` : name.slice(0, 2)).toUpperCase();
-}
-
-export function HomeMarketplace({ products, wants, stores }: {
-  products: ProductCardData[];
-  wants: MarketplaceWant[];
-  stores: MarketplaceStore[];
-}) {
-  return (
-    <section data-home-marketplace className={styles.marketplace} aria-label="Explore the JORO marketplace">
-      <section data-marketplace-panel="products" className={`${styles.panel} ${styles.featured}`} aria-labelledby="featured-products-heading">
-        <header className={styles.featuredHeader}>
-          <div className={styles.headingGroup}>
-            <p className={styles.eyebrow}>
-              <span className={styles.sparkle}><Sparkles aria-hidden="true" /></span>
-              Popular Picks
-            </p>
-            <h2 id="featured-products-heading" className={styles.featuredTitle}>Featured Products</h2>
-          </div>
-          <Link href="/products" className={styles.viewAll}>View All <ArrowRight aria-hidden="true" /></Link>
-        </header>
-        <div className={styles.products}>
-          {products.length
-            ? products.slice(0, 4).map((product) => <ProductCard key={product._id} product={product} variant="marketplace" />)
-            : Array.from({ length: 4 }, (_, index) => <ProductCardSkeleton key={index} variant="marketplace" />)}
-        </div>
-      </section>
-
-      <section id="trending-wants" data-marketplace-panel="wants" className={`${styles.panel} ${styles.wants}`} aria-labelledby="trending-wants-heading">
-        <header className={styles.sideHeader}>
-          <p className={styles.eyebrow}><TrendingUp aria-hidden="true" /> What People Need</p>
-          <h2 id="trending-wants-heading" className={styles.sideTitle}>Trending Wants <Flame aria-hidden="true" className={styles.flame} /></h2>
-        </header>
-        <div className={styles.wantList}>
-          {wants.length ? wants.map((want) => {
-            const Icon = wantIcon(want.title);
-            return (
-              <Link key={want.id} href={`/wants/${want.id}`} className={styles.want}>
-                <span className={styles.wantIcon}><Icon aria-hidden="true" /></span>
-                <div className={styles.wantInfo}>
-                  <h3 className={styles.wantTitle}>{want.title}</h3>
-                  <div className={styles.wantMeta}>
-                    <span className={styles.city}><MapPin aria-hidden="true" />{want.city}</span>
-                    <span aria-hidden="true">·</span>
-                    <span>{want._count.offers} {want._count.offers === 1 ? "offer" : "offers"}</span>
-                  </div>
-                </div>
-                <span className={styles.open}>Open</span>
-              </Link>
-            );
-          }) : <p className={styles.empty}>No moderated Wants yet.</p>}
-        </div>
-        <Link href="/wants" className={`${styles.cta} ${styles.explore}`}>Explore Wants <ArrowRight aria-hidden="true" /></Link>
-      </section>
-
-      <section id="stores" data-marketplace-panel="vendors" className={`${styles.panel} ${styles.vendors}`} aria-labelledby="top-vendors-heading">
-        <header className={styles.sideHeader}>
-          <p className={styles.eyebrow}><Store aria-hidden="true" /> Seller Network</p>
-          <h2 id="top-vendors-heading" className={styles.sideTitle}>Top Vendors</h2>
-          <p className={styles.description}>Discover trusted stores selected on JORO</p>
-        </header>
-        <div className={styles.storeList}>
-          {stores.length ? stores.map((store) => (
-            <Link key={store.id} href={`/stores/${store.storeSlug || store.id}`} className={styles.store}>
-              <span className={styles.avatar} aria-hidden="true">{storeInitials(store.shopName)}</span>
-              <div className={styles.storeInfo}>
-                <h3 className={styles.storeTitle}>{store.shopName}</h3>
-                <p className={styles.storeCategory}>{store.primaryCategory}</p>
-                {store.rating.reviewCount > 0 && <p className={styles.storeRating}>★ {store.rating.ratingAvg.toFixed(1)} ({store.rating.reviewCount})</p>}
-              </div>
-              <span className={styles.vendorBadge}>{store.label || "Top Vendor"}</span>
-            </Link>
-          )) : <p className={styles.empty}>No Top Vendors selected yet.</p>}
-        </div>
-        <Link href="/stores" className={`${styles.cta} ${styles.browse}`}>Browse Stores <ArrowRight aria-hidden="true" /></Link>
-      </section>
-    </section>
-  );
-}
+type MarketplaceWant = { id: string; title: string; description: string | null; category: string; requestType: string; city: string; photo: string | null; createdAt: Date; customer: { name: string }; _count: { offers: number; interests: number } };
+type MarketplaceStore = { id: string; shopName: string; storeSlug: string | null; primaryCategory: string | null; label: string | null; rating: { ratingAvg: number; reviewCount: number } };
+function Heading({ title, href, link }: { title: string; href: string; link: string }) { return <header className="mb-5 flex items-end justify-between gap-3"><h2 className="text-2xl font-black tracking-tight text-emerald-950 sm:text-3xl">{title}</h2><Link href={href} className="shrink-0 rounded-xl bg-lime-100 px-3 py-2 text-sm font-bold text-emerald-900 hover:bg-lime-200">{link} →</Link></header>; }
+function ProductGrid({ products }: { products: ProductCardData[] }) { return products.length ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">{products.slice(0, 5).map(product => <ProductCard key={product._id} product={product} variant="marketplace" />)}</div> : <p className="rounded-2xl border bg-white p-6 text-gray-600">No products available right now.</p>; }
+export function HomeMarketplace({ products, wants, services, gifts, stores }: { products: ProductCardData[]; wants: MarketplaceWant[]; services: PublicService[]; gifts: ProductCardData[]; stores: MarketplaceStore[] }) { return <div data-home-marketplace className="mx-auto max-w-7xl space-y-10 px-4 pb-10 sm:px-6">
+  <section id="trending-wants"><Heading title="Trending Wants" href="/joro-connect" link="View all requests" /><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{wants.length ? wants.map(want => <article key={want.id} className="flex min-w-0 flex-col overflow-hidden rounded-2xl border bg-white shadow-sm"><div className="p-4"><p className="text-xs font-bold text-emerald-700">{want.requestType} · {want.category}</p><h3 className="mt-2 line-clamp-2 text-lg font-black text-emerald-950"><Link href={`/wants/${want.id}`}>{want.title}</Link></h3><p className="mt-2 line-clamp-2 text-sm text-gray-600">{want.description}</p><p className="mt-3 text-xs text-gray-500">{want.customer.name || "JORO member"} · {want.city}</p><time dateTime={want.createdAt.toISOString()} className="text-xs text-gray-500">{want.createdAt.toLocaleDateString("en-PK", { timeZone: "Asia/Karachi" })}</time></div>{want.photo && <Image src={want.photo} alt="" width={600} height={360} unoptimized className="h-36 w-full object-cover" />}<div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t px-4 py-3 text-xs text-gray-600"><span>{want._count.interests} joined · {want._count.offers} offers</span><Link href={`/wants/${want.id}`} className="font-bold text-emerald-800">Join request →</Link></div></article>) : <p className="rounded-2xl border bg-white p-6 text-gray-600 sm:col-span-2 lg:col-span-4">No approved open requests yet.</p>}</div></section>
+  <section id="featured-products"><Heading title="Featured Products" href="/products" link="View all products" /><ProductGrid products={products} /></section>
+  <section id="featured-services"><Heading title="Featured Services" href="/services" link="View all services" />{services.length ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{services.map(service => <ServiceCard key={service.id} service={service} />)}</div> : <p className="rounded-2xl border bg-white p-6 text-gray-600">No active services from approved vendors yet.</p>}</section>
+  <section id="featured-gifts"><Heading title="Featured Gifts" href="/gifts" link="View all gifts" /><ProductGrid products={gifts} /><Link href="/wants/new?type=gift" className="mt-4 inline-block rounded-xl bg-brand-primary px-5 py-3 font-bold text-brand-dark">Request a custom gift</Link></section>
+  <section id="stores" className="rounded-3xl bg-[#123d27] p-5 text-white sm:p-7"><header className="mb-5 flex flex-wrap items-center justify-between gap-3"><h2 className="text-2xl font-black">Top Sellers</h2><Link href="/stores" className="rounded-xl bg-brand-primary px-4 py-2 text-sm font-bold text-brand-dark">View all sellers →</Link></header>{stores.length ? <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{stores.map(store => <Link key={store.id} href={`/stores/${store.storeSlug || store.id}`} className="rounded-2xl bg-white/10 p-4 hover:bg-white/15"><span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-primary font-black text-brand-dark">{store.shopName.slice(0, 2).toUpperCase()}</span><h3 className="mt-3 font-bold">{store.shopName}</h3><p className="mt-1 text-sm text-white/70">{store.primaryCategory}</p>{store.rating.reviewCount > 0 && <p className="mt-2 text-sm text-lime-300">★ {store.rating.ratingAvg.toFixed(1)} ({store.rating.reviewCount})</p>}</Link>)}</div> : <p className="text-white/70">No featured sellers yet.</p>}</section>
+</div>; }

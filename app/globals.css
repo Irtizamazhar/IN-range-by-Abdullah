@@ -1276,12 +1276,23 @@
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; } }
 
 /* Auth keeps the approved composition without internal scrolling panels. */
-.joro-auth-input { width: 100%; height: 48px; border: 1px solid #d4d8d4; border-radius: 12px; padding: 0 14px 0 42px; font-size: 14px; background: white; outline: none; }
+.joro-auth-card { min-height: min(94dvh, 980px); border: 1px solid #e7eae8; border-radius: 24px; background: #fff; box-shadow: 0 16px 48px rgba(10, 39, 25, .08); }
+.joro-auth-role { display: flex; min-width: 0; min-height: 82px; align-items: center; justify-content: center; gap: 12px; border: 1px solid transparent; border-radius: 14px; background: #f4f5f4; padding: 9px; color: #50535a; transition: background .2s, border-color .2s, box-shadow .2s; }
+.joro-auth-role:hover { background: #edf4ef; }
+.joro-auth-role-active { border-color: #85baa0; background: #f3faf5; color: #075236; box-shadow: 0 2px 7px rgba(6, 82, 54, .12); }
+.joro-auth-role:focus-visible, .joro-auth-tab:focus-visible { outline: 3px solid #b7e33a; outline-offset: 2px; }
+.joro-auth-tab { min-height: 49px; border-bottom: 2px solid transparent; color: #666b72; font-size: 15px; font-weight: 700; }
+.joro-auth-tab:hover { color: #075236; }
+.joro-auth-tab-active { border-color: #075236; color: #075236; }
+.joro-auth-input { width: 100%; height: 52px; border: 1px solid #dce4ee; border-radius: 12px; padding: 0 14px 0 46px; font-size: 14px; background: #f4f7fb; outline: none; }
 .joro-auth-input:focus { border-color: #0f5132; box-shadow: 0 0 0 3px rgba(183,227,58,.25); }
 .joro-auth-input[aria-invalid="true"] { border-color: #b91c1c; }
-.joro-auth-field-icon { position: absolute; z-index: 1; left: 14px; top: 15px; width: 18px; height: 18px; color: #67736b; pointer-events: none; }
-.joro-auth-primary { display: flex; height: 48px; align-items: center; justify-content: center; border-radius: 12px; background: #063d29; color: white; font-size: 14px; font-weight: 700; padding: 0 16px; }
+.joro-auth-field-icon { position: absolute; z-index: 1; left: 15px; top: 17px; width: 18px; height: 18px; color: #67736b; pointer-events: none; }
+.joro-auth-primary { display: flex; height: 52px; align-items: center; justify-content: center; border-radius: 12px; background: #064c2d; color: white; font-size: 15px; font-weight: 700; padding: 0 16px; transition: background .2s, transform .2s; }
+.joro-auth-primary:hover { background: #08633b; }
 .joro-auth-primary:focus-visible { outline: 3px solid #b7e33a; outline-offset: 2px; }
 .joro-auth-primary:disabled { opacity: .65; }
 @media (min-width: 1024px) { .joro-auth-page { min-height: 100dvh; } .joro-auth-brand { height: 100dvh; position: sticky; top: 0; } }
+.joro-auth-brand:after { content: ""; position: absolute; z-index: 1; left: -12%; right: -8%; bottom: 18%; height: 1px; background: #b7e33a; box-shadow: 0 0 20px 5px rgba(183, 227, 58, .55); transform: rotate(-21deg); pointer-events: none; }
+@media (max-width: 639px) { .joro-auth-card { min-height: calc(100dvh - 24px); border-radius: 20px; } .joro-auth-role { gap: 6px; min-height: 76px; } .joro-auth-role svg { width: 20px; height: 20px; } }
 .joro-auth-input.pr-11 { padding-right: 44px; }

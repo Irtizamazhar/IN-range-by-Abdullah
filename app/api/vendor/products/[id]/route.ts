@@ -10,6 +10,7 @@ import {
   deleteVendorProductAndStorefront,
   syncVendorProductStorefront,
 } from "@/lib/sync-vendor-product-storefront";
+import { activeProductCategory } from "@/lib/active-product-category";
 
 type Ctx = { params: { id: string } };
 
@@ -87,7 +88,12 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
         : new Prisma.Decimal(d.originalPrice.toFixed(2));
   }
   if (d.category != null) {
-    data.category = sanitizePlainText(d.category, 255);
+    const requested = sanitizePlainText(d.category, 255);
+    if (requested !== existing.category) {
+      const activeCategory = await activeProductCategory(requested);
+      if (!activeCategory) return NextResponse.json({ error: "Choose an active product category." }, { status: 400 });
+      data.category = activeCategory.name;
+    }
   }
   if (d.stock != null) {
     data.stock = d.stock;

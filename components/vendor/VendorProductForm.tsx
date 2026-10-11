@@ -10,10 +10,6 @@ import {
   imageFilesFromClipboard,
   isAllowedImageFile,
 } from "@/lib/clipboard-image-files";
-import {
-  fetchShopCategoryNameList,
-  SHOP_CATEGORY_FALLBACK,
-} from "@/lib/shop-category-names";
 import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 import { parseImagesJson } from "@/lib/vendor-product-schemas";
 
@@ -52,27 +48,28 @@ export function VendorProductForm({
       : ""
   );
   const [shopCategoryNames, setShopCategoryNames] = useState<string[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoriesError, setCategoriesError] = useState(false);
   const [category, setCategory] = useState(initial?.category ?? "");
+  const [categorySearch, setCategorySearch] = useState("");
 
   const categoryOptions = useMemo(() => {
-    const fromApi =
-      shopCategoryNames.length > 0
-        ? shopCategoryNames
-        : [...SHOP_CATEGORY_FALLBACK];
     return Array.from(
       new Set<string>([
         ...(initial?.category ? [initial.category] : []),
-        ...fromApi,
+        ...shopCategoryNames,
       ])
     );
   }, [shopCategoryNames, initial?.category]);
 
   useEffect(() => {
     let cancelled = false;
-    void fetchShopCategoryNameList().then((names) => {
-      if (cancelled) return;
-      setShopCategoryNames(names);
-    });
+    fetch("/api/product-categories", { cache: "no-store" }).then(async (response) => {
+      if (!response.ok) throw new Error("Categories unavailable");
+      return (await response.json() as { name: string }[]).map((row) => row.name);
+    }).then((names) => { if (!cancelled) setShopCategoryNames(names); })
+      .catch(() => { if (!cancelled) setCategoriesError(true); })
+      .finally(() => { if (!cancelled) setCategoriesLoading(false); });
     return () => {
       cancelled = true;
     };
@@ -84,7 +81,7 @@ export function VendorProductForm({
       if (initial?.category && categoryOptions.includes(initial.category)) {
         return initial.category;
       }
-      return categoryOptions[0] ?? "";
+      return "";
     });
   }, [categoryOptions, initial?.category]);
   const [stock, setStock] = useState(String(initial?.stock ?? 0));
@@ -212,6 +209,10 @@ export function VendorProductForm({
     }
     if (images.length < 1) {
       toast.error("Add at least one product image");
+      return;
+    }
+    if (!category || (category !== initial?.category && !shopCategoryNames.includes(category))) {
+      toast.error("Choose an active product category");
       return;
     }
 
@@ -394,18 +395,25 @@ export function VendorProductForm({
           />
         </div>
         <div>
-          <label className="text-sm font-bold text-neutral-800">Category</label>
+          <label htmlFor="vendor-product-category" className="text-sm font-bold text-neutral-800">Product Category *</label>
+          {categoryOptions.length > 10 && <input type="search" value={categorySearch} onChange={(event) => setCategorySearch(event.target.value)} placeholder="Search categories" aria-label="Search product categories" className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2" />}
           <select
+            id="vendor-product-category"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2"
+            required
+            disabled={categoriesLoading || (mode === "create" && !shopCategoryNames.length)}
           >
-            {categoryOptions.map((c) => (
+            <option value="">{categoriesLoading ? "Loading categories…" : "Select Category"}</option>
+            {categoryOptions.filter((name) => name === category || name.toLowerCase().includes(categorySearch.toLowerCase())).map((c) => (
               <option key={c} value={c}>
-                {c}
+                {c === initial?.category && !shopCategoryNames.includes(c) ? `${c} (legacy; choose an active category to change)` : c}
               </option>
             ))}
           </select>
+          {categoriesError && <p role="alert" className="mt-1 text-xs text-red-700">Categories are unavailable. Refresh and try again.</p>}
+          {!categoriesLoading && !categoriesError && !shopCategoryNames.length && <p role="status" className="mt-1 text-xs text-amber-800">No active product categories are available.</p>}
         </div>
         {mode === "edit" ? (
           <div className="sm:col-span-2">

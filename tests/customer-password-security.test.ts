@@ -12,8 +12,8 @@ import {
 } from "../lib/customer-password-security";
 
 test("password reauth intent is signed and expires", () => {
-  const issuedAt = Date.now();
   const token = createPasswordReauthIntent("customer-1");
+  const issuedAt = verifyPasswordReauthIntent(token)!.issuedAt;
   assert.equal(verifyPasswordReauthIntent(token, issuedAt + 1)?.customerId, "customer-1");
   assert.equal(verifyPasswordReauthIntent(token, issuedAt + CUSTOMER_PASSWORD_REAUTH_MAX_AGE_SECONDS * 1000 + 1), null);
   assert.equal(verifyPasswordReauthIntent(`${token}tampered`, issuedAt + 1), null);

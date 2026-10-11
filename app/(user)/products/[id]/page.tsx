@@ -21,11 +21,20 @@ export default async function ProductDetailPage({ params }: PageProps) {
       select: catalogProductSelect(),
     });
     if (!product || !product.isActive) notFound();
+    const publication = await prisma.vendorProduct.findUnique({
+      where: { publishedProductId: product.id },
+      select: { status: true, vendor: { select: { shopName: true, storeSlug: true, status: true } } },
+    });
+    const seller = publication?.status === "active" && publication.vendor.status === "approved"
+      ? { name: publication.vendor.shopName, storeSlug: publication.vendor.storeSlug }
+      : null;
 
     const relatedRaw = await prisma.product.findMany({
       where: {
         id: { not: product.id },
-        category: product.category,
+        OR: product.categoryRecordId
+          ? [{ categoryRecordId: product.categoryRecordId }, { category: product.category }]
+          : [{ category: product.category }],
         isActive: true,
       },
       take: 4,
@@ -53,6 +62,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
           reviewCount: dash.totalCount,
         }}
         related={related}
+        seller={seller}
       />
     );
   } catch {
