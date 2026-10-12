@@ -16,6 +16,8 @@ export type WantsFeedItem = {
   createdAt: string;
   expiresAt: string;
   customer: { name: string; image: string | null };
+  /** Seller offers on this Want; only sent on the owner's "mine" tab. */
+  offerCount?: number;
 };
 
 export type WantsFeedPage = {

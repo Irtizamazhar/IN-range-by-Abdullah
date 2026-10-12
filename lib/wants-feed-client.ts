@@ -26,6 +26,8 @@ export class WantsFeedPager {
     return this.request(false);
   }
   clear() { this.dispose(); this.snapshot = empty(); this.update({ hasMore: false, initialized: true }); }
+  /** Applies a local edit (e.g. a deleted or closed Want) without refetching the feed. */
+  mapItems(fn: (items: WantsFeedItem[]) => WantsFeedItem[]) { if (this.snapshot.initialized) this.update({ items: fn(this.snapshot.items) }); }
   dispose() { this.generation++; this.controller?.abort(); this.controller = null; this.active = null; this.requesting = false; }
   loadMore = () => {
     if (this.active) return this.active;

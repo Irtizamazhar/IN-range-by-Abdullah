@@ -16,6 +16,12 @@ export function DashboardShell({ sidebar, children, label }: {
   const content = useRef<HTMLDivElement>(null);
 
   useEffect(() => { setOpen(false); }, [pathname]);
+  // The content pane is the only scroller on dashboard pages; html/body must never add a second scrollbar.
+  useEffect(() => {
+    const html = document.documentElement;
+    html.classList.add("dashboard-scroll-lock");
+    return () => html.classList.remove("dashboard-scroll-lock");
+  }, []);
   useEffect(() => {
     const desktop = window.matchMedia("(min-width: 768px)");
     const closeOnDesktop = () => { if (desktop.matches) setOpen(false); };
@@ -55,7 +61,7 @@ export function DashboardShell({ sidebar, children, label }: {
   }, [open]);
 
   return (
-    <div className="flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-brand-background md:flex-row">
+    <div className="relative flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-brand-background md:flex-row">
       <header className="flex h-12 shrink-0 items-center gap-3 bg-footerDark px-4 text-white md:hidden">
         <button ref={trigger} type="button" aria-label={`Open ${label} menu`} aria-expanded={open}
           aria-controls="dashboard-sidebar" onClick={() => setOpen(true)} className="rounded p-1.5 focus-visible:outline focus-visible:outline-2">
@@ -75,7 +81,7 @@ export function DashboardShell({ sidebar, children, label }: {
         </div>
         {sidebar}
       </div>
-      <div ref={content} className={`min-h-0 min-w-0 flex-1 ${open ? "overflow-hidden" : "overflow-y-auto"}`}>
+      <div ref={content} className={`relative min-h-0 min-w-0 flex-1 ${open ? "overflow-hidden" : "overflow-y-auto"}`}>
         {children}
       </div>
     </div>

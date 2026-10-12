@@ -16,10 +16,8 @@ export async function GET(req: NextRequest) {
     const merged = await loadMergedNewArrivalCards({ search: "", category: "" });
     const total = merged.length;
     const slice = merged.slice(offset, offset + limit);
-    const cards = slice.map(({ createdAtTs, ...card }) => {
-      void createdAtTs;
-      return card;
-    });
+    // createdAt lets the card show a "New" tag; undated JSON items (epoch) get none.
+    const cards = slice.map(({ createdAtTs, ...card }) => (createdAtTs > 0 ? { ...card, createdAt: new Date(createdAtTs).toISOString() } : card));
 
     return NextResponse.json({ products: cards, total, offset, limit });
   } catch (e) {

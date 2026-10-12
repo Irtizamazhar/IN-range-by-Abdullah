@@ -6,7 +6,7 @@ export default function VendorSectionLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-neutral-50 text-neutral-900">
+    <div className="min-h-[100dvh] bg-neutral-50 text-neutral-900">
       <VendorAuthProvider>{children}</VendorAuthProvider>
     </div>
   );

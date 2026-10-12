@@ -9,6 +9,7 @@ import Link from "@/components/ui/LoadingLink";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { LoadingForm } from "@/components/ui/LoadingForm";
 import { PostWantButton } from "@/components/user/PostWantButton";
+import { WantOwnerActions } from "@/components/user/WantOwnerActions";
 import { usePageLoading } from "@/hooks/usePageLoading";
 import { WantsFeedPager, type RestoredFeed } from "@/lib/wants-feed-client";
 import type { WantsFeedItem, WantsFeedTab } from "@/lib/wants-feed-types";
@@ -57,7 +58,7 @@ export function WantsFeedSkeleton({ more = false }: { more?: boolean }) {
   </div>;
 }
 
-function FeedPost({ want, href, onDetails }: { want: WantsFeedItem; href: string; onDetails: () => void }) {
+function FeedPost({ want, href, onDetails, mine }: { want: WantsFeedItem; href: string; onDetails: () => void; mine: boolean }) {
   const status = statusFor(want);
   const [avatarFailed, setAvatarFailed] = useState(false);
   const [photoFailed, setPhotoFailed] = useState(false);
@@ -67,7 +68,7 @@ function FeedPost({ want, href, onDetails }: { want: WantsFeedItem; href: string
     <div className={styles.cardBody}><header className={styles.postHeader}>
       <div className={styles.avatar}>{want.customer.image && !avatarFailed ? <Image src={want.customer.image} alt="" width={43} height={43} unoptimized onError={() => setAvatarFailed(true)} /> : <span aria-hidden="true">{initials || "J"}</span>}</div>
       <div className={styles.author}><strong>{want.customer.name}</strong><div className={styles.meta}><MapPin aria-hidden="true" /><span>{want.city}</span><span aria-hidden="true">·</span><time dateTime={want.createdAt}>{new Date(want.createdAt).toLocaleString("en-PK", { timeZone: "Asia/Karachi", day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" })}</time></div></div>
-      <span className={styles.status} data-tone={status.tone}>{status.label}</span>
+      <span className={styles.status} data-tone={status.tone}>{status.label}</span>{mine && <WantOwnerActions wantId={want.id} status={want.status} offerCount={want.offerCount} />}
     </header><h2 id={`want-${want.id}`} className={styles.title}>{want.title}</h2>{want.description && <p className={styles.description}>{want.description}</p>}</div>
     {photo && !photoFailed && <div className={styles.photo}><Image src={photo} alt={`Reference for ${want.title}`} fill sizes="(max-width: 800px) 100vw, 780px" onError={() => setPhotoFailed(true)} /></div>}
     <footer className={styles.postFooter}><dl className={styles.facts}><div><dt>Budget</dt><dd>{budget(want)}</dd></div><div><dt>Quantity</dt><dd>{want.quantity.toLocaleString("en-PK")}</dd></div><div><dt>Category</dt><dd>{want.category}</dd></div></dl>
@@ -129,6 +130,14 @@ export function WantsFeed({ categories }: { categories: string[] }) {
     window.addEventListener("wants-changed", refresh); return () => window.removeEventListener("wants-changed", refresh);
   }, [cacheKey, category, city, selectFeed, tab]);
   useEffect(() => {
+    const removed = (event: Event) => {
+      const { id, closed } = (event as CustomEvent<{ id: string; closed: boolean }>).detail || {};
+      pager.mapItems(items => closed && tab === "mine" ? items.map(item => item.id === id ? { ...item, status: "CLOSED" } : item) : items.filter(item => item.id !== id));
+      memory.clear(); try { Object.keys(sessionStorage).filter(key => key.startsWith(storagePrefix)).forEach(key => sessionStorage.removeItem(key)); } catch {}
+    };
+    window.addEventListener("want-deleted", removed); return () => window.removeEventListener("want-deleted", removed);
+  }, [pager, tab]);
+  useEffect(() => {
     if (!sentinel.current || blocked || !state.initialized || state.loading || state.loadingMore || state.error || state.moreError || !state.hasMore) return;
     const observer = new IntersectionObserver(entries => { if (entries.some(entry => entry.isIntersecting)) void pager.loadMore(); }, { rootMargin: "0px 0px 500px 0px" });
     observer.observe(sentinel.current); return () => observer.disconnect();
@@ -167,7 +176,7 @@ export function WantsFeed({ categories }: { categories: string[] }) {
       : state.error && !selectionPending ? <div className={styles.notice}><p role="alert" className={styles.error}>{state.error}</p><LoadingButton className={styles.primary} loadingLabel="Retrying…" onClick={pager.retry}><RotateCcw aria-hidden="true" /> Try again</LoadingButton></div>
       : waitingAuth || selectionPending || !state.initialized || state.loading ? <WantsFeedSkeleton />
       : <>
-        <div className={styles.list}>{state.items.map(want => <FeedPost key={want.id} want={want} href={`/wants/${want.id}?from=${encodeURIComponent(feedHref)}`} onDetails={rememberPosition} />)}</div>
+        <div className={styles.list}>{state.items.map(want => <FeedPost key={want.id} want={want} href={`/wants/${want.id}?from=${encodeURIComponent(feedHref)}`} onDetails={rememberPosition} mine={tab === "mine"} />)}</div>
         {!state.items.length && <div className={styles.notice}><div className={styles.noticeIcon}><MessageSquareText /></div><h2>{tab === "mine" ? "You haven't posted a Want yet" : "No Wants match just yet"}</h2><p>{tab === "mine" ? "Post what you need. Your submission will appear here while it is reviewed." : "Try another city or category, or let the community know what you're looking for."}</p><PostWantButton className={styles.primary}><Plus aria-hidden="true" /> Post a Want</PostWantButton></div>}
         {state.loadingMore && <div className="mt-5"><WantsFeedSkeleton more /></div>}
         {state.moreError && <div className={`${styles.notice} mt-5`}><p role="alert" className={styles.error}>{state.moreError}</p><LoadingButton className={styles.secondary} loadingLabel="Retrying…" onClick={pager.retry}><RotateCcw aria-hidden="true" /> Retry loading more</LoadingButton></div>}

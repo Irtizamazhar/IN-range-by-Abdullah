@@ -2,15 +2,10 @@
 import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowRight, Zap } from "lucide-react";
+import { Zap } from "lucide-react";
 
-import {
-  ProductCard,
-  ProductCardSkeleton,
-  type ProductCardData,
-} from "@/components/user/ProductCard";
-import gridStyles from "@/components/user/ProductGrid.module.css";
-import styles from "@/components/user/NewArrivalsSection.module.css";
+import type { ProductCardData } from "@/components/user/ProductCard";
+import { HOME_PRODUCT_GRID, HOME_VIEW_BUTTON, HomeProductCard, HomeProductCardSkeleton } from "@/components/user/HomeProductCard";
 
 type ApiNewArrivalsResponse = {
   products?: ProductCardData[];
@@ -142,14 +137,14 @@ export function NewArrivalsSection({
   return (
     <section className="bg-brand-background py-9 sm:py-11">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="mb-6 flex items-end justify-between gap-4">
+        <div className="mb-4 flex items-center justify-between gap-2">
           <div>
             <div className="mb-1.5 inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.15em] text-brand-link">
               <Zap className="h-3.5 w-3.5" />
               Just added
             </div>
 
-            <h2 className="text-[24px] font-black tracking-[-0.035em] text-brand-dark sm:text-[28px]">
+            <h2 className="whitespace-nowrap text-[24px] font-black tracking-[-0.035em] text-brand-dark sm:text-[28px]">
               New Arrivals
             </h2>
           </div>
@@ -159,10 +154,10 @@ export function NewArrivalsSection({
               type="button"
               loading={loading}
               onClick={loadMore}
-              className="inline-flex shrink-0 items-center gap-1 text-[12px] font-black text-brand-link transition hover:text-brand-dark disabled:opacity-50"
+              loadingLabel="Loading…"
+              className={`${HOME_VIEW_BUTTON} disabled:opacity-50`}
             >
-              View More
-              <ArrowRight className="h-3.5 w-3.5" />
+              View more →
             </LoadingButton>
           ) : null}
         </div>
@@ -174,24 +169,15 @@ export function NewArrivalsSection({
         ) : (
           <div
             ref={gridRef}
-            className={`${gridStyles.grid} ${styles.grid}`}
+            className={HOME_PRODUCT_GRID}
             aria-busy={loading}
           >
             {products.map((product) => (
-              <ProductCard
-                key={product._id}
-                product={product}
-                ribbon="NEW"
-                badgePosition="right"
-                variant="marketplace"
-              />
+              <HomeProductCard key={product._id} product={product} showNewTag />
             ))}
 
             {Array.from({ length: loadingCount }).map((_, index) => (
-              <ProductCardSkeleton
-                key={`new-loading-${index}`}
-                variant="marketplace"
-              />
+              <HomeProductCardSkeleton key={`new-loading-${index}`} />
             ))}
           </div>
         )}

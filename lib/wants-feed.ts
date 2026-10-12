@@ -82,6 +82,7 @@ export const wantsFeedSelect = {
   createdAt: true,
   expiresAt: true,
   customer: { select: { name: true, image: true } },
+  _count: { select: { offers: true } },
 } satisfies Prisma.WantSelect;
 
 export type WantsFeedRow = Prisma.WantGetPayload<{ select: typeof wantsFeedSelect }>;
@@ -118,7 +119,7 @@ export function buildWantsFeedFindMany(
   } satisfies Prisma.WantFindManyArgs;
 }
 
-function toFeedItem(row: WantsFeedRow): WantsFeedItem {
+function toFeedItem(row: WantsFeedRow, mine: boolean): WantsFeedItem {
   return {
     id: row.id,
     title: row.title,
@@ -135,6 +136,7 @@ function toFeedItem(row: WantsFeedRow): WantsFeedItem {
     createdAt: row.createdAt.toISOString(),
     expiresAt: row.expiresAt.toISOString(),
     customer: { name: row.customer.name || "JORO member", image: row.customer.image },
+    ...(mine ? { offerCount: row._count.offers } : {}),
   };
 }
 
@@ -153,7 +155,7 @@ export function toWantsFeedPage(
     scope: cursorScope(query, customerId),
   } : null;
   return {
-    wants: page.map(toFeedItem),
+    wants: page.map(row => toFeedItem(row, query.tab === "mine")),
     nextCursor: cursor ? Buffer.from(JSON.stringify(cursor)).toString("base64url") : null,
     hasMore,
   };

@@ -1296,3 +1296,10 @@
 .joro-auth-brand:after { content: ""; position: absolute; z-index: 1; left: -12%; right: -8%; bottom: 18%; height: 1px; background: #b7e33a; box-shadow: 0 0 20px 5px rgba(183, 227, 58, .55); transform: rotate(-21deg); pointer-events: none; }
 @media (max-width: 639px) { .joro-auth-card { min-height: calc(100dvh - 24px); border-radius: 20px; } .joro-auth-role { gap: 6px; min-height: 76px; } .joro-auth-role svg { width: 20px; height: 20px; } }
 .joro-auth-input.pr-11 { padding-right: 44px; }
+
+/* Dashboard shells (vendor/admin) scroll only their content pane; html/body stay put. */
+html.dashboard-scroll-lock,
+html.dashboard-scroll-lock body {
+  height: 100%;
+  overflow: hidden;
+}

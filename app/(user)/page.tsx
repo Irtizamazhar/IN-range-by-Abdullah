@@ -139,6 +139,7 @@ async function getNewArrivalsInitial(): Promise<{
 
 
 
+  // createdAt lets the card show a "New" tag; undated JSON items (epoch) get none.
   const initial = strip.map(
 
     ({
@@ -149,11 +150,7 @@ async function getNewArrivalsInitial(): Promise<{
 
     }) => {
 
-      void createdAtTs;
-
-
-
-      return card;
+      return createdAtTs > 0 ? { ...card, createdAt: new Date(createdAtTs).toISOString() } : card;
 
     }
 
@@ -539,7 +536,7 @@ export default async function HomePage() {
 
       orderBy: { createdAt: "desc" },
 
-      take: 4,
+      take: 12, // up to two rows of the 6-column Trending Wants grid
 
       select: {
 
@@ -559,7 +556,9 @@ export default async function HomePage() {
 
         city: true,
 
-        customer: { select: { name: true } },
+        budgetMin: true,
+        budgetMax: true,
+        budgetFlexible: true,
 
         _count: { select: { offers: true, interests: true } },
 
@@ -674,63 +673,20 @@ export default async function HomePage() {
 
 
         <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-
-          <div className="mb-3.5 flex items-end justify-between gap-3">
-
-            <div>
-
-              <h2 className="mt-0.5 text-[20px] font-black tracking-[-0.035em] text-brand-dark sm:text-[22px]">
-
-                Shop by Category
-
-              </h2>
-
-            </div>
-
-
-
+          <div className="mb-4 flex items-center justify-between gap-2 sm:gap-3">
+            <h2 className="whitespace-nowrap text-[20px] font-black tracking-[-0.035em] text-brand-dark sm:text-[22px]">
+              Shop by Category
+            </h2>
             <Link
-
               href="/products"
-
-              className="inline-flex h-8 items-center gap-1 rounded-lg bg-white px-3 text-[12px] font-bold text-brand-link shadow-xs transition hover:bg-brand-soft"
-
+              className="inline-flex h-8 shrink-0 items-center gap-1 whitespace-nowrap rounded-lg bg-white px-2.5 text-[12px] sm:px-3 font-bold text-brand-link shadow-xs transition hover:bg-brand-soft"
             >
-
               View All Categories
-
-
-
               <ArrowRight className="h-3 w-3" />
-
             </Link>
-
           </div>
-
-
-
-          {categories.length > 0 ? (
-
-            <CategoryAutoScroll
-
-              categories={
-
-                categories
-
-              }
-
-            />
-
-          ) : (
-
-            <div className="rounded-[18px] border border-black/[0.05] bg-white p-7 text-center text-[12px] font-medium text-black/40 shadow-xs">
-
-              Categories will appear here.
-
-            </div>
-
-          )}
-
+          {/* Handles its own empty state. */}
+          <CategoryAutoScroll categories={categories} />
         </section>
 
 

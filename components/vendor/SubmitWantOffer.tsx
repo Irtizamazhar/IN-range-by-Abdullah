@@ -1,9 +1,106 @@
 "use client";
+import { useState, type FormEvent, type ReactNode } from "react";
+import toast from "react-hot-toast";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { LoadingForm } from "@/components/ui/LoadingForm";
-import { useState } from "react";
-export function SubmitWantOffer({ wantId, products }: { wantId: string; products: { id: string; name: string }[] }) {
-  const [message, setMessage] = useState(""); const [busy, setBusy] = useState(false);
-  async function submit(e: React.FormEvent<HTMLFormElement>) { e.preventDefault(); const f = new FormData(e.currentTarget); setBusy(true); try { const r = await fetch("/api/vendor/offers", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ wantId, productId: f.get("productId") || null, price: Number(f.get("price")), quantity: Number(f.get("quantity")), shipping: Number(f.get("shipping")), delivery: f.get("delivery"), condition: f.get("condition"), warranty: f.get("warranty"), message: f.get("message"), expiresAt: new Date(String(f.get("expiry"))).toISOString() }) }); const d = await r.json(); if (!r.ok) throw new Error(d.error); setMessage("Offer submitted. Manage revisions from My Offers."); } catch(e) { setMessage(e instanceof Error ? e.message : "Could not submit offer."); } finally { setBusy(false); } }
-  return <LoadingForm onSubmit={e => submit(e)} className="joro-form mt-6 grid gap-4 rounded-2xl bg-white p-6 sm:grid-cols-2"><h2 className="text-xl font-bold sm:col-span-2">Submit an offer</h2><label>Matching product<select name="productId"><option value="">Link a product later</option>{products.map(p => <option value={p.id} key={p.id}>{p.name}</option>)}</select></label><label>Unit price PKR<input type="number" name="price" min={1} step="0.01" required /></label><label>Quantity<input type="number" name="quantity" min={1} defaultValue={1} required /></label><label>Delivery charge PKR<input name="shipping" type="number" min={0} step="0.01" defaultValue={0} required /></label><label>Estimated delivery<input name="delivery" maxLength={300} required /></label><label>Condition<select name="condition"><option>New</option><option>Used</option><option>Refurbished</option></select></label><label>Warranty<input name="warranty" maxLength={1000} /></label><label>Offer expiry<input name="expiry" type="datetime-local" required /></label><label>Message<textarea name="message" maxLength={5000} /></label><LoadingButton type="submit" loadingLabel="Submitting…" disabled={busy} className="self-end rounded-xl bg-brand-primary p-3 font-bold">Submit offer</LoadingButton><p role="status" className="sm:col-span-2">{message}</p></LoadingForm>;
+import { useLoadingRouter } from "@/hooks/useLoadingRouter";
+
+type Budget = { min: number | null; max: number | null; flexible: boolean; label: string };
+type Errors = Partial<Record<"productId" | "unitPrice" | "expiresAt" | "message", string>>;
+const MESSAGE_MAX = 500;
+const input = "block h-11 w-full min-w-0 rounded-lg border border-neutral-300 bg-white px-3 text-[15px] focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20";
+
+/** "yyyy-MM-ddTHH:mm" in local time, the format a datetime-local input expects. */
+function localInputValue(date: Date) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function Field({ label, hint, htmlFor, error, help, children }: { label: string; hint: string; htmlFor: string; error?: string; help?: ReactNode; children: ReactNode }) {
+  return <div className="min-w-0">
+    <div className="mb-1.5 flex items-baseline justify-between gap-2"><label htmlFor={htmlFor} className="text-sm font-medium text-neutral-800">{label}</label><span className="text-xs text-neutral-400">{hint}</span></div>
+    {children}
+    {error ? <p id={`${htmlFor}-error`} role="alert" className="mt-1 text-xs text-red-600">{error}</p> : help ? <div className="mt-1 text-xs text-neutral-500">{help}</div> : null}
+  </div>;
+}
+
+/**
+ * Vendor quote on a customer Want. The customer already chose quantity and condition, and the server links
+ * the vendor's matching catalog product, so the vendor only sets a unit price and optional warranty/expiry/message.
+ */
+/**
+ * `chooseFrom` is only set when none of the vendor's products matches the Want automatically: the vendor then
+ * picks which of their products they are offering (an empty list means they have nothing in stock to offer).
+ */
+export function SubmitWantOffer({ wantId, budget, quantity, wantExpiresAt, chooseFrom }: { wantId: string; budget: Budget; quantity: number; wantExpiresAt: string; chooseFrom?: { id: string; name: string }[] }) {
+  const router = useLoadingRouter();
+  const [productId, setProductId] = useState(chooseFrom?.length === 1 ? chooseFrom[0].id : "");
+  const nothingToOffer = !!chooseFrom && chooseFrom.length === 0;
+  const [price, setPrice] = useState(""); const [warranty, setWarranty] = useState("");
+  const [expiry, setExpiry] = useState(""); const [message, setMessage] = useState("");
+  const [errors, setErrors] = useState<Errors>({}); const [busy, setBusy] = useState(false); const [done, setDone] = useState(false);
+
+  const now = new Date(); now.setSeconds(0, 0);
+  const latest = new Date(Math.min(Date.now() + 30 * 86400000, new Date(wantExpiresAt).getTime()));
+  const unit = Number(price);
+  const budgetWarning = unit > 0 && !budget.flexible
+    ? budget.max != null && unit > budget.max ? "Your price is above the customer's budget." : budget.min != null && unit < budget.min ? "Your price is below the customer's budget." : ""
+    : "";
+
+  function validate(): Errors {
+    const next: Errors = {};
+    if (chooseFrom && !productId) next.productId = "Choose which of your products you are offering.";
+    if (!price || !Number.isFinite(unit) || unit < 1) next.unitPrice = "Enter a unit price of at least PKR 1.";
+    if (expiry) { const at = new Date(expiry); if (!(at > new Date())) next.expiresAt = "Choose a time in the future."; else if (at > latest) next.expiresAt = `Choose a time before ${latest.toLocaleString("en-PK", { dateStyle: "medium", timeStyle: "short" })}.`; }
+    if (message.length > MESSAGE_MAX) next.message = `Keep the message under ${MESSAGE_MAX} characters.`;
+    return next;
+  }
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); if (busy || done) return;
+    const found = validate(); setErrors(found); if (Object.keys(found).length) return;
+    setBusy(true);
+    try {
+      const response = await fetch("/api/vendor/offers", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+        wantId, ...(chooseFrom && productId ? { productId } : {}), unitPrice: unit, warranty: warranty.trim(), message: message.trim(), ...(expiry ? { expiresAt: new Date(expiry).toISOString() } : {}),
+      }) });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(result?.error || "Could not submit your offer. Please try again.");
+      setDone(true); toast.success("Offer sent to the customer.");
+      await router.push("/vendor/dashboard/offers");
+    } catch (failure) { toast.error(failure instanceof Error ? failure.message : "Could not submit your offer."); }
+    finally { setBusy(false); }
+  }
+
+  const describe = (id: string, key: keyof Errors) => (errors[key] ? `${id}-error` : undefined);
+  return <LoadingForm onSubmit={submit} noValidate className="flex flex-col gap-4 rounded-2xl border border-[#D9E6D0] bg-white p-4 sm:p-5">
+    <div><h2 className="text-lg font-bold text-emerald-950">Submit an offer</h2><p className="mt-0.5 text-xs text-neutral-500">For {quantity.toLocaleString("en-PK")} {quantity === 1 ? "unit" : "units"}, as requested by the customer.</p></div>
+    <fieldset disabled={busy || done || nothingToOffer} className="flex min-w-0 flex-col gap-4">
+      {chooseFrom && (nothingToOffer
+        ? <p role="alert" className="rounded-lg bg-amber-50 px-3 py-2.5 text-sm text-amber-900">You have no active product with at least {quantity.toLocaleString("en-PK")} in stock. Publish one in My Products, then come back to send an offer.</p>
+        : <Field label="Product you are offering" hint="Required" htmlFor="offer-product" error={errors.productId} help="None of your products matched this request automatically. The customer checks out with the one you pick.">
+            <select id="offer-product" value={productId} onChange={e => setProductId(e.target.value)} aria-invalid={!!errors.productId} aria-describedby={describe("offer-product", "productId")} className={input}><option value="">Choose a product</option>{chooseFrom.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
+          </Field>)}
+      <Field label="Unit price PKR" hint="Required" htmlFor="offer-price" error={errors.unitPrice} help={<>
+        <span>Customer budget: {budget.label}</span>
+        {budgetWarning && <span className="mt-1 block rounded-md bg-amber-50 px-2 py-1 text-amber-800">{budgetWarning}</span>}
+      </>}>
+        <input id="offer-price" type="number" inputMode="decimal" min={1} step="0.01" placeholder="e.g. 800" value={price} onChange={e => setPrice(e.target.value)} aria-invalid={!!errors.unitPrice} aria-describedby={describe("offer-price", "unitPrice")} className={input} />
+      </Field>
+      {/* Side by side from sm, but stacked again in the narrow desktop side column. */}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
+        <Field label="Warranty" hint="Optional" htmlFor="offer-warranty">
+          <input id="offer-warranty" maxLength={1000} placeholder="e.g. 6 months" value={warranty} onChange={e => setWarranty(e.target.value)} className={input} />
+        </Field>
+        <Field label="Offer expiry" hint="Optional" htmlFor="offer-expiry" error={errors.expiresAt} help="Defaults to 7 days if left empty.">
+          <input id="offer-expiry" type="datetime-local" min={localInputValue(now)} max={localInputValue(latest)} value={expiry} onChange={e => setExpiry(e.target.value)} aria-invalid={!!errors.expiresAt} aria-describedby={describe("offer-expiry", "expiresAt")} className={input} />
+        </Field>
+      </div>
+      <Field label="Message" hint={`${message.length} / ${MESSAGE_MAX}`} htmlFor="offer-message" error={errors.message}>
+        <textarea id="offer-message" rows={4} maxLength={MESSAGE_MAX} placeholder="Add a note for the customer" value={message} onChange={e => setMessage(e.target.value)} className={`${input} h-auto py-2.5`} />
+      </Field>
+    </fieldset>
+    <LoadingButton type="submit" loading={busy} loadingLabel="Submitting…" disabled={done || nothingToOffer} className="h-11 w-full rounded-lg bg-brand-primary font-bold text-brand-dark transition hover:brightness-95 active:scale-[0.99] disabled:opacity-60">Submit offer</LoadingButton>
+    {done && <p role="status" className="text-center text-sm text-emerald-800">Offer sent. Opening your Offers…</p>}
+  </LoadingForm>;
 }

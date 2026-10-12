@@ -40,7 +40,9 @@ export async function PATCH(request: Request, { params }: Context) { return api(
       return { offer: updated };
     }
     if (action === "counter" && latest.initiator !== "VENDOR") throw new ApiError(409, "Wait for a vendor response.");
-    const terms = sanitizeOfferTerms(offerTerms.parse(body)); validateOfferExpiry(new Date(terms.expiresAt));
+    // Revisions and counters may only change price, warranty, expiry and message (and the vendor's product);
+    // quantity, delivery and condition always carry over from the current terms, whatever the client sends.
+    const terms = sanitizeOfferTerms({ ...offerTerms.parse(body), quantity: latest.quantity, shipping: Number(latest.shipping), delivery: latest.delivery, condition: latest.condition }); validateOfferExpiry(new Date(terms.expiresAt));
     if (!vendor && terms.productId !== latest.productId) throw new ApiError(400, "A counter cannot substitute the vendor product.");
     if (terms.productId) await validateOfferProduct(tx, offer.vendorId, terms.productId, terms.quantity);
     const version = offer.version + 1;
