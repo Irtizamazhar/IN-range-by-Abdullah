@@ -44,7 +44,7 @@ export async function releaseReservedInventory(
     }
     if (row.vendorProductId) {
       await tx.$executeRaw`
-        UPDATE VendorProduct
+        UPDATE vendorproduct
         SET stock = stock + ${row.quantity},
             totalSold = GREATEST(0, totalSold - ${row.quantity})
         WHERE id = ${row.vendorProductId}

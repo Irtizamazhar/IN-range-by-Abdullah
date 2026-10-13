@@ -43,6 +43,8 @@ model Customer {
   offerQuotes      OfferQuote[]
 
   @@index([isActive, createdAt])
+
+  @@map("customer")
 }
 
 model Product {
@@ -79,6 +81,8 @@ model Product {
 
   @@index([isActive, isBestSeller])
   @@index([categoryRecordId])
+
+  @@map("product")
 }
 
 model Category {
@@ -93,6 +97,8 @@ model Category {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   products   Product[]
+
+  @@map("category")
 }
 
 model Review {
@@ -118,6 +124,8 @@ model Review {
   @@unique([orderId, productId])
   @@index([productId])
   @@index([approved, createdAt])
+
+  @@map("review")
 }
 
 /// Guest reviews for JSON-catalog "new arrival" items (numeric id from `data/products.json`).
@@ -134,6 +142,8 @@ model NewArrivalReview {
 
   @@index([newArrivalId])
   @@index([approved, createdAt])
+
+  @@map("newarrivalreview")
 }
 
 /// productId null = staging (before product save). Filled = live product image.
@@ -144,6 +154,8 @@ model ProductImage {
   data      Bytes    @db.MediumBlob
   mimeType  String
   sortOrder Int      @default(0)
+
+  @@map("productimage")
 }
 
 /// Guest payment screenshot before order is created.
@@ -158,6 +170,8 @@ model PaymentProofStaging {
 
   @@index([customerId])
   @@index([expiresAt])
+
+  @@map("paymentproofstaging")
 }
 
 model Order {
@@ -204,6 +218,8 @@ model Order {
   offerQuote            OfferQuote?
 
   @@index([customerId, createdAt])
+
+  @@map("order")
 }
 
 model OrderItem {
@@ -221,6 +237,8 @@ model OrderItem {
   inventoryLine  OrderInventoryLine?
   returnRequests ReturnRequest[]
   warranty       WarrantyRecord?
+
+  @@map("orderitem")
 }
 
 enum InventoryReservationState {
@@ -251,6 +269,8 @@ model OrderInventoryLine {
   @@index([orderId, state])
   @@index([vendorShopOrderId, state])
   @@index([vendorProductId])
+
+  @@map("orderinventoryline")
 }
 
 model OrderStatusEvent {
@@ -267,6 +287,8 @@ model OrderStatusEvent {
   createdAt      DateTime @default(now())
 
   @@index([orderId, createdAt])
+
+  @@map("orderstatusevent")
 }
 
 model CustomerPasswordResetToken {
@@ -279,6 +301,8 @@ model CustomerPasswordResetToken {
   createdAt  DateTime  @default(now())
 
   @@index([customerId, expiresAt])
+
+  @@map("customerpasswordresettoken")
 }
 
 model CustomerNotification {
@@ -294,6 +318,8 @@ model CustomerNotification {
   createdAt      DateTime @default(now())
 
   @@index([customerId, isRead, createdAt])
+
+  @@map("customernotification")
 }
 
 model CustomerAddress {
@@ -311,6 +337,8 @@ model CustomerAddress {
   updatedAt     DateTime @updatedAt
 
   @@index([customerId, isDefault])
+
+  @@map("customeraddress")
 }
 
 model SavedProduct {
@@ -322,6 +350,8 @@ model SavedProduct {
 
   @@id([customerId, productId])
   @@index([productId])
+
+  @@map("savedproduct")
 }
 
 model StoreFollow {
@@ -334,6 +364,8 @@ model StoreFollow {
 
   @@unique([customerId, vendorId])
   @@index([vendorId, createdAt])
+
+  @@map("storefollow")
 }
 
 enum ReturnRequestStatus {
@@ -392,6 +424,8 @@ model ReturnRequest {
   @@index([customerId, requestedAt])
   @@index([vendorId, status])
   @@index([orderId])
+
+  @@map("returnrequest")
 }
 
 model Dispute {
@@ -416,6 +450,8 @@ model Dispute {
   @@index([customerId, createdAt])
   @@index([vendorId, status])
   @@index([orderId])
+
+  @@map("dispute")
 }
 
 /// Provider-neutral refund record. Money is only marked processed after an
@@ -444,6 +480,8 @@ model Refund {
   @@index([customerId, createdAt])
   @@index([orderId, status])
   @@index([vendorId, status])
+
+  @@map("refund")
 }
 
 model WarrantyRecord {
@@ -472,6 +510,8 @@ model WarrantyRecord {
   @@index([customerId, expiresAt])
   @@index([vendorId, status])
   @@index([orderId])
+
+  @@map("warrantyrecord")
 }
 
 /// Database-backed admin identity. The configured environment admin is
@@ -491,6 +531,8 @@ model AdminUser {
   assignedTickets SupportTicket[]
 
   @@index([isActive, role])
+
+  @@map("adminuser")
 }
 
 model AdminAuditLog {
@@ -508,6 +550,8 @@ model AdminAuditLog {
   @@index([adminId, createdAt])
   @@index([entityType, entityId])
   @@index([createdAt])
+
+  @@map("adminauditlog")
 }
 
 model Settings {
@@ -524,6 +568,8 @@ model Settings {
   bankJazzcash       String   @default("")
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
+
+  @@map("settings")
 }
 
 // ─── Multi-vendor (additive; does not alter existing shop tables) ───
@@ -668,6 +714,8 @@ model Vendor {
   warranties       WarrantyRecord[]
 
   @@index([status])
+
+  @@map("vendor")
 }
 
 model VendorDocument {
@@ -679,6 +727,8 @@ model VendorDocument {
   uploadedAt   DateTime           @default(now())
 
   @@index([vendorId])
+
+  @@map("vendordocument")
 }
 
 model VendorProduct {
@@ -708,6 +758,8 @@ model VendorProduct {
   warranties     WarrantyRecord[]
 
   @@index([vendorId])
+
+  @@map("vendorproduct")
 }
 
 model VendorOrder {
@@ -737,6 +789,8 @@ model VendorOrder {
   @@index([vendorId])
   @@index([orderId])
   @@index([vendorShopOrderId])
+
+  @@map("vendororder")
 }
 
 model VendorShopOrder {
@@ -783,6 +837,8 @@ model VendorShopOrder {
   @@index([orderId])
   @@index([vendorId, status])
   @@index([placedAt])
+
+  @@map("vendorshoporder")
 }
 
 model CommissionSetting {
@@ -791,6 +847,8 @@ model CommissionSetting {
   commissionPercentage Decimal  @db.Decimal(5, 2)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
+
+  @@map("commissionsetting")
 }
 
 model VendorEarning {
@@ -822,6 +880,8 @@ model VendorEarning {
   @@index([vendorId])
   @@index([orderId])
   @@index([vendorShopOrderId])
+
+  @@map("vendorearning")
 }
 
 model VendorWithdrawal {
@@ -847,6 +907,8 @@ model VendorWithdrawal {
 
   @@index([vendorId])
   @@index([status])
+
+  @@map("vendorwithdrawal")
 }
 
 enum PayoutAllocationStatus {
@@ -868,6 +930,8 @@ model PayoutAllocation {
 
   @@unique([withdrawalId, earningId])
   @@index([earningId, status])
+
+  @@map("payoutallocation")
 }
 
 model VendorLedgerEntry {
@@ -886,6 +950,8 @@ model VendorLedgerEntry {
 
   @@index([vendorId, createdAt])
   @@index([withdrawalId])
+
+  @@map("vendorledgerentry")
 }
 
 model VendorReview {
@@ -903,6 +969,8 @@ model VendorReview {
 
   @@index([vendorId])
   @@index([customerId])
+
+  @@map("vendorreview")
 }
 
 model VendorCoupon {
@@ -921,6 +989,8 @@ model VendorCoupon {
 
   @@unique([vendorId, couponCode])
   @@index([vendorId])
+
+  @@map("vendorcoupon")
 }
 
 model VendorNotification {
@@ -937,6 +1007,8 @@ model VendorNotification {
 
   @@index([vendorId])
   @@index([vendorId, isRead])
+
+  @@map("vendornotification")
 }
 
 model VendorSession {
@@ -951,6 +1023,8 @@ model VendorSession {
   isRevoked Boolean  @default(false)
 
   @@index([vendorId])
+
+  @@map("vendorsession")
 }
 
 model VendorAuditLog {
@@ -965,6 +1039,8 @@ model VendorAuditLog {
 
   @@index([vendorId])
   @@index([createdAt])
+
+  @@map("vendorauditlog")
 }
 
 enum WantStatus {
@@ -1008,6 +1084,8 @@ model Want {
   @@index([customerId, createdAt])
   @@index([category, city])
   @@index([requestType, status, expiresAt])
+
+  @@map("want")
 }
 
 model WantInterest {
@@ -1020,6 +1098,8 @@ model WantInterest {
 
   @@unique([customerId, wantId])
   @@index([wantId, createdAt])
+
+  @@map("wantinterest")
 }
 
 model WantOffer {
@@ -1036,6 +1116,8 @@ model WantOffer {
 
   @@unique([wantId, vendorId])
   @@index([vendorId, status])
+
+  @@map("wantoffer")
 }
 
 model OfferRevision {
@@ -1058,6 +1140,8 @@ model OfferRevision {
   quote          OfferQuote?
 
   @@unique([offerId, revisionNumber])
+
+  @@map("offerrevision")
 }
 
 model OfferQuote {
@@ -1074,6 +1158,8 @@ model OfferQuote {
   createdAt      DateTime      @default(now())
   orderId        String?       @unique
   order          Order?        @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  @@map("offerquote")
 }
 
 model VendorPromotion {
@@ -1099,6 +1185,8 @@ model VendorPromotion {
   updatedAt    DateTime  @updatedAt
 
   @@index([status, placement, startAt, endAt])
+
+  @@map("vendorpromotion")
 }
 
 /// Admin-curated homepage "Top Vendors" selection -- independent of VendorPromotion (sponsored)
@@ -1115,6 +1203,8 @@ model TopVendor {
   updatedAt DateTime @updatedAt
 
   @@index([enabled, priority])
+
+  @@map("topvendor")
 }
 
 model MarketplaceAudit {
@@ -1126,6 +1216,8 @@ model MarketplaceAudit {
   createdAt DateTime @default(now())
 
   @@index([target, createdAt])
+
+  @@map("marketplaceaudit")
 }
 
 model ShoppingRoom {
@@ -1136,6 +1228,8 @@ model ShoppingRoom {
   members     RoomMember[]
   items       RoomItem[]
   invitations RoomInvite[]
+
+  @@map("shoppingroom")
 }
 
 model RoomMember {
@@ -1152,6 +1246,8 @@ model RoomMember {
   comments   RoomComment[]
 
   @@unique([roomId, customerId])
+
+  @@map("roommember")
 }
 
 model RoomInvite {
@@ -1164,6 +1260,8 @@ model RoomInvite {
   createdAt DateTime     @default(now())
 
   @@index([roomId])
+
+  @@map("roominvite")
 }
 
 model RoomItem {
@@ -1182,6 +1280,8 @@ model RoomItem {
   comments        RoomComment[]
 
   @@index([roomId])
+
+  @@map("roomitem")
 }
 
 model RoomVote {
@@ -1192,6 +1292,8 @@ model RoomVote {
   member   RoomMember @relation(fields: [memberId], references: [id], onDelete: Restrict)
 
   @@unique([memberId, itemId])
+
+  @@map("roomvote")
 }
 
 model RoomComment {
@@ -1204,6 +1306,8 @@ model RoomComment {
   createdAt DateTime   @default(now())
 
   @@index([itemId])
+
+  @@map("roomcomment")
 }
 
 model ServiceOffering {
@@ -1228,6 +1332,8 @@ model ServiceOffering {
   bookings          OrderService[]
 
   @@index([vendorId, active])
+
+  @@map("serviceoffering")
 }
 
 model ProductServiceAddon {
@@ -1239,6 +1345,8 @@ model ProductServiceAddon {
   active    Boolean         @default(true)
 
   @@unique([productId, serviceId])
+
+  @@map("productserviceaddon")
 }
 
 model OrderService {
@@ -1266,6 +1374,8 @@ model OrderService {
 
   @@index([vendorId, status])
   @@index([orderId])
+
+  @@map("orderservice")
 }
 
 model ServiceEvent {
@@ -1278,6 +1388,8 @@ model ServiceEvent {
   createdAt      DateTime     @default(now())
 
   @@index([orderServiceId, createdAt])
+
+  @@map("serviceevent")
 }
 
 model StoreSlugAlias {
@@ -1285,6 +1397,8 @@ model StoreSlugAlias {
   vendorId  String
   vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Restrict)
   createdAt DateTime @default(now())
+
+  @@map("storeslugalias")
 }
 
 /// Help & Support ticket. Owner is exactly one of customer/vendor, matching actorType.
@@ -1324,6 +1438,8 @@ model SupportTicket {
   @@index([actorType, vendorId, status])
   @@index([status, priority, lastActivityAt])
   @@index([assignedToId])
+
+  @@map("supportticket")
 }
 
 /// One row per public message or internal note. isInternalNote rows must never reach
@@ -1343,6 +1459,8 @@ model SupportMessage {
   createdAt DateTime @default(now())
 
   @@index([ticketId, createdAt])
+
+  @@map("supportmessage")
 }
 
 /// Stable provider identity; email is never used to silently link an existing customer.
@@ -1357,4 +1475,6 @@ model CustomerOAuthAccount {
 
   @@unique([provider, providerAccountId])
   @@index([customerId])
+
+  @@map("customeroauthaccount")
 }

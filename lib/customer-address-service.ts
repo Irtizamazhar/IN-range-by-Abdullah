@@ -5,7 +5,7 @@ export const addressSelect = { id: true, label: true, recipientName: true, phone
 export async function addressTransaction<T>(customerId: string, work: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
   for (let attempt = 0; ; attempt++) {
     try { return await prisma.$transaction(async tx => {
-      await tx.$queryRaw`SELECT id FROM Customer WHERE id = ${customerId} FOR UPDATE`;
+      await tx.$queryRaw`SELECT id FROM customer WHERE id = ${customerId} FOR UPDATE`;
       return work(tx);
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }); }
     catch (e) { if (attempt < 2 && e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2034") continue; throw e; }

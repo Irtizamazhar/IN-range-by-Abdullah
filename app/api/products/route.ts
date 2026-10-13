@@ -86,7 +86,7 @@ export async function GET(req: NextRequest) {
   if (isAdminList && products.length > 0) {
     const ids = products.map((p) => p.id);
     const flags = await prisma.$queryRaw<Array<{ id: string; b: unknown }>>(
-      Prisma.sql`SELECT id, isBestSeller AS b FROM Product WHERE id IN (${Prisma.join(ids)})`
+      Prisma.sql`SELECT id, isBestSeller AS b FROM product WHERE id IN (${Prisma.join(ids)})`
     );
     const map = new Map(
       flags.map((r) => [r.id, Boolean(Number(r.b))] as const)

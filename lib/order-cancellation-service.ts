@@ -20,7 +20,7 @@ async function reverseVendorSalesMetrics(
   if (!orderCount && !saleAmount) return;
 
   await tx.$executeRaw`
-    UPDATE Vendor
+    UPDATE vendor
     SET totalSales = GREATEST(0, totalSales - ${saleAmount}),
         totalOrders = GREATEST(0, totalOrders - ${orderCount})
     WHERE id = ${vendorId}

@@ -61,7 +61,7 @@ export async function PATCH(_req: NextRequest, context: Ctx) {
         throw e;
       }
       const rows = await prisma.$queryRaw<Array<{ b: unknown }>>`
-        SELECT isBestSeller AS b FROM Product WHERE id = ${id} LIMIT 1
+        SELECT isBestSeller AS b FROM product WHERE id = ${id} LIMIT 1
       `;
       if (!rows.length) {
         return NextResponse.json({ error: "Not found" }, { status: 404 });
