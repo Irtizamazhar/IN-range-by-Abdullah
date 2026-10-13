@@ -20,5 +20,6 @@ export const PAKISTANI_CITIES = [
   "Sheikhupura",
   "Rahim Yar Khan",
   "Jhang",
+  "Taxila",
   "Other",
 ].sort((a, b) => a.localeCompare(b));
