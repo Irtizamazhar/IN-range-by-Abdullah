@@ -1,0 +1,606 @@
+/* =========================================================
+   JORO.pk — Private launch / Coming Soon screen
+   Self-contained styles (CSS module).
+========================================================= */
+
+/* ---------- Overlay ---------- */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: #f7f8f2;
+  color: #111111;
+  font-family: var(--font-primary);
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ---------- Screen ---------- */
+
+.screen {
+  position: relative;
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+  isolation: isolate;
+}
+
+.glowA,
+.glowB {
+  position: absolute;
+  z-index: -1;
+  border-radius: 999px;
+  filter: blur(70px);
+  pointer-events: none;
+}
+
+.glowA {
+  top: -12%;
+  left: -10%;
+  width: 46vmax;
+  height: 46vmax;
+  background: radial-gradient(circle, rgba(183, 227, 58, 0.38), transparent 65%);
+  animation: joroCsFloat 14s ease-in-out infinite alternate;
+}
+
+.glowB {
+  right: -12%;
+  bottom: -14%;
+  width: 42vmax;
+  height: 42vmax;
+  background: radial-gradient(circle, rgba(0, 143, 59, 0.22), transparent 65%);
+  animation: joroCsFloat 16s ease-in-out infinite alternate-reverse;
+}
+
+.gridPattern {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(rgba(17, 17, 17, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(17, 17, 17, 0.045) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse at center, #000 30%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse at center, #000 30%, transparent 75%);
+  pointer-events: none;
+}
+
+.content {
+  display: flex;
+  flex: 1;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 36px 20px 16px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.logo {
+  width: clamp(150px, 34vw, 210px);
+  height: auto;
+  filter: drop-shadow(0 10px 22px rgba(0, 82, 53, 0.18));
+}
+
+.badge {
+  display: inline-flex;
+  margin-top: 18px;
+  padding: 7px 14px 7px 12px;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(17, 17, 17, 0.9);
+  border-radius: 999px;
+  background: #111111;
+  color: #f5c518;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  box-shadow: 0 8px 24px rgba(17, 17, 17, 0.16);
+}
+
+.badgeDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #f5c518;
+  box-shadow: 0 0 0 0 rgba(245, 197, 24, 0.7);
+  animation: joroCsPulse 1.8s ease-out infinite;
+}
+
+.gears {
+  display: block;
+  width: clamp(170px, 46vw, 230px);
+  height: auto;
+  margin: 18px auto 4px;
+  overflow: visible;
+}
+
+.gearLarge,
+.gearSmall,
+.gearTiny {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.gearLarge {
+  animation: joroCsSpin 12s linear infinite;
+  filter: drop-shadow(0 8px 14px rgba(0, 82, 53, 0.25));
+}
+
+.gearSmall {
+  animation: joroCsSpinReverse 9s linear infinite;
+  filter: drop-shadow(0 6px 10px rgba(201, 154, 30, 0.3));
+}
+
+.gearTiny {
+  animation: joroCsSpin 8s linear infinite;
+}
+
+.heading {
+  margin: 8px 0 0;
+  color: #111111;
+  font-size: clamp(44px, 10vw, 84px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.045em;
+}
+
+.headingAccent {
+  background: linear-gradient(120deg, #005235 0%, #008f3b 45%, #8fbf1f 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.message {
+  max-width: 420px;
+  margin: 16px 0 0;
+  color: #4d544b;
+  font-size: clamp(15px, 2.4vw, 17px);
+  font-weight: 500;
+  line-height: 1.6;
+}
+
+/* Progress */
+.progress {
+  width: 100%;
+  max-width: 400px;
+  margin-top: 30px;
+}
+
+.progressMeta {
+  display: flex;
+  margin-bottom: 10px;
+  justify-content: space-between;
+  color: #6e756c;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.progressValue {
+  color: #123d27;
+  font-weight: 800;
+}
+
+.progressTrack {
+  position: relative;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e7e9e2;
+  box-shadow: inset 0 1px 2px rgba(17, 17, 17, 0.06);
+}
+
+.progressFill {
+  position: relative;
+  width: var(--joro-cs-progress, 80%);
+  height: 100%;
+  overflow: hidden;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #005235, #008f3b 55%, #b7e33a);
+  transform-origin: left center;
+  animation: joroCsFill 1.8s cubic-bezier(0.22, 1, 0.36, 1) 0.7s both;
+}
+
+.progressFill::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    rgba(255, 255, 255, 0.55) 50%,
+    transparent 80%
+  );
+  content: "";
+  transform: translateX(-100%);
+  animation: joroCsShimmer 2.2s ease-in-out 2.4s infinite;
+}
+
+/* Footer + Continue */
+.footer {
+  display: flex;
+  padding: 8px 20px 28px;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.teamLoginButton {
+  display: inline-flex;
+  min-height: 44px;
+  padding: 0 14px;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #6b7168;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition:
+    color 200ms ease,
+    background-color 200ms ease;
+}
+
+.teamLoginButton:hover {
+  background: rgba(0, 82, 53, 0.07);
+  color: #005235;
+}
+
+.teamLoginButton:focus-visible {
+  outline: 2px solid #008f3b;
+  outline-offset: 2px;
+}
+
+.teamLoginIcon {
+  width: 14px;
+  height: 14px;
+}
+
+.footerNote {
+  margin: 0;
+  color: #8a9087;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ---------- Modal ---------- */
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  padding: 20px;
+  place-items: center;
+  overflow-y: auto;
+  background: rgba(17, 17, 17, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: joroCsFadeIn 220ms ease both;
+}
+
+.modal {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  padding: 32px 26px 26px;
+  border: 1px solid #e7e9e2;
+  border-radius: 22px;
+  background: #ffffff;
+  box-shadow: 0 30px 70px rgba(17, 17, 17, 0.28);
+  text-align: left;
+  animation: joroCsModalIn 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.modal::before {
+  position: absolute;
+  top: 0;
+  right: 24px;
+  left: 24px;
+  height: 4px;
+  border-radius: 0 0 6px 6px;
+  background: repeating-linear-gradient(-45deg, #f5c518 0 8px, #111111 8px 16px);
+  content: "";
+}
+
+.modalClose {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: #f3f4ee;
+  color: #4d544b;
+  cursor: pointer;
+  transition: background-color 200ms ease, color 200ms ease;
+}
+
+.modalClose:hover {
+  background: #e7e9e2;
+  color: #111111;
+}
+
+.modalClose svg {
+  width: 18px;
+  height: 18px;
+}
+
+.modalIcon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 14px;
+  background: #e6f7c3;
+  color: #123d27;
+}
+
+.modalIcon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.modalTitle {
+  margin: 16px 0 0;
+  color: #111111;
+  font-size: 23px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.modalSubtitle {
+  margin: 6px 0 0;
+  color: #6e756c;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.modalForm {
+  display: flex;
+  margin-top: 22px;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.fieldLabel {
+  color: #111111;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.fieldInput {
+  width: 100%;
+  height: 48px;
+  padding: 0 14px;
+  border: 1.5px solid #e7e9e2;
+  border-radius: 12px;
+  outline: none;
+  background: #f7f8f2;
+  color: #111111;
+  font-size: 15px;
+  transition: border-color 200ms ease, background-color 200ms ease, box-shadow 200ms ease;
+}
+
+.fieldInput::placeholder {
+  color: #a3a89f;
+}
+
+.fieldInput:focus {
+  border-color: #49651a;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(183, 227, 58, 0.3);
+}
+
+.fieldInput[aria-invalid="true"] {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.12);
+}
+
+.passwordWrap {
+  position: relative;
+  display: block;
+}
+
+.fieldInputWithToggle {
+  padding-right: 48px;
+}
+
+.passwordToggle {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #6e756c;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.passwordToggle:hover {
+  background: #eef0e8;
+  color: #111111;
+}
+
+.passwordToggle svg {
+  width: 19px;
+  height: 19px;
+}
+
+.error {
+  display: flex;
+  margin: -4px 0 0;
+  padding: 10px 12px;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #dc2626;
+  font-size: 13px;
+  font-weight: 700;
+  animation: joroCsShake 380ms ease both;
+}
+
+.submitButton {
+  height: 50px;
+  margin-top: 4px;
+  border: 0;
+  border-radius: 12px;
+  background: #b7e33a;
+  color: #111111;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(183, 227, 58, 0.35);
+  transition: background-color 200ms ease, transform 200ms ease;
+}
+
+.submitButton:hover:not(:disabled) {
+  background: #a7c957;
+  transform: translateY(-1px);
+}
+
+.submitButton:disabled {
+  cursor: progress;
+  opacity: 0.75;
+}
+
+/* ---------- Entrance animations ---------- */
+
+.reveal {
+  animation: joroCsRise 800ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.delay1 { animation-delay: 80ms; }
+.delay2 { animation-delay: 200ms; }
+.delay3 { animation-delay: 340ms; }
+.delay4 { animation-delay: 480ms; }
+.delay5 { animation-delay: 640ms; }
+
+/* ---------- Keyframes ---------- */
+
+@keyframes joroCsRise {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes joroCsFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes joroCsModalIn {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes joroCsSpin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes joroCsSpinReverse {
+  to { transform: rotate(-360deg); }
+}
+
+@keyframes joroCsFill {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@keyframes joroCsShimmer {
+  to { transform: translateX(100%); }
+}
+
+@keyframes joroCsPulse {
+  0% { box-shadow: 0 0 0 0 rgba(245, 197, 24, 0.7); }
+  100% { box-shadow: 0 0 0 9px rgba(245, 197, 24, 0); }
+}
+
+@keyframes joroCsFloat {
+  to { transform: translate(6%, 8%) scale(1.08); }
+}
+
+@keyframes joroCsShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 480px) {
+  .content {
+    padding-top: 26px;
+  }
+
+  .modal {
+    padding: 28px 20px 22px;
+  }
+}
+
+@media (max-height: 700px) {
+  .gears {
+    width: 150px;
+    margin-top: 10px;
+  }
+
+  .progress {
+    margin-top: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .gearLarge,
+  .gearSmall,
+  .gearTiny,
+  .glowA,
+  .glowB,
+  .badgeDot,
+  .progressFill,
+  .progressFill::after,
+  .modal,
+  .modalBackdrop,
+  .error {
+    animation: none;
+  }
+}
