@@ -90,7 +90,7 @@ export function HeroSection({
           <div className="relative z-10 w-full overflow-hidden rounded-[18px] border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.32)]">
             <Image
               src="/branding/hero/men.png"
-              alt="JORO Connect marketplace: customer requests, joining a request, vendor offers and private offers"
+              alt="JORO Wants marketplace: customer requests, joining a request, vendor offers and private offers"
               width={1200}
               height={600}
               sizes="(max-width: 639px) 100vw, (max-width: 1023px) 90vw, 52vw"

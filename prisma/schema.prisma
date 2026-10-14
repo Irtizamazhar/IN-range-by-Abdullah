@@ -42,6 +42,8 @@ model Customer {
   supportTickets   SupportTicket[]
   roomMemberships  RoomMember[]
   offerQuotes      OfferQuote[]
+  wantReactions    WantReaction[]
+  wantReports      WantReport[]
 
   @@index([isActive, createdAt])
 
@@ -713,6 +715,8 @@ model Vendor {
   ledgerEntries    VendorLedgerEntry[]
   followers        StoreFollow[]
   wantOffers       WantOffer[]
+  wantReactions    WantReaction[]
+  wantReports      WantReport[]
   returnRequests   ReturnRequest[]
   disputes         Dispute[]
   refunds          Refund[]
@@ -1135,6 +1139,8 @@ model Want {
   interests        WantInterest[]
   offers           WantOffer[]
   quote            OfferQuote?
+  reactions        WantReaction[]
+  reports          WantReport[]
 
   @@index([status, expiresAt, createdAt])
   @@index([customerId, createdAt])
@@ -1533,4 +1539,59 @@ model CustomerOAuthAccount {
   @@index([customerId])
 
   @@map("customeroauthaccount")
+}
+
+/// One reaction per account per Want: exactly one of customerId / vendorId is set.
+enum WantReactionType {
+  LIKE
+  LOVE
+  SUPPORT
+  WOW
+  FIRE
+}
+
+model WantReaction {
+  id         String           @id @default(cuid())
+  wantId     String
+  want       Want             @relation(fields: [wantId], references: [id], onDelete: Cascade)
+  customerId String?
+  customer   Customer?        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  vendorId   String?
+  vendor     Vendor?          @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  type       WantReactionType
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@unique([wantId, customerId])
+  @@unique([wantId, vendorId])
+  @@index([wantId, type])
+  @@index([customerId])
+  @@index([vendorId])
+
+  @@map("wantreaction")
+}
+
+/// A customer or vendor flagging a public Want for admin review.
+model WantReport {
+  id         String    @id @default(cuid())
+  wantId     String
+  want       Want      @relation(fields: [wantId], references: [id], onDelete: Cascade)
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  vendorId   String?
+  vendor     Vendor?   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  reason     String    @db.VarChar(40)
+  details    String?   @db.VarChar(1000)
+  status     String    @default("OPEN") @db.VarChar(16)
+  reviewedBy String?   @db.VarChar(191)
+  reviewedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@unique([wantId, customerId])
+  @@unique([wantId, vendorId])
+  @@index([status, createdAt])
+  @@index([customerId])
+  @@index([vendorId])
+
+  @@map("wantreport")
 }

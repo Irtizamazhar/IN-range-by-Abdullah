@@ -3,11 +3,12 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import toast from "react-hot-toast";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { LoadingForm } from "@/components/ui/LoadingForm";
-import { useLoadingRouter } from "@/hooks/useLoadingRouter";
+import Link from "@/components/ui/LoadingLink";
 
 type Budget = { min: number | null; max: number | null; flexible: boolean; label: string };
-type Errors = Partial<Record<"productId" | "unitPrice" | "expiresAt" | "message", string>>;
+type Errors = Partial<Record<"productId" | "unitPrice" | "expiresAt" | "message" | "delivery", string>>;
 const MESSAGE_MAX = 500;
+const DELIVERY_MAX = 300;
 const input = "block h-11 w-full min-w-0 rounded-lg border border-neutral-300 bg-white px-3 text-[15px] focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20";
 
 /** "yyyy-MM-ddTHH:mm" in local time, the format a datetime-local input expects. */
@@ -33,11 +34,11 @@ function Field({ label, hint, htmlFor, error, help, children }: { label: string;
  * picks which of their products they are offering (an empty list means they have nothing in stock to offer).
  */
 export function SubmitWantOffer({ wantId, budget, quantity, wantExpiresAt, chooseFrom }: { wantId: string; budget: Budget; quantity: number; wantExpiresAt: string; chooseFrom?: { id: string; name: string }[] }) {
-  const router = useLoadingRouter();
   const [productId, setProductId] = useState(chooseFrom?.length === 1 ? chooseFrom[0].id : "");
   const nothingToOffer = !!chooseFrom && chooseFrom.length === 0;
   const [price, setPrice] = useState(""); const [warranty, setWarranty] = useState("");
-  const [expiry, setExpiry] = useState(""); const [message, setMessage] = useState("");
+  const [expiry, setExpiry] = useState(""); const [message, setMessage] = useState(""); const [delivery, setDelivery] = useState("");
+  const [sentOfferId, setSentOfferId] = useState("");
   const [errors, setErrors] = useState<Errors>({}); const [busy, setBusy] = useState(false); const [done, setDone] = useState(false);
 
   const now = new Date(); now.setSeconds(0, 0);
@@ -53,6 +54,7 @@ export function SubmitWantOffer({ wantId, budget, quantity, wantExpiresAt, choos
     if (!price || !Number.isFinite(unit) || unit < 1) next.unitPrice = "Enter a unit price of at least PKR 1.";
     if (expiry) { const at = new Date(expiry); if (!(at > new Date())) next.expiresAt = "Choose a time in the future."; else if (at > latest) next.expiresAt = `Choose a time before ${latest.toLocaleString("en-PK", { dateStyle: "medium", timeStyle: "short" })}.`; }
     if (message.length > MESSAGE_MAX) next.message = `Keep the message under ${MESSAGE_MAX} characters.`;
+    if (delivery.length > DELIVERY_MAX) next.delivery = `Keep the estimate under ${DELIVERY_MAX} characters.`;
     return next;
   }
 
@@ -62,12 +64,12 @@ export function SubmitWantOffer({ wantId, budget, quantity, wantExpiresAt, choos
     setBusy(true);
     try {
       const response = await fetch("/api/vendor/offers", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
-        wantId, ...(chooseFrom && productId ? { productId } : {}), unitPrice: unit, warranty: warranty.trim(), message: message.trim(), ...(expiry ? { expiresAt: new Date(expiry).toISOString() } : {}),
+        wantId, ...(chooseFrom && productId ? { productId } : {}), unitPrice: unit, warranty: warranty.trim(), message: message.trim(), delivery: delivery.trim(), ...(expiry ? { expiresAt: new Date(expiry).toISOString() } : {}),
       }) });
       const result = await response.json().catch(() => null);
       if (!response.ok) throw new Error(result?.error || "Could not submit your offer. Please try again.");
-      setDone(true); toast.success("Offer sent to the customer.");
-      await router.push("/vendor/dashboard/offers");
+      // Repeated clicks are blocked by `busy`/`done`; the server also allows one offer per vendor per Want.
+      setDone(true); setSentOfferId(String(result?.offer?.id || "")); toast.success("Your offer has been sent.");
     } catch (failure) { toast.error(failure instanceof Error ? failure.message : "Could not submit your offer."); }
     finally { setBusy(false); }
   }
@@ -96,11 +98,14 @@ export function SubmitWantOffer({ wantId, budget, quantity, wantExpiresAt, choos
           <input id="offer-expiry" type="datetime-local" min={localInputValue(now)} max={localInputValue(latest)} value={expiry} onChange={e => setExpiry(e.target.value)} aria-invalid={!!errors.expiresAt} aria-describedby={describe("offer-expiry", "expiresAt")} className={input} />
         </Field>
       </div>
-      <Field label="Message" hint={`${message.length} / ${MESSAGE_MAX}`} htmlFor="offer-message" error={errors.message}>
-        <textarea id="offer-message" rows={4} maxLength={MESSAGE_MAX} placeholder="Add a note for the customer" value={message} onChange={e => setMessage(e.target.value)} className={`${input} h-auto py-2.5`} />
+      <Field label="Delivery / completion estimate" hint="Optional" htmlFor="offer-delivery" error={errors.delivery} help="For example: 2-3 days in Lahore, or completed within a week.">
+        <input id="offer-delivery" maxLength={DELIVERY_MAX} placeholder="e.g. 2-3 working days" value={delivery} onChange={e => setDelivery(e.target.value)} aria-invalid={!!errors.delivery} aria-describedby={describe("offer-delivery", "delivery")} className={input} />
+      </Field>
+      <Field label="Note to the customer" hint={`${message.length} / ${MESSAGE_MAX}`} htmlFor="offer-message" error={errors.message}>
+        <textarea id="offer-message" rows={4} maxLength={MESSAGE_MAX} placeholder="What you're offering, scope, and anything the customer should know" value={message} onChange={e => setMessage(e.target.value)} className={`${input} h-auto py-2.5`} />
       </Field>
     </fieldset>
-    <LoadingButton type="submit" loading={busy} loadingLabel="Submitting…" disabled={done || nothingToOffer} className="h-11 w-full rounded-lg bg-brand-primary font-bold text-brand-dark transition hover:brightness-95 active:scale-[0.99] disabled:opacity-60">Submit offer</LoadingButton>
-    {done && <p role="status" className="text-center text-sm text-emerald-800">Offer sent. Opening your Offers…</p>}
+    <LoadingButton type="submit" loading={busy} loadingLabel="Submitting…" disabled={done || nothingToOffer} className="h-11 w-full rounded-lg bg-brand-primary font-bold text-brand-dark transition hover:brightness-95 active:scale-[0.99] disabled:opacity-60">{done ? "Offered" : "Send Offer"}</LoadingButton>
+    {done && <div role="status" className="rounded-lg bg-[#F3F9EC] px-3 py-3 text-center text-sm text-[#005235]"><p className="font-bold">Your offer has been sent.</p><p className="mt-1 text-xs text-neutral-600">The customer sees it privately. Your button now shows “Offered”.</p><Link href={sentOfferId ? `/vendor/dashboard/offers#${sentOfferId}` : "/vendor/dashboard/offers"} className="mt-2 inline-block font-bold underline">View / Edit Offer</Link></div>}
   </LoadingForm>;
 }

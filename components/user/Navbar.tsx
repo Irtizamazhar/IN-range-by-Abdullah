@@ -27,6 +27,7 @@ import {
 } from "next-auth/react";
 
 import { CartSidebar } from "./CartSidebar";
+import { CustomerNotificationBell } from "./CustomerNotificationBell";
 import { LogoMark } from "./LogoMark";
 
 import { useCart } from "@/context/CartContext";
@@ -275,6 +276,7 @@ export function Navbar({
                 >
                   Sell on JORO
                 </Link>
+                <CustomerNotificationBell />
                 {/* CART */}
 
                 <LoadingButton

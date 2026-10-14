@@ -33,7 +33,8 @@ export function loadingMessageForRoute(input: string | null | undefined): string
   if (first === "new-arrivals") return second ? "Loading product details..." : "Loading products...";
   if (first === "services") return second ? "Loading service details..." : "Exploring services...";
   if (first === "gifts") return "Finding gifts...";
-  if (first === "joro-connect" || first === "together") return "Opening JORO Connect...";
+  if (first === "joro-connect") return "Opening Wants...";
+  if (first === "together") return "Opening JORO Connect...";
   if (first === "wants") return "Loading requests...";
   if (first === "stores") return second ? "Opening store..." : "Exploring stores...";
   if (first === "cart") return "Loading your cart...";

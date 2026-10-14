@@ -9,7 +9,7 @@ const directory = await mkdtemp(join(tmpdir(), "joro-marketplace-"));
 let failures = 0;
 try {
   for (const width of [390, 768, 1440]) {
-    for (const [name, route, heading] of [["home", "/", "Shop by Category"], ["services", "/services", "Find a trusted service provider"], ["gifts", "/gifts", "Thoughtful gifts for every occasion"], ["connect", "/joro-connect", "JORO Connect"]]) {
+    for (const [name, route, heading] of [["home", "/", "Shop by Category"], ["services", "/services", "Find a trusted service provider"], ["gifts", "/gifts", "Thoughtful gifts for every occasion"], ["wants", "/wants", "Wants"]]) {
       const page = await browser.newPage({ viewport: { width, height: 900 }, deviceScaleFactor: 1 });
       const errors = [];
       page.on("pageerror", error => errors.push(error.message));

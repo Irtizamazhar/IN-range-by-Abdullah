@@ -16,13 +16,15 @@ export async function validateOfferProduct(tx: Prisma.TransactionClient, vendorI
 }
 /**
  * What a vendor may send when first quoting on a Want. The customer already chose quantity and condition,
- * so those (plus delivery charge and estimate) are set on the server; unknown keys are dropped by zod.
+ * so those (plus the delivery charge) are set on the server; unknown keys are dropped by zod.
  */
 export const newOfferInput = z.object({
   wantId: z.string({ message: "This Want could not be found." }).min(1, "This Want could not be found.").max(191),
   unitPrice: z.number({ message: "Enter a unit price." }).positive("Unit price must be at least PKR 1.").min(1, "Unit price must be at least PKR 1.").max(999999999),
   warranty: z.string().trim().max(1000).optional().default(""),
   message: z.string().trim().max(500, "Message can be at most 500 characters.").optional().default(""),
+  /** Expected delivery or completion time, e.g. "2-3 days" (stored on the revision's delivery field). */
+  delivery: z.string().trim().max(300, "Delivery estimate can be at most 300 characters.").optional().default(""),
   expiresAt: z.string().datetime().optional(),
   // Only sent when nothing in the vendor's catalog matches automatically and the vendor picks a product.
   productId: z.string().min(1).max(191).optional(),

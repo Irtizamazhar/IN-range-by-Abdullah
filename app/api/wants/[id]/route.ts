@@ -4,19 +4,34 @@ import { wantInput } from "@/lib/want-schema";
 import { sanitizePlainText } from "@/lib/security/sanitize";
 import { removeWantPhotoFile } from "@/lib/want-photo-file";
 import { wantImages } from "@/lib/want-images";
+import { resolveWantViewer, wantEngagement } from "@/lib/want-engagement";
+import { publicDisplayName } from "@/lib/want-social";
+import { assertWantPhotoStored } from "@/lib/want-photo-file";
 export const dynamic = "force-dynamic";
 type Context = { params: { id: string } };
 export async function GET(_request: Request, { params }: Context) { return api(async () => {
-  const want = await prisma.want.findUnique({ where: { id: params.id }, select: { id: true, customerId: true, title: true, requestType: true, occasion: true, category: true, city: true, budgetMin: true, budgetMax: true, budgetFlexible: true, quantity: true, description: true, condition: true, photo: true, needBy: true, status: true, expiresAt: true, createdAt: true, _count: { select: { interests: true, offers: true } } } });
+  const want = await prisma.want.findUnique({ where: { id: params.id }, select: { id: true, customerId: true, title: true, requestType: true, occasion: true, category: true, city: true, budgetMin: true, budgetMax: true, budgetFlexible: true, quantity: true, description: true, condition: true, photo: true, needBy: true, status: true, expiresAt: true, createdAt: true, customer: { select: { name: true, image: true, isActive: true } }, _count: { select: { interests: true, offers: true } } } });
   if (!want) throw new ApiError(404, "Want not found.");
-  let isOwner = false;
-  try { const customer = await customerActor(); isOwner = customer.id === want.customerId; } catch { /* anonymous viewer */ }
-  if ((want.status !== "OPEN" || want.expiresAt <= new Date()) && !isOwner) throw new ApiError(404, "Want unavailable.");
-  const offers = isOwner
-    ? await prisma.wantOffer.findMany({ where: { wantId: want.id }, orderBy: { updatedAt: "desc" }, include: { vendor: { select: { id: true, shopName: true, city: true, storeSlug: true } }, revisions: { orderBy: { revisionNumber: "desc" } } } })
-    : [];
-  const { customerId, ...publicWant } = want; void customerId;
-  return { want: { ...publicWant, images: wantImages(want), isOwner, offers } };
+  const viewer = await resolveWantViewer();
+  const isOwner = viewer.customerId === want.customerId;
+  // Hidden, rejected, pending, expired or deactivated-owner Wants exist only for their owner.
+  if (!isOwner && (want.status !== "OPEN" || want.expiresAt <= new Date() || !want.customer.isActive)) throw new ApiError(404, "Want unavailable.");
+  const [offers, engagement] = await Promise.all([
+    isOwner
+      ? prisma.wantOffer.findMany({ where: { wantId: want.id }, orderBy: { updatedAt: "desc" }, include: { vendor: { select: { id: true, shopName: true, city: true, storeSlug: true } }, revisions: { orderBy: { revisionNumber: "desc" } } } })
+      : Promise.resolve([]),
+    wantEngagement([want], viewer),
+  ]);
+  const { customerId, customer, ...publicWant } = want; void customerId;
+  const social = engagement.get(want.id)!;
+  return { want: {
+    ...publicWant,
+    // `interests` keeps the active-account joined count for older clients reading _count.
+    _count: { interests: social.joinedCount, offers: social.offerVendorCount },
+    customer: { name: publicDisplayName(customer.name), image: customer.image },
+    images: wantImages(want), isOwner, offers,
+    joinedCount: social.joinedCount, offerVendorCount: social.offerVendorCount, reactions: social.reactions, viewer: social.viewer,
+  } };
 }); }
 export async function PATCH(request: Request, { params }: Context) { return api(async () => {
   sameOrigin(request); const customer = await customerActor(); const body = await request.json();
@@ -32,6 +47,7 @@ export async function PATCH(request: Request, { params }: Context) { return api(
     }
     const { draft, title, description, category, city, condition, needBy, ...data } = wantInput.parse(body);
     if (want._count.offers > 0 && (data.requestType !== want.requestType || sanitizePlainText(category, 100) !== want.category)) throw new ApiError(409, "Sellers have already made offers on this Want, so its request type and category can't be changed.");
+    if (data.photo && data.photo !== want.photo) await assertWantPhotoStored(data.photo);
     const expiresAt = data.expiresAt ? new Date(data.expiresAt) : want.expiresAt;
     if (expiresAt <= new Date() || expiresAt.getTime() > Date.now() + 90 * 86400000) throw new ApiError(400, "Invalid expiry.");
     const updated = await tx.want.update({ where: { id: want.id }, data: { ...data, title: sanitizePlainText(title, 160), description: description ? sanitizePlainText(description, 5000) : null, category: sanitizePlainText(category, 100), city: sanitizePlainText(city, 100), condition: condition ? sanitizePlainText(condition, 60) : undefined, needBy: needBy ? new Date(needBy) : null, expiresAt, status: draft ? "DRAFT" : "PENDING_MODERATION", moderationReason: null } });

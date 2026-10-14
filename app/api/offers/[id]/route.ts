@@ -8,7 +8,10 @@ export const dynamic = "force-dynamic";
 type Context = { params: { id: string } };
 export async function PATCH(request: Request, { params }: Context) { return api(async () => {
   sameOrigin(request); const body = await request.json(); const action = z.enum(["revise", "counter", "withdraw", "reject", "accept"]).parse(body.action);
-  const vendor = ["revise", "withdraw"].includes(action) ? await getVendorFromSession() : null;
+  // Vendor actions need an approved vendor session; they never fall back to the customer path.
+  const vendorAction = action === "revise" || action === "withdraw";
+  const vendor = vendorAction ? await getVendorFromSession() : null;
+  if (vendorAction && !vendor) throw new ApiError(401, "Sign in as an approved vendor to change your offer.");
   const customer = vendor ? null : await customerActor();
   return prisma.$transaction(async tx => {
     const offer = await tx.wantOffer.findUnique({ where: { id: params.id }, include: { want: true, vendor: { select: { status: true, shopName: true } }, revisions: { orderBy: { revisionNumber: "desc" }, take: 1 } } });
@@ -48,7 +51,7 @@ export async function PATCH(request: Request, { params }: Context) { return api(
     const version = offer.version + 1;
     await tx.offerRevision.create({ data: { ...terms, expiresAt: new Date(terms.expiresAt), offerId: offer.id, revisionNumber: version, initiator: vendor ? "VENDOR" : "CUSTOMER" } });
     const updated = await tx.wantOffer.update({ where: { id: offer.id }, data: { version, status: vendor ? "SUBMITTED" : "COUNTERED" } });
-    if (vendor) await notifyCustomer(tx, offer.want.customerId, `offer-revised:${offer.id}:${version}`, "Seller updated their offer", customerHref, `${offer.vendor.shopName} sent new terms for "${offer.want.title}".`);
+    if (vendor) await notifyCustomer(tx, offer.want.customerId, `offer-revised:${offer.id}:${version}`, "Revised offer received", customerHref, `${offer.vendor.shopName} revised their offer for your "${offer.want.title}" request.`);
     else await notifyVendor(tx, offer.vendorId, `offer-countered:${offer.id}:${version}`, "Customer sent a counter offer", vendorHref, `A customer countered your offer on "${offer.want.title}".`);
     return { offer: updated };
   }, { isolationLevel: "Serializable" });

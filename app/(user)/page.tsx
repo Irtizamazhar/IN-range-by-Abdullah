@@ -851,7 +851,7 @@ export default async function HomePage() {
                   <ArrowRight className={`${styles.promoArrow} h-4 w-4 shrink-0`} aria-hidden="true" />
                 </Link>
                 <Link
-                  href="/joro-connect"
+                  href="/wants"
                   className={`${styles.wantSecondary} inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-[12px] font-bold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white`}
                 >
                   Explore Requests

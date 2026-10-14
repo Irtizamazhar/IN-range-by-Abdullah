@@ -18,7 +18,7 @@ const explore = [
   { label: "Gifts", href: "/gifts", Icon: Gift },
   { label: "Wants & Offers", href: "/wants", Icon: Tag },
   { label: "Trending Wants", href: "/wants/trending", Icon: TrendingUp },
-  { label: "JORO Connect", href: "/joro-connect", Icon: Users },
+  { label: "Wants", href: "/wants", Icon: Users },
   { label: "Stores", href: "/stores", Icon: Store },
   { label: "Sell on JORO", href: "/sell", Icon: PlusCircle },
 ] as const;
@@ -79,7 +79,7 @@ export function Footer({ settings }: { settings: Pick<ISettings, "whatsappNumber
         <Contact number={settings.whatsappNumber} />
       </div>
       <div className={styles.skyline} aria-hidden="true"><Image src="/branding/footer/pakistan-skyline.png" alt="" fill sizes="(max-width: 639px) 390px, (max-width: 1024px) 768px, 1280px" className={styles.skylineImage} /></div>
-      <div className={styles.bottom}><span className={styles.copyright}>© {new Date().getFullYear()} JORO.pk. All rights reserved.</span><SocialLinks /><nav aria-label="Footer shortcuts" className={styles.motto}><Link href="/products">Shop</Link><b aria-hidden="true">·</b><Link href="/wants/new">Post</Link><b aria-hidden="true">·</b><Link href="/joro-connect">Connect</Link></nav></div>
+      <div className={styles.bottom}><span className={styles.copyright}>© {new Date().getFullYear()} JORO.pk. All rights reserved.</span><SocialLinks /><nav aria-label="Footer shortcuts" className={styles.motto}><Link href="/products">Shop</Link><b aria-hidden="true">·</b><Link href="/wants/new">Post</Link><b aria-hidden="true">·</b><Link href="/wants">Wants</Link></nav></div>
     </div>
   </footer>;
 }

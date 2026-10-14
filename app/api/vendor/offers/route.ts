@@ -21,18 +21,19 @@ export async function POST(request: Request) { return api(async () => {
       const want = await tx.want.findFirst({ where: { id: wantId, status: "OPEN", expiresAt: { gt: new Date() } }, select: { id: true, title: true, category: true, customerId: true, quantity: true, condition: true, expiresAt: true } }); if (!want) throw new ApiError(409, "This Want is no longer open for offers.");
       const existing = await tx.wantOffer.findUnique({ where: { wantId_vendorId: { wantId, vendorId: session.vendor.id } }, select: { id: true } });
       if (existing) throw new ApiError(409, "You already have an offer thread on this Want. Manage it from My Offers instead of submitting a new one.");
-      // Server-owned terms: the customer's quantity and condition, no delivery charge or estimate, and the catalog product.
+      // Server-owned terms: the customer's quantity and condition, no delivery charge, and the catalog product.
       const product = await pickOfferProduct(tx, session.vendor.id, want, input.unitPrice, input.productId);
       const defaultExpiry = new Date(Math.min(Date.now() + DEFAULT_OFFER_DAYS * 86400000, want.expiresAt.getTime()));
       const terms = sanitizeOfferTerms({
-        productId: product.id, price: input.unitPrice, quantity: want.quantity, shipping: 0, delivery: "",
+        productId: product.id, price: input.unitPrice, quantity: want.quantity, shipping: 0, delivery: input.delivery,
         condition: want.condition || "Any", warranty: input.warranty, message: input.message,
         expiresAt: (input.expiresAt ? new Date(input.expiresAt) : defaultExpiry).toISOString(),
       });
       await validateOfferProduct(tx, session.vendor.id, terms.productId, terms.quantity);
       const offer = await tx.wantOffer.create({ data: { wantId, vendorId: session.vendor.id, revisions: { create: { ...terms, expiresAt: new Date(terms.expiresAt), revisionNumber: 1, initiator: "VENDOR" } } } });
-      await notifyCustomer(tx, want.customerId, `offer-submitted:${offer.id}`, "New offer on your Want", `/wants/${wantId}`, `A seller sent an offer for "${want.title}".`);
-      return { offer };
+      // Only the Want owner is notified; the link opens their private offer, which only they can load.
+      await notifyCustomer(tx, want.customerId, `offer-submitted:${offer.id}`, "New offer received", `/account/offers#${offer.id}`, `New offer received for your "${want.title}" request.`);
+      return { offer: { id: offer.id, status: offer.status, wantId: offer.wantId } };
     }, { isolationLevel: "Serializable" });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
