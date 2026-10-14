@@ -5,6 +5,8 @@ import Link from "@/components/ui/LoadingLink";
 import { HeroHeadline } from "./HeroHeadline";
 import {
   ArrowRight,
+  Banknote,
+  Handshake,
   Megaphone,
   ShoppingBag,
   Store,
@@ -72,11 +74,20 @@ export function HeroSection({
             </Link>
           </div>
 
-          <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-white/10 pt-4 text-[11px] font-bold uppercase tracking-[0.08em] text-white/55 sm:text-[12px]">
-            <span>✓ Verified Sellers</span>
-            <span>✓ Secure Shopping</span>
-            <span>✓ Pakistan Delivery</span>
-          </div>
+          <ul className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-white/10 pt-4 text-[11px] font-bold uppercase tracking-[0.08em] text-white/70 sm:text-[12px]">
+            <li className="flex items-center gap-1.5">
+              <Megaphone className="h-3.5 w-3.5 text-brand-primary" aria-hidden="true" />
+              Free Want Posting
+            </li>
+            <li className="flex items-center gap-1.5">
+              <Handshake className="h-3.5 w-3.5 text-brand-primary" aria-hidden="true" />
+              Private Seller Offers
+            </li>
+            <li className="flex items-center gap-1.5">
+              <Banknote className="h-3.5 w-3.5 text-brand-primary" aria-hidden="true" />
+              Cash on Delivery
+            </li>
+          </ul>
         </div>
 
         {/* RIGHT VISUAL — JORO CONNECT IMAGE */}

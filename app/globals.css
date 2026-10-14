@@ -1303,3 +1303,38 @@ html.dashboard-scroll-lock body {
   height: 100%;
   overflow: hidden;
 }
+
+/* =========================================================
+   ADMIN PANEL — "Classic Emerald" theme.
+   Scoped to .admin-ui so the storefront and vendor panel keep their palette.
+   Existing admin pages use brand-* / darkText / primaryYellow utilities, which
+   read these variables, so they inherit the admin palette without markup edits.
+========================================================= */
+.admin-ui {
+  --brand-primary-rgb: 181 230 55;   /* #B5E637 accent lime */
+  --brand-hover-rgb: 163 211 40;
+  --brand-dark-rgb: 16 42 32;        /* emerald-tinted ink for text */
+  --brand-background-rgb: 247 249 246; /* #F7F9F6 */
+  --brand-secondary-rgb: 0 82 53;    /* #005235 */
+  --brand-soft-rgb: 234 244 236;
+
+  --brand-accent: #b5e637;
+  --brand-ink: #102a20;
+  --brand-hover: #a3d328;
+  --brand-soft: #eaf4ec;
+  --brand-link: #005235;
+
+  background-color: #f7f9f6;
+  color: #102a20;
+}
+
+.admin-ui .border-borderGray { border-color: #e3eae4; }
+
+.admin-sidebar-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+.admin-sidebar-scrollbar::-webkit-scrollbar { width: 6px; }
+.admin-sidebar-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.admin-sidebar-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.22); border-radius: 999px; }
+.admin-sidebar-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.35); }
