@@ -10,6 +10,7 @@ import { useCart } from "@/context/CartContext";
 import { useSavedProducts } from "@/lib/use-saved-products";
 import { formatPKR } from "@/lib/format";
 import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
+import { displayDiscount } from "@/lib/product-discount";
 import styles from "./ProductCard.module.css";
 
 export type ProductCardData = {
@@ -81,14 +82,12 @@ export const ProductCard = memo(function ProductCard({
   const image = product.images?.[0];
   const available = product.available !== false;
   const detailHref = product.href || `/products/${product._id}`;
-  const hasDiscount = Boolean(product.originalPrice && product.originalPrice > product.price);
-  const discountPercent = product.discountPercent ??
-    (hasDiscount && product.originalPrice ? Math.round((1 - product.price / product.originalPrice) * 100) : 0);
+  const discount = displayDiscount(product.price, product.originalPrice);
+  const originalPrice = Number(product.originalPrice);
+  const hasOriginalPrice = Number.isFinite(originalPrice) && product.price > 0 && originalPrice > product.price;
   const reviews = Math.max(0, Math.floor(Number(product.reviewCount) || 0));
   const rating = Number(product.ratingAvg) || 0;
   const marketplace = presentation === "marketplace";
-  const marketplaceDiscount = Math.max(0, Math.round(Number(discountPercent) || 0));
-  const marketplaceDiscountLabel = marketplaceDiscount > 0 ? `-${marketplaceDiscount}%` : "0%";
 
   const stockKnown = typeof product.stock === "number" && Number.isFinite(product.stock);
   const maxStock = stockKnown ? Math.max(0, Number(product.stock)) : 99;
@@ -111,12 +110,12 @@ export const ProductCard = memo(function ProductCard({
       fill
       unoptimized={shouldUnoptimizeImageSrc(image)}
       sizes={presentation === "featured"
-        ? "(max-width: 359px) 90vw, (max-width: 639px) 46vw, 280px"
+        ? "(max-width: 639px) 47vw, 280px"
         : presentation === "compact"
         ? "(max-width: 639px) 47vw, (max-width: 1023px) 31vw, (max-width: 1279px) 21vw, 240px"
         : marketplace
         ? "(max-width: 639px) 47vw, (max-width: 1023px) 31vw, 17vw"
-        : "(max-width: 639px) calc(100vw - 40px), (max-width: 1023px) calc((100vw - 64px) / 2), 280px"}
+        : "(max-width: 639px) 47vw, (max-width: 1023px) calc((100vw - 64px) / 2), 280px"}
       className={styles.image}
     />
   ) : (
@@ -157,8 +156,8 @@ export const ProductCard = memo(function ProductCard({
         ) : (
           <div className={styles.imageLink}>{imageContent}</div>
         )}
-        {marketplace || discountPercent > 0 ? (
-          <span className={styles.badge}>{marketplace ? marketplaceDiscountLabel : `-${discountPercent}%`}</span>
+        {discount ? (
+          <span className={styles.badge}>-{discount.percent}%</span>
         ) : ribbon ? (
           <span className={styles.badge}>{ribbon}</span>
         ) : null}
@@ -204,10 +203,10 @@ export const ProductCard = memo(function ProductCard({
             {currentPrice}
           </span>
           {marketplace ? (
-            <span className={styles.marketplaceDiscount}>{marketplaceDiscountLabel}</span>
+            hasOriginalPrice ? <del className={styles.marketplaceDiscount}>{formatPKR(originalPrice)}</del> : null
           ) : (
-            <span data-product-original-price className={styles.originalPrice} aria-hidden={!hasDiscount}>
-              {hasDiscount && product.originalPrice ? <del>{formatPKR(product.originalPrice)}</del> : null}
+            <span data-product-original-price className={styles.originalPrice} aria-hidden={!hasOriginalPrice}>
+              {hasOriginalPrice ? <del>{formatPKR(originalPrice)}</del> : null}
             </span>
           )}
         </div>

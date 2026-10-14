@@ -20,7 +20,6 @@
 
 @media (max-width: 639px) {
   .grid {
-    /* Match two cards even inside the homepage's padded featured panel. */
-    --product-card-width: min(180px, calc((100vw - 64px) / 2));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

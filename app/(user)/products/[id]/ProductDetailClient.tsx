@@ -16,6 +16,7 @@ import {
   Plus,
 } from "lucide-react";
 import { ProductCard, ProductCardData } from "@/components/user/ProductCard";
+import { displayDiscount } from "@/lib/product-discount";
 import gridStyles from "@/components/user/ProductGrid.module.css";
 import {
   ProductApprovedReviewsList,
@@ -107,11 +108,6 @@ export function ProductDetailClient({
   const mainLocal = mainImg ? isLocalProductImageSrc(mainImg) : false;
   const hasDiscount =
     Boolean(product.originalPrice && product.originalPrice > product.price);
-  const discountPct =
-    product.discountPercent ??
-    (hasDiscount && product.originalPrice
-      ? Math.round((1 - product.price / product.originalPrice) * 100)
-      : 0);
   const needsVariant = product.variants?.length > 0;
 
   const basePrice = product.price;
@@ -176,6 +172,7 @@ export function ProductDetailClient({
       : hasDiscount
         ? product.originalPrice! * tierNum
         : tierMeta[tierNum].strikeTotal;
+  const displayedDiscount = displayDiscount(displayPrice, displayOriginal);
 
   function validateAdd() {
     if (needsVariant && !variant) {
@@ -328,19 +325,19 @@ export function ProductDetailClient({
                 >
                   {formatPKR(displayPrice)}
                 </span>
-                {hasDiscount || displayOriginal != null ? (
+                {displayOriginal != null ? (
                   <>
                     {displayOriginal != null ? (
                       <span className="text-sm text-[#757575] line-through">
                         {formatPKR(displayOriginal)}
                       </span>
                     ) : null}
-                    {discountPct > 0 ? (
+                    {displayedDiscount ? (
                       <span
                         className="rounded-full bg-[#EFFBF4] px-2 py-1 text-[12px] font-bold"
                         style={{ color: "var(--brand-link)" }}
                       >
-                        -{discountPct}%
+                        -{displayedDiscount.percent}%
                       </span>
                     ) : null}
                   </>

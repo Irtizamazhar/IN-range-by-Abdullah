@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "@/components/ui/LoadingLink";
 import { useEffect, useRef, useState } from "react";
-import { LayoutGrid } from "lucide-react";
+import { ChevronLeft, ChevronRight, LayoutGrid } from "lucide-react";
 
 import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 
@@ -62,10 +62,18 @@ export function CategoryAutoScroll({ categories }: { categories: CategoryItem[] 
   const firstList = useRef<HTMLDivElement>(null);
   const secondList = useRef<HTMLDivElement>(null);
   const [overflowing, setOverflowing] = useState(false);
+  const [scrollEdges, setScrollEdges] = useState({ left: false, right: false });
   const [reducedMotion, setReducedMotion] = useState(false);
   const pause = useRef({ hover: false, focus: false, dragging: false, until: 0 });
   const looping = overflowing && !reducedMotion;
   const holdFor = (ms: number) => { pause.current.until = performance.now() + ms; };
+
+  function scrollCategories(direction: -1 | 1) {
+    const element = scroller.current;
+    if (!element) return;
+    holdFor(RESUME_AFTER_TOUCH_MS);
+    element.scrollBy({ left: direction * Math.max(120, element.clientWidth * 0.7), behavior: "smooth" });
+  }
 
   useEffect(() => {
     const query = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -77,11 +85,17 @@ export function CategoryAutoScroll({ categories }: { categories: CategoryItem[] 
   // Move only when one copy of the list is wider than the row.
   useEffect(() => {
     const view = scroller.current, list = firstList.current; if (!view || !list) return;
-    const measure = () => setOverflowing(list.scrollWidth > view.clientWidth + 1);
+    const measure = () => {
+      setOverflowing(list.scrollWidth > view.clientWidth + 1);
+      const left = view.scrollLeft > 2;
+      const right = view.scrollLeft + view.clientWidth < view.scrollWidth - 2;
+      setScrollEdges(previous => previous.left === left && previous.right === right ? previous : { left, right });
+    };
     measure();
     const observer = new ResizeObserver(measure); observer.observe(view); observer.observe(list);
-    return () => observer.disconnect();
-  }, [categories.length]);
+    view.addEventListener("scroll", measure, { passive: true });
+    return () => { observer.disconnect(); view.removeEventListener("scroll", measure); };
+  }, [categories.length, looping]);
 
   useEffect(() => {
     const el = scroller.current; if (!el || !looping) return;
@@ -154,7 +168,13 @@ export function CategoryAutoScroll({ categories }: { categories: CategoryItem[] 
     </div>;
   }
 
-  return <div ref={scroller} data-looping={looping || undefined} className={row}
+  return <div className="min-w-0">
+    {overflowing && <div className="mb-2 flex items-center justify-end gap-2 text-xs text-brand-dark/60">
+      <span className="mr-auto sm:hidden">Swipe to explore categories</span>
+      <button type="button" aria-label="Scroll categories left" onClick={() => scrollCategories(-1)} disabled={!looping && !scrollEdges.left} className="flex h-9 w-9 items-center justify-center rounded-full border border-green-200 bg-white text-brand-dark shadow-sm disabled:opacity-35"><ChevronLeft className="h-4 w-4" aria-hidden="true" /></button>
+      <button type="button" aria-label="Scroll categories right" onClick={() => scrollCategories(1)} disabled={!looping && !scrollEdges.right} className="flex h-9 w-9 items-center justify-center rounded-full border border-green-200 bg-white text-brand-dark shadow-sm disabled:opacity-35"><ChevronRight className="h-4 w-4" aria-hidden="true" /></button>
+    </div>}
+    <div ref={scroller} data-looping={looping || undefined} className={row}
     onMouseEnter={() => { pause.current.hover = true; }} onMouseLeave={() => { pause.current.hover = false; }}
     onFocusCapture={() => { pause.current.focus = true; }} onBlurCapture={() => { pause.current.focus = false; }}
     onTouchStart={() => holdFor(60_000)} onTouchEnd={() => holdFor(RESUME_AFTER_TOUCH_MS)} onTouchCancel={() => holdFor(RESUME_AFTER_TOUCH_MS)}>
@@ -165,5 +185,6 @@ export function CategoryAutoScroll({ categories }: { categories: CategoryItem[] 
     {looping && <div ref={secondList} aria-hidden="true" className="flex shrink-0 gap-3 pr-3">
       {categories.map(category => <div key={category.id} className="flex"><CategoryCircle category={category} hidden /></div>)}
     </div>}
+    </div>
   </div>;
 }

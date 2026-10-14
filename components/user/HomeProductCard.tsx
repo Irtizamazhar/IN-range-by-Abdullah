@@ -12,11 +12,11 @@ import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 import { displayDiscount } from "@/lib/product-discount";
 import type { ProductCardData } from "./ProductCard";
 
-/** Grid shared by every home product row: 6 / 5 / 4 / 3 / 2 / 1 columns (xl / lg / md / sm / 340px+ / below). */
-export const HOME_PRODUCT_GRID = "grid grid-cols-1 gap-2 min-[340px]:grid-cols-2 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6";
+/** Grid shared by every home product row: two columns on mobile. */
+export const HOME_PRODUCT_GRID = "grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6";
 /** "View all products" / "View more" pill used in every home product row header. */
 export const HOME_VIEW_BUTTON = "shrink-0 whitespace-nowrap rounded-lg bg-lime-100 px-2.5 py-1.5 text-xs font-bold text-emerald-900 hover:bg-lime-200 sm:rounded-xl sm:px-3 sm:py-2 sm:text-sm";
-const SIZES = "(min-width: 1280px) 16vw, (min-width: 1024px) 20vw, (min-width: 768px) 25vw, (min-width: 640px) 33vw, (min-width: 340px) 50vw, 100vw";
+const SIZES = "(min-width: 1280px) 16vw, (min-width: 1024px) 20vw, (min-width: 768px) 25vw, (min-width: 640px) 33vw, 50vw";
 // Lift and green border only where a real pointer can hover; touch gets a press effect instead.
 const hoverLift = "[@media(hover:hover)]:hover:-translate-y-[3px] [@media(hover:hover)]:hover:border-emerald-400 [@media(hover:hover)]:hover:shadow-[0_10px_24px_rgba(17,17,17,.08)]";
 
@@ -64,9 +64,9 @@ export const HomeProductCard = memo(function HomeProductCard({ product, showNewT
     <div className="relative p-2 pb-0">
       <Link href={href} tabIndex={-1} aria-hidden="true" className={`relative block aspect-square overflow-hidden rounded-xl bg-neutral-50 ${canAdd ? "" : "opacity-60"}`}>
         <span className="absolute inset-0 flex items-center justify-center p-1.5">
-          {/* Natural size, capped to the square: the whole product shows, small images are never enlarged. */}
+          {/* Keep every product image within the same square frame. */}
           {image
-            ? <Image src={image} alt="" width={400} height={400} sizes={SIZES} loading="lazy" unoptimized={shouldUnoptimizeImageSrc(image)} onError={() => setImageFailed(true)} className="h-auto max-h-full w-auto max-w-full object-contain" />
+            ? <Image src={image} alt="" fill sizes={SIZES} loading="lazy" unoptimized={shouldUnoptimizeImageSrc(image)} onError={() => setImageFailed(true)} className="object-contain p-2" />
             : <ImageOff className="h-8 w-8 text-neutral-300" aria-hidden="true" />}
         </span>
       </Link>
@@ -81,11 +81,11 @@ export const HomeProductCard = memo(function HomeProductCard({ product, showNewT
     </div>
 
     <div className="flex min-w-0 flex-1 flex-col gap-1 p-2.5">
-      {product.category && <p className="truncate text-[10.5px] text-neutral-500 sm:text-[11px]">{product.category}</p>}
-      <Link href={href} title={product.name} className="line-clamp-2 min-h-[2.5em] text-xs font-medium leading-[1.25] text-neutral-900 first-letter:uppercase hover:text-emerald-800 sm:text-sm">{product.name}</Link>
-      <div className="flex flex-wrap items-baseline gap-x-1.5">
-        <span className="max-w-full truncate text-sm font-bold text-emerald-700 sm:text-base" title={formatPKR(product.price)}>{formatPKR(product.price)}</span>
-        {discount && <del className="whitespace-nowrap text-[11px] text-neutral-400 sm:text-xs">{formatPKR(discount.original)}</del>}
+      <p className="h-4 truncate text-[10.5px] text-neutral-500 sm:text-[11px]">{product.category || "\u00a0"}</p>
+      <Link href={href} title={product.name} className="line-clamp-2 min-h-[2.5em] break-words text-xs font-medium leading-[1.25] text-neutral-900 first-letter:uppercase hover:text-emerald-800 sm:text-sm">{product.name}</Link>
+      <div className="flex min-h-10 min-w-0 flex-col justify-start leading-5">
+        <span className="max-w-full break-words text-[13px] font-bold text-emerald-700 sm:text-base" title={formatPKR(product.price)}>{formatPKR(product.price)}</span>
+        {discount && <del className="max-w-full break-words text-[11px] text-neutral-400 sm:text-xs">{formatPKR(discount.original)}</del>}
       </div>
       {/* Same row height with or without reviews keeps every card in a row aligned. */}
       <div className="flex h-4 items-center gap-1 text-[11px]">

@@ -9,12 +9,15 @@ import { usePathname, useSearchParams } from "next/navigation";
 import {
   ArrowRight,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Flame,
   Gift,
   House,
   LayoutGrid,
   Package,
   ShoppingBag,
+  Search,
   UsersRound,
   Wrench,
   X,
@@ -73,18 +76,50 @@ function CategoryImage({ category }: { category: NavCategory }) {
 export function CategoryNavigation() {
   const { data: categories = [], isLoading, isError } = useNavCategories();
   const [open, setOpen] = useState(false);
+  const [categorySearch, setCategorySearch] = useState("");
   const [bounds, setBounds] = useState({ top: 0, height: 0 });
   const root = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
+  const searchInput = useRef<HTMLInputElement>(null);
   const menu = useRef<HTMLElement>(null);
-  const focusFirstCategory = useRef(false);
+  const strip = useRef<HTMLElement>(null);
+  const [scrollEdges, setScrollEdges] = useState({ left: false, right: false });
+  const focusSearch = useRef(false);
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const selectedCategory = pathname === "/products" ? searchParams?.get("category") : null;
+  const visibleCategories = categories.filter(category => category.name.toLocaleLowerCase().includes(categorySearch.trim().toLocaleLowerCase()));
   const route = `${pathname}?${searchParams?.toString() ?? ""}`;
 
   useEffect(() => {
+    const element = strip.current;
+    if (!element) return;
+    const update = () => {
+      const left = element.scrollLeft > 2;
+      const right = element.scrollLeft + element.clientWidth < element.scrollWidth - 2;
+      setScrollEdges(previous => previous.left === left && previous.right === right ? previous : { left, right });
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+    element.addEventListener("scroll", update, { passive: true });
+    return () => { observer.disconnect(); element.removeEventListener("scroll", update); };
+  }, []);
+
+  useEffect(() => {
+    const element = strip.current;
+    const active = element?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!element || !active) return;
+    element.scrollLeft += active.getBoundingClientRect().left - element.getBoundingClientRect().left - (element.clientWidth - active.clientWidth) / 2;
+  }, [pathname]);
+
+  function scrollSections(direction: -1 | 1) {
+    strip.current?.scrollBy({ left: direction * Math.max(120, strip.current.clientWidth * 0.75), behavior: "smooth" });
+  }
+
+  useEffect(() => {
     setOpen(false);
+    setCategorySearch("");
   }, [route]);
 
   // Measure the real navigation edge, including wrapped mobile header rows.
@@ -161,10 +196,9 @@ export function CategoryNavigation() {
   }, [open]);
 
   useEffect(() => {
-    if (open && focusFirstCategory.current) {
-      (menu.current?.querySelector<HTMLAnchorElement>("[data-category-link]") ??
-        menu.current?.querySelector<HTMLAnchorElement>("a"))?.focus({ preventScroll: true });
-      focusFirstCategory.current = false;
+    if (open && focusSearch.current) {
+      searchInput.current?.focus({ preventScroll: true });
+      focusSearch.current = false;
     }
   }, [open]);
 
@@ -181,14 +215,14 @@ export function CategoryNavigation() {
           type="button"
           aria-expanded={open}
           aria-controls="category-dropdown"
-          onClick={() => setOpen((isOpen) => !isOpen)}
+          onClick={() => { if (!open) setCategorySearch(""); setOpen(!open); }}
           onKeyDown={(event) => {
             if (event.key === "ArrowDown" || (event.key === "Tab" && !event.shiftKey && open)) {
               event.preventDefault();
               if (open) {
-                menu.current?.querySelector<HTMLAnchorElement>("a")?.focus();
+                searchInput.current?.focus();
               } else {
-                focusFirstCategory.current = true;
+                focusSearch.current = true;
                 setOpen(true);
               }
             }
@@ -199,7 +233,8 @@ export function CategoryNavigation() {
           Categories
           <ChevronDown aria-hidden="true" className={`${styles.chevron} ${open ? styles.chevronOpen : ""}`} />
         </LoadingButton>
-        <nav aria-label="JORO marketplace sections" className={styles.strip}>
+        <div className={styles.stripWrap}>
+        <nav ref={strip} aria-label="JORO marketplace sections" className={styles.strip}>
           {NAV_ITEMS.map(({ label, href, Icon }) => {
             const active =
               href === "/products"
@@ -238,6 +273,9 @@ export function CategoryNavigation() {
             );
           })}
         </nav>
+        {scrollEdges.left && <button type="button" aria-label="Scroll sections left" onClick={() => scrollSections(-1)} className={`${styles.scrollControl} ${styles.scrollLeft}`}><ChevronLeft aria-hidden="true" /></button>}
+        {scrollEdges.right && <button type="button" aria-label="Scroll sections right" onClick={() => scrollSections(1)} className={`${styles.scrollControl} ${styles.scrollRight}`}><ChevronRight aria-hidden="true" /></button>}
+        </div>
       </div>
 
       {open && createPortal(
@@ -286,9 +324,13 @@ export function CategoryNavigation() {
                 <X aria-hidden="true" className="h-5 w-5" />
               </LoadingButton>
             </div>
+            <div className={styles.searchRow}>
+              <Search aria-hidden="true" className={styles.searchIcon} />
+              <input ref={searchInput} type="search" value={categorySearch} onChange={event => setCategorySearch(event.target.value)} placeholder="Find a category" aria-label="Find a product category" className={styles.searchInput} />
+            </div>
             <div data-category-scroll className={styles.scrollArea}>
               <nav aria-label="All categories" className={styles.grid}>
-                {categories.map((category) => (
+                {visibleCategories.map((category) => (
                   <Link
                     key={category.id}
                     data-category-link
@@ -306,6 +348,7 @@ export function CategoryNavigation() {
               {isLoading && <p role="status" className={styles.status}>Loading categories…</p>}
               {isError && <p role="status" className={styles.status}>Categories are temporarily unavailable. Browse all products.</p>}
               {!isLoading && !isError && !categories.length && <p className={styles.status}>Browse all products while categories are being added.</p>}
+              {!isLoading && !isError && categories.length > 0 && !visibleCategories.length && <p role="status" className={styles.status}>No matching categories.</p>}
             </div>
           </section>
         </div>,

@@ -418,7 +418,7 @@
 
 .marketplace .media { background: #fff; }
 .marketplace .imageLink { aspect-ratio: 1; pointer-events: none; }
-.marketplace .image { padding: 0; }
+.marketplace .image { padding: 6px; }
 .marketplace .badge {
   top: 7px;
   left: 7px;
@@ -456,7 +456,7 @@
 .marketplace .titleLink:focus-visible { outline: none; }
 .marketplace .titleLink:focus-visible::after { outline: 2px solid #31573d; outline-offset: -2px; }
 .marketplace .title {
-  height: auto;
+  height: 36px;
   color: #212121;
   font-size: 14px;
   font-weight: 400;
@@ -467,10 +467,9 @@
 .marketplace .titleLink:hover .title { color: #212121; }
 .marketplace .price {
   display: flex;
-  min-height: 24px;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0 5px;
+  min-height: 42px;
+  flex-direction: column;
+  align-items: flex-start;
   margin-top: 4px;
 }
 
@@ -486,7 +485,7 @@
   letter-spacing: 0;
 }
 
-.marketplaceDiscount { color: #757575; font-size: 12px; line-height: 18px; white-space: nowrap; }
+.marketplaceDiscount { max-width: 100%; overflow-wrap: anywhere; color: #757575; font-size: 11px; line-height: 18px; }
 .marketplaceRating {
   display: flex;
   min-height: 18px;
@@ -517,6 +516,14 @@
 }
 
 .marketplace .action svg { width: 14px; height: 14px; }
+
+@container product-card (max-width: 160px) {
+  .card:not(.marketplace) .body { padding: 9px; }
+  .card:not(.marketplace) .image { padding: 9px; }
+  .card:not(.marketplace) .badge { top: 7px; left: 7px; max-width: calc(100% - 54px); padding: 3px 5px; font-size: 10px; }
+  .card:not(.marketplace) .wishlist { top: 7px; right: 7px; width: 34px; height: 34px; }
+  .card:not(.marketplace) .action { gap: 4px; padding-inline: 4px; font-size: 11px; }
+}
 
 @media (hover: hover) {
   .marketplace:not(.skeleton):hover { transform: none; box-shadow: 0 2px 9px rgb(0 0 0 / 12%); }
