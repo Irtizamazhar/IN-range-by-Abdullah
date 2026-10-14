@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getVendorFromSession } from "@/lib/vendor-auth-server";
 import { VendorProtectedRoute } from "@/components/vendor/VendorProtectedRoute";
 import { VendorChrome } from "@/components/vendor/VendorChrome";
+import { vendorWelcomeDisplayName } from "@/lib/vendor-display-name";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,7 @@ export default async function VendorDashboardLayout({
 
   return (
     <VendorProtectedRoute>
-      <VendorChrome shopName={row.vendor.shopName}>{children}</VendorChrome>
+      <VendorChrome shopName={row.vendor.shopName} ownerName={vendorWelcomeDisplayName(row.vendor.ownerName)}>{children}</VendorChrome>
     </VendorProtectedRoute>
   );
 }
