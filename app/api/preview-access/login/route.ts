@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
 
   if (!isPreviewGateConfigured()) {
     console.error(
-      "[private-launch] Team login is disabled: set PREVIEW_SESSION_SECRET (32+ chars) and PREVIEW_ALLOWED_EMAILS.",
+      "[private-launch] Team login is disabled: configure PREVIEW_ALLOWED_EMAILS, PREVIEW_PASSWORD_HASH, and PREVIEW_SESSION_SECRET (32+ chars).",
     );
     return json({ error: "Team login is not available right now." }, 503);
   }

@@ -136,7 +136,7 @@ export function ComingSoonScreen() {
             onClick={() => setModalOpen(true)}
           >
             <Lock className={styles.teamLoginIcon} aria-hidden="true" />
-            Team login
+            Team Access
           </button>
         </footer>
 

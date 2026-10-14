@@ -30,6 +30,7 @@ function isPublicAssetPath(pathname: string) {
 const PUBLIC_ENDPOINTS: Record<string, readonly string[]> = {
   "/api/preview-access/login": ["POST"],
   "/api/preview-access/logout": ["POST"],
+  "/api/preview-access/session": ["GET"],
   // next-auth's SessionProvider polls this from the root layout; it only ever
   // returns the caller's own session (empty for public visitors).
   "/api/auth/session": ["GET"],

@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { SignJWT } from "jose";
+import bcrypt from "bcryptjs";
+import { verifyTeamCredentials } from "../lib/private-launch/team-credentials";
 
 import { decideGatedRequest } from "../lib/private-launch/gate-policy";
 import {
@@ -8,14 +10,17 @@ import {
   isMaintenanceMode,
   isPreviewEmailAllowed,
   isPreviewGateConfigured,
+  isValidPreviewPasswordHash,
   verifyPreviewSessionToken,
 } from "../lib/private-launch/session";
 
 const SECRET = "test-preview-secret-that-is-at-least-32-chars";
+const HASH = "$2b$12$QPsnLPsXDmWop537RVbpc.sIfmyG/w2LATsj/za4UYi.DBm9i6k3u";
 const env = (overrides: Record<string, string | undefined> = {}) =>
   ({
     MAINTENANCE_MODE: "true",
     PREVIEW_SESSION_SECRET: SECRET,
+    PREVIEW_PASSWORD_HASH: HASH,
     PREVIEW_ALLOWED_EMAILS: " Team@JORO.pk , qa@joro.pk ",
     ...overrides,
   }) as unknown as NodeJS.ProcessEnv;
@@ -40,6 +45,19 @@ test("gate is unconfigured without a strong secret or allowlist", () => {
   assert.equal(isPreviewGateConfigured(env({ PREVIEW_SESSION_SECRET: undefined })), false);
   assert.equal(isPreviewGateConfigured(env({ PREVIEW_SESSION_SECRET: "short" })), false);
   assert.equal(isPreviewGateConfigured(env({ PREVIEW_ALLOWED_EMAILS: " , " })), false);
+  assert.equal(isPreviewGateConfigured(env({ PREVIEW_PASSWORD_HASH: undefined })), false);
+  assert.equal(isPreviewGateConfigured(env({ PREVIEW_PASSWORD_HASH: "plain-text-password" })), false);
+  assert.equal(isValidPreviewPasswordHash(HASH), true);
+});
+
+test("shared bcrypt preview password accepts only allowlisted emails", async () => {
+  const password = "synthetic-preview-test-password";
+  const hashed = await bcrypt.hash(password, 12);
+  const config = env({ PREVIEW_PASSWORD_HASH: hashed });
+  assert.equal(await verifyTeamCredentials(" TEAM@JORO.pk ", password, config), "team@joro.pk");
+  assert.equal(await verifyTeamCredentials("team@joro.pk", "wrong-password", config), null);
+  assert.equal(await verifyTeamCredentials("other@example.com", password, config), null);
+  assert.equal(await verifyTeamCredentials("team@joro.pk", password, env({ PREVIEW_PASSWORD_HASH: undefined })), null);
 });
 
 test("preview session round-trips for an allowlisted member", async () => {
@@ -57,10 +75,11 @@ test("preview session is rejected when tampered, re-keyed, revoked or missing", 
   );
   assert.equal(await verifyPreviewSessionToken(token, env({ PREVIEW_ALLOWED_EMAILS: "qa@joro.pk" })), null);
   assert.equal(await verifyPreviewSessionToken(token, env({ PREVIEW_SESSION_SECRET: undefined })), null);
+  assert.equal(await verifyPreviewSessionToken(token, env({ PREVIEW_PASSWORD_HASH: HASH.replace("Q", "R") })), null);
 });
 
 test("tokens of another type or expired tokens are rejected", async () => {
-  const key = new TextEncoder().encode(SECRET);
+  const key = new TextEncoder().encode(`${SECRET}:${HASH}`);
   const otherType = await new SignJWT({ typ: "customer" })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject("team@joro.pk")
@@ -99,6 +118,8 @@ test("only the team login endpoints and session probe are public APIs", () => {
   assert.equal(decideGatedRequest({ pathname: "/api/preview-access/login", method: "POST" }), "allow");
   assert.equal(decideGatedRequest({ pathname: "/api/preview-access/login", method: "GET" }), "block");
   assert.equal(decideGatedRequest({ pathname: "/api/preview-access/logout", method: "POST" }), "allow");
+  assert.equal(decideGatedRequest({ pathname: "/api/preview-access/session", method: "GET" }), "allow");
+  assert.equal(decideGatedRequest({ pathname: "/api/preview-access/session", method: "POST" }), "block");
   assert.equal(decideGatedRequest({ pathname: "/api/auth/session", method: "GET" }), "allow");
   assert.equal(decideGatedRequest({ pathname: "/api/auth/session", method: "POST" }), "block");
 });

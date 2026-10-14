@@ -6,6 +6,7 @@
  * Environment:
  * - MAINTENANCE_MODE=true          turns the gate on (anything else = off).
  * - PREVIEW_ALLOWED_EMAILS=a@x,b@y explicit team allowlist (empty = nobody).
+ * - PREVIEW_PASSWORD_HASH=...     bcrypt hash of the shared preview password.
  * - PREVIEW_SESSION_SECRET=...     HS256 key, at least 32 characters.
  *
  * The gate fails closed: with the gate on and no valid secret or allowlist,
@@ -40,8 +41,15 @@ export function isPreviewEmailAllowed(email: string, env: NodeJS.ProcessEnv = pr
 
 function previewSecretKey(env: NodeJS.ProcessEnv = process.env): Uint8Array | null {
   const secret = env.PREVIEW_SESSION_SECRET?.trim();
-  if (!secret || secret.length < MIN_SECRET_LENGTH) return null;
-  return new TextEncoder().encode(secret);
+  const hash = env.PREVIEW_PASSWORD_HASH?.trim();
+  if (!secret || secret.length < MIN_SECRET_LENGTH || !isValidPreviewPasswordHash(hash)) return null;
+  // Rotating the password hash also revokes every previously issued session.
+  return new TextEncoder().encode(`${secret}:${hash}`);
+}
+
+export function isValidPreviewPasswordHash(hash: string | undefined): boolean {
+  const match = /^\$2[aby]\$(\d{2})\$[./A-Za-z0-9]{53}$/.exec(hash || "");
+  return match !== null && Number(match[1]) >= 12 && Number(match[1]) <= 15;
 }
 
 export function isPreviewGateConfigured(env: NodeJS.ProcessEnv = process.env) {
@@ -50,7 +58,7 @@ export function isPreviewGateConfigured(env: NodeJS.ProcessEnv = process.env) {
 
 export async function createPreviewSessionToken(email: string, env: NodeJS.ProcessEnv = process.env) {
   const key = previewSecretKey(env);
-  if (!key) throw new Error("PREVIEW_SESSION_SECRET is missing or shorter than 32 characters");
+  if (!key) throw new Error("Preview password hash or session secret is not configured");
   return new SignJWT({ typ: PREVIEW_TOKEN_TYPE })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(email.trim().toLowerCase())

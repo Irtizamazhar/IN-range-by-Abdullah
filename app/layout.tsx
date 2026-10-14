@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import "./globals.css";
 import { Providers } from "./providers";
 import { GlobalNavigationLoader } from "@/components/ui/GlobalNavigationLoader";
+import { PreviewExitControl } from "@/components/coming-soon-gate/PreviewExitControl";
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -62,6 +63,7 @@ export default function RootLayout({
           <Suspense fallback={null}>
             <GlobalNavigationLoader />
           </Suspense>
+          <PreviewExitControl />
         </Providers>
       </body>
     </html>
