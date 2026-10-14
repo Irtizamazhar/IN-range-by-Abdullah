@@ -23,6 +23,12 @@ import {
   ShieldCheck,
   Users,
   LifeBuoy,
+  Sparkles,
+  Wrench,
+  MessageSquareHeart,
+  Megaphone,
+  TicketPercent,
+  Trophy,
 } from "lucide-react";
 import { LogoMark } from "@/components/user/LogoMark";
 
@@ -68,13 +74,13 @@ function isAdminNotificationsPath(pathname: string | null): boolean {
   return pathname === "/admin/notifications" || pathname.startsWith("/admin/notifications/");
 }
 
-const links = [
+export const ADMIN_NAV_LINKS = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/products", label: "Products", icon: Package, dividerBefore: true },
   { href: "/admin/categories", label: "Categories", icon: Shapes },
-  { href: "/admin/new-arrivals", label: "New Arrivals", icon: Package },
-  { href: "/admin/services", label: "Services", icon: ShoppingBag },
-  { href: "/admin/wants", label: "Wants", icon: ShoppingBag },
+  { href: "/admin/new-arrivals", label: "New Arrivals", icon: Sparkles },
+  { href: "/admin/services", label: "Services", icon: Wrench },
+  { href: "/admin/wants", label: "Wants", icon: MessageSquareHeart },
   { href: "/admin/orders", label: "Orders", icon: ShoppingBag, dividerBefore: true },
   {
     href: "/admin/vendor-orders",
@@ -83,9 +89,9 @@ const links = [
   },
   { href: "/admin/dashboard/after-sales", label: "After-sales", icon: RotateCcw },
   { href: "/admin/vendors", label: "Vendors", icon: Store, dividerBefore: true },
-  { href: "/admin/vendors/top-vendors", label: "Top Vendors", icon: Star },
-  { href: "/admin/vendor-promotions", label: "Vendor Promotions", icon: Store },
-  { href: "/admin/marketing/coupons", label: "Coupons", icon: Percent },
+  { href: "/admin/vendors/top-vendors", label: "Top Vendors", icon: Trophy },
+  { href: "/admin/vendor-promotions", label: "Vendor Promotions", icon: Megaphone },
+  { href: "/admin/marketing/coupons", label: "Coupons", icon: TicketPercent },
   { href: "/admin/customers", label: "Customers", icon: Users },
   { href: "/admin/reviews", label: "Reviews", icon: Star },
   {
@@ -105,7 +111,15 @@ const links = [
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
-function isAdminLinkActive(pathname: string | null, href: string): boolean {
+const links = ADMIN_NAV_LINKS;
+
+/** Existing admin logout: end the NextAuth admin session, then hard-navigate to login. */
+export async function signOutAdmin() {
+  await signOut({ redirect: false });
+  await navigateDocument("/admin/login");
+}
+
+export function isAdminLinkActive(pathname: string | null, href: string): boolean {
   if (!pathname) return false;
   // Keep dashboard exact so nested dashboard tools highlight their own links only.
   if (href === "/admin/dashboard") {
@@ -114,7 +128,19 @@ function isAdminLinkActive(pathname: string | null, href: string): boolean {
   return pathname === href || pathname.startsWith(href + "/");
 }
 
-export function AdminSidebar() {
+/** The single nav item to highlight: the most specific link matching the path. */
+export function activeAdminHref(pathname: string | null): string | null {
+  let best: string | null = null;
+  for (const { href } of ADMIN_NAV_LINKS) {
+    if (isAdminLinkActive(pathname, href) && (!best || href.length > best.length)) best = href;
+  }
+  return best;
+}
+
+const badgeBase =
+  "ml-auto min-w-[1.375rem] shrink-0 rounded-full px-1.5 py-0.5 text-center text-[11px] font-bold leading-4 tabular-nums";
+
+export function AdminSidebar({ collapsed = false }: { collapsed?: boolean }) {
   const pathname = usePathname();
   const [unreadOrders, setUnreadOrders] = useState(0);
   const [pendingVendors, setPendingVendors] = useState(0);
@@ -213,98 +239,127 @@ export function AdminSidebar() {
     };
   }, [pathname]);
 
-  return (
-    <aside className="flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-footerDark text-white">
-      <div className="shrink-0 p-4 border-b border-white/10">
-        {/* Shared brand mark and sizing with the customer navbar. */}
-        <LogoMark inverse
-          href="/admin/dashboard"
-          className="shrink-0 [&_img]:max-w-[min(100%,260px)]"
-        />
-        <p className="mt-2 text-[11px] font-semibold uppercase tracking-widest text-primaryYellow">
-          Admin
-        </p>
-      </div>
-      <nav aria-label="Admin navigation" tabIndex={0} className="dashboard-sidebar-scrollbar min-h-0 flex-1 space-y-1 overflow-x-hidden overflow-y-auto overscroll-y-contain p-3">
-        {links.map(({ href, label, icon: Icon, dividerBefore }) => {
-          const onVendors = isAdminVendorsPath(pathname);
-          const onSellerOrders = isAdminSellerOrdersPath(pathname);
-          const vendorsNew =
-            vendorsAck == null
-              ? pendingVendors
-              : Math.max(0, pendingVendors - vendorsAck);
-          const sellerOrdersNew =
-            sellerOrdersAck == null
-              ? pendingSellerOrders
-              : Math.max(0, pendingSellerOrders - sellerOrdersAck);
-          const showVendorsBadge =
-            href === "/admin/vendors" && vendorsNew > 0 && !onVendors;
-          const showSellerOrdersBadge =
-            href === "/admin/vendor-orders" &&
-            sellerOrdersNew > 0 &&
-            !onSellerOrders;
-          const onNotifications = isAdminNotificationsPath(pathname);
-          const appealsNew =
-            appealsAck == null ? pendingAppeals : Math.max(0, pendingAppeals - appealsAck);
-          const showAppealsBadge =
-            href === "/admin/notifications" && appealsNew > 0 && !onNotifications;
+  const activeHref = activeAdminHref(pathname);
 
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={`${dividerBefore ? "mt-3 border-t border-white/10 pt-4" : ""} flex items-center gap-3 rounded-lg px-3 py-2.5 text-base font-medium transition-all duration-200 ${
-                isAdminLinkActive(pathname, href)
-                  ? "bg-brand-primary font-semibold text-brand-dark shadow-sm"
-                  : "text-white/80 hover:bg-white/10 hover:text-white"
-              }`}
-            >
-              <Icon className="h-4 w-4 shrink-0" />
-              <span className="flex-1">{label}</span>
-              {href === "/admin/orders" && unreadOrders > 0 ? (
-                <span className="ml-auto min-w-[1.25rem] rounded-full bg-red-500 px-2 py-0.5 text-center text-[11px] font-bold text-white tabular-nums">
-                  {unreadOrders > 99 ? "99+" : unreadOrders}
-                </span>
-              ) : null}
-              {showVendorsBadge ? (
-                <span
-                  className="ml-auto min-w-[1.25rem] rounded-full bg-red-500 px-2 py-0.5 text-center text-[11px] font-bold text-white tabular-nums"
-                  title={`${vendorsNew} new vendor signup(s)`}
+  return (
+    <aside className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden bg-admin-dark text-white">
+      <div
+        className={`flex shrink-0 items-center border-b border-white/10 ${
+          collapsed ? "justify-center px-2 py-3" : "gap-2 px-4 py-2"
+        }`}
+      >
+        {/* Shared brand mark with the customer navbar; sized down so it fits the rail. */}
+        <LogoMark
+          inverse
+          href="/admin/dashboard"
+          className={
+            collapsed
+              ? "[&_span:has(>img)]:!m-0 [&_span:has(>img)]:!h-10 [&_span:has(>img)]:!w-14"
+              : "[&_span:has(>img)]:!my-0 [&_span:has(>img)]:!h-[4.25rem] [&_span:has(>img)]:!w-[8.25rem]"
+          }
+        />
+        {!collapsed ? (
+          <span className="ml-auto mr-8 rounded-md bg-admin-lime/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-admin-lime md:mr-0">
+            Admin
+          </span>
+        ) : null}
+      </div>
+      <nav
+        aria-label="Admin navigation"
+        className={`admin-sidebar-scrollbar min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain py-3 ${
+          collapsed ? "px-2" : "px-3"
+        }`}
+      >
+        <ul className="space-y-0.5">
+          {links.map(({ href, label, icon: Icon, dividerBefore }) => {
+            const onVendors = isAdminVendorsPath(pathname);
+            const onSellerOrders = isAdminSellerOrdersPath(pathname);
+            const vendorsNew =
+              vendorsAck == null
+                ? pendingVendors
+                : Math.max(0, pendingVendors - vendorsAck);
+            const sellerOrdersNew =
+              sellerOrdersAck == null
+                ? pendingSellerOrders
+                : Math.max(0, pendingSellerOrders - sellerOrdersAck);
+            const showVendorsBadge =
+              href === "/admin/vendors" && vendorsNew > 0 && !onVendors;
+            const showSellerOrdersBadge =
+              href === "/admin/vendor-orders" &&
+              sellerOrdersNew > 0 &&
+              !onSellerOrders;
+            const onNotifications = isAdminNotificationsPath(pathname);
+            const appealsNew =
+              appealsAck == null ? pendingAppeals : Math.max(0, pendingAppeals - appealsAck);
+            const showAppealsBadge =
+              href === "/admin/notifications" && appealsNew > 0 && !onNotifications;
+
+            const active = href === activeHref;
+            let badge: { count: number; title: string } | null = null;
+            if (href === "/admin/orders" && unreadOrders > 0) {
+              badge = { count: unreadOrders, title: `${unreadOrders} unread order(s)` };
+            } else if (showVendorsBadge) {
+              badge = { count: vendorsNew, title: `${vendorsNew} new vendor signup(s)` };
+            } else if (showSellerOrdersBadge) {
+              badge = { count: sellerOrdersNew, title: `${sellerOrdersNew} new seller order(s)` };
+            } else if (showAppealsBadge) {
+              badge = { count: appealsNew, title: `${appealsNew} unresolved appeal(s)` };
+            }
+
+            return (
+              <li
+                key={href}
+                className={dividerBefore ? "mt-2 border-t border-white/10 pt-2" : undefined}
+              >
+                <Link
+                  href={href}
+                  aria-current={active ? "page" : undefined}
+                  aria-label={collapsed ? (badge ? `${label}, ${badge.title}` : label) : undefined}
+                  title={collapsed ? label : undefined}
+                  className={`relative flex min-h-[2.5rem] items-center gap-3 rounded-lg text-[14px] font-medium transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-admin-lime ${
+                    collapsed ? "justify-center px-0" : "px-3"
+                  } ${
+                    active
+                      ? "bg-admin-lime font-semibold text-admin-dark shadow-sm"
+                      : "text-white/85 hover:bg-white/10 hover:text-white"
+                  }`}
                 >
-                  {vendorsNew > 99 ? "99+" : vendorsNew}
-                </span>
-              ) : null}
-              {showSellerOrdersBadge ? (
-                <span
-                  className="ml-auto min-w-[1.25rem] rounded-full bg-red-500 px-2 py-0.5 text-center text-[11px] font-bold text-white tabular-nums"
-                  title={`${sellerOrdersNew} new seller order(s)`}
-                >
-                  {sellerOrdersNew > 99 ? "99+" : sellerOrdersNew}
-                </span>
-              ) : null}
-              {showAppealsBadge ? (
-                <span
-                  className="ml-auto min-w-[1.25rem] rounded-full bg-red-500 px-2 py-0.5 text-center text-[11px] font-bold text-white tabular-nums"
-                  title={`${appealsNew} unresolved appeal(s)`}
-                >
-                  {appealsNew > 99 ? "99+" : appealsNew}
-                </span>
-              ) : null}
-            </Link>
-          );
-        })}
+                  <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={1.9} aria-hidden />
+                  {!collapsed ? <span className="min-w-0 flex-1 truncate">{label}</span> : null}
+                  {badge && !collapsed ? (
+                    <span
+                      className={`${badgeBase} ${
+                        active ? "bg-admin-dark text-admin-lime" : "bg-admin-lime text-admin-dark"
+                      }`}
+                      title={badge.title}
+                    >
+                      {badge.count > 99 ? "99+" : badge.count}
+                    </span>
+                  ) : null}
+                  {badge && collapsed ? (
+                    <span
+                      className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-admin-lime ring-2 ring-admin-dark"
+                      aria-hidden
+                    />
+                  ) : null}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
       </nav>
-      <div className="shrink-0 border-t border-white/10 p-3">
+      <div className={`shrink-0 border-t border-white/10 py-3 ${collapsed ? "px-2" : "px-3"}`}>
         <LoadingButton loadingLabel="Processing…"
           type="button"
-          onClick={async () => {
-            await signOut({ redirect: false });
-            await navigateDocument("/admin/login");
-          }}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-base font-medium text-white/80 hover:bg-white/10"
+          onClick={signOutAdmin}
+          aria-label={collapsed ? "Log out" : undefined}
+          title={collapsed ? "Log out" : undefined}
+          className={`flex min-h-[2.5rem] w-full items-center gap-3 rounded-lg text-[14px] font-medium text-white/85 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-admin-lime ${
+            collapsed ? "justify-center px-0" : "px-3"
+          }`}
         >
-          <LogOut className="h-4 w-4" />
-          Log out
+          <LogOut className="h-[18px] w-[18px] shrink-0" strokeWidth={1.9} aria-hidden />
+          {!collapsed ? "Log out" : null}
         </LoadingButton>
       </div>
     </aside>

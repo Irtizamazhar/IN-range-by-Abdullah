@@ -216,6 +216,18 @@ const config: Config = {
 
         footerDark:
           "rgb(var(--brand-dark-rgb) / <alpha-value>)",
+
+        /* Admin panel "Classic Emerald" palette (admin UI only). */
+        admin: {
+          primary: "#005235",
+          dark: "#003D2B",
+          lime: "#B5E637",
+          bg: "#F7F9F6",
+          card: "#FFFFFF",
+          border: "#E3EAE4",
+          ink: "#102A20",
+          muted: "#5E7268",
+        },
       },
 
       /* =====================================================
