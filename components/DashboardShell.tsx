@@ -4,10 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 
-export function DashboardShell({ sidebar, children, label }: {
+export function DashboardShell({ sidebar, topbar, children, label, className = "" }: {
   sidebar: React.ReactNode;
+  /** Content of the top bar (search, notifications, profile). The mobile menu button is added before it. */
+  topbar?: React.ReactNode;
   children: React.ReactNode;
   label: string;
+  /** Extra classes on the root, e.g. a scoped theme like `vendor-ui`. */
+  className?: string;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -23,7 +27,7 @@ export function DashboardShell({ sidebar, children, label }: {
     return () => html.classList.remove("dashboard-scroll-lock");
   }, []);
   useEffect(() => {
-    const desktop = window.matchMedia("(min-width: 768px)");
+    const desktop = window.matchMedia("(min-width: 1024px)");
     const closeOnDesktop = () => { if (desktop.matches) setOpen(false); };
     desktop.addEventListener("change", closeOnDesktop);
     return () => desktop.removeEventListener("change", closeOnDesktop);
@@ -61,28 +65,30 @@ export function DashboardShell({ sidebar, children, label }: {
   }, [open]);
 
   return (
-    <div className="relative flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-brand-background md:flex-row">
-      <header className="flex h-12 shrink-0 items-center gap-3 bg-footerDark px-4 text-white md:hidden">
-        <button ref={trigger} type="button" aria-label={`Open ${label} menu`} aria-expanded={open}
-          aria-controls="dashboard-sidebar" onClick={() => setOpen(true)} className="rounded p-1.5 focus-visible:outline focus-visible:outline-2">
-          <Menu className="h-5 w-5" />
-        </button>
-        <span className="text-sm font-semibold">{label}</span>
-      </header>
-      {open && <div className="fixed inset-0 z-40 bg-black/50 md:hidden" aria-hidden="true" onClick={() => setOpen(false)} />}
+    <div className={`relative flex h-[100dvh] min-h-0 overflow-hidden bg-admin-bg ${className}`}>
+      {open && <div className="fixed inset-0 z-40 bg-admin-dark/60 backdrop-blur-[1px] lg:hidden" aria-hidden="true" onClick={() => setOpen(false)} />}
       <div id="dashboard-sidebar" ref={panel} role={open ? "dialog" : undefined}
         aria-modal={open ? true : undefined} aria-label={`${label} menu`}
-        className={`${open ? "flex" : "hidden"} fixed inset-y-0 left-0 z-50 h-[100dvh] w-64 max-w-[100vw] min-h-0 shrink-0 flex-col overflow-hidden bg-footerDark md:static md:z-auto md:flex`}
+        className={`${open ? "flex" : "hidden"} fixed inset-y-0 left-0 z-50 h-[100dvh] w-[17rem] max-w-[85vw] min-h-0 shrink-0 flex-col overflow-hidden bg-admin-dark shadow-2xl lg:static lg:z-auto lg:flex lg:w-60 lg:max-w-none lg:shadow-none`}
         onClick={event => { if ((event.target as HTMLElement).closest("a[href]")) setOpen(false); }}>
-        <div className="flex shrink-0 justify-end px-3 py-1 text-white md:hidden">
-          <button type="button" aria-label="Close menu" onClick={() => setOpen(false)} className="rounded p-2 focus-visible:outline focus-visible:outline-2">
+        {open ? (
+          <button type="button" aria-label="Close menu" onClick={() => setOpen(false)} className="absolute right-2 top-2 z-10 inline-flex h-10 w-10 items-center justify-center rounded-lg text-white/85 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-admin-lime lg:hidden">
             <X className="h-5 w-5" />
           </button>
-        </div>
+        ) : null}
         {sidebar}
       </div>
-      <div ref={content} className={`relative min-h-0 min-w-0 flex-1 ${open ? "overflow-hidden" : "overflow-y-auto"}`}>
-        {children}
+      <div ref={content} className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b border-admin-border bg-white px-3 sm:gap-3 sm:px-5 lg:h-[4.5rem] lg:px-7">
+          <button ref={trigger} type="button" aria-label={`Open ${label} menu`} aria-expanded={open}
+            aria-controls="dashboard-sidebar" onClick={() => setOpen(true)} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-admin-ink hover:bg-admin-bg focus-visible:outline focus-visible:outline-2 focus-visible:outline-admin-primary lg:hidden">
+            <Menu className="h-5 w-5" />
+          </button>
+          {topbar}
+        </header>
+        <div className={`relative min-h-0 min-w-0 flex-1 overflow-x-hidden ${open ? "overflow-y-hidden" : "overflow-y-auto"}`}>
+          {children}
+        </div>
       </div>
     </div>
   );

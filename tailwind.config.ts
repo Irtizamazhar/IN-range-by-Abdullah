@@ -217,7 +217,7 @@ const config: Config = {
         footerDark:
           "rgb(var(--brand-dark-rgb) / <alpha-value>)",
 
-        /* Admin panel "Classic Emerald" palette (admin UI only). */
+        /* "Classic Emerald" palette (admin + vendor panels only). */
         admin: {
           primary: "#005235",
           dark: "#003D2B",

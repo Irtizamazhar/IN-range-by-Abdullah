@@ -2,23 +2,28 @@
 import { useLoadingRouter } from "@/hooks/useLoadingRouter";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 
-import type { ComponentType } from "react";
+import type { LucideIcon } from "lucide-react";
 import Link from "@/components/ui/LoadingLink";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
-  LayoutDashboard,
+  Home,
+  QrCode,
   Package,
-  ShoppingBag,
-  LogOut,
+  Cog,
+  UsersRound,
+  Tag,
+  TicketPercent,
+  ClipboardList,
+  History,
+  BarChart3,
   Wallet,
-  Settings,
+  Users,
   Bell,
-  CircleDollarSign,
-  ShieldAlert,
-  RotateCcw,
-  LifeBuoy,
-  Store,
+  ShieldCheck,
+  Settings,
+  CircleHelp,
+  LogOut,
 } from "lucide-react";
 import { LogoMark } from "@/components/user/LogoMark";
 import { clearVendorLoginRememberPrefs } from "@/lib/vendor-login-remember-prefs";
@@ -54,40 +59,40 @@ function isVendorOrdersPath(pathname: string | null): boolean {
 const links: {
   href: string;
   label: string;
-  icon: ComponentType<{ className?: string }>;
+  icon: LucideIcon;
 }[] = [
-  { href: "/vendor/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/vendor/dashboard/store", label: "Store & QR", icon: Store },
+  { href: "/vendor/dashboard", label: "Dashboard", icon: Home },
+  { href: "/vendor/dashboard/store", label: "Store & QR", icon: QrCode },
   {
     href: "/vendor/dashboard/products",
     label: "My Products",
     icon: Package,
   },
-  { href: "/vendor/dashboard/services", label: "Services", icon: ShoppingBag },
-  { href: "/vendor/dashboard/demand", label: "Customer Demand", icon: ShoppingBag },
-  { href: "/vendor/dashboard/offers", label: "Offers", icon: ShoppingBag },
-  { href: "/vendor/dashboard/marketing/coupons", label: "Coupons", icon: ShoppingBag },
+  { href: "/vendor/dashboard/services", label: "Services", icon: Cog },
+  { href: "/vendor/dashboard/demand", label: "Customer Demand", icon: UsersRound },
+  { href: "/vendor/dashboard/offers", label: "Offers", icon: Tag },
+  { href: "/vendor/dashboard/marketing/coupons", label: "Coupons", icon: TicketPercent },
   {
     href: "/vendor/dashboard/orders",
     label: "My Orders",
-    icon: ShoppingBag,
+    icon: ClipboardList,
   },
   {
     href: "/vendor/dashboard/returns",
     label: "Returns & Disputes",
-    icon: RotateCcw,
+    icon: History,
   },
   {
     href: "/vendor/dashboard/earnings",
     label: "My Earnings",
-    icon: CircleDollarSign,
+    icon: BarChart3,
   },
   {
     href: "/vendor/dashboard/withdrawals",
     label: "Withdrawals",
     icon: Wallet,
   },
-  { href: "/vendor/dashboard/followers", label: "Followers", icon: ShoppingBag },
+  { href: "/vendor/dashboard/followers", label: "Followers", icon: Users },
   {
     href: "/vendor/dashboard/notifications",
     label: "Notifications",
@@ -96,7 +101,7 @@ const links: {
   {
     href: "/vendor/dashboard/account-status",
     label: "Account Status",
-    icon: ShieldAlert,
+    icon: ShieldCheck,
   },
   {
     href: "/vendor/dashboard/settings",
@@ -106,7 +111,7 @@ const links: {
   {
     href: "/vendor/dashboard/help",
     label: "Help & Support",
-    icon: LifeBuoy,
+    icon: CircleHelp,
   },
 ];
 
@@ -125,9 +130,9 @@ function linkActive(pathname: string | null, href: string): boolean {
 }
 
 export function VendorSidebar({
-  shopName,
+  unreadNotifications = 0,
 }: {
-  shopName: string;
+  unreadNotifications?: number;
 }) {
   const pathname = usePathname();
   const [pendingOrders, setPendingOrders] = useState(0);
@@ -180,27 +185,17 @@ export function VendorSidebar({
   }
 
   return (
-    <aside className="flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-footerDark text-white">
-      <div className="shrink-0 border-b border-white/10 p-4">
-        <div className="min-w-0 flex-1">
-          <LogoMark inverse
-            href="/vendor/dashboard"
-            className="shrink-0 [&_img]:max-w-[min(100%,260px)]"
-          />
-          <p className="mt-2 text-[11px] font-semibold uppercase tracking-widest text-primaryYellow">
-            Vendor
-          </p>
-          {shopName ? (
-            <p
-              className="mt-1 truncate text-xs font-normal text-white/70"
-              title={shopName}
-            >
-              {shopName}
-            </p>
-          ) : null}
-        </div>
+    <aside className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden bg-admin-dark text-white">
+      <div className="shrink-0 px-4 pb-3 pt-2">
+        {/* Shared brand mark with the customer navbar; sized down so it fits the sidebar. */}
+        <LogoMark
+          inverse
+          href="/vendor/dashboard"
+          className="shrink-0 [&_span:has(>img)]:!my-0 [&_span:has(>img)]:!h-[4.25rem] [&_span:has(>img)]:!w-[8.25rem]"
+        />
+        <span className="block pl-1 text-[15px] font-medium text-white/80">Vendor Center</span>
       </div>
-      <nav aria-label="Vendor navigation" tabIndex={0} className="dashboard-sidebar-scrollbar min-h-0 flex-1 space-y-1 overflow-x-hidden overflow-y-auto overscroll-y-contain p-3">
+      <nav aria-label="Vendor navigation" tabIndex={0} className="admin-sidebar-scrollbar min-h-0 flex-1 space-y-1 overflow-x-hidden overflow-y-auto overscroll-y-contain px-3 pb-3 focus-visible:outline-none">
         {links.map(({ href, label, icon: Icon }) => {
           const active = linkActive(pathname, href);
           const onOrdersSection = isVendorOrdersPath(pathname);
@@ -216,17 +211,24 @@ export function VendorSidebar({
             <Link
               key={href}
               href={href}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-base font-medium transition-all duration-200 ${
+              aria-current={active ? "page" : undefined}
+              className={`flex min-h-[3rem] items-center gap-3.5 rounded-xl px-3.5 text-[15px] transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-admin-lime ${
                 active
-                  ? "bg-brand-primary font-semibold text-brand-dark shadow-sm"
-                  : "text-white/80 hover:bg-white/10 hover:text-white"
+                  ? "bg-admin-lime font-semibold text-admin-dark shadow-sm"
+                  : "font-medium text-white/90 hover:bg-white/10 hover:text-white"
               }`}
             >
-              <Icon className="h-4 w-4 shrink-0" />
-              <span className="flex-1">{label}</span>
+              <Icon className="h-[22px] w-[22px] shrink-0" strokeWidth={1.8} aria-hidden />
+              <span className="min-w-0 truncate">
+                {label}
+                {href === "/vendor/dashboard/notifications" && unreadNotifications > 0 ? (
+                  <span className="ml-1 inline-block h-2 w-2 -translate-y-2 rounded-full bg-red-500" title={`${unreadNotifications} unread`} aria-label={`${unreadNotifications} unread`} />
+                ) : null}
+              </span>
+              <span className="flex-1" aria-hidden />
               {showPendingBadge ? (
                 <span
-                  className="ml-auto min-w-[1.25rem] rounded-full bg-red-500 px-2 py-0.5 text-center text-[11px] font-bold text-white tabular-nums"
+                  className="ml-auto min-w-[1.25rem] rounded-full bg-admin-lime px-2 py-0.5 text-center text-[11px] font-bold text-admin-dark tabular-nums"
                   title={`${pendingNew} new order(s) to process`}
                 >
                   {pendingNew > 99 ? "99+" : pendingNew}
@@ -236,13 +238,13 @@ export function VendorSidebar({
           );
         })}
       </nav>
-      <div className="shrink-0 border-t border-white/10 p-3">
+      <div className="mx-3 shrink-0 border-t border-white/15 py-3">
         <LoadingButton
           type="button"
           loadingLabel="Signing out…" onClick={() => logout()}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-base font-medium text-white/80 hover:bg-white/10"
+          className="flex min-h-[3rem] w-full items-center gap-3.5 rounded-xl px-3.5 text-[15px] font-medium text-white/90 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-admin-lime"
         >
-          <LogOut className="h-4 w-4 shrink-0" />
+          <LogOut className="h-[22px] w-[22px] shrink-0" strokeWidth={1.8} aria-hidden />
           Logout
         </LoadingButton>
       </div>

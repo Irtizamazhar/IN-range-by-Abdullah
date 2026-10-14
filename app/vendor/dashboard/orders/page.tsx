@@ -27,8 +27,12 @@ function VendorOrdersPageInner() {
   const selectedTab = useRef<(typeof TABS)[number]>("all");
   const previousStatus = useRef<string | undefined>();
   const requestVersion = useRef(0);
-  const [q, setQ] = useState("");
-  const [debouncedQ, setDebouncedQ] = useState("");
+  const urlQ = searchParams?.get("q") ?? "";
+  const [q, setQ] = useState(urlQ);
+  const [debouncedQ, setDebouncedQ] = useState(urlQ.trim());
+
+  // The top-bar search links here with ?q=…; keep the box in sync when it changes.
+  useEffect(() => { setQ(urlQ); }, [urlQ]);
   const [rows, setRows] = useState<ShopOrderListRow[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);

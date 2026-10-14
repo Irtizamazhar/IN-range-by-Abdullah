@@ -1305,12 +1305,13 @@ html.dashboard-scroll-lock body {
 }
 
 /* =========================================================
-   ADMIN PANEL — "Classic Emerald" theme.
-   Scoped to .admin-ui so the storefront and vendor panel keep their palette.
-   Existing admin pages use brand-* / darkText / primaryYellow utilities, which
-   read these variables, so they inherit the admin palette without markup edits.
+   ADMIN + VENDOR PANELS — "Classic Emerald" theme.
+   Scoped to .admin-ui / .vendor-ui so the storefront keeps its palette.
+   Existing panel pages use brand-* / darkText / primaryYellow utilities, which
+   read these variables, so they inherit the panel palette without markup edits.
 ========================================================= */
-.admin-ui {
+.admin-ui,
+.vendor-ui {
   --brand-primary-rgb: 181 230 55;   /* #B5E637 accent lime */
   --brand-hover-rgb: 163 211 40;
   --brand-dark-rgb: 16 42 32;        /* emerald-tinted ink for text */
@@ -1328,7 +1329,8 @@ html.dashboard-scroll-lock body {
   color: #102a20;
 }
 
-.admin-ui .border-borderGray { border-color: #e3eae4; }
+.admin-ui .border-borderGray,
+.vendor-ui .border-borderGray { border-color: #e3eae4; }
 
 .admin-sidebar-scrollbar {
   scrollbar-width: thin;
