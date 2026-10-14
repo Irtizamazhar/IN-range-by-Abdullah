@@ -130,6 +130,16 @@ export async function cancelParentOrder(params: {
         // Releases internal inventory and safely skips seller lines already released above.
         await releaseReservedInventory(tx, { orderId: order.id }, reason);
 
+        // Only a whole-order cancellation before fulfilment restores redemption.
+        // Partial seller cancellations and refunds keep the historical redemption.
+        const redemption = await tx.couponRedemption.findUnique({ where: { orderId: order.id } });
+        if (redemption?.status === "redeemed" && ["pending", "failed"].includes(order.paymentStatus)) {
+          const restored = await tx.couponRedemption.updateMany({ where: { id: redemption.id, status: "redeemed" }, data: { status: "restored", restoredAt: new Date() } });
+          if (restored.count === 1) {
+            await tx.vendorCoupon.update({ where: { id: redemption.couponId }, data: { usedCount: { decrement: 1 }, spent: { decrement: redemption.discount } } });
+          }
+        }
+
         await tx.orderStatusEvent.create({
           data: {
             orderId: order.id,

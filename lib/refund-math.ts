@@ -25,3 +25,23 @@ export function calculateVendorRefundDebitCents(params: {
     Math.round((params.lineVendorCents * boundedRefund) / params.lineSaleCents)
   );
 }
+
+export function calculateCouponFundingReversalCents(params: {
+  discountCents: number;
+  customerPaidCents: number;
+  customerRefundCents: number;
+  alreadyReversedCents: number;
+}): number {
+  const { discountCents, customerPaidCents, customerRefundCents, alreadyReversedCents } = params;
+  if (discountCents <= 0 || customerPaidCents <= 0 || customerRefundCents <= 0) return 0;
+  return Math.min(
+    Math.max(0, discountCents - alreadyReversedCents),
+    Math.round(discountCents * customerRefundCents / customerPaidCents)
+  );
+}
+
+export function grossUpPlatformRefundCents(customerRefundCents: number, lineBaseCents: number, customerPaidCents: number): number {
+  return customerPaidCents > 0
+    ? Math.round(customerRefundCents * lineBaseCents / customerPaidCents)
+    : customerRefundCents;
+}

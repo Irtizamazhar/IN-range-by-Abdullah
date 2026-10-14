@@ -25,6 +25,10 @@ export default function CheckoutPage() {
   const [settingsError, setSettingsError] = useState("");
   const [loading, setLoading] = useState(false);
   const [checkoutKey, setCheckoutKey] = useState("");
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number } | null>(null);
+  const [couponMessage, setCouponMessage] = useState("");
+  const [couponBusy, setCouponBusy] = useState(false);
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -132,7 +136,24 @@ export default function CheckoutPage() {
       (c) => c.toLowerCase() === city.trim().toLowerCase()
     ) ?? false;
   const deliveryCharge = items.length === 1 && items[0].quoteId ? Number(items[0].quoteShipping || 0) : Number(settings?.codCharges ?? 0);
-  const totalAmount = subtotal + deliveryCharge;
+  const totalAmount = subtotal + deliveryCharge - (appliedCoupon?.discount || 0);
+  const cartSignature = JSON.stringify(items.map(i => [i.productId, i.quantity, i.price, i.variant, i.serviceId, i.quoteId]));
+  useEffect(() => { setAppliedCoupon(null); setCouponMessage(""); }, [cartSignature]);
+
+  async function applyCoupon() {
+    setCouponBusy(true);
+    setCouponMessage("");
+    try {
+      const response = await fetch("/api/coupons/validate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: couponInput, quoteId: items.find(i => i.quoteId)?.quoteId, products: items.map(i => ({ productId: i.productId, quantity: i.quantity })) }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Coupon could not be applied.");
+      setAppliedCoupon({ code: data.code, discount: data.discount });
+      setCouponMessage(`Coupon ${data.code} applied.`);
+    } catch (error) {
+      setAppliedCoupon(null);
+      setCouponMessage(error instanceof Error ? error.message : "Coupon could not be applied.");
+    } finally { setCouponBusy(false); }
+  }
 
   const infoComplete = useMemo(
     () =>
@@ -169,6 +190,7 @@ export default function CheckoutPage() {
           customerAddress: [address, apartment].filter(Boolean).join(", "),
           city,
           paymentMethod,
+          couponCode: appliedCoupon?.code,
           quoteId: items.find(i => i.quoteId)?.quoteId,
           products: items.map((i) => ({
             serviceId: i.serviceId,
@@ -631,6 +653,15 @@ export default function CheckoutPage() {
               ))}
             </div>
             <div className="mt-4 space-y-2 text-sm">
+              <div className="rounded-xl bg-[#F7F9F6] p-3">
+                <label htmlFor="checkout-coupon" className="mb-2 block font-semibold text-[#005235]">Coupon code</label>
+                <div className="flex gap-2">
+                  <input id="checkout-coupon" value={couponInput} onChange={e => setCouponInput(e.target.value.toUpperCase())} maxLength={32} autoComplete="off" className="min-w-0 flex-1 rounded-lg border border-[#DFEDE5] bg-white px-3 py-2 uppercase focus:outline-none focus:ring-2 focus:ring-[#B5E637]" placeholder="Enter code" />
+                  <LoadingButton type="button" disabled={couponBusy || !couponInput.trim()} onClick={applyCoupon} className="rounded-lg bg-[#005235] px-4 py-2 font-semibold text-white disabled:opacity-50">Apply</LoadingButton>
+                </div>
+                {appliedCoupon && <button type="button" onClick={() => { setAppliedCoupon(null); setCouponMessage("Coupon removed."); }} className="mt-2 text-sm font-semibold text-[#005235] underline">Remove coupon</button>}
+                {couponMessage && <p role="status" className="mt-2 text-sm text-[#005235]">{couponMessage}</p>}
+              </div>
               <div className="flex items-center justify-between">
                 <span className="text-darkText/70">Subtotal</span>
                 <span className="font-semibold">{formatPKR(subtotal)}</span>
@@ -641,6 +672,7 @@ export default function CheckoutPage() {
                   {deliveryCharge === 0 ? "FREE" : formatPKR(deliveryCharge)}
                 </span>
               </div>
+              {appliedCoupon && <div className="flex items-center justify-between text-[#005235]"><span>Coupon ({appliedCoupon.code})</span><span>-{formatPKR(appliedCoupon.discount)}</span></div>}
               <div className="flex items-center justify-between border-t border-borderGray pt-2 text-base font-bold text-darkText">
                 <span>Total</span>
                 <span>{formatPKR(totalAmount)}</span>

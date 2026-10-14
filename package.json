@@ -16,7 +16,7 @@
     "test:account:e2e": "tsx scripts/test-customer-account.ts",
     "test:wants:e2e": "tsx scripts/test-wants-demand.ts",
     "test:marketplace:e2e": "tsx scripts/test-marketplace-expansion.ts",
-    "test": "tsx --test tests/joro-foundation.test.ts tests/customer-account.test.ts tests/customer-password-security.test.ts tests/reviews-ratings.test.ts tests/marketplace-expansion.test.ts tests/private-launch.test.ts",
+    "test": "tsx --test tests/joro-foundation.test.ts tests/customer-account.test.ts tests/customer-password-security.test.ts tests/reviews-ratings.test.ts tests/marketplace-expansion.test.ts tests/private-launch.test.ts tests/coupon-system.test.ts",
     "test:together:e2e": "tsx scripts/test-family-cart.ts",
     "test:reviews:e2e": "tsx scripts/test-reviews-ratings.ts",
     "postinstall": "node scripts/prisma-generate-try.mjs",

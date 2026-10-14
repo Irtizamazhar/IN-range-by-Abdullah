@@ -5,6 +5,8 @@ import { toCents } from "@/lib/payout-allocation";
 import {
   calculateRefundPaymentStatus,
   calculateVendorRefundDebitCents,
+  calculateCouponFundingReversalCents,
+  grossUpPlatformRefundCents,
 } from "@/lib/refund-math";
 import { createCustomerNotification } from "@/lib/customer-notifications";
 
@@ -27,7 +29,16 @@ export async function createPendingRefund(params: {
       if (request.refund) return request.refund;
       if (request.status !== "received") throw new Error("INVALID_STATE");
 
-      const maximumCents = toCents(request.orderItem.price.toString()) * request.quantity;
+      const redemption = await tx.couponRedemption.findUnique({ where: { orderId: request.orderId } });
+      const snapshot = redemption?.snapshot as { fundingType?: string; allocations?: Array<{ orderItemId?: string; discount?: number; base?: number }> } | undefined;
+      const allocation = snapshot?.allocations?.find(a => a.orderItemId === request.orderItemId);
+      const lineDiscountCents = allocation ? toCents(String(allocation.discount || 0)) : 0;
+      const quantity = request.orderItem.quantity;
+      const allocatedDiscount = Math.round(lineDiscountCents * request.quantity / quantity);
+      const previousRefunds = await tx.refund.aggregate({ where: { orderId: request.orderId, returnRequest: { orderItemId: request.orderItemId }, status: { in: ["pending", "processed"] } }, _sum: { amount: true } });
+      const linePaidCents = toCents(request.orderItem.price.toString()) * quantity - lineDiscountCents;
+      const remainingCents = linePaidCents - toCents(previousRefunds._sum.amount?.toString() || "0");
+      const maximumCents = Math.min(toCents(request.orderItem.price.toString()) * request.quantity - allocatedDiscount, remainingCents);
       if (amountCents > maximumCents) throw new Error("AMOUNT_EXCEEDS_LINE");
 
       const refund = await tx.refund.create({
@@ -111,10 +122,22 @@ export async function processManualRefund(params: {
       }
       if (refund.order.paymentStatus !== "received") throw new Error("PAYMENT_NOT_RECEIVED");
 
+      const couponRedemption = await tx.couponRedemption.findUnique({ where: { orderId: refund.orderId } });
+      const couponSnapshot = couponRedemption?.snapshot as { fundingType?: string; allocations?: Array<{ orderItemId?: string; discount?: number; base?: number }> } | undefined;
+      const couponAllocation = couponSnapshot?.allocations?.find(a => a.orderItemId === refund.returnRequest.orderItemId);
+      let platformReversalCents = 0;
+      if (couponSnapshot?.fundingType === "PLATFORM_FUNDED" && couponAllocation) {
+        const discountCents = toCents(String(couponAllocation.discount || 0));
+        const paidCents = toCents(String(couponAllocation.base || 0)) - discountCents;
+        const previous = await tx.refund.aggregate({ where: { orderId: refund.orderId, returnRequest: { orderItemId: refund.returnRequest.orderItemId }, status: "processed" }, _sum: { couponPlatformReversal: true } });
+        platformReversalCents = calculateCouponFundingReversalCents({ discountCents, customerPaidCents: paidCents, customerRefundCents: toCents(refund.amount.toString()), alreadyReversedCents: toCents(previous._sum.couponPlatformReversal?.toString() || "0") });
+      }
+
       const gate = await tx.refund.updateMany({
         where: { id: refund.id, status: "pending" },
         data: {
           status: "processed",
+          couponPlatformReversal: new Prisma.Decimal((platformReversalCents / 100).toFixed(2)),
           externalRef,
           processedBy: params.adminId,
           adminNote: params.adminNote || refund.adminNote,
@@ -203,12 +226,23 @@ export async function processManualRefund(params: {
             select: { saleAmount: true, vendorAmount: true },
           });
           if (vendorLine && Number(vendorLine.saleAmount) > 0) {
+            const redemption = await tx.couponRedemption.findUnique({ where: { orderId: refund.orderId } });
+            const snapshot = redemption?.snapshot as { fundingType?: string; allocations?: Array<{ orderItemId?: string; discount?: number; base?: number }> } | undefined;
+            const allocation = snapshot?.allocations?.find(a => a.orderItemId === refund.returnRequest.orderItemId);
+            const lineBase = allocation ? toCents(String(allocation.base || 0)) : toCents(vendorLine.saleAmount.toString());
+            const linePaid = lineBase - (allocation ? toCents(String(allocation.discount || 0)) : 0);
+            const adjustedRefund = snapshot?.fundingType === "PLATFORM_FUNDED" && linePaid > 0
+              ? grossUpPlatformRefundCents(toCents(refund.amount.toString()), lineBase, linePaid)
+              : toCents(refund.amount.toString());
             const debitCents = calculateVendorRefundDebitCents({
-              customerRefundCents: toCents(refund.amount.toString()),
+              customerRefundCents: adjustedRefund,
               lineSaleCents: toCents(vendorLine.saleAmount.toString()),
               lineVendorCents: toCents(vendorLine.vendorAmount.toString()),
             });
-            debit = new Prisma.Decimal((debitCents / 100).toFixed(2));
+            const earlier = await tx.refund.findMany({ where: { orderId: refund.orderId, id: { not: refund.id }, status: "processed", returnRequest: { orderItemId: refund.returnRequest.orderItemId } }, select: { id: true } });
+            const earlierDebits = earlier.length ? await tx.vendorLedgerEntry.aggregate({ where: { vendorId: refund.vendorId, idempotencyKey: { in: earlier.map(row => `refund:${row.id}`) }, type: "refund_debit" }, _sum: { amount: true } }) : null;
+            const remainingDebit = Math.max(0, toCents(vendorLine.vendorAmount.toString()) + toCents(earlierDebits?._sum.amount?.toString() || "0"));
+            debit = new Prisma.Decimal((Math.min(debitCents, remainingDebit) / 100).toFixed(2));
           }
         }
         await tx.vendorLedgerEntry.create({

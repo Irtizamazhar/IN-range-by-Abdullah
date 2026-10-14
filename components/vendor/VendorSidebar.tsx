@@ -66,6 +66,7 @@ const links: {
   { href: "/vendor/dashboard/services", label: "Services", icon: ShoppingBag },
   { href: "/vendor/dashboard/demand", label: "Customer Demand", icon: ShoppingBag },
   { href: "/vendor/dashboard/offers", label: "Offers", icon: ShoppingBag },
+  { href: "/vendor/dashboard/marketing/coupons", label: "Coupons", icon: ShoppingBag },
   {
     href: "/vendor/dashboard/orders",
     label: "My Orders",

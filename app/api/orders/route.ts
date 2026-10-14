@@ -20,6 +20,7 @@ import { notifyAdminNewOrder } from "@/lib/order-emails";
 import { createVendorNotification } from "@/lib/vendor-notifications";
 import { primaryProductImageUrl, serializeOrder } from "@/lib/serialize";
 import { resolveCommissionPercent } from "@/lib/vendor-commission";
+import { calculateCoupon, cents, findCoupon, money, normalizeCouponCode, type CouponLine } from "@/lib/coupon-service";
 import {
   generateVendorShopOrderNumber,
   type VendorShopOrderTx,
@@ -53,7 +54,7 @@ export async function GET(req: NextRequest) {
     const orders = await prisma.order.findMany({
       where,
       orderBy: { createdAt: "desc" },
-      include: { orderItems: true },
+      include: { orderItems: true, couponRedemption: true },
     });
     const unread = await prisma.order.count({
       where: { ...where, isRead: false },
@@ -108,6 +109,9 @@ export async function POST(req: NextRequest) {
       { status: 400 }
     );
   }
+  let couponCode: string | null = null;
+  try { couponCode = body.couponCode == null || body.couponCode === "" ? null : normalizeCouponCode(body.couponCode); }
+  catch { return NextResponse.json({ error: "Enter a valid coupon code." }, { status: 400 }); }
 
   const customer = await prisma.customer.findUnique({
     where: { id: session.user.id },
@@ -207,6 +211,9 @@ export async function POST(req: NextRequest) {
     variant?: string;
     decrementFromPrisma: boolean;
     vendorSlice?: VendorSlice;
+    category: string;
+    categoryRecordId: string | null;
+    originalPrice: number | null;
   }> = [];
 
   for (const line of lineItems) {
@@ -299,6 +306,9 @@ export async function POST(req: NextRequest) {
       variant: variantSel,
       decrementFromPrisma: true,
       vendorSlice,
+      category: p.category,
+      categoryRecordId: p.categoryRecordId,
+      originalPrice: p.originalPrice == null ? null : Number(p.originalPrice),
     });
   }
 
@@ -309,7 +319,7 @@ export async function POST(req: NextRequest) {
   });
   const services = await Promise.all(serviceInputs.map(s => resolveServiceAddon(prisma, s.productId, s.serviceId, s.quantity, String(city))));
   const serviceTotal = services.reduce((sum, s) => sum.add(s.price.mul(s.quantity)), new Prisma.Decimal(0));
-  const totalAmount = new Prisma.Decimal(subtotal).add(deliveryCharge).add(serviceTotal).toDecimalPlaces(2);
+  const preCouponTotal = new Prisma.Decimal(subtotal).add(deliveryCharge).add(serviceTotal).toDecimalPlaces(2);
 
   const orderNumber = await generateOrderNumber();
 
@@ -322,6 +332,30 @@ export async function POST(req: NextRequest) {
     };
 
     const mp = getMarketplaceTx(tx);
+    if (couponCode && quote) throw new ApiError(400, "Coupons cannot be applied to negotiated quotes.");
+    let couponResult: ReturnType<typeof calculateCoupon> | null = null;
+    let coupon: Awaited<ReturnType<typeof findCoupon>> | null = null;
+    if (couponCode) {
+      coupon = await findCoupon(tx, couponCode);
+      const currentLines: CouponLine[] = [];
+      for (const line of resolvedProducts) {
+        const current = await tx.product.findFirst({ where: { id: line.productId, isActive: true }, select: { price: true, originalPrice: true, category: true, categoryRecordId: true } });
+        if (!current || cents(current.price) !== cents(line.price)) throw new ApiError(409, "Cart prices changed. Refresh checkout and apply the coupon again.");
+        const currentVendor = await tx.vendorProduct.findFirst({ where: { publishedProductId: line.productId, status: "active", vendor: { status: "approved" } }, select: { id: true, vendorId: true } });
+        if ((currentVendor?.id || null) !== (line.vendorSlice?.vendorProductId || null) || (currentVendor?.vendorId || null) !== (line.vendorSlice?.vendorId || null)) throw new ApiError(409, "Product ownership changed. Refresh checkout and apply the coupon again.");
+        currentLines.push({ productId: line.productId, vendorId: line.vendorSlice?.vendorId, category: current.category, categoryRecordId: current.categoryRecordId, price: line.price, originalPrice: current.originalPrice == null ? null : Number(current.originalPrice), quantity: line.quantity });
+      }
+      couponResult = calculateCoupon(coupon, currentLines, customer.id);
+      if (coupon.perCustomerLimit != null) {
+        const count = await tx.couponRedemption.count({ where: { couponId: coupon.id, customerId: customer.id, status: "redeemed" } });
+        if (count >= coupon.perCustomerLimit) throw new ApiError(400, "You have reached this coupon's usage limit.");
+      }
+      const gate = await tx.vendorCoupon.updateMany({
+        where: { id: coupon.id, status: "active", updatedAt: coupon.updatedAt, ...(coupon.maxUses == null ? {} : { usedCount: { lt: coupon.maxUses } }), ...(coupon.budget == null ? {} : { spent: { lte: new Prisma.Decimal(coupon.budget).sub(money(couponResult.discount)) } }) },
+        data: { usedCount: { increment: 1 }, spent: { increment: money(couponResult.discount) } },
+      });
+      if (gate.count !== 1) throw new ApiError(409, "Coupon limit or budget was reached. Please try another code.");
+    }
 
     if (quoteId) { const currentQuote = await checkoutQuote(tx, quoteId, session.user.id, String(city)); if (currentQuote.orderId) throw new ApiError(409, "Quote already checked out. Refresh your orders."); }
     for (const service of services) {
@@ -338,7 +372,7 @@ export async function POST(req: NextRequest) {
         customerEmail: customer.email,
         customerAddress: String(customerAddress).trim(),
         city: String(city).trim(),
-        totalAmount,
+        totalAmount: preCouponTotal.sub(couponResult ? money(couponResult.discount) : 0),
         paymentMethod: effectivePaymentMethod,
         bankAccount: null,
         paymentScreenshot: null,
@@ -351,8 +385,7 @@ export async function POST(req: NextRequest) {
         isRead: false,
       },
     });
-
-    const createdOrderItems = [];
+    const createdOrderItems: Array<{ id: string }> = [];
     for (const line of resolvedProducts) {
       createdOrderItems.push(
         await tx.orderItem.create({
@@ -367,6 +400,13 @@ export async function POST(req: NextRequest) {
           },
         })
       );
+    }
+    if (coupon && couponResult) {
+      await tx.couponRedemption.create({ data: {
+        couponId: coupon.id, orderId: o.id, customerId: customer.id,
+        discount: money(couponResult.discount), platformFunded: money(couponResult.platformFunded),
+        snapshot: { couponId: coupon.id, code: coupon.couponCode, ownerType: coupon.ownerType, ownerVendorId: coupon.vendorId, fundingType: coupon.fundingType, discountType: coupon.discountType, discountValue: String(coupon.discountValue), discount: couponResult.discount / 100, platformFunded: couponResult.platformFunded / 100, allocations: couponResult.allocations.map(a => ({ orderItemId: createdOrderItems[a.index].id, productId: a.productId, vendorId: a.vendorId, base: a.base / 100, discount: a.discount / 100, commissionBase: (a.base - (coupon.fundingType === "VENDOR_FUNDED" ? a.discount : 0)) / 100 })) },
+      } });
     }
 
     // One VendorShopOrder per vendor on this checkout (bundled lines) + linked VendorOrder rows.
@@ -399,7 +439,8 @@ export async function POST(req: NextRequest) {
 
       for (const line of lines) {
         const vs = line.vendorSlice!;
-        const saleAmount = line.price * line.quantity;
+        const vendorDiscount = coupon?.fundingType === "VENDOR_FUNDED" ? (couponResult?.allocations.find(a => a.index === resolvedProducts.indexOf(line))?.discount ?? 0) / 100 : 0;
+        const saleAmount = line.price * line.quantity - vendorDiscount;
         const rate = await resolveCommissionPercent(
           mp,
           vs.category,

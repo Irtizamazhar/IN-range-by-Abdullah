@@ -26,6 +26,7 @@ model Customer {
   vendorShopOrders VendorShopOrder[]
   productReviews   Review[]
   orders           Order[]
+  couponRedemptions CouponRedemption[]
   paymentProofs    PaymentProofStaging[]
   passwordResets   CustomerPasswordResetToken[]
   addresses        CustomerAddress[]
@@ -216,6 +217,7 @@ model Order {
   warranties            WarrantyRecord[]
   services              OrderService[]
   offerQuote            OfferQuote?
+  couponRedemption      CouponRedemption?
 
   @@index([customerId, createdAt])
 
@@ -467,6 +469,7 @@ model Refund {
   vendorId        String?
   vendor          Vendor?       @relation(fields: [vendorId], references: [id], onDelete: SetNull)
   amount          Decimal       @db.Decimal(12, 2)
+  couponPlatformReversal Decimal @default(0) @db.Decimal(12, 2)
   method          String        @default("manual") @db.VarChar(40)
   status          RefundStatus  @default(pending)
   idempotencyKey  String        @unique @db.VarChar(191)
@@ -637,6 +640,8 @@ enum VendorCouponDiscountType {
 enum VendorCouponStatus {
   active
   inactive
+  paused
+  expired
 }
 
 model Vendor {
@@ -975,22 +980,73 @@ model VendorReview {
 
 model VendorCoupon {
   id             String                   @id @default(cuid())
-  vendorId       String
-  vendor         Vendor                   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  vendorId       String?
+  vendor         Vendor?                  @relation(fields: [vendorId], references: [id], onDelete: Cascade)
   couponCode     String
+  /// Unique claim for new codes; legacy rows may share a code and remain untouched.
+  codeKey        String?                  @unique @db.VarChar(32)
   discountType   VendorCouponDiscountType
   discountValue  Decimal                  @db.Decimal(12, 2)
   minOrderAmount Decimal                  @default(0) @db.Decimal(12, 2)
+  maxDiscount    Decimal?                 @db.Decimal(12, 2)
+  startDate      DateTime?
+  productIds     Json?
+  categories     Json?
+  collectionIds  Json?
+  selectedVendorIds Json?
+  customerIds    Json?
+  perCustomerLimit Int?
+  ownerType      String                   @default("VENDOR") @db.VarChar(16)
+  fundingType    String                   @default("VENDOR_FUNDED") @db.VarChar(24)
+  budget         Decimal?                 @db.Decimal(12, 2)
+  spent          Decimal                  @default(0) @db.Decimal(12, 2)
+  approvals      Json?
+  approvedBy     String?                  @db.VarChar(191)
+  approvedAt     DateTime?
+  updatedAt      DateTime                 @updatedAt
   maxUses        Int?
   usedCount      Int                      @default(0)
   expiryDate     DateTime?
   status         VendorCouponStatus       @default(active)
   createdAt      DateTime                 @default(now())
+  redemptions    CouponRedemption[]
 
   @@unique([vendorId, couponCode])
   @@index([vendorId])
+  @@index([couponCode, status])
 
   @@map("vendorcoupon")
+}
+
+model CouponRedemption {
+  id            String       @id @default(cuid())
+  couponId      String
+  coupon        VendorCoupon @relation(fields: [couponId], references: [id], onDelete: Restrict)
+  orderId       String       @unique
+  order         Order        @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  customerId    String
+  customer      Customer     @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  snapshot      Json
+  discount      Decimal      @db.Decimal(12, 2)
+  platformFunded Decimal     @default(0) @db.Decimal(12, 2)
+  status        String       @default("redeemed") @db.VarChar(24)
+  redeemedAt    DateTime     @default(now())
+  restoredAt    DateTime?
+
+  @@index([couponId, status])
+  @@index([customerId, couponId, status])
+  @@map("couponredemption")
+}
+
+model CouponCollection {
+  id         String   @id @default(cuid())
+  name       String   @unique @db.VarChar(160)
+  productIds Json
+  createdBy  String   @db.VarChar(191)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("couponcollection")
 }
 
 model VendorNotification {

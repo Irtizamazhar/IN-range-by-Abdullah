@@ -85,6 +85,7 @@ const links = [
   { href: "/admin/vendors", label: "Vendors", icon: Store, dividerBefore: true },
   { href: "/admin/vendors/top-vendors", label: "Top Vendors", icon: Star },
   { href: "/admin/vendor-promotions", label: "Vendor Promotions", icon: Store },
+  { href: "/admin/marketing/coupons", label: "Coupons", icon: Percent },
   { href: "/admin/customers", label: "Customers", icon: Users },
   { href: "/admin/reviews", label: "Reviews", icon: Star },
   {

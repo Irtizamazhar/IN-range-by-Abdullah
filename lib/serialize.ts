@@ -112,6 +112,7 @@ export function serializeOrder(
   order: Order & {
     orderItems: OrderItem[];
     vendorShopOrders?: { status: string; shopOrderNumber?: string | null }[];
+    couponRedemption?: { discount: { toString(): string }; platformFunded: { toString(): string }; snapshot: unknown; status: string } | null;
   },
   opts?: { forAdmin?: boolean; vendorShopOrderRef?: string }
 ) {
@@ -140,6 +141,7 @@ export function serializeOrder(
     customerAddress: order.customerAddress,
     city: order.city,
     totalAmount: Number(order.totalAmount),
+    coupon: order.couponRedemption ? { discount: Number(order.couponRedemption.discount), code: (order.couponRedemption.snapshot as { code?: string })?.code || "", fundingType: (order.couponRedemption.snapshot as { fundingType?: string })?.fundingType || "", status: order.couponRedemption.status, ...(opts?.forAdmin ? { platformFunded: Number(order.couponRedemption.platformFunded) } : {}) } : null,
     paymentMethod: order.paymentMethod,
     paymentStatus: order.paymentStatus,
     paymentRejectedReason: order.paymentRejectedReason,
