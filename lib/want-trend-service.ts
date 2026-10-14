@@ -6,7 +6,7 @@ export async function wantTrendService(filters: { city?: string; category?: stri
   const recentStart = new Date(now.getTime() - 7 * 86400000);
   const previousStart = new Date(now.getTime() - 14 * 86400000);
   const wants = await prisma.want.findMany({
-    where: { status: "OPEN", expiresAt: { gt: now }, ...(filters.city ? { city: filters.city } : {}), ...(filters.category ? { category: filters.category } : {}) },
+    where: { status: "OPEN", expiresAt: { gt: now }, customer: { isActive: true }, ...(filters.city ? { city: filters.city } : {}), ...(filters.category ? { category: filters.category } : {}) },
     select: { id: true, title: true, photo: true, requestType: true, category: true, city: true, budgetMin: true, budgetMax: true, budgetFlexible: true, quantity: true, createdAt: true, expiresAt: true, _count: { select: { interests: true } } },
     orderBy: { createdAt: "desc" }, take: 500,
   });

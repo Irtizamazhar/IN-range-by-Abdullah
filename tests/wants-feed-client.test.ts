@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { WantsFeedPager } from "../lib/wants-feed-client";
 import type { WantsFeedItem, WantsFeedPage } from "../lib/wants-feed-types";
+import { emptyReactionSummary } from "../lib/want-social";
 
 function item(id: string): WantsFeedItem {
   return {
@@ -9,6 +10,8 @@ function item(id: string): WantsFeedItem {
     budgetMin: null, budgetMax: "5000", budgetFlexible: false, quantity: 1,
     category: "Other", city: "Lahore", status: "OPEN", createdAt: "2026-10-08T08:00:00.000Z",
     expiresAt: "2026-11-08T08:00:00.000Z", customer: { name: "Customer", image: null },
+    requestType: "PRODUCT", occasion: null, joinedCount: 0, offerVendorCount: 0, reactions: emptyReactionSummary(),
+    viewer: { actor: null, reaction: null, joined: false, isOwner: false, vendorOffer: null, canJoin: false, canOffer: false },
   };
 }
 

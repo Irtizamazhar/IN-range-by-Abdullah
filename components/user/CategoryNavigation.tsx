@@ -9,7 +9,6 @@ import { usePathname, useSearchParams } from "next/navigation";
 import {
   ArrowRight,
   ChevronDown,
-  ClipboardList,
   Flame,
   Gift,
   House,
@@ -32,8 +31,7 @@ const NAV_ITEMS = [
   { label: "Services", href: "/services", Icon: Wrench },
   { label: "Gifts", href: "/gifts", Icon: Gift },
   { label: "MyHome", href: "/myhome", Icon: House },
-  { label: "JORO Connect", href: "/joro-connect", Icon: UsersRound },
-  { label: "Requests", href: "/wants/new", Icon: ClipboardList },
+  { label: "Wants", href: "/wants", Icon: UsersRound },
   { label: "Deals", href: "/deals", Icon: Flame },
 ] as const;
 
@@ -206,11 +204,9 @@ export function CategoryNavigation() {
             const active =
               href === "/products"
                 ? pathname === "/products" || pathname?.startsWith("/products/")
-                : href === "/joro-connect"
-                  ? pathname === "/joro-connect" || pathname === "/wants" || pathname?.startsWith("/wants/trending")
-                  : href === "/wants/new"
-                    ? pathname === "/wants/new"
-                    : href !== null && pathname === href;
+                : href === "/wants"
+                  ? pathname === "/wants" || pathname?.startsWith("/wants/")
+                  : href !== null && pathname === href;
 
             const contents = (
               <>

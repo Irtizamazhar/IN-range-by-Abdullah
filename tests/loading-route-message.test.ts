@@ -11,7 +11,7 @@ test("loading copy follows real destination routes", () => {
     "/services": "Exploring services...",
     "/services/abc": "Loading service details...",
     "/gifts": "Finding gifts...",
-    "/joro-connect": "Opening JORO Connect...",
+    "/joro-connect": "Opening Wants...",
     "/wants": "Loading requests...",
     "/account?tab=wants": "Loading your requests...",
     "/joined-requests": "Loading joined requests...",
