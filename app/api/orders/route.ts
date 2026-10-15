@@ -17,6 +17,7 @@ import {
 } from "@/lib/prisma-order-includes";
 import { prisma } from "@/lib/prisma";
 import { notifyAdminNewOrder } from "@/lib/order-emails";
+import { queueOrderConfirmation } from "@/lib/order-confirmation-delivery";
 import { createVendorNotification } from "@/lib/vendor-notifications";
 import { primaryProductImageUrl, serializeOrder } from "@/lib/serialize";
 import { resolveCommissionPercent } from "@/lib/vendor-commission";
@@ -601,6 +602,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    await queueOrderConfirmation(tx, o);
     return o;
   });
 

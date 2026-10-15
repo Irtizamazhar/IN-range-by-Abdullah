@@ -51,4 +51,33 @@ export const vendorSetupDraftSchema = z.object({...draftStrings,businessType:z.e
   returnSameAsPickup:bool,step,declarationAccepted:bool}).partial();
 export type VendorSetup = z.infer<typeof vendorSetupSchema>;
 export type VendorSetupDraft = z.infer<typeof vendorSetupDraftSchema>;
+export const SETUP_STEP_KEYS = [
+  ["shopName", "storeSlug", "category", "shopDescription", "phone", "address", "city", "province", "postalCode", "businessType"],
+  ["name", "cnic", "businessLegalName", "businessRegNo", "taxNumber"],
+  ["pickupAddress", "pickupCity", "pickupProvince", "pickupPostalCode", "pickupContactName", "pickupPhone", "returnSameAsPickup", "returnAddress", "returnCity", "returnProvince", "returnPostalCode", "returnContactName", "returnPhone"],
+  ["accountTitle", "bankName", "accountNumber", "iban"],
+] as const;
+
+/** Validate only the active step; future required fields must not block a draft. */
+export function setupStepErrors(input: Record<string, unknown>, step: number): Record<string, string> {
+  if (step === 4) {
+    const result = vendorSetupSchema.safeParse(input);
+    return result.success ? {} : Object.fromEntries(result.error.issues.map(issue => [String(issue.path[0]), issue.message]));
+  }
+  const errors: Record<string, string> = {};
+  for (const key of SETUP_STEP_KEYS[step] || []) {
+    const result = vendorSetupFields[key].safeParse(input[key]);
+    if (!result.success) errors[key] = result.error.issues[0].message;
+  }
+  if (step === 1 && input.businessType === "company") {
+    if (!String(input.businessLegalName || "").trim()) errors.businessLegalName = "Registered business name is required.";
+    if (String(input.businessRegNo || "").trim().length < 2) errors.businessRegNo = "Business registration number is required.";
+  }
+  if (step === 2 && (input.returnSameAsPickup === false || input.returnSameAsPickup === "false")) {
+    for (const key of ["returnAddress", "returnCity", "returnProvince", "returnContactName", "returnPhone"]) {
+      if (!String(input[key] || "").trim()) errors[key] = "Complete the separate return address.";
+    }
+  }
+  return errors;
+}
 export const PRIVATE_SETUP_KEYS = ["businessLegalName","taxNumber","province","postalCode","pickupAddress","pickupCity","pickupProvince","pickupPostalCode","pickupContactName","pickupPhone","returnSameAsPickup","returnAddress","returnCity","returnProvince","returnPostalCode","returnContactName","returnPhone","step","declarationAccepted"] as const;

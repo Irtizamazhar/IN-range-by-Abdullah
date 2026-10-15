@@ -21,16 +21,16 @@ export function vendorSetupData(input: VendorSetupDraft, current: Prisma.JsonVal
 
 export async function validateSetupSlug(tx: Prisma.TransactionClient, vendorId: string, slug?: string) {
   if (!slug) return;
-  if (isReservedOrInvalidSlug(slug)) throw new ApiError(400,"Choose a valid, non-reserved store URL.");
+  if (isReservedOrInvalidSlug(slug)) throw new ApiError(400,"Choose a valid, non-reserved store URL.", {storeSlug:"Choose a valid, non-reserved store URL."});
   const [vendor,alias] = await Promise.all([
     tx.vendor.findFirst({where:{OR:[{id:slug},{storeSlug:slug}],NOT:{id:vendorId}},select:{id:true}}),
     tx.storeSlugAlias.findUnique({where:{slug},select:{vendorId:true}}),
   ]);
-  if (vendor || alias && alias.vendorId !== vendorId) throw new ApiError(409,"That store URL is already in use.");
+  if (vendor || alias && alias.vendorId !== vendorId) throw new ApiError(409,"That store URL is already in use.", {storeSlug:"That store URL is already in use."});
 }
 
-export async function saveVendorSetup(vendorId: string, input: VendorSetupDraft) {
-  return prisma.$transaction(async tx => {
+export async function saveVendorSetup(vendorId: string, input: VendorSetupDraft, db = prisma) {
+  return db.$transaction(async tx => {
     const current=await tx.vendor.findUnique({where:{id:vendorId},select:{status:true,onboardingData:true}});
     if (!current || !["onboarding","rejected"].includes(current.status)) throw new ApiError(409,"This application is no longer editable.");
     await validateSetupSlug(tx,vendorId,input.storeSlug);

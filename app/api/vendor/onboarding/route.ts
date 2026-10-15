@@ -5,6 +5,8 @@ import { getVendorFromSession } from "@/lib/vendor-auth-server";
 import { vendorSetupSchema, vendorSetupDraftSchema, saveVendorSetup, submitVendorSetup } from "@/lib/vendor-onboarding";
 import { saveVendorDocumentBuffer } from "@/lib/vendor-doc-upload";
 import { imageExtension } from "@/lib/security/image-signature";
+import { setupStepErrors } from "@/lib/vendor-onboarding-schema";
+import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
@@ -16,13 +18,17 @@ async function actor() {
 
 async function setupRequest(request: Request) {
   if (!request.headers.get("content-type")?.includes("multipart/form-data")) {
-    return { fields: await request.json(), files: [] };
+    const fields = await request.json();
+    if (!fields || typeof fields !== "object" || Array.isArray(fields)) throw new ApiError(400, "Please supply your seller setup details.");
+    return { fields, files: [] };
   }
   const form = await request.formData();
   const fields = Object.fromEntries(Array.from(form.entries()).filter(([, value]) => typeof value === "string"));
   const files = (["cnic_front", "cnic_back", "license"] as const).flatMap(type => {
     const file = form.get(type);
-    return file instanceof File && file.size ? [{ type, file }] : [];
+    // Node 18 supports Request.formData() but has no global File constructor.
+    // FormData entries are already typed/validated by the platform parser.
+    return file && typeof file !== "string" && file.size > 0 ? [{ type, file }] : [];
   });
   for (const { file } of files) {
     if (file.size > 5 * 1024 * 1024 || !["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
@@ -52,16 +58,27 @@ export async function PATCH(request: Request) {
     const vendor = await actor();
     if (!["onboarding","rejected"].includes(vendor.status)) throw new ApiError(409, "This application is no longer editable.");
     const { fields, files } = await setupRequest(request);
+    if (fields.intent === "continue") {
+      const active = Number(fields.currentStep);
+      if (!Number.isInteger(active) || active < 0 || active > 3 || Number(fields.step) !== active + 1) throw new ApiError(400, "Invalid setup step.");
+      const fieldErrors = setupStepErrors(fields, active);
+      if (active === 1) {
+        const existing = await prisma.vendorDocument.findMany({ where: { vendorId: vendor.id }, select: { documentType: true } });
+        const required = fields.businessType === "company" ? ["cnic_front", "cnic_back", "license"] : ["cnic_front", "cnic_back"];
+        if (required.some(type => !existing.some(doc => doc.documentType === type) && !files.some(upload => upload.type === type))) fieldErrors.documents = "Upload all required verification documents before continuing.";
+      }
+      if (Object.keys(fieldErrors).length) return NextResponse.json({ error: "Please check the highlighted details.", fieldErrors }, { status: 400 });
+    }
     const parsed = vendorSetupDraftSchema.safeParse(fields);
     if (!parsed.success) {
       const issue = parsed.error.issues[0];
-      throw new ApiError(400, issue.path.join(".") + ": " + issue.message);
+      return NextResponse.json({ error: issue.message, fieldErrors: Object.fromEntries(parsed.error.issues.map(i => [i.path.join("."), i.message])) }, { status: 400 });
     }
-    await saveVendorSetup(vendor.id, parsed.data);
     for (const { type, file } of files) {
       await saveVendorDocumentBuffer(vendor.id, type, Buffer.from(await file.arrayBuffer()), file.type);
     }
-    return { ok: true, uploaded: files.map(file => file.type) };
+    await saveVendorSetup(vendor.id, parsed.data);
+    return { ok: true, uploaded: files.map(file => file.type), documents: await prisma.vendorDocument.findMany({ where: { vendorId: vendor.id }, select: { id: true, documentType: true } }) };
   });
 }
 
@@ -74,7 +91,7 @@ export async function POST(request: Request) {
     const parsed = vendorSetupSchema.safeParse(fields);
     if (!parsed.success) {
       const issue = parsed.error.issues[0];
-      throw new ApiError(400, issue.path.join(".") + ": " + issue.message);
+      return NextResponse.json({ error: issue.message, fieldErrors: Object.fromEntries(parsed.error.issues.map(i => [i.path.join("."), i.message])) }, { status: 400 });
     }
     if (parsed.data.businessType === "company" && !parsed.data.businessRegNo?.trim()) {
       throw new ApiError(400, "Business registration number is required.");

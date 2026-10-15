@@ -4,7 +4,7 @@ import { ZodError } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getCustomerSession, getAdminSession } from "@/lib/sessions";
 export class ApiError extends Error {
-  constructor(public status: number, message: string) { super(message); }
+  constructor(public status: number, message: string, public fieldErrors?: Record<string, string>) { super(message); }
 }
 export async function customerActor() {
   const session = await getCustomerSession();
@@ -40,9 +40,9 @@ export function sameOrigin(request: Request) {
 }
 
 export async function api(work: () => Promise<unknown>) {
-  try { return NextResponse.json(await work(), { headers: { "Cache-Control": "no-store" } }); }
+  try { const result = await work(); return result instanceof NextResponse ? result : NextResponse.json(result, { headers: { "Cache-Control": "no-store" } }); }
   catch (error) {
-    if (error instanceof ApiError) return NextResponse.json({ error: error.message }, { status: error.status });
+    if (error instanceof ApiError) return NextResponse.json({ error: error.message, ...(error.fieldErrors ? { fieldErrors: error.fieldErrors } : {}) }, { status: error.status });
     if (error instanceof ZodError || error instanceof SyntaxError) return NextResponse.json({ error: "Please check the supplied fields." }, { status: 400 });
     if (error instanceof Prisma.PrismaClientKnownRequestError && ["P2002", "P2034"].includes(error.code)) return NextResponse.json({ error: "This record changed. Refresh and try again." }, { status: 409 });
     console.error("Marketplace request failed", error instanceof Error ? error.name : "Unknown error");

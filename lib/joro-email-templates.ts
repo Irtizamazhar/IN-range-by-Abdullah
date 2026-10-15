@@ -3,6 +3,27 @@ import { sanitizeDescriptionHtml } from "@/lib/security/sanitize";
 
 export type JoroEmail = { subject: string; html: string; text: string };
 
+export function orderConfirmationEmail(order: {
+  id: string; orderNumber: string; customerName: string; createdAt: Date;
+  customerAddress: string; city: string; paymentMethod: string; paymentStatus: string;
+  totalAmount: unknown; orderItems: { name: string; quantity: number; price: unknown }[];
+}): JoroEmail {
+  const money = (value: unknown) => `PKR ${Number(value).toLocaleString("en-PK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const lines = order.orderItems.map(item => `${item.name} × ${item.quantity} — ${money(item.price)} each; ${money(Number(item.price) * item.quantity)}`);
+  const details = [
+    `Order: ${order.orderNumber}`,
+    `Date: ${order.createdAt.toLocaleDateString("en-PK", { timeZone: "Asia/Karachi", year: "numeric", month: "long", day: "numeric" })}`,
+    ...lines, `Order total: ${money(order.totalAmount)}`,
+    `Payment method: ${order.paymentMethod === "cod" ? "Cash on delivery" : "Bank transfer"}`,
+    `Payment status: ${order.paymentStatus}${order.paymentMethod === "cod" && order.paymentStatus === "pending" ? " (due on delivery)" : ""}`,
+    ...([order.customerAddress, order.city].some(Boolean) ? [`Delivery: ${[order.customerAddress, order.city].filter(Boolean).join(", ")}`] : []),
+    ...(process.env.SUPPORT_EMAIL?.trim() ? [`Support: ${process.env.SUPPORT_EMAIL.trim()}`] : []),
+  ];
+  return brand({ subject: `Order confirmed — ${order.orderNumber}`, preview: "Thank you for your order at JORO", greeting: `Assalam-o-Alaikum ${order.customerName},`,
+    bodyHtml: `<p>Your order is confirmed. Thank you for shopping with JORO.</p>${details.map(line => `<p style="overflow-wrap:anywhere;margin:10px 0">${escapeEmailHtml(line)}</p>`).join("")}`,
+    bodyText: `Your order is confirmed.\n${details.join("\n")}`, action: { label: "View Order", url: `${appOrigin()}/account/orders/${encodeURIComponent(order.id)}` }, footer: "This is a transactional order confirmation from JORO." });
+}
+
 export function escapeEmailHtml(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }

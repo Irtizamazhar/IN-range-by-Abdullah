@@ -28,6 +28,8 @@ function isPublicAssetPath(pathname: string) {
 
 /** Always reachable while gated (matched exactly, with the listed methods). */
 const PUBLIC_ENDPOINTS: Record<string, readonly string[]> = {
+  // Machine worker has its own constant-time bearer authentication.
+  "/api/cron/order-confirmations": ["POST"],
   "/api/preview-access/login": ["POST"],
   "/api/preview-access/logout": ["POST"],
   "/api/preview-access/session": ["GET"],

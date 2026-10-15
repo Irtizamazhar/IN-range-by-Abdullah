@@ -38,18 +38,6 @@ export async function notifyAdminScreenshotUploaded(order: OrderNotifyPayload) {
   }
 }
 
-export async function notifyCustomerOrderConfirmed(order: OrderNotifyPayload) {
-  try {
-    await sendMail({
-      to: order.customerEmail,
-      subject: `Order confirmed — ${order.orderNumber}`,
-      html: `<p>Assalam-o-Alaikum ${order.customerName},</p><p>Your order <strong>${order.orderNumber}</strong> is confirmed.</p>`,
-    });
-  } catch (e) {
-    console.error("notifyCustomerOrderConfirmed", e);
-  }
-}
-
 export async function notifyCustomerShipped(order: OrderNotifyPayload) {
   try {
     const slice =

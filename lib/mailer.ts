@@ -25,8 +25,13 @@ export async function sendMail(opts: {
   html: string;
   text?: string;
 }): Promise<boolean> {
+  return (await sendMailOutcome(opts)) === "accepted";
+}
+
+/** An ambiguous DATA timeout must never be blindly retried: SMTP may have accepted it. */
+export async function sendMailOutcome(opts: { to: string; subject: string; html: string; text?: string; messageId?: string }): Promise<"accepted" | "retry" | "uncertain"> {
   try {
-    if (!isMailConfigured()) return false;
+    if (!isMailConfigured()) return "retry";
     const transporter = createTransport();
     const result = await transporter.sendMail({
       from: JORO_SENDER,
@@ -34,11 +39,13 @@ export async function sendMail(opts: {
       subject: opts.subject,
       text: opts.text,
       html: opts.html,
+      messageId: opts.messageId,
     });
-    return result.accepted.some(address => (typeof address === "string" ? address : address.address).toLowerCase() === opts.to.toLowerCase());
+    return result.accepted.some(address => (typeof address === "string" ? address : address.address).toLowerCase() === opts.to.toLowerCase()) ? "accepted" : "retry";
   } catch (e) {
     console.error("sendMail failed", e instanceof Error ? e.name : "Unknown error");
-    return false;
+    const error = e as { command?: string; responseCode?: number };
+    return error.responseCode || ["CONN", "EHLO", "HELO", "AUTH", "AUTH PLAIN", "AUTH LOGIN", "MAIL FROM", "RCPT TO"].includes(error.command || "") ? "retry" : "uncertain";
   }
 }
 

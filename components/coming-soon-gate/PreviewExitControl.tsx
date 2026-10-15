@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
 export function PreviewExitControl() {
+  const pathname = usePathname();
   const [active, setActive] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
@@ -17,7 +19,7 @@ export function PreviewExitControl() {
   }, []);
 
   if (!active) return null;
-  return <div className="fixed bottom-4 right-4 z-[2147483001] flex flex-col items-end gap-2">
+  return <div className={`${pathname === "/vendor/onboarding" ? "relative mx-auto mb-4 max-w-4xl px-4" : "fixed bottom-4 right-4"} z-[2147483001] flex flex-col items-end gap-2`}>
     {error && <p role="alert" className="rounded bg-white px-3 py-2 text-sm text-red-700 shadow-lg">Could not exit preview. Please try again.</p>}
     <button
     type="button"

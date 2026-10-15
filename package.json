@@ -13,6 +13,8 @@
     "start": "next start",
     "lint": "next lint",
     "test:auth:services": "tsx scripts/test-prestep10-services.ts",
+    "test:vendor-order": "tsx --tsconfig tests/tsconfig.json --test tests/vendor-onboarding.test.ts tests/vendor-onboarding-api.test.ts tests/order-confirmation.test.ts tests/pakistan-phone.test.ts tests/pakistan-cnic.test.ts tests/joro-email-campaign.test.ts tests/private-launch.test.ts",
+    "test:vendor:browser": "node scripts/test-vendor-onboarding-browser.mjs",
     "test:auth:e2e": "tsx scripts/test-auth-page.ts",
     "test:account:e2e": "tsx scripts/test-customer-account.ts",
     "test:wants:e2e": "tsx scripts/test-wants-demand.ts",

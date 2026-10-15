@@ -6,7 +6,6 @@ import { getAdminSession, getCustomerSession } from "@/lib/sessions";
 import { autoCancelStaleBankOrders } from "@/lib/auto-cancel-orders";
 import { findOrderByIdOrNumber } from "@/lib/find-order";
 import {
-  notifyCustomerOrderConfirmed,
   notifyCustomerOrderCancelled,
   notifyCustomerPaymentRejected,
   notifyCustomerShipped,
@@ -19,6 +18,7 @@ import { consumeReservedInventory } from "@/lib/order-inventory-service";
 import { customerOwnsRecord } from "@/lib/order-ownership";
 import { requireAdminPermission } from "@/lib/admin-rbac";
 import { createCustomerNotification } from "@/lib/customer-notifications";
+import { queueOrderConfirmation } from "@/lib/order-confirmation-delivery";
 
 type Ctx = { params: { id: string } };
 
@@ -196,6 +196,7 @@ export async function PUT(req: NextRequest, context: Ctx) {
       if (row.orderStatus === "delivered") {
         await consumeReservedInventory(tx, { orderId: order.id });
       }
+      await queueOrderConfirmation(tx, row);
       return row;
     });
 
@@ -207,9 +208,6 @@ export async function PUT(req: NextRequest, context: Ctx) {
       trackingNumber: updated.trackingNumber,
     };
 
-    if (prevStatus !== "confirmed" && updated.orderStatus === "confirmed") {
-      await notifyCustomerOrderConfirmed(payload);
-    }
     if (prevStatus !== "shipped" && updated.orderStatus === "shipped") {
       await notifyCustomerShipped(payload);
     }
