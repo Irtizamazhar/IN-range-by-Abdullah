@@ -22,3 +22,8 @@ export function vendorJwtExpiresSeconds(exp: string): number {
 export function defaultVendorJwtExpiresIn(): string {
   return process.env.VENDOR_JWT_EXPIRES_IN?.trim() || "7d";
 }
+
+/** Unchecked vendor logins have a browser-session cookie; their JWT still has its normal limit. */
+export function vendorLoginCookieLifetime(rememberMe: boolean, maxAge: number): { maxAge?: number } {
+  return rememberMe ? { maxAge } : {};
+}

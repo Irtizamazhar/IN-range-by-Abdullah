@@ -17,6 +17,7 @@ declare module "next-auth" {
   }
 
   interface User {
+    rememberMe?: boolean;
     role?: "admin" | "customer";
     phone?: string;
     adminRole?: string;
@@ -26,6 +27,7 @@ declare module "next-auth" {
 
 declare module "next-auth/jwt" {
   interface JWT extends DefaultJWT {
+    rememberMe?: boolean;
     role?: "admin" | "customer";
     phone?: string;
     sessionVersion?: number;

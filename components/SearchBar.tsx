@@ -5,6 +5,10 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useLoadingRouter } from "@/hooks/useLoadingRouter";
 import { LoaderCircle, Mic, Search, X } from "lucide-react";
 import type { SearchItem } from "@/lib/public-search";
+import type { ProductCardData } from "@/components/user/ProductCard";
+import Image from "next/image";
+import Link from "@/components/ui/LoadingLink";
+import { formatPKR } from "@/lib/format";
 
 type SpeechResult = { results: ArrayLike<ArrayLike<{ transcript: string }>>; resultIndex: number };
 type BrowserRecognition = {
@@ -36,17 +40,24 @@ export function SearchBar() {
   const [startingVoice, setStartingVoice] = useState(false);
   const [voiceStatus, setVoiceStatus] = useState("");
   const [language, setLanguage] = useState("en-PK");
+  const [voiceProducts, setVoiceProducts] = useState<ProductCardData[]>([]);
+  const [showVoiceProducts, setShowVoiceProducts] = useState(false);
+  const [voiceSearching, setVoiceSearching] = useState(false);
+  const [voiceSearchError, setVoiceSearchError] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
   const recognition = useRef<BrowserRecognition | null>(null);
   const cancelled = useRef(false);
   const voiceAttempt = useRef(0);
   const voicePending = useRef(false);
+  const voiceTranscript = useRef("");
+  const voiceProductRequest = useRef<AbortController | null>(null);
 
   function releaseVoice() {
     voiceAttempt.current += 1;
     voicePending.current = false;
     cancelled.current = true;
+    voiceTranscript.current = "";
     try { recognition.current?.stop(); } catch { /* Already stopped. */ }
     recognition.current = null;
     setStartingVoice(false);
@@ -58,6 +69,9 @@ export function SearchBar() {
     setOpen(false);
     releaseVoice();
     setVoiceStatus("");
+    voiceProductRequest.current?.abort();
+    setShowVoiceProducts(false);
+    setVoiceProducts([]);
   }, [pathname, routeQuery]);
 
   useEffect(() => {
@@ -65,7 +79,7 @@ export function SearchBar() {
     setVoiceSupported(Boolean(speech.SpeechRecognition || speech.webkitSpeechRecognition));
     const saved = sessionStorage.getItem("joro:voice-language");
     if (saved === "en-PK" || saved === "ur-PK") setLanguage(saved);
-    return () => { voiceAttempt.current += 1; cancelled.current = true; try { recognition.current?.stop(); } catch { /* Already stopped. */ } recognition.current = null; };
+    return () => { voiceAttempt.current += 1; cancelled.current = true; voiceProductRequest.current?.abort(); try { recognition.current?.stop(); } catch { /* Already stopped. */ } recognition.current = null; };
   }, []);
 
   useEffect(() => {
@@ -106,74 +120,71 @@ export function SearchBar() {
     setVoiceStatus("Voice search stopped");
   }
 
-  async function microphonePermission() {
+  async function searchVoiceProducts(transcript: string) {
+    voiceProductRequest.current?.abort();
+    const controller = new AbortController();
+    voiceProductRequest.current = controller;
+    setVoiceSearching(true);
+    setVoiceSearchError(false);
+    setVoiceProducts([]);
+    setShowVoiceProducts(true);
+    setOpen(false);
+    const words = transcript.match(/[^\s,.!?]+/g) || [];
+    const stopWords = new Set(["show", "me", "find", "search", "for", "a", "an", "the", "please", "مجھے", "دکھائیں", "تلاش", "کریں"]);
+    const fallback = words.filter(word => word.length >= 2 && !stopWords.has(word.toLocaleLowerCase())).sort((a, b) => b.length - a.length)[0];
     try {
-      return (await navigator.permissions?.query({ name: "microphone" as PermissionName }))?.state;
+      const load = async (search: string) => {
+        const response = await fetch(`/api/products?search=${encodeURIComponent(search)}&limit=12`, { signal: controller.signal, cache: "no-store" });
+        if (!response.ok) throw new Error("Product search unavailable");
+        const data = await response.json() as { products?: ProductCardData[] };
+        return Array.isArray(data.products) ? data.products : [];
+      };
+      let products = await load(transcript);
+      if (!products.length && fallback && fallback.toLocaleLowerCase() !== transcript.toLocaleLowerCase()) products = await load(fallback);
+      if (!controller.signal.aborted) setVoiceProducts(products);
     } catch {
-      return undefined;
+      if (!controller.signal.aborted) setVoiceSearchError(true);
+    } finally {
+      if (!controller.signal.aborted) setVoiceSearching(false);
     }
   }
 
-  async function startVoice() {
+  function startVoice() {
     if (listening || voicePending.current) { stopVoice(); return; }
     const speech = window as SpeechWindow;
     const Constructor = speech.SpeechRecognition || speech.webkitSpeechRecognition;
-    if (!Constructor) { setVoiceStatus("Voice search unavailable"); return; }
+    if (!Constructor) { setVoiceStatus("Voice search is not supported in this browser."); return; }
     const attempt = ++voiceAttempt.current;
     voicePending.current = true;
     cancelled.current = false;
+    voiceTranscript.current = "";
     setStartingVoice(true);
     setVoiceStatus("");
+    voiceProductRequest.current?.abort();
+    setShowVoiceProducts(false);
+    setOpen(false);
     try {
-      const permission = await microphonePermission();
-      if (attempt !== voiceAttempt.current) return;
-      if (permission !== "granted") {
-        if (!navigator.mediaDevices?.getUserMedia) {
-          setVoiceStatus("Microphone unavailable. Check Chrome site settings.");
-          return;
-        }
-        setVoiceStatus("Requesting microphone...");
-        let stream: MediaStream;
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        } catch (error) {
-          if (attempt !== voiceAttempt.current) return;
-          const name = error && typeof error === "object" && "name" in error ? String(error.name) : "";
-          const accessDenied = name === "NotAllowedError" || name === "PermissionDeniedError";
-          const currentPermission = accessDenied ? await microphonePermission() : undefined;
-          if (attempt !== voiceAttempt.current) return;
-          setVoiceStatus(accessDenied
-            ? currentPermission === "denied"
-              ? "Microphone blocked. Allow it in Chrome site settings."
-              : "Microphone access was not granted. Try again."
-            : name === "NotFoundError" || name === "NotReadableError"
-              ? "Microphone unavailable. Check your device."
-              : "Could not access microphone. Try again.");
-          return;
-        }
-        stream.getTracks().forEach(track => track.stop());
-        if (attempt !== voiceAttempt.current) return;
-        setVoiceStatus("");
-      }
       const instance = new Constructor();
       recognition.current = instance;
       instance.lang = language;
       instance.continuous = false;
       instance.interimResults = false;
       instance.onresult = (event) => {
-        if (cancelled.current) return;
+        if (cancelled.current || attempt !== voiceAttempt.current) return;
         const transcript = event.results[event.resultIndex]?.[0]?.transcript?.trim();
-        if (transcript) { setQuery(transcript); setVoiceStatus(""); navigate(transcript); }
+        if (transcript) { voiceTranscript.current = transcript.slice(0, 100); setQuery(voiceTranscript.current); setOpen(false); setVoiceStatus(""); }
       };
       instance.onerror = (event) => {
         if (cancelled.current || attempt !== voiceAttempt.current) return;
         const messages: Record<string, string> = {
-          "not-allowed": "Speech recognition blocked. Check Chrome site settings.",
-          "service-not-allowed": "Speech recognition service unavailable in Chrome.",
+          "not-allowed": "Microphone permission denied. Allow access in your browser site settings.",
+          "service-not-allowed": "Speech recognition service unavailable in this browser.",
           "audio-capture": "Microphone unavailable. Check your device.",
           "network": "Speech service network error. Try again.",
           "no-speech": "No speech detected. Try again.",
+          "language-not-supported": "This speech language is unavailable. Try English.",
         };
+        voiceTranscript.current = "";
         setVoiceStatus(messages[event.error] || "Voice search unavailable. Try again.");
         setListening(false);
       };
@@ -181,8 +192,12 @@ export function SearchBar() {
         if (attempt !== voiceAttempt.current) return;
         setListening(false);
         recognition.current = null;
-        setVoiceStatus(status => status === "Listening..." ? "" : status);
+        const transcript = voiceTranscript.current;
+        voiceTranscript.current = "";
+        if (!cancelled.current && transcript) { setVoiceStatus(""); void searchVoiceProducts(transcript); }
+        else setVoiceStatus(status => status === "Listening..." ? "No speech detected. Try again." : status);
       };
+      // Starting inside the click handler keeps browser microphone activation valid.
       instance.start();
       voicePending.current = false;
       setStartingVoice(false);
@@ -205,16 +220,23 @@ export function SearchBar() {
   const suggestions = open && query.trim().length >= 2;
   return <div ref={root} className="relative z-[1000] w-full min-w-0">
     <form role="search" onSubmit={(event) => { event.preventDefault(); navigate(); }} className="flex h-10 min-w-0 overflow-hidden rounded-lg border border-neutral-200 bg-white transition-colors focus-within:border-emerald-600 focus-within:ring-2 focus-within:ring-emerald-100">
-      <input ref={input} type="search" value={query} onChange={(event) => { setQuery(event.target.value); setVoiceStatus(""); setOpen(true); setActiveIndex(-1); }} onFocus={() => setOpen(true)} onKeyDown={(event) => {
-        if (event.key === "Escape") { setOpen(false); setActiveIndex(-1); return; }
-        if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); setOpen(true); setActiveIndex((index) => event.key === "ArrowDown" ? Math.min(items.length - 1, index + 1) : Math.max(-1, index - 1)); }
+      <input ref={input} type="search" value={query} onChange={(event) => { if (listening || voicePending.current) releaseVoice(); voiceProductRequest.current?.abort(); setShowVoiceProducts(false); setQuery(event.target.value); setVoiceStatus(""); setOpen(true); setActiveIndex(-1); }} onFocus={() => { if (!showVoiceProducts) setOpen(true); }} onKeyDown={(event) => {
+        if (event.key === "Escape") { setOpen(false); setShowVoiceProducts(false); setActiveIndex(-1); return; }
+        if ((event.key === "ArrowDown" || event.key === "ArrowUp") && !showVoiceProducts) { event.preventDefault(); setOpen(true); setActiveIndex((index) => event.key === "ArrowDown" ? Math.min(items.length - 1, index + 1) : Math.max(-1, index - 1)); }
         if (event.key === "Enter" && activeIndex >= 0 && items[activeIndex]) { event.preventDefault(); setOpen(false); void router.push(items[activeIndex].href); }
       }} role="combobox" aria-autocomplete="list" aria-expanded={suggestions} aria-controls="joro-search-options" aria-activedescendant={activeIndex >= 0 ? `joro-search-option-${activeIndex}` : undefined} aria-label="Search JORO marketplace" maxLength={100} autoComplete="off" placeholder="Search products, services, gifts & more..." className="h-full min-w-0 flex-1 border-0 bg-transparent px-3 text-sm text-neutral-900 outline-none placeholder:text-neutral-400 sm:px-4" />
-      {query && <button type="button" onClick={() => { setQuery(""); setItems([]); setVoiceStatus(""); input.current?.focus(); }} aria-label="Clear search" className="flex w-8 shrink-0 items-center justify-center text-neutral-500 hover:text-emerald-800"><X className="h-4 w-4" /></button>}
-      {voiceSupported && <><select value={language} onChange={(event) => { setLanguage(event.target.value); sessionStorage.setItem("joro:voice-language", event.target.value); }} aria-label="Voice search language" className="w-11 shrink-0 appearance-none bg-white text-center text-[10px] font-bold text-emerald-900 outline-none"><option value="en-PK">EN</option><option value="ur-PK">UR</option></select><button type="button" onClick={() => { void startVoice(); }} aria-label={listening || startingVoice ? "Stop voice search" : "Start voice search"} aria-pressed={listening} title={listening || startingVoice ? "Tap to stop" : "Search by voice"} className={`flex w-9 shrink-0 items-center justify-center ${listening ? "bg-emerald-100 text-emerald-800" : "text-neutral-500 hover:text-emerald-800"}`}><Mic className="h-4 w-4" /></button></>}
+      {query && <button type="button" onClick={() => { if (listening || voicePending.current) releaseVoice(); voiceProductRequest.current?.abort(); setShowVoiceProducts(false); setQuery(""); setItems([]); setVoiceStatus(""); input.current?.focus(); }} aria-label="Clear search" className="flex w-8 shrink-0 items-center justify-center text-neutral-500 hover:text-emerald-800"><X className="h-4 w-4" /></button>}
+      {voiceSupported && <select value={language} onChange={(event) => { setLanguage(event.target.value); sessionStorage.setItem("joro:voice-language", event.target.value); }} aria-label="Voice search language" className="w-11 shrink-0 appearance-none bg-white text-center text-[10px] font-bold text-emerald-900 outline-none"><option value="en-PK">EN</option><option value="ur-PK">UR</option></select>}
+      <button type="button" onClick={startVoice} aria-label={!voiceSupported ? "Voice search unavailable in this browser" : listening || startingVoice ? "Stop voice search" : "Start voice search"} aria-pressed={listening} title={!voiceSupported ? "Voice search is not supported in this browser" : listening || startingVoice ? "Tap to stop" : "Search by voice"} className={`flex w-9 shrink-0 items-center justify-center ${listening ? "bg-emerald-100 text-emerald-800" : "text-neutral-500 hover:text-emerald-800"}`}><Mic className="h-4 w-4" /></button>
       <button type="submit" aria-label="Search marketplace" className="flex w-10 shrink-0 items-center justify-center bg-brand-primary text-brand-dark hover:bg-brand-hover md:w-[74px]"><Search className="h-5 w-5 md:hidden" /><span className="hidden text-xs font-bold md:inline">SEARCH</span></button>
     </form>
     {voiceStatus && <span role="status" className="absolute left-1 top-full mt-1 rounded bg-white px-2 py-1 text-xs text-emerald-900 shadow-sm">{voiceStatus}</span>}
+    {showVoiceProducts && <div role="region" aria-label="Voice search products" aria-live="polite" className="absolute left-0 top-[44px] max-h-[min(70vh,28rem)] w-full overflow-y-auto rounded-xl border border-emerald-100 bg-white p-2 shadow-xl">
+      {voiceSearching ? <p className="flex items-center gap-2 px-3 py-3 text-sm text-neutral-600"><LoaderCircle className="h-4 w-4 animate-spin" /> Searching products...</p> : voiceSearchError ? <p className="px-3 py-3 text-sm text-red-700">Product search unavailable. Please try again.</p> : voiceProducts.length === 0 ? <p className="px-3 py-3 text-sm text-neutral-600">No products found</p> : voiceProducts.map(product => <Link key={product._id} href={product.href || `/products/${encodeURIComponent(product._id)}`} onClick={() => setShowVoiceProducts(false)} className="flex items-center gap-3 rounded-lg p-2 text-left hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-700">
+        <Image src={product.images?.[0] || "/branding/joro-logo.png"} alt="" width={56} height={56} unoptimized className="h-14 w-14 shrink-0 rounded-lg bg-neutral-50 object-cover" />
+        <span className="min-w-0"><span className="block truncate text-sm font-semibold text-emerald-950">{product.name}</span><span className="block text-sm font-bold text-emerald-800">{formatPKR(Number(product.price))}</span></span>
+      </Link>)}
+    </div>}
     {suggestions && <div id="joro-search-options" role="listbox" aria-label="Search suggestions" className="absolute left-0 top-[44px] max-h-96 w-full overflow-y-auto rounded-xl border border-emerald-100 bg-white p-2 shadow-xl">
       {busy && <p className="flex items-center gap-2 px-3 py-2 text-xs text-neutral-500"><LoaderCircle className="h-4 w-4 animate-spin" /> Finding matches...</p>}
       {!busy && items.length === 0 && <p className="px-3 py-2 text-xs text-neutral-500">{suggestionError ? "Suggestions unavailable. Press Enter to search." : "No matching public listings yet."}</p>}

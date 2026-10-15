@@ -9,6 +9,7 @@ import { vendorLoginBodySchema } from "@/lib/vendor-auth-schemas";
 import { signVendorJwt } from "@/lib/vendor-jwt";
 import {
   defaultVendorJwtExpiresIn,
+  vendorLoginCookieLifetime,
   vendorJwtExpiresSeconds,
 } from "@/lib/vendor-expires";
 import { hashVendorJwtCookie } from "@/lib/vendor-token-hash";
@@ -211,7 +212,7 @@ export async function POST(req: NextRequest) {
   });
   res.cookies.set(VENDOR_JWT_COOKIE, jwt, {
     ...cookieBase(),
-    maxAge,
+    ...vendorLoginCookieLifetime(rememberMe, maxAge),
   });
   return res;
 }

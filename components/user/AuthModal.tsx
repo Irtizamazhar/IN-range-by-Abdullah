@@ -23,6 +23,7 @@ import {
 } from "react";
 import toast from "react-hot-toast";
 import { LogoMark } from "@/components/user/LogoMark";
+import { setCustomerOAuthRememberChoice } from "@/lib/customer-remember-policy";
 
 export type AuthModalView = "login" | "signup" | "forgot";
 
@@ -115,6 +116,7 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
 
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPass, setLoginPass] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [suName, setSuName] = useState("");
   const [suPhone, setSuPhone] = useState("");
   const [suEmail, setSuEmail] = useState("");
@@ -184,6 +186,7 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
       const res = await signIn("credentials", {
         email: em,
         password: loginPass,
+        rememberMe,
         redirect: false,
       });
       if (res?.error) {
@@ -244,6 +247,7 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
       const res2 = await signIn("credentials", {
         email: em,
         password: suPass,
+        rememberMe: false,
         redirect: false,
       });
       if (res2?.error) {
@@ -420,7 +424,11 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
                         </p>
                       ) : null}
 
-                      <div className="flex justify-end">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <label className="flex items-center gap-2 text-xs font-medium text-gray-700">
+                          <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} />
+                          Remember me
+                        </label>
                         <LoadingButton
                           type="button"
                           className="text-xs font-medium text-primaryBlue transition-opacity hover:opacity-80"
@@ -446,13 +454,14 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
                     <LoadingButton
                       type="button"
                       className={socialBtnClass}
-                      onClick={() =>
-                        signIn("google", {
+                      onClick={() => {
+                        setCustomerOAuthRememberChoice(rememberMe);
+                        return signIn("google", {
                           callbackUrl: "/",
                         }, {
                           prompt: "select_account",
-                        })
-                      }
+                        });
+                      }}
                     >
                       <GoogleIcon className="h-5 w-5" />
                       Sign in with Google
@@ -581,16 +590,17 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
                     <LoadingButton
                       type="button"
                       className={socialBtnClass}
-                      onClick={() =>
-                        signIn("google", {
+                      onClick={() => {
+                        setCustomerOAuthRememberChoice(false);
+                        return signIn("google", {
                           callbackUrl:
                             typeof window !== "undefined"
                               ? window.location.pathname + window.location.search
                               : "/",
                         }, {
                           prompt: "select_account",
-                        })
-                      }
+                        });
+                      }}
                     >
                       <GoogleIcon className="h-5 w-5" />
                       Sign up with Google

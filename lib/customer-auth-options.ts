@@ -7,6 +7,8 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { customerCookieOptions } from "@/lib/auth-cookies";
 import { isOAuthOnlyPasswordHash } from "@/lib/customer-password-security";
+import { encode as encodeJwt } from "next-auth/jwt";
+import { CUSTOMER_REMEMBERED_SECONDS, customerTokenLifetime } from "@/lib/customer-remember-policy";
 
 export const customerAuthOptions: NextAuthOptions = {
   debug: false,
@@ -27,6 +29,7 @@ export const customerAuthOptions: NextAuthOptions = {
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        rememberMe: { label: "Remember me", type: "text" },
       },
       async authorize(credentials) {
         const email = credentials?.email?.trim().toLowerCase();
@@ -55,11 +58,17 @@ export const customerAuthOptions: NextAuthOptions = {
           name: customer.name,
           phone: customer.phone || "",
           role: "customer" as const,
+          rememberMe: credentials?.rememberMe === "true",
         };
       },
     }),
   ],
-  session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 },
+  session: { strategy: "jwt", maxAge: CUSTOMER_REMEMBERED_SECONDS },
+  jwt: {
+    async encode(params) {
+      return encodeJwt({ ...params, maxAge: customerTokenLifetime(params.token?.rememberMe) });
+    },
+  },
   cookies: customerCookieOptions,
   callbacks: {
     async signIn({ account, profile }) {
@@ -83,6 +92,7 @@ export const customerAuthOptions: NextAuthOptions = {
         token.picture = customer.image; return token;
       }
       if (user) {
+        token.rememberMe = user.rememberMe === true;
         token.email = user.email;
         token.name = user.name;
         token.sub = user.id;
@@ -126,6 +136,7 @@ export const customerAuthOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }) {
+      session.expires = new Date(Date.now() + customerTokenLifetime(token.rememberMe) * 1000).toISOString();
       if (session.user) {
         session.user.id = token.sub || "";
         session.user.email = token.email as string;
