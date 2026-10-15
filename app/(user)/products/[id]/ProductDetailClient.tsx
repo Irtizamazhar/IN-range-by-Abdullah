@@ -26,6 +26,7 @@ import { VerifiedOrderReviewSection } from "@/components/user/VerifiedOrderRevie
 import { useCart } from "@/context/CartContext";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
 import { formatPKR } from "@/lib/format";
+import { showCartSuccessToast } from "@/lib/cart-success-toast";
 
 function isLocalProductImageSrc(src: string) {
   return src.startsWith("/api/") || src.startsWith("/uploads/");
@@ -210,6 +211,7 @@ export function ProductDetailClient({
         quantity: totalUnits,
       });
       setAdded(true);
+      showCartSuccessToast();
       if (addedTimer.current) clearTimeout(addedTimer.current);
       addedTimer.current = setTimeout(() => setAdded(false), 1400);
     }, "signup");
@@ -514,7 +516,7 @@ export function ProductDetailClient({
                 </div>
               </div>
 
-              <div className="flex flex-col gap-3 sm:flex-row">
+              <div className="grid grid-cols-2 gap-3">
                 <LoadingButton
                   type="button"
                   onClick={handleBuyNow}
@@ -523,7 +525,7 @@ export function ProductDetailClient({
                     quantityClamped < 1 ||
                     quantityClamped > product.stock
                   }
-                  className="h-11 flex-1 rounded-xl bg-[#B7E33A] text-[15px] font-bold text-[#063D2B] transition hover:brightness-95 disabled:opacity-45"
+                  className="min-h-[52px] min-w-0 rounded-xl bg-[#B7E33A] px-3 py-3 text-sm font-bold text-[#063D2B] transition hover:brightness-95 disabled:opacity-45 sm:text-[15px]"
                 >
                   Buy Now
                 </LoadingButton>
@@ -535,7 +537,7 @@ export function ProductDetailClient({
                     quantityClamped < 1 ||
                     quantityClamped > product.stock
                   }
-                  className="h-11 flex-1 rounded-xl bg-[#005235] text-[15px] font-bold text-white transition hover:bg-[#063D2B] disabled:opacity-45"
+                  className="min-h-[52px] min-w-0 rounded-xl bg-[#005235] px-3 py-3 text-sm font-bold text-white transition hover:bg-[#063D2B] disabled:opacity-45 sm:text-[15px]"
                 >
                   {added ? "Added ✓" : "Add to Cart"}
                 </LoadingButton>

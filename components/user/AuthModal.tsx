@@ -23,6 +23,7 @@ import {
 } from "react";
 import toast from "react-hot-toast";
 import { LogoMark } from "@/components/user/LogoMark";
+import { PasswordStrength } from "@/components/auth/PasswordStrength";
 import { setCustomerOAuthRememberChoice } from "@/lib/customer-remember-policy";
 
 export type AuthModalView = "login" | "signup" | "forgot";
@@ -579,12 +580,15 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
                       {errors.suPass ? (
                         <p className="mt-1 text-xs text-red-600">{errors.suPass}</p>
                       ) : null}
+                      <PasswordStrength password={suPass} />
 
                       <LoadingButton type="submit" className={primaryBtnClass}>
 
                         Create account
                       </LoadingButton>
                     </LoadingForm>
+
+                    <p className="mt-3 text-center text-xs text-neutral-600">By continuing, you agree to our <a href="/terms-and-conditions" target="_blank" rel="noopener noreferrer" className="font-semibold text-emerald-800 underline">Terms &amp; Conditions <span className="sr-only">(opens in a new tab)</span></a>.</p>
 
                     <OrDivider />
                     <LoadingButton

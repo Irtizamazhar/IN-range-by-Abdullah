@@ -10,6 +10,7 @@ import { useSavedProducts } from "@/lib/use-saved-products";
 import { formatPKR } from "@/lib/format";
 import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 import { displayDiscount } from "@/lib/product-discount";
+import { showCartSuccessToast } from "@/lib/cart-success-toast";
 import type { ProductCardData } from "./ProductCard";
 
 /** Grid shared by every home product row: two columns on mobile. */
@@ -21,7 +22,7 @@ const SIZES = "(min-width: 1280px) 16vw, (min-width: 1024px) 20vw, (min-width: 7
 const hoverLift = "[@media(hover:hover)]:hover:-translate-y-[3px] [@media(hover:hover)]:hover:border-emerald-400 [@media(hover:hover)]:hover:shadow-[0_10px_24px_rgba(17,17,17,.08)]";
 
 const NEW_FOR_MS = 14 * 24 * 60 * 60 * 1000;
-const card = "flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-[#E3EBDB] bg-white shadow-[0_2px_8px_rgba(17,17,17,.04)]";
+const card = "relative isolate flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-[#E3EBDB] bg-white shadow-[0_2px_8px_rgba(17,17,17,.04)]";
 
 /**
  * Compact product card shared by the home product rows (Featured Products, New Arrivals). Other pages keep
@@ -60,6 +61,7 @@ export const HomeProductCard = memo(function HomeProductCard({ product, showNewT
     if (existing && existing.quantity >= maxStock) { toast.error("You already have all available stock in your cart."); return; }
     addItem({ productId: id, name: product.name, price: product.price, image: product.images?.[0] || "/branding/joro-logo.png", maxStock, variant, quantity: Math.min((existing?.quantity || 0) + 1, maxStock) });
     setAdded(true);
+    showCartSuccessToast();
     if (addedTimer.current) clearTimeout(addedTimer.current);
     addedTimer.current = setTimeout(() => setAdded(false), 1400);
   }
@@ -80,14 +82,14 @@ export const HomeProductCard = memo(function HomeProductCard({ product, showNewT
         {isNew && <span className="rounded-full bg-lime-100 px-1.5 py-0.5 text-[10.5px] font-bold text-emerald-800 sm:text-[11px]">New</span>}
       </span>}
       <button type="button" onClick={() => void toggle(id)} disabled={savedLoading || saving} aria-pressed={saved} aria-label={saved ? `Remove ${product.name} from wishlist` : `Save ${product.name} to wishlist`} title={saved ? "Remove from wishlist" : "Add to wishlist"}
-        className="absolute right-3.5 top-3.5 flex h-7 w-7 items-center justify-center rounded-full bg-white/95 text-neutral-500 shadow-sm transition hover:text-red-500 disabled:opacity-60">
+        className="absolute right-3.5 top-3.5 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-white/95 text-neutral-500 shadow-sm transition hover:text-red-500 disabled:opacity-60">
         <Heart className={`h-3.5 w-3.5 ${saved ? "fill-red-500 text-red-500" : ""}`} aria-hidden="true" />
       </button>
     </div>
 
     <div className="flex min-w-0 flex-1 flex-col gap-1 p-2.5">
       <p className="h-4 truncate text-[10.5px] text-neutral-500 sm:text-[11px]">{product.category || "\u00a0"}</p>
-      <Link href={href} title={product.name} className="line-clamp-2 min-h-[2.5em] break-words text-xs font-medium leading-[1.25] text-neutral-900 first-letter:uppercase hover:text-emerald-800 sm:text-sm">{product.name}</Link>
+      <Link href={href} title={product.name} className="line-clamp-2 min-h-[2.5em] break-words text-xs font-medium leading-[1.25] text-neutral-900 first-letter:uppercase hover:text-emerald-800 after:absolute after:inset-0 after:z-10 after:content-[''] focus-visible:outline-none focus-visible:after:outline focus-visible:after:outline-2 focus-visible:after:outline-emerald-700 sm:text-sm">{product.name}</Link>
       <div className="flex min-h-10 min-w-0 flex-col justify-start leading-5">
         <span className="max-w-full break-words text-[13px] font-bold text-emerald-700 sm:text-base" title={formatPKR(product.price)}>{formatPKR(product.price)}</span>
         {discount && <del className="max-w-full break-words text-[11px] text-neutral-400 sm:text-xs">{formatPKR(discount.original)}</del>}
@@ -100,8 +102,8 @@ export const HomeProductCard = memo(function HomeProductCard({ product, showNewT
       </div>
       <div className="mt-auto pt-1.5">
         {requiresVariant && canAdd
-          ? <Link href={href} className={`${button} bg-brand-primary text-brand-dark hover:brightness-95`}>Options <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" /></Link>
-          : <button type="button" onClick={addToCart} disabled={!canAdd} className={`${button} ${canAdd ? "bg-brand-primary text-brand-dark hover:brightness-95" : "cursor-not-allowed bg-neutral-100 text-neutral-500"}`}>
+          ? <Link href={href} className={`${button} relative z-20 bg-brand-primary text-brand-dark hover:brightness-95`}>Select Options <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" /></Link>
+          : <button type="button" onClick={addToCart} disabled={!canAdd} className={`${button} relative z-20 ${canAdd ? "bg-brand-primary text-brand-dark hover:brightness-95" : "cursor-not-allowed bg-neutral-100 text-neutral-500"}`}>
               {canAdd ? added ? <span role="status">Added ✓</span> : <><ShoppingCart className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /><span className="truncate">Add to Cart</span></> : "Out of stock"}
             </button>}
       </div>

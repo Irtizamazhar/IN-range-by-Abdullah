@@ -11,6 +11,7 @@ import { useSavedProducts } from "@/lib/use-saved-products";
 import { formatPKR } from "@/lib/format";
 import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 import { displayDiscount } from "@/lib/product-discount";
+import { showCartSuccessToast } from "@/lib/cart-success-toast";
 import styles from "./ProductCard.module.css";
 
 export type ProductCardData = {
@@ -137,6 +138,7 @@ export const ProductCard = memo(function ProductCard({
       quantity: Math.min((existing?.quantity || 0) + 1, maxStock),
     });
     setAdded(true);
+    showCartSuccessToast();
     if (addedTimer.current) clearTimeout(addedTimer.current);
     addedTimer.current = setTimeout(() => setAdded(false), 1400);
   }
@@ -240,7 +242,7 @@ export const ProductCard = memo(function ProductCard({
             </LoadingButton>
           ) : requiresVariant && canAdd ? (
             <Link href={detailHref} className={styles.action}>
-              View Options <ArrowRight aria-hidden="true" />
+              Select Options <ArrowRight aria-hidden="true" />
             </Link>
           ) : (
             <LoadingButton type="button" disabled={!canAdd} onClick={handleAddToCart} className={styles.action}>

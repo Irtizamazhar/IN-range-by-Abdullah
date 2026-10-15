@@ -23,6 +23,7 @@ import { LogoMark } from "@/components/user/LogoMark";
 import { PasswordToggleInput } from "@/components/ui/PasswordToggleInput";
 
 import { AuthBrandPanel } from "@/components/auth/AuthBrandPanel";
+import { PasswordStrength } from "@/components/auth/PasswordStrength";
 import styles from "./AuthLayout.module.css";
 
 import { vendorEntry } from "@/lib/vendor-entry";
@@ -100,7 +101,7 @@ export function LoginExperience({initialRole,initialMode,googleEnabled,developme
 
     {(role==="customer"?status==="loading":vendorLoading)?<PageSkeleton label="Checking your session…" rows={2} />:authenticated?<div className="py-8"><h1 className="text-2xl font-bold">Welcome back, {role==="customer"?session?.user?.name:vendor?.ownerName}</h1>{role==="customer"?<div className="mt-5 grid gap-3"><Link className="joro-auth-primary" href="/">Continue Shopping</Link><Link className="text-center font-bold text-emerald-800" href="/account">My Account</Link></div>:<Link className="joro-auth-primary mt-5" href={vendorEntry(vendor?.status).href}>{vendorEntry(vendor?.status).label}</Link>}<LoadingButton className="mt-5 underline" onClick={async()=>{if(role==="customer")await signOut({redirect:false});else {const r=await fetch("/api/vendor/logout",{method:"POST"});if(!r.ok)throw new Error("Could not sign out. Please try again.");setVendor(null);}await router.refresh();}}>Logout</LoadingButton></div>:<AuthForm key={`${role}:${mode}`} role={role} mode={mode} callback={callback} google={googleEnabled} development={development} setBusy={setBusy}/>}
 
-    <p className="mt-2 text-center text-[10px] leading-4 text-neutral-500 sm:text-[11px]">By continuing, you agree to our <Link href="/terms-and-conditions" className="font-semibold text-emerald-800 underline">Terms &amp; Conditions</Link>.</p>
+    {!(mode==="signup"&&role==="customer")&&<p className="mt-2 text-center text-[10px] leading-4 text-neutral-500 sm:text-[11px]">By continuing, you agree to our <Link href="/terms-and-conditions" className="font-semibold text-emerald-800 underline">Terms &amp; Conditions</Link>.</p>}
 
    </div>
 
@@ -114,9 +115,13 @@ export function LoginExperience({initialRole,initialMode,googleEnabled,developme
 
 function AuthForm({role,mode,callback,google,development,setBusy}:{role:Role;mode:Mode;callback:string;google:boolean;development:boolean;setBusy:(value:boolean)=>void}) {
 
- const router=useRouter();const {data:currentSession,update}=useSession();const [values,setValues]=useState({name:"",email:"",phone:"",password:"",confirm:""});const [errors,setErrors]=useState<Record<string,string>>({});const [message,setMessage]=useState("");const [pending,setPending]=useState(false);const [forgot,setForgot]=useState(false);const [remember,setRemember]=useState(false);const [vendorCode,setVendorCode]=useState("");
+ const router=useRouter();const {data:currentSession,update}=useSession();const [values,setValues]=useState({name:"",email:"",phone:"",password:"",confirm:""});const [errors,setErrors]=useState<Record<string,string>>({});const [message,setMessage]=useState("");const [pending,setPending]=useState(false);const [forgot,setForgot]=useState(false);const [remember,setRemember]=useState(false);const [vendorCode,setVendorCode]=useState("");const [draftRestored,setDraftRestored]=useState(false);
 
  const signup=mode==="signup", vendor=role==="vendor";
+
+ useEffect(()=>{if(!signup||vendor)return;try{const raw=sessionStorage.getItem("joro:customer-signup-terms-draft");if(!raw)return;sessionStorage.removeItem("joro:customer-signup-terms-draft");const draft=JSON.parse(raw) as {name?:string;email?:string;phone?:string;savedAt?:number};if(typeof draft.savedAt!=="number"||Date.now()-draft.savedAt>15*60*1000)return;setValues(previous=>({...previous,name:draft.name||"",email:draft.email||"",phone:draft.phone||"",password:"",confirm:""}));setDraftRestored(true);}catch{/* Storage may be disabled. */}},[signup,vendor]);
+
+ function saveTermsDraft(){try{sessionStorage.setItem("joro:customer-signup-terms-draft",JSON.stringify({name:values.name,email:values.email,phone:values.phone,savedAt:Date.now()}));}catch{/* The form remains usable if storage is disabled. */}}
 
  const phoneInputRef = useRef<HTMLInputElement>(null);
 
@@ -296,7 +301,9 @@ function AuthForm({role,mode,callback,google,development,setBusy}:{role:Role;mod
 
      {message&&<p role="alert" className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{message}{vendorCode==="suspended"&&<Link href="/vendor/login?appeal=1" className="ml-2 underline">Request reactivation</Link>}{vendorCode==="unverified"&&<Link href="/vendor/verify-email" className="ml-2 underline">Verify email</Link>}</p>}
 
- <LoadingForm onSubmit={submit} noValidate className="mt-2"><fieldset disabled={pending} className="grid gap-1.5">{signup&&field("name","Full Name")}{field("email","Email","email")}{signup&&vendor&&field("phone","Mobile Number","tel")}{!forgot&&field("password","Password","password")}{signup&&field("confirm","Confirm Password","password")}{!signup&&!forgot&&<div className="flex items-center justify-between gap-3 text-xs"><label className="flex items-center gap-2"><input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)}/>Remember me</label>{vendor?<Link href="/vendor/forgot-password" className="font-bold text-emerald-800">Forgot password?</Link>:<LoadingButton type="button" onClick={()=>{setForgot(true);setValues({...values,password:"",confirm:""});setErrors({});}} className="font-bold text-emerald-800">Forgot password?</LoadingButton>}</div>}<LoadingButton className="joro-auth-primary" type="submit" loadingLabel={forgot?"Sending…":signup?"Creating account…":"Signing in…"}>{forgot?"Send reset link":signup?(vendor?"Create Seller Account":"Create Account"):(vendor?"Sign In as Vendor":"Sign In")}</LoadingButton>{forgot&&<LoadingButton type="button" className="text-sm underline" onClick={()=>setForgot(false)}>Back to sign in</LoadingButton>}</fieldset></LoadingForm>
+ <LoadingForm onSubmit={submit} noValidate className="mt-2"><fieldset disabled={pending} className="grid gap-1.5">{signup&&field("name","Full Name")}{field("email","Email","email")}{signup&&vendor&&field("phone","Mobile Number","tel")}{!forgot&&field("password","Password","password")}{signup&&!vendor&&<PasswordStrength password={values.password}/>} {signup&&field("confirm","Confirm Password","password")}{!signup&&!forgot&&<div className="flex items-center justify-between gap-3 text-xs"><label className="flex items-center gap-2"><input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)}/>Remember me</label>{vendor?<Link href="/vendor/forgot-password" className="font-bold text-emerald-800">Forgot password?</Link>:<LoadingButton type="button" onClick={()=>{setForgot(true);setValues({...values,password:"",confirm:""});setErrors({});}} className="font-bold text-emerald-800">Forgot password?</LoadingButton>}</div>}<LoadingButton className="joro-auth-primary" type="submit" loadingLabel={forgot?"Sending…":signup?"Creating account…":"Signing in…"}>{forgot?"Send reset link":signup?(vendor?"Create Seller Account":"Create Account"):(vendor?"Sign In as Vendor":"Sign In")}</LoadingButton>{forgot&&<LoadingButton type="button" className="text-sm underline" onClick={()=>setForgot(false)}>Back to sign in</LoadingButton>}</fieldset></LoadingForm>
+
+ {signup&&!vendor&&<p className="mt-2 text-center text-xs leading-5 text-neutral-600">By continuing, you agree to our <Link href="/terms-and-conditions" onClick={saveTermsDraft} className="font-semibold text-emerald-800 underline">Terms &amp; Conditions</Link>. {draftRestored&&"Your details were restored. Re-enter your password to continue."}</p>}
 
  {signup&&vendor&&<p className="mt-2 text-xs leading-5 text-neutral-500">Next: business details and verification. Admin approval is required before selling.</p>}
 
