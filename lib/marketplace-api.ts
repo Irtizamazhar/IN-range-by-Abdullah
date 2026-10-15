@@ -20,8 +20,25 @@ export async function adminActor() {
 }
 export function sameOrigin(request: Request) {
   const origin = request.headers.get("origin");
-  if (origin && origin !== new URL(request.url).origin) throw new ApiError(403, "Cross-origin requests are not allowed.");
+  if (!origin) return;
+
+  const allowedOrigins = new Set([
+    "https://joro.pk",
+    "https://www.joro.pk",
+  ]);
+
+  if (process.env.NODE_ENV !== "production") {
+    allowedOrigins.add(new URL(request.url).origin);
+  }
+
+  if (!allowedOrigins.has(origin)) {
+    throw new ApiError(
+      403,
+      "Cross-origin requests are not allowed."
+    );
+  }
 }
+
 export async function api(work: () => Promise<unknown>) {
   try { return NextResponse.json(await work(), { headers: { "Cache-Control": "no-store" } }); }
   catch (error) {
