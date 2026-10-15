@@ -3,7 +3,7 @@ import { LoadingButton } from "@/components/ui/LoadingButton";
 import { LoadingForm } from "@/components/ui/LoadingForm";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "@/components/ui/LoadingLink";
 import toast from "react-hot-toast";
@@ -24,6 +24,7 @@ export default function CheckoutPage() {
   const [settingsLoading, setSettingsLoading] = useState(true);
   const [settingsError, setSettingsError] = useState("");
   const [loading, setLoading] = useState(false);
+  const orderInFlight = useRef(false);
   const [checkoutKey, setCheckoutKey] = useState("");
   const [couponInput, setCouponInput] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number } | null>(null);
@@ -168,13 +169,15 @@ export default function CheckoutPage() {
   );
 
   async function placeOrder() {
-    const s = await getSession();
-    if (s?.user?.role !== "customer") {
-      toast.error("Please sign in or create an account first");
-      return openAuthModal("signup");
-    }
-    setLoading(true);
+    if (orderInFlight.current) return;
+    orderInFlight.current = true;
     try {
+      const s = await getSession();
+      if (s?.user?.role !== "customer") {
+        toast.error("Please sign in or create an account first");
+        return openAuthModal("signup");
+      }
+      setLoading(true);
       const requestKey = checkoutKey || crypto.randomUUID();
       if (!checkoutKey) setCheckoutKey(requestKey);
       const res = await fetch("/api/orders", {
@@ -238,6 +241,7 @@ export default function CheckoutPage() {
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Network error");
     } finally {
+      orderInFlight.current = false;
       setLoading(false);
     }
   }

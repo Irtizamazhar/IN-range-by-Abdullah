@@ -75,8 +75,8 @@ export const LoadingButton = forwardRef<HTMLButtonElement, LoadingButtonProps>(f
     aria-label={pending ? loadingLabel : props["aria-label"]}
     data-loading={pending ? "true" : undefined}
     className={`${styles.control} ${className}`} style={{ ...style, ...lockedStyle }}>
-    <span className={`${styles.content} ${pending ? styles.hidden : ""}`} aria-hidden={pending || undefined}>{children}</span>
-    {pending && <span className={styles.indicator} aria-hidden="true"><span className={styles.spinner} />{!iconOnly && <span className={styles.label}>{loadingLabel}</span>}</span>}
+    <span className={`${styles.content} ${pending && !iconOnly ? styles.hidden : ""}`} aria-hidden={pending && !iconOnly || undefined}>{children}</span>
+    {pending && !iconOnly && <span className={styles.indicator} aria-hidden="true"><span className={styles.label}>{loadingLabel}</span></span>}
     <span className={styles.srOnly} role="status" aria-live="polite">{pending ? loadingLabel : ""}</span>
   </button>;
 });

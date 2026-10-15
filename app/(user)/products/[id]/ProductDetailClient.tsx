@@ -4,7 +4,7 @@ import { ProductServices } from "@/components/user/ProductServices";
 
 import Image from "next/image";
 import Link from "@/components/ui/LoadingLink";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLoadingRouter as useRouter } from "@/hooks/useLoadingRouter";
 import toast from "react-hot-toast";
 import {
@@ -87,6 +87,9 @@ export function ProductDetailClient({
   type BuyTierKey = "buy1" | "buy3" | "buy5";
 
   const [quantity, setQuantity] = useState(1);
+  const [added, setAdded] = useState(false);
+  const addedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (addedTimer.current) clearTimeout(addedTimer.current); }, []);
 
   const { addItem, clear } = useCart();
   const { requireCustomer } = useCustomerAuth();
@@ -206,7 +209,9 @@ export function ProductDetailClient({
         variant,
         quantity: totalUnits,
       });
-      toast.success("Added to cart");
+      setAdded(true);
+      if (addedTimer.current) clearTimeout(addedTimer.current);
+      addedTimer.current = setTimeout(() => setAdded(false), 1400);
     }, "signup");
   }
 
@@ -532,7 +537,7 @@ export function ProductDetailClient({
                   }
                   className="h-11 flex-1 rounded-xl bg-[#005235] text-[15px] font-bold text-white transition hover:bg-[#063D2B] disabled:opacity-45"
                 >
-                  Add to Cart
+                  {added ? "Added ✓" : "Add to Cart"}
                 </LoadingButton>
               </div>
             </div>

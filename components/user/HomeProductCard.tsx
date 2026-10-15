@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import { ArrowRight, Heart, ImageOff, ShoppingCart, Star } from "lucide-react";
@@ -32,6 +32,9 @@ export const HomeProductCard = memo(function HomeProductCard({ product, showNewT
   const { items, addItem } = useCart();
   const { ids, toggle, saving, loading: savedLoading } = useSavedProducts();
   const [imageFailed, setImageFailed] = useState(false);
+  const [added, setAdded] = useState(false);
+  const addedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (addedTimer.current) clearTimeout(addedTimer.current); }, []);
   const id = String(product._id);
   const saved = ids.includes(id);
   const image = !imageFailed ? product.images?.[0] : undefined;
@@ -56,7 +59,9 @@ export const HomeProductCard = memo(function HomeProductCard({ product, showNewT
     if (!canAdd || requiresVariant) return;
     if (existing && existing.quantity >= maxStock) { toast.error("You already have all available stock in your cart."); return; }
     addItem({ productId: id, name: product.name, price: product.price, image: product.images?.[0] || "/branding/joro-logo.png", maxStock, variant, quantity: Math.min((existing?.quantity || 0) + 1, maxStock) });
-    toast.success("Added to cart");
+    setAdded(true);
+    if (addedTimer.current) clearTimeout(addedTimer.current);
+    addedTimer.current = setTimeout(() => setAdded(false), 1400);
   }
 
   const button = "flex h-10 w-full shrink-0 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-semibold transition active:scale-[0.97] sm:h-9 sm:text-[13px]";
@@ -97,7 +102,7 @@ export const HomeProductCard = memo(function HomeProductCard({ product, showNewT
         {requiresVariant && canAdd
           ? <Link href={href} className={`${button} bg-brand-primary text-brand-dark hover:brightness-95`}>Options <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" /></Link>
           : <button type="button" onClick={addToCart} disabled={!canAdd} className={`${button} ${canAdd ? "bg-brand-primary text-brand-dark hover:brightness-95" : "cursor-not-allowed bg-neutral-100 text-neutral-500"}`}>
-              {canAdd ? <><ShoppingCart className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /><span className="truncate">Add to Cart</span></> : "Out of stock"}
+              {canAdd ? added ? <span role="status">Added ✓</span> : <><ShoppingCart className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /><span className="truncate">Add to Cart</span></> : "Out of stock"}
             </button>}
       </div>
     </div>

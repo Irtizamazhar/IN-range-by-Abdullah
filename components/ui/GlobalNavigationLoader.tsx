@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { beginNavigation, finishNavigation, usePendingNavigation } from "@/hooks/navigationLoadingStore";
-import { loadingMessageForRoute, loadingNeedsOpaqueBackground } from "@/lib/loading-route-message";
+import { loadingMessageForRoute, loadingNeedsOpaqueBackground, needsBrandedLoader } from "@/lib/loading-route-message";
 import { GlobalLoaderVisual } from "./GlobalLoaderVisual";
 import styles from "./GlobalLoader.module.css";
 
@@ -30,7 +30,7 @@ export function GlobalNavigationLoader() {
     if (pending?.source === "history" && pending.href === route) finishNavigation(pending.id);
   }, [pending, route]);
 
-  if (!pending || !visible) return null;
+  if (!pending || !visible || !needsBrandedLoader(pending.href)) return null;
   const destination = pending.href || route;
   const opaque = loadingNeedsOpaqueBackground(route) || loadingNeedsOpaqueBackground(destination);
   return <div className={`${styles.overlay} ${opaque ? styles.opaque : ""}`} aria-busy="true" data-global-loader="true">

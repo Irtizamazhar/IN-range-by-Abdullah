@@ -29,22 +29,26 @@ export function useSavedProducts() {
       if (existing) return existing;
       const request = (async () => {
         try {
-          let ids = queryClient.getQueryData<string[]>(key);
-          if (!ids || query.isError) {
-            const result = await query.refetch();
-            if (result.error) throw result.error;
-            ids = result.data || [];
-          }
+          await queryClient.cancelQueries({ queryKey: key });
+          const ids = queryClient.getQueryData<string[]>(key);
+          if (!ids || query.isError) throw new Error("Saved products are unavailable. Please try again.");
           const saved = ids.includes(productId);
-          const response = await fetch(`/api/customer/saved-products${saved ? `/${encodeURIComponent(productId)}` : ""}`, {
-            method: saved ? "DELETE" : "POST", headers: { "Content-Type": "application/json" },
-            ...(saved ? {} : { body: JSON.stringify({ productId }) }),
-          });
-          const data = await response.json();
-          if (!response.ok) throw new Error(data.error || "Could not update saved products.");
-          queryClient.setQueryData<string[]>(key, old => saved ? (old || []).filter(id => id !== productId) : Array.from(new Set([...(old || []), productId])));
-          window.dispatchEvent(new Event("customer-saved-products-changed"));
-          toast.success(saved ? "Product removed from saved items." : "Product saved.");
+          queryClient.setQueryData<string[]>(key, saved ? ids.filter(id => id !== productId) : [...ids, productId]);
+          try {
+            const response = await fetch(`/api/customer/saved-products${saved ? `/${encodeURIComponent(productId)}` : ""}`, {
+              method: saved ? "DELETE" : "POST", headers: { "Content-Type": "application/json" },
+              ...(saved ? {} : { body: JSON.stringify({ productId }) }),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || "Could not update saved products.");
+            window.dispatchEvent(new Event("customer-saved-products-changed"));
+            toast.success(saved ? "Product removed from saved items." : "Product saved.");
+          } catch (error) {
+            queryClient.setQueryData<string[]>(key, current => saved
+              ? Array.from(new Set([...(current || []), productId]))
+              : (current || []).filter(id => id !== productId));
+            throw error;
+          }
         } catch (error) {
           toast.error(error instanceof Error ? error.message : "Could not save product. Please try again.");
         }

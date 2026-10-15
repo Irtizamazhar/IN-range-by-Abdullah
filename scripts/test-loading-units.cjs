@@ -106,7 +106,7 @@ function load(file) {
     return load(resolved);
   }
   const context = vm.createContext({ module, exports: module.exports, require: localRequire, window: windowMock,
-    console, URL, URLSearchParams, FormData, Promise, Error, Symbol, Set, Map, fetch: (...args) => fetchMock(...args),
+    console, URL, URLSearchParams, FormData, Promise, Error, Symbol, Set, Map, setTimeout, clearTimeout, fetch: (...args) => fetchMock(...args),
     ResizeObserver: class { observe() {} disconnect() {} },
   });
   new vm.Script(contents, { filename: absolute }).runInContext(context);
@@ -222,15 +222,13 @@ async function main() {
   const modified = click(node(), { ctrlKey: true }); await link.output.props.onClick(modified); link.render();
   assert.equal(modified.defaultPrevented, false);
   const event = click(node()); const linkNavigation = link.output.props.onClick(event); link.render();
-  assert.equal(event.defaultPrevented, true); assert.equal(link.output.props['aria-disabled'], true);
-  assert.equal(link.output.props.style.width, 142); assert.equal(link.output.props['data-loading'], 'true');
-  assert.equal(navigationCompletions, 0, 'navigation menus remain open while their destination is pending');
-  await link.output.props.onClick(click(node()));
-  link.finishTransition(); await linkNavigation; link.render();
+  assert.equal(event.defaultPrevented, false); assert.equal(link.output.props['aria-disabled'], undefined);
+  assert.equal(link.output.props['data-loading'], undefined);
+  assert.equal(navigationCompletions, 1, 'navigation closes transient menus immediately');
+  await linkNavigation; link.render();
   assert.equal(link.output.props['aria-disabled'], undefined);
-  assert.equal(navigationCompletions, 1, 'navigation completion closes the menu after destination readiness');
   link.unmount(); form.unmount(); button.unmount(); unrelated.unmount();
-  console.log('PASS link handlers: native hash/external/new-tab/modified semantics, duplicate lock, navigation completion');
+  console.log('PASS link handlers: native navigation without button loading, immediate menu close');
 
   const { StoreFollowButton } = load('components/user/StoreFollowButton.tsx');
   let http = gate(), httpCalls = 0;

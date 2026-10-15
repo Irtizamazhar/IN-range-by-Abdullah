@@ -3,7 +3,7 @@ import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import Image from "next/image";
 import Link from "@/components/ui/LoadingLink";
-import { memo, type CSSProperties } from "react";
+import { memo, useEffect, useRef, useState, type CSSProperties } from "react";
 import { ArrowRight, Heart, ShoppingCart, Star } from "lucide-react";
 
 import { useCart } from "@/context/CartContext";
@@ -78,6 +78,9 @@ export const ProductCard = memo(function ProductCard({
 }) {
   const { items, addItem } = useCart();
   const { ids, toggle, saving, loading: savedLoading } = useSavedProducts();
+  const [added, setAdded] = useState(false);
+  const addedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (addedTimer.current) clearTimeout(addedTimer.current); }, []);
   const saved = ids.includes(String(product._id));
   const image = product.images?.[0];
   const available = product.available !== false;
@@ -133,6 +136,9 @@ export const ProductCard = memo(function ProductCard({
       variant,
       quantity: Math.min((existing?.quantity || 0) + 1, maxStock),
     });
+    setAdded(true);
+    if (addedTimer.current) clearTimeout(addedTimer.current);
+    addedTimer.current = setTimeout(() => setAdded(false), 1400);
   }
 
   return (
@@ -164,7 +170,7 @@ export const ProductCard = memo(function ProductCard({
         <LoadingButton
           type="button"
           onClick={() => toggle(String(product._id))}
-          loading={saving} loadingLabel="Saving…" disabled={savedLoading}
+          disabled={savedLoading || saving}
           aria-label={saved ? `Remove ${product.name} from saved products` : `Save ${product.name}`}
           title={saved ? "Remove from wishlist" : "Add to wishlist"}
           aria-pressed={saved}
@@ -226,7 +232,7 @@ export const ProductCard = memo(function ProductCard({
           {!available ? (
             <LoadingButton
               type="button"
-              loading={saving} loadingLabel="Saving…" disabled={savedLoading || !saved}
+              disabled={savedLoading || saving || !saved}
               onClick={() => toggle(String(product._id))}
               className={styles.action}
             >
@@ -239,7 +245,7 @@ export const ProductCard = memo(function ProductCard({
           ) : (
             <LoadingButton type="button" disabled={!canAdd} onClick={handleAddToCart} className={styles.action}>
               <ShoppingCart aria-hidden="true" />
-              {canAdd ? "Add to Cart" : "Out of Stock"}
+              {canAdd ? added ? "Added ✓" : "Add to Cart" : "Out of Stock"}
             </LoadingButton>
           )}
         </div>

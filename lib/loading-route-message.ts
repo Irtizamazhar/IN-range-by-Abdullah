@@ -49,3 +49,13 @@ export function loadingNeedsOpaqueBackground(input: string | null | undefined): 
     return path.startsWith("/account") || path.startsWith("/checkout") || path.startsWith("/vendor/dashboard") || (path.startsWith("/admin") && !path.startsWith("/admin/login"));
   } catch { return false; }
 }
+
+/** Reserve the branded screen for entry and account/order transitions. */
+export function needsBrandedLoader(input: string | null | undefined): boolean {
+  if (!input) return false;
+  try {
+    const path = new URL(input, "https://joro.pk").pathname.replace(/\/+$/, "") || "/";
+    return path === "/" || path === "/login" || path === "/checkout" ||
+      /^\/vendor\/(login|register|verify-email|reset-password)$/.test(path);
+  } catch { return false; }
+}
