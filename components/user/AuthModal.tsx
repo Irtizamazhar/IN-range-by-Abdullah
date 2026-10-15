@@ -13,6 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { getSession, signIn, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import {
   useCallback,
   useEffect,
@@ -25,6 +26,7 @@ import toast from "react-hot-toast";
 import { LogoMark } from "@/components/user/LogoMark";
 import { PasswordStrength } from "@/components/auth/PasswordStrength";
 import { setCustomerOAuthRememberChoice } from "@/lib/customer-remember-policy";
+import { normalizePakistanMobile, PAKISTAN_MOBILE_ERROR } from "@/lib/pakistan-phone";
 
 export type AuthModalView = "login" | "signup" | "forgot";
 
@@ -110,6 +112,7 @@ function GoogleIcon({ className }: { className?: string }) {
 }
 
 export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalProps) {
+  const router = useRouter();
   const titleId = useId();
   const [view, setView] = useState<AuthModalView>(initialTab);
   const [showPassword, setShowPassword] = useState(false);
@@ -209,6 +212,8 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
       toast.success("Welcome back!");
       setLoginPass("");
       onClose();
+      const welcome = await fetch("/api/customer/welcome", { cache: "no-store" }).then(r => r.ok ? r.json() : null).catch(() => null);
+      if (welcome?.showWelcome) router.push("/");
     } catch (error) { toast.error(error instanceof Error ? error.message : "Could not reach the server. Please try again."); }
   }
 
@@ -217,7 +222,8 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
     clearErrors();
     const next: Errors = {};
     if (!suName.trim()) next.suName = "Full name is required";
-    if (!suPhone.trim()) next.suPhone = "Phone number is required";
+    const normalizedPhone = suPhone.trim() ? normalizePakistanMobile(suPhone) : "";
+    if (suPhone.trim() && !normalizedPhone) next.suPhone = PAKISTAN_MOBILE_ERROR;
     const em = suEmail.trim();
     if (!em) next.suEmail = "Email is required";
     else if (!EMAIL_RE.test(em)) next.suEmail = "Enter a valid email";
@@ -236,7 +242,7 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
           name: suName.trim(),
           email: em,
           password: suPass,
-          phone: suPhone.trim(),
+          phone: normalizedPhone,
         }),
       });
       const data = await res.json();
@@ -244,28 +250,9 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
         toast.error(data.error || "Sign-up failed");
         return;
       }
-      toast.success("Account created. Signing you in…");
-      const res2 = await signIn("credentials", {
-        email: em,
-        password: suPass,
-        rememberMe: false,
-        redirect: false,
-      });
-      if (res2?.error) {
-        toast.error("Account created. Please sign in manually.");
-        setView("login");
-        setLoginEmail(em);
-        return;
-      }
-      const s3 = await getSession();
-      if (s3?.user?.role !== "customer") {
-        toast.error("Could not verify session. Please sign in.");
-        setView("login");
-        setLoginEmail(em);
-        return;
-      }
       setSuPass("");
       onClose();
+      router.push("/login?role=customer&mode=signin&registered=1");
     } catch (error) { toast.error(error instanceof Error ? error.message : "Could not reach the server. Please try again."); }
   }
 
@@ -525,14 +512,16 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
                         ] as const
                       ).map((f) => (
                         <div key={f.key}>
+                          <label htmlFor={`signup-${f.key}`} className="mb-1 block text-xs font-semibold text-gray-700">{f.key === "suPhone" ? "Phone number (optional)" : f.key === "suName" ? "Full name" : "Email"}</label>
                           <AuthField icon={f.icon}>
                             <input
+                              id={`signup-${f.key}`}
                               type={f.type}
                               autoComplete={f.autoComplete}
                               placeholder={f.placeholder}
                               value={f.value}
                               onChange={(e) => {
-                                f.set(e.target.value);
+                                f.set(f.key === "suPhone" ? e.target.value.slice(0, 30) : e.target.value);
                                 const k = f.key as keyof Errors;
                                 if (errors[k])
                                   setErrors((o) => ({ ...o, [k]: undefined }));

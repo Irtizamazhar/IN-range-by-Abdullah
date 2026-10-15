@@ -24,6 +24,7 @@ import { HomeMarketplace } from "@/components/user/HomeMarketplace";
 import { HeroSection } from "@/components/user/HeroSection";
 
 import { HomePersonalization } from "@/components/user/HomePersonalization";
+import { FirstCustomerWelcome } from "@/components/user/FirstCustomerWelcome";
 
 import { VendorAuthProvider } from "@/context/VendorAuthContext";
 
@@ -648,6 +649,7 @@ export default async function HomePage() {
   return (
 
     <>
+      <FirstCustomerWelcome />
 
       {/* =====================================================
 

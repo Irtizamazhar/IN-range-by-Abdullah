@@ -29,6 +29,7 @@ import {
   Megaphone,
   TicketPercent,
   Trophy,
+  Mail,
 } from "lucide-react";
 import { LogoMark } from "@/components/user/LogoMark";
 
@@ -92,6 +93,7 @@ export const ADMIN_NAV_LINKS = [
   { href: "/admin/vendors/top-vendors", label: "Top Vendors", icon: Trophy },
   { href: "/admin/vendor-promotions", label: "Vendor Promotions", icon: Megaphone },
   { href: "/admin/marketing/coupons", label: "Coupons", icon: TicketPercent },
+  { href: "/admin/marketing/email-campaigns", label: "Email Campaigns", icon: Mail },
   { href: "/admin/customers", label: "Customers", icon: Users },
   { href: "/admin/reviews", label: "Reviews", icon: Star },
   {

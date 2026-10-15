@@ -10,7 +10,7 @@ function request(url: string, headers: Record<string, string>) {
 }
 
 test("registration accepts configured public origins through an exact proxy host match", () => {
-  process.env.NODE_ENV = "production";
+  Object.assign(process.env, { NODE_ENV: "production" });
   process.env.NEXT_PUBLIC_APP_URL = "https://joro.pk";
   process.env.JORO_PREVIEW_ORIGIN = "https://preview.joro.pk";
   delete process.env.NEXTAUTH_URL;
@@ -27,7 +27,7 @@ test("registration accepts configured public origins through an exact proxy host
   } finally {
     for (const name of names) {
       if (previous[name] === undefined) delete process.env[name];
-      else process.env[name] = previous[name];
+      else Object.assign(process.env, { [name]: previous[name] });
     }
   }
 });

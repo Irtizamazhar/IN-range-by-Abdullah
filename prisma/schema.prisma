@@ -13,6 +13,10 @@ model Customer {
   passwordHash   String   @db.VarChar(255)
   name           String
   phone          String   @default("")
+  welcomeEligibleAt DateTime?
+  welcomeSeenAt     DateTime?
+  marketingEmailConsentAt DateTime?
+  marketingEmailUnsubscribedAt DateTime?
   image          String?  @db.VarChar(2048)
   provider       String?  @db.VarChar(32)
   sessionVersion Int      @default(0)
@@ -651,6 +655,8 @@ model Vendor {
   shopName              String @default("")
   ownerName             String
   email                 String              @unique
+  marketingEmailConsentAt DateTime?
+  marketingEmailUnsubscribedAt DateTime?
   passwordHash          String              @db.VarChar(255)
   phone                 String @default("")
   cnic                  String?             @unique
@@ -1539,6 +1545,25 @@ model CustomerOAuthAccount {
   @@index([customerId])
 
   @@map("customeroauthaccount")
+}
+
+/// Admin-authored marketing drafts. Bulk delivery is intentionally disabled.
+model EmailCampaign {
+  id             String   @id @default(cuid())
+  subject        String   @db.VarChar(200)
+  previewText    String   @default("") @db.VarChar(240)
+  bodyHtml       String   @db.Text
+  audience       String   @default("CUSTOMERS") @db.VarChar(16)
+  recipientIds   Json?
+  status         String   @default("DRAFT") @db.VarChar(24)
+  createdBy      String   @db.VarChar(191)
+  lastTestAt     DateTime?
+  lastTestStatus String?  @db.VarChar(16)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@map("emailcampaign")
 }
 
 /// One reaction per account per Want: exactly one of customerId / vendorId is set.

@@ -6,6 +6,8 @@ import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { sendMail } from "@/lib/mailer";
+import { passwordChangedEmail } from "@/lib/joro-email-templates";
 
 const schema = z.object({
   token: z.string().min(32).max(256),
@@ -27,11 +29,11 @@ export async function POST(req: NextRequest) {
   const passwordHash = await bcrypt.hash(parsed.data.password, 12);
 
   try {
-    await prisma.$transaction(
+    const changedVendor = await prisma.$transaction(
       async (tx) => {
         const vendor = await tx.vendor.findFirst({
           where: { passwordResetToken: tokenHash, passwordResetExpires: { gt: new Date() } },
-          select: { id: true, passwordResetToken: true },
+          select: { id: true, passwordResetToken: true, email: true, ownerName: true },
         });
         if (!vendor) throw new Error("RESET_TOKEN_INVALID");
         const gate = await tx.vendor.updateMany({
@@ -52,9 +54,12 @@ export async function POST(req: NextRequest) {
         await tx.vendorAuditLog.create({
           data: { vendorId: vendor.id, action: "password_reset" },
         });
+        return vendor;
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
     );
+    try { await sendMail({ to: changedVendor.email, ...passwordChangedEmail(changedVendor.ownerName) }); }
+    catch { console.error("vendor password notification unavailable"); }
   } catch (error) {
     if (error instanceof Error && error.message === "RESET_TOKEN_INVALID") {
       return NextResponse.json({ error: "This reset link is invalid or has expired" }, { status: 400 });

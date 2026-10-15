@@ -1,25 +1,23 @@
-import {appOrigin} from "@/lib/app-url";
 import nodemailer from "nodemailer";
 
 function createTransport() {
-  const host = process.env.EMAIL_HOST?.trim() || process.env.SMTP_HOST?.trim() || "smtp.gmail.com";
-  const port = Number(process.env.EMAIL_PORT || process.env.SMTP_PORT || 587);
+  const host = process.env.EMAIL_HOST?.trim() || process.env.SMTP_HOST?.trim();
+  const port = Number(process.env.EMAIL_PORT || process.env.SMTP_PORT || 465);
   const user = process.env.EMAIL_USER?.trim() || process.env.SMTP_USER?.trim();
-  const pass = process.env.EMAIL_PASS?.trim() || process.env.SMTP_PASS?.trim();
-  if (!user || !pass) {
-    console.warn("EMAIL_USER/EMAIL_PASS or SMTP_USER/SMTP_PASS not set — emails will not send");
-  }
+  const pass = process.env.EMAIL_PASS?.trim() || process.env.SMTP_PASSWORD?.trim() || process.env.SMTP_PASS?.trim();
+  if (!host || !user || !pass || !Number.isInteger(port) || port < 1 || port > 65535) throw new Error("Mail transport is not configured.");
   return nodemailer.createTransport({
     host,
     port,
-    secure: port === 465,
-    auth: user && pass ? { user, pass } : undefined,
+    secure: process.env.SMTP_SECURE === "true" || (process.env.SMTP_SECURE !== "false" && port === 465),
+    auth: { user, pass },
+    connectionTimeout: 8000,
+    greetingTimeout: 8000,
+    socketTimeout: 10000,
   });
 }
 
-function fromAddress() {
-  return process.env.EMAIL_FROM?.trim() || process.env.SMTP_FROM?.trim() || process.env.EMAIL_USER?.trim() || process.env.SMTP_USER?.trim() || ("noreply@" + new URL(appOrigin()).hostname);
-}
+export const JORO_SENDER = "JORO <admin@joro.pk>";
 
 export async function sendMail(opts: {
   to: string;
@@ -30,26 +28,28 @@ export async function sendMail(opts: {
   try {
     if (!isMailConfigured()) return false;
     const transporter = createTransport();
-    await transporter.sendMail({
-      from: fromAddress(),
+    const result = await transporter.sendMail({
+      from: JORO_SENDER,
       to: opts.to,
       subject: opts.subject,
       text: opts.text,
       html: opts.html,
     });
-    return true;
+    return result.accepted.some(address => (typeof address === "string" ? address : address.address).toLowerCase() === opts.to.toLowerCase());
   } catch (e) {
-    console.error("sendMail error", e);
+    console.error("sendMail failed", e instanceof Error ? e.name : "Unknown error");
     return false;
   }
 }
 
 export function isMailConfigured(): boolean {
   const user = process.env.EMAIL_USER?.trim() || process.env.SMTP_USER?.trim();
-  const pass = process.env.EMAIL_PASS?.trim() || process.env.SMTP_PASS?.trim();
-  return Boolean(user && pass);
+  const pass = process.env.EMAIL_PASS?.trim() || process.env.SMTP_PASSWORD?.trim() || process.env.SMTP_PASS?.trim();
+  const host = process.env.EMAIL_HOST?.trim() || process.env.SMTP_HOST?.trim();
+  const port = Number(process.env.EMAIL_PORT || process.env.SMTP_PORT || 465);
+  return Boolean(host && user && pass && Number.isInteger(port) && port > 0 && port <= 65535);
 }
 
 export function getAdminEmail(): string {
-  return process.env.ADMIN_EMAIL || "";
+  return process.env.ADMIN_NOTIFICATION_EMAIL?.trim() || process.env.ADMIN_EMAIL?.trim() || "";
 }

@@ -6,6 +6,8 @@ import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { sendMail } from "@/lib/mailer";
+import { passwordChangedEmail } from "@/lib/joro-email-templates";
 
 const schema = z.object({
   token: z.string().min(32).max(256),
@@ -31,7 +33,7 @@ export async function POST(req: NextRequest) {
   const passwordHash = await bcrypt.hash(parsed.data.password, 12);
 
   try {
-    await prisma.$transaction(
+    const changedCustomer = await prisma.$transaction(
       async (tx) => {
         const token = await tx.customerPasswordResetToken.findFirst({
           where: { tokenHash, usedAt: null, expiresAt: { gt: new Date() } },
@@ -42,20 +44,24 @@ export async function POST(req: NextRequest) {
           data: { usedAt: new Date() },
         });
         if (gate.count !== 1) throw new Error("RESET_TOKEN_INVALID");
-        await tx.customer.update({
+        const customer = await tx.customer.update({
           where: { id: token.customerId },
           data: {
             passwordHash,
             sessionVersion: { increment: 1 },
           },
+          select: { email: true, name: true },
         });
         await tx.customerPasswordResetToken.updateMany({
           where: { customerId: token.customerId, usedAt: null },
           data: { usedAt: new Date() },
         });
+        return customer;
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
     );
+    try { await sendMail({ to: changedCustomer.email, ...passwordChangedEmail(changedCustomer.name) }); }
+    catch { console.error("customer password notification unavailable"); }
   } catch (error) {
     if (error instanceof Error && error.message === "RESET_TOKEN_INVALID") {
       return NextResponse.json(

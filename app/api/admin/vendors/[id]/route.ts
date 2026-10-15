@@ -6,7 +6,7 @@ import { Prisma } from "@prisma/client";
 import { requireAdminPermission, writeAdminAudit } from "@/lib/admin-rbac";
 import { prisma } from "@/lib/prisma";
 import { sanitizePlainText } from "@/lib/security/sanitize";
-import { sendVendorApprovedEmail } from "@/lib/vendor-mail";
+import { sendVendorApprovedEmail, sendVendorRejectedEmail } from "@/lib/vendor-mail";
 import { generateUniqueStoreSlug } from "@/lib/store-slug";
 
 const patchSchema = z.discriminatedUnion("action", [
@@ -126,6 +126,10 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
           ),
         },
       });
+      if (vendor.status !== "rejected") {
+        try { await sendVendorRejectedEmail(vendor.email, parsed.data.rejectionReason); }
+        catch (mailError) { console.error("vendor rejection email", mailError instanceof Error ? mailError.name : "Unknown error"); }
+      }
     } else if (parsed.data.action === "suspend") {
       const until =
         parsed.data.suspensionType === "temporary" &&

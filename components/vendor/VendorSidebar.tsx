@@ -93,6 +93,7 @@ const links: {
     icon: Wallet,
   },
   { href: "/vendor/dashboard/followers", label: "Followers", icon: Users },
+  { href: "/marketing/preferences", label: "Email Preferences", icon: Settings },
   {
     href: "/vendor/dashboard/notifications",
     label: "Notifications",

@@ -5,6 +5,7 @@ import { createHash, randomBytes } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isMailConfigured, sendMail } from "@/lib/mailer";
+import { customerPasswordResetEmail } from "@/lib/joro-email-templates";
 import { consumeOrReject, createLoginRateLimiter } from "@/lib/security/rate-limit";
 import { clientIp } from "@/lib/vendor-ip";
 
@@ -66,9 +67,7 @@ export async function POST(req: NextRequest) {
   const url = `${base}/reset-password?token=${encodeURIComponent(token)}`;
   const sent = await sendMail({
     to: customer.email,
-    subject: "Set or reset your In Range password",
-    text: `Open this link within 30 minutes to set or reset your website password:\n${url}`,
-    html: `<p>Hello ${customer.name.replace(/[<>&"']/g, "")},</p><p>Use the link below within 30 minutes to set or reset your website password.</p><p><a href="${url}">Set or reset password</a></p><p>If you did not request this, you can ignore this email.</p>`,
+    ...customerPasswordResetEmail(customer.name, url),
   });
   if (!sent) {
     await prisma.customerPasswordResetToken.deleteMany({ where: { tokenHash } });

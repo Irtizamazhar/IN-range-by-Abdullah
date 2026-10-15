@@ -12,6 +12,10 @@ import { sendVendorVerificationEmail } from "@/lib/vendor-mail";
 import { clientIp } from "@/lib/vendor-ip";
 import { saveVendorDocumentBuffer } from "@/lib/vendor-doc-upload";
 import { vendorEmailVerificationRequired } from "@/lib/vendor-email-verification-flag";
+import { vendorRegistrationSameOrigin } from "@/lib/vendor-registration-origin";
+import { ApiError } from "@/lib/marketplace-api";
+import { isMailConfigured, sendMail } from "@/lib/mailer";
+import { vendorWelcomeEmail } from "@/lib/joro-email-templates";
 
 const registerLimiter = createRegisterRateLimiter();
 
@@ -21,6 +25,10 @@ function fileOrNull(fd: FormData, key: string): File | null {
 }
 
 export async function POST(req: NextRequest) {
+  try { vendorRegistrationSameOrigin(req); }
+  catch (error) {
+    return NextResponse.json({ error: error instanceof ApiError ? error.message : "Registration request was rejected." }, { status: 403 });
+  }
   const ip = clientIp(req);
   const limited = await consumeOrReject(registerLimiter, `vendor-reg:${ip}`);
   if (!limited.ok) {
@@ -220,6 +228,10 @@ export async function POST(req: NextRequest) {
     } catch (e) {
       console.error("vendor verification email", e);
     }
+  }
+  if (isMailConfigured()) {
+    try { await sendMail({ to: email, ...vendorWelcomeEmail(name) }); }
+    catch { /* Registration remains successful if the mail service is unavailable. */ }
   }
 
   const message = requireEmailVerification
