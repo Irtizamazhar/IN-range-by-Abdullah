@@ -7,6 +7,7 @@ import { useLoadingRouter as useRouter } from "@/hooks/useLoadingRouter";
 import { useCart } from "@/context/CartContext";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
 import { formatPKR } from "@/lib/format";
+import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 import { Minus, Plus, Trash2 } from "lucide-react";
 
 export default function CartPage() {
@@ -42,6 +43,7 @@ export default function CartPage() {
                       fill
                       className="object-cover"
                       sizes="96px"
+                      unoptimized={shouldUnoptimizeImageSrc(line.image)}
                     />
                   ) : null}
                 </div>

@@ -7,6 +7,7 @@ import Image from "next/image";
 import Link from "@/components/ui/LoadingLink";
 import toast from "react-hot-toast";
 import { formatPKR } from "@/lib/format";
+import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Record<string, unknown>[]>([]);
@@ -135,6 +136,7 @@ export default function AdminProductsPage() {
                         fill
                         className="object-cover"
                         sizes="48px"
+                        unoptimized={shouldUnoptimizeImageSrc(String((p.images as string[])[0]))}
                       />
                     ) : null}
                   </div>
