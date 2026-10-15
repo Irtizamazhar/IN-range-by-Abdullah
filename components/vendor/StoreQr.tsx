@@ -1,29 +1,138 @@
 "use client";
-import { LoadingButton } from "@/components/ui/LoadingButton";
-import { useEffect, useRef, useState } from "react";
+
+import { useEffect, useState } from "react";
 import QRCode from "qrcode";
-export function StoreQr({ url, name, logo }: { url: string | null; name: string; logo?: string | null }) {
-  const canvas = useRef<HTMLCanvasElement>(null); const [generated, setGenerated] = useState(false); const [ready, setReady] = useState(false); const [error, setError] = useState(""); const [copied, setCopied] = useState(false);
-  useEffect(() => { setGenerated(false); setReady(false); setError(""); }, [url]);
-  useEffect(() => { let active = true; if (!generated || !canvas.current || !url) return; QRCode.toCanvas(canvas.current, url, { width: 1200, margin: 5, errorCorrectionLevel: "H", color: { dark: "#10251d", light: "#FFFFFF" } }).then(() => { if (active) setReady(true); }).catch(() => { if (active) setError("Could not generate QR."); }); return () => { active = false; }; }, [generated, url]);
-  async function copyLink() { if (!url) return; try { await navigator.clipboard.writeText(url); setCopied(true); window.setTimeout(() => setCopied(false), 1800); } catch { setError("Could not copy the store link."); } }
-  function downloadPng() { if (!canvas.current) return; const a = document.createElement("a"); a.href = canvas.current.toDataURL("image/png"); a.download = `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "joro-store"}-qr.png`; a.click(); }
-  async function downloadSvg() { if (!url) return; try { const svg = await QRCode.toString(url, { type: "svg", margin: 5, errorCorrectionLevel: "H", color: { dark: "#10251d", light: "#FFFFFF" } }); const blob = new Blob([svg], { type: "image/svg+xml" }); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "joro-store"}-qr.svg`; a.click(); URL.revokeObjectURL(a.href); } catch { setError("Could not export SVG."); } }
-  function printQr() {
-    if (!canvas.current || !ready) return;
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return setError("Allow pop-ups to print the QR.");
-    printWindow.opener = null;
-    printWindow.document.title = `${name} QR`;
-    const img = printWindow.document.createElement("img");
-    img.style.cssText = "display:block;width:70mm;margin:20mm auto";
-    img.alt = `QR code for ${name}`;
-    const caption = printWindow.document.createElement("p");
-    caption.style.cssText = "text-align:center;font:16px sans-serif";
-    caption.textContent = `Scan to visit ${name}`;
-    img.onload = () => { printWindow.focus(); printWindow.print(); };
-    img.src = canvas.current.toDataURL("image/png");
-    printWindow.document.body.replaceChildren(img, caption);
+import { LoadingButton } from "@/components/ui/LoadingButton";
+import styles from "./StoreQr.module.css";
+
+const logoPath = "/branding/joro-logo.png";
+const qrOptions = { width: 680, margin: 4, errorCorrectionLevel: "H" as const, color: { dark: "#000000", light: "#ffffff" } };
+
+function rounded(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath(); ctx.roundRect(x, y, w, h, r);
+}
+
+function fitText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, initial: number, min: number) {
+  let size = initial;
+  do { ctx.font = `700 ${size}px Arial, sans-serif`; if (ctx.measureText(text).width <= maxWidth) break; size -= 2; } while (size > min);
+}
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Could not load the QR card artwork."));
+    image.src = src;
+  });
+}
+
+/** Export at 1200 × 1800 pixels. The QR includes a four module quiet zone. */
+export async function renderStoreQrCard(url: string, name: string, qrDataUrl: string): Promise<HTMLCanvasElement> {
+  const [logo, qr] = await Promise.all([loadImage(logoPath), loadImage(qrDataUrl)]);
+  const canvas = document.createElement("canvas");
+  canvas.width = 1200; canvas.height = 1800;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas is unavailable.");
+  const glow = ctx.createRadialGradient(600, 850, 100, 600, 850, 1000);
+  glow.addColorStop(0, "#ffffff"); glow.addColorStop(1, "#e6f4ee");
+  ctx.fillStyle = glow; ctx.fillRect(0, 0, 1200, 1800);
+  ctx.fillStyle = "#005754";
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(395, 0); ctx.bezierCurveTo(240, 65, 125, 245, 0, 320); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "#91d500";
+  ctx.beginPath(); ctx.moveTo(325, 0); ctx.lineTo(385, 0); ctx.bezierCurveTo(225, 70, 110, 205, 0, 300); ctx.lineTo(0, 280); ctx.bezierCurveTo(120, 190, 220, 70, 325, 0); ctx.fill();
+  ctx.fillStyle = "#dcefe8";
+  ctx.beginPath(); ctx.ellipse(1160, 280, 155, 300, -.65, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#b7e895";
+  ctx.beginPath(); ctx.ellipse(1200, 510, 100, 200, .7, 0, Math.PI * 2); ctx.fill();
+  const logoWidth = 555;
+  const markHeight = Math.round(logo.height * .64);
+  ctx.drawImage(logo, 0, 0, logo.width, markHeight, (1200 - logoWidth) / 2, 92, logoWidth, logoWidth * markHeight / logo.width);
+  ctx.textAlign = "center"; ctx.font = "700 49px Arial, sans-serif";
+  ctx.fillStyle = "#063a39"; ctx.fillText("Jo Chahiye,", 474, 355);
+  ctx.fillStyle = "#64b900"; ctx.fillText("Yahin Mile!", 783, 355);
+  ctx.fillStyle = "#edf7f4"; rounded(ctx, 125, 430, 950, 170, 38); ctx.fill();
+  fitText(ctx, name, 875, 72, 30);
+  ctx.fillStyle = "#053c3b"; ctx.fillText(name, 600, 535, 875);
+  ctx.fillStyle = "#76c600"; rounded(ctx, 520, 565, 160, 7, 4); ctx.fill();
+  const border = ctx.createLinearGradient(240, 640, 960, 1390);
+  border.addColorStop(0, "#005b58"); border.addColorStop(.5, "#9cdd00"); border.addColorStop(1, "#00625b");
+  ctx.fillStyle = border; rounded(ctx, 205, 640, 790, 790, 68); ctx.fill();
+  ctx.fillStyle = "#ffffff"; rounded(ctx, 218, 653, 764, 764, 56); ctx.fill();
+  ctx.drawImage(qr, 260, 695, 680, 680);
+  ctx.fillStyle = "#ffffff"; rounded(ctx, 105, 1480, 990, 120, 60); ctx.fill();
+  ctx.strokeStyle = "#d2e4df"; ctx.lineWidth = 3; ctx.stroke();
+  ctx.fillStyle = "#e6f0ed"; rounded(ctx, 130, 1500, 80, 80, 40); ctx.fill();
+  ctx.strokeStyle = "#064b49"; ctx.lineWidth = 9; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(155, 1550); ctx.lineTo(182, 1523); ctx.moveTo(158, 1527); ctx.lineTo(145, 1540); ctx.moveTo(180, 1549); ctx.lineTo(169, 1560); ctx.stroke();
+  const displayUrl = url.replace(/^https:\/\//, "");
+  fitText(ctx, displayUrl, 810, 39, 22);
+  ctx.fillStyle = "#083b3b"; ctx.textAlign = "left"; ctx.fillText(displayUrl, 245, 1555, 810);
+  ctx.fillStyle = "#91d500";
+  ctx.beginPath(); ctx.moveTo(0, 1650); ctx.bezierCurveTo(320, 1840, 780, 1700, 1200, 1610); ctx.lineTo(1200, 1800); ctx.lineTo(0, 1800); ctx.fill();
+  ctx.fillStyle = "#00615b";
+  ctx.beginPath(); ctx.moveTo(0, 1695); ctx.bezierCurveTo(360, 1765, 720, 1765, 1200, 1660); ctx.lineTo(1200, 1800); ctx.lineTo(0, 1800); ctx.fill();
+  return canvas;
+}
+
+export function StoreQr({ url, name }: { url: string | null; name: string }) {
+  const [qrDataUrl, setQrDataUrl] = useState("");
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  useEffect(() => {
+    let current = true;
+    setQrDataUrl(""); setError("");
+    if (url) QRCode.toDataURL(url, qrOptions).then(data => { if (current) setQrDataUrl(data); }).catch(() => { if (current) setError("Could not generate the store QR code."); });
+    return () => { current = false; };
+  }, [url]);
+  async function copyLink() {
+    if (!url) return;
+    try { await navigator.clipboard.writeText(url); setNotice("Store link copied."); setError(""); }
+    catch { setError("Could not copy the link. Select the address on the card to copy it manually."); }
   }
-  return <section className="mt-8 overflow-hidden rounded-3xl border border-emerald-100 bg-white shadow-[0_18px_50px_rgba(6,61,41,0.10)]"><div className="bg-brand-dark px-6 py-5 text-white sm:px-8"><p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-primary">Share your storefront</p><h2 className="mt-1 text-2xl font-black">Store QR code</h2><p className="mt-1 text-sm text-white/70">Print or share this code so customers can visit your public store.</p></div>{url ? <div className="p-6 sm:p-8">{!generated ? <div className="rounded-2xl border border-dashed border-emerald-200 bg-emerald-50/50 p-8 text-center"><div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-primary text-2xl font-black text-brand-dark">QR</div><h3 className="mt-4 text-xl font-black text-darkText">Ready to generate</h3><p className="mt-2 text-sm text-darkText/65">Create a high-contrast QR for your saved public storefront.</p><LoadingButton type="button" onClick={() => setGenerated(true)} className="mt-5 rounded-xl bg-brand-primary px-5 py-3 font-bold text-brand-dark">Generate QR Code</LoadingButton></div> : <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:items-center"><div className="text-center"><div className="mx-auto flex aspect-square w-full max-w-[310px] items-center justify-center rounded-2xl border border-emerald-100 bg-white p-3 shadow-inner"><canvas ref={canvas} aria-label={`QR code for ${name}`} className="h-full w-full" /></div><p className="mt-4 text-sm font-semibold text-darkText">Scan to visit our store</p></div><div><div className="flex items-center gap-4">{logo ? <img src={logo} alt="" className="h-16 w-16 rounded-2xl border border-borderGray object-cover" /> : <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-primary text-lg font-black text-brand-dark">{name.slice(0, 2).toUpperCase()}</div>}<div><h3 className="text-xl font-black text-darkText">{name}</h3><p className="mt-1 break-all text-sm text-darkText/60">{url}</p></div></div><div className="mt-6 grid gap-3 sm:grid-cols-2"><LoadingButton type="button" disabled={!ready} onClick={downloadPng} className="rounded-xl bg-brand-primary px-4 py-3 font-bold text-brand-dark disabled:opacity-50">Download PNG</LoadingButton><LoadingButton type="button" disabled={!ready} onClick={() => downloadSvg()} className="rounded-xl border border-emerald-200 px-4 py-3 font-bold text-brand-link disabled:opacity-50">Download SVG</LoadingButton><LoadingButton type="button" disabled={!ready} onClick={printQr} className="rounded-xl border border-emerald-200 px-4 py-3 font-bold text-brand-link disabled:opacity-50">Print QR</LoadingButton><LoadingButton type="button" disabled={!ready} onClick={() => copyLink()} className="rounded-xl border border-emerald-200 px-4 py-3 font-bold text-brand-link disabled:opacity-50">{copied ? "Copied" : "Copy Store Link"}</LoadingButton><a href={url} target="_blank" rel="noreferrer" className="rounded-xl bg-brand-dark px-4 py-3 text-center font-bold text-white sm:col-span-2">Visit Store</a></div><p role="alert" className="mt-3 min-h-5 text-sm text-red-700">{error}</p></div></div>}</div> : <div className="p-8 text-center"><p className="font-bold text-darkText">QR code is waiting for a public HTTPS domain.</p><p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-darkText/65">Configure <code>NEXT_PUBLIC_APP_URL</code> or <code>NEXTAUTH_URL</code> with your live HTTPS domain, then restart the app. Localhost QR codes are intentionally not generated.</p></div>}</section>;
+  async function downloadPng() {
+    if (!url || !qrDataUrl) return;
+    try {
+      const canvas = await renderStoreQrCard(url, name, qrDataUrl);
+      const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/png"));
+      if (!blob) throw new Error("PNG export failed.");
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl; link.download = `joro-store-${url.split("/").pop()}-qr-card.png`;
+      document.body.append(link); link.click(); link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+      setNotice("QR card downloaded."); setError("");
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not download the QR card."); }
+  }
+  async function shareLink() {
+    if (!url) return;
+    try {
+      if (navigator.share) { await navigator.share({ title: name, url }); setNotice("Store link shared."); }
+      else await copyLink();
+      setError("");
+    } catch (cause) {
+      if (cause instanceof DOMException && cause.name === "AbortError") return;
+      await copyLink();
+    }
+  }
+  return <section className={styles.section} aria-labelledby="store-qr-title">
+    <div className={styles.heading}><h2 id="store-qr-title">Store QR code</h2><p>Share your public storefront with customers.</p></div>
+    {!url ? <p className={styles.unavailable}>Your store QR is available after your store is approved.</p> : <>
+      <div className={styles.card} aria-label={`QR card for ${name}`}>
+        <div className={styles.topWave} aria-hidden="true" />
+        <div className={styles.logoBlock}><div className={styles.logoCrop}><img src={logoPath} alt="JORO" /></div><p>Jo Chahiye, <span>Yahin Mile!</span></p></div>
+        <div className={styles.name}>{name}</div>
+        <div className={styles.qrBorder}>{qrDataUrl ? <img src={qrDataUrl} alt={`QR code opening ${url}`} /> : <span role="status">Generating QR code…</span>}</div>
+        <div className={styles.linkBar}><span aria-hidden="true">↗</span><span className={styles.linkText}>{url.replace(/^https:\/\//, "")}</span></div>
+        <div className={styles.bottomWave} aria-hidden="true" />
+      </div>
+      <div className={styles.actions}>
+        <LoadingButton type="button" disabled={!qrDataUrl} onClick={downloadPng} className={styles.primary}>Download QR Card PNG</LoadingButton>
+        <LoadingButton type="button" onClick={copyLink}>Copy Store Link</LoadingButton>
+        <a href={url} target="_blank" rel="noopener noreferrer">Visit Store</a>
+        <LoadingButton type="button" onClick={shareLink}>Share Store Link</LoadingButton>
+      </div>
+      <p className={styles.feedback} role="status">{notice}</p>
+      {error && <p className={styles.error} role="alert">{error}</p>}
+    </>}
+  </section>;
 }

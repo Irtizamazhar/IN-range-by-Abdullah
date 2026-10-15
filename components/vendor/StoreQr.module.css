@@ -1,0 +1,29 @@
+.section{margin-top:2rem;overflow:hidden;border:1px solid #d9eee5;border-radius:1.5rem;background:#fff;box-shadow:0 18px 50px #063d291a}
+.heading{padding:1.4rem 1.8rem;background:#073d3a;color:#fff}
+.heading h2{font-size:1.5rem;font-weight:800;line-height:1.25}
+.heading p{margin-top:.35rem;color:#ffffffb8;font-size:.9rem}
+.unavailable{padding:2rem;color:#36564f}
+.card{box-sizing:border-box;position:relative;isolation:isolate;width:min(100% - 2rem,520px);aspect-ratio:2/3;margin:2rem auto 1.5rem;overflow:hidden;border-radius:2rem;background:radial-gradient(circle at 50% 48%,#fff 24%,#e9f6f0 100%);box-shadow:0 15px 45px #07534322;display:flex;align-items:center;flex-direction:column;padding:4% 7% 13%}
+.card:before{content:"";position:absolute;z-index:-1;right:-10%;top:8%;width:27%;height:27%;border-radius:50%;background:#e0f0e7;transform:rotate(-24deg)}
+.topWave{position:absolute;z-index:-1;top:0;left:0;width:38%;height:20%;background:#005754;border-radius:0 0 100% 0;border-right:8px solid #91d500}
+.bottomWave{position:absolute;z-index:-1;bottom:-3%;left:-8%;width:120%;height:16%;background:#00615b;border-top:12px solid #91d500;border-radius:55% 60% 0 0;transform:rotate(-5deg)}
+.logoBlock{width:56%;margin-top:4%;text-align:center;flex:none}
+.logoCrop{width:100%;aspect-ratio:2.78;overflow:hidden}
+.logoBlock img{display:block;width:100%;height:auto;object-fit:contain}
+.logoBlock p{margin-top:-1%;font-size:clamp(.75rem,3.3vw,1.4rem);font-weight:800;white-space:nowrap;color:#063a39}
+.logoBlock p span{color:#64b900}
+.name{width:100%;min-height:10%;margin-top:7%;padding:4% 2%;display:grid;place-items:center;overflow-wrap:anywhere;text-align:center;border-radius:1.2rem;background:#ecf7f4;color:#053c3b;font-size:clamp(1.05rem,4vw,2rem);font-weight:800;line-height:1.15}
+.qrBorder{width:74%;aspect-ratio:1;display:grid;place-items:center;margin-top:4%;padding:1.5%;border-radius:10%;background:linear-gradient(135deg,#005b58,#9cdd00 52%,#00625b);box-shadow:0 10px 25px #08735a38}
+.qrBorder img{display:block;width:100%;height:100%;padding:5%;border-radius:9%;background:#fff;image-rendering:pixelated}
+.qrBorder span{padding:1rem;text-align:center;color:#fff;font-weight:700}
+.linkBar{display:flex;align-items:center;gap:5%;width:100%;min-height:9%;margin-top:5%;padding:2% 4%;border:2px solid #d2e4df;border-radius:5rem;background:#fff;color:#083b3b;font-size:clamp(.7rem,2.25vw,1.05rem);font-weight:700}
+.linkBar>span:first-child{flex:none;width:9%;aspect-ratio:1;display:grid;place-items:center;border-radius:50%;background:#e6f0ed;font-size:1.4em}
+.linkText{min-width:0;overflow-wrap:anywhere;user-select:text}
+.actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem;max-width:520px;margin:0 auto;padding:0 1rem}
+.actions button,.actions a{display:grid;place-items:center;min-height:46px;padding:.7rem .9rem;border:1px solid #b4ddd1;border-radius:.8rem;background:#fff;color:#075a50;text-align:center;font-size:.9rem;font-weight:700}
+.actions .primary{background:#a6e200;border-color:#a6e200;color:#073d3a}
+.actions button:disabled{opacity:.55;cursor:not-allowed}
+.actions button:focus-visible,.actions a:focus-visible{outline:3px solid #62bd00;outline-offset:2px}
+.feedback,.error{min-height:1.5rem;max-width:520px;margin:.7rem auto;padding:0 1rem;font-size:.85rem}
+.feedback{color:#13654d}.error{color:#ad2222}
+@media(max-width:420px){.card{width:calc(100% - 1rem);margin:1rem auto}.actions{grid-template-columns:1fr}.logoBlock p{font-size:3.4vw}.qrBorder{width:78%}.name{font-size:4.3vw}}

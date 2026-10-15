@@ -33,6 +33,9 @@ const STORE_SELECT = {
 } as const;
 
 async function resolveVendor(param: string) {
+  // Printed QR URLs use immutable vendor IDs. Resolve these before editable slugs.
+  const byId = await prisma.vendor.findUnique({ where: { id: param }, select: { ...STORE_SELECT, status: true } });
+  if (byId) return byId.status === "approved" ? byId : null;
   const bySlug = await prisma.vendor.findFirst({ where: { storeSlug: param, status: "approved" }, select: STORE_SELECT });
   if (bySlug) return bySlug;
 
@@ -43,8 +46,7 @@ async function resolveVendor(param: string) {
     if (vendor) return vendor;
   }
 
-  // Backward-compat: raw vendor id (pre-slug bookmarks/printed material).
-  return prisma.vendor.findFirst({ where: { id: param, status: "approved" }, select: STORE_SELECT });
+  return null;
 }
 
 function canonicalOrigin() {
