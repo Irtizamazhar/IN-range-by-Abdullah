@@ -7,7 +7,7 @@ type EmailItem = { name: string; quantity: number; price: unknown; image?: strin
 type ConfirmedEmailOrder = {
   id: string; orderNumber: string; customerName: string; createdAt: Date;
   customerAddress: string; city: string; paymentMethod: string; paymentStatus: string;
-  totalAmount: unknown; orderItems: EmailItem[];
+  totalAmount: unknown; handlingFee?: unknown; orderItems: EmailItem[];
   couponRedemption?: { discount: unknown } | null;
   services?: { quantity: number; price: unknown }[];
 };
@@ -37,10 +37,11 @@ export function orderConfirmationEmail(order: ConfirmedEmailOrder): JoroEmail {
   const subtotal = order.orderItems.reduce((sum, item) => sum + Number(item.price) * item.quantity, 0);
   const serviceTotal = (order.services || []).reduce((sum, item) => sum + Number(item.price) * item.quantity, 0);
   const discount = Number(order.couponRedemption?.discount || 0);
-  // Checkout persists the final total, item snapshots, service prices and redemption.
+  const handlingFee = Number(order.handlingFee || 0);
+  // Checkout persists the final total, handling fee, item snapshots, service prices and redemption.
   // Reconcile the remainder; never use today's mutable delivery settings.
-  const delivery = Math.round((Number(order.totalAmount) - subtotal - serviceTotal + discount) * 100) / 100;
-  const details = [`Order Number: ${order.orderNumber}`, `Order Date: ${emailDate(order.createdAt)}`, `Subtotal: ${emailMoney(subtotal)}`, ...(serviceTotal ? [`Booked services: ${emailMoney(serviceTotal)}`] : []), ...(delivery > 0 ? [`Delivery Charges: ${emailMoney(delivery)}`] : []), ...(discount ? [`Discount: ${emailMoney(discount)}`] : []), `Final Order Total: ${emailMoney(order.totalAmount)}`, ...paymentDetails(order), `Delivery Address: ${[order.customerAddress, order.city].filter(Boolean).join(", ")}`];
+  const delivery = Math.round((Number(order.totalAmount) - subtotal - serviceTotal - handlingFee + discount) * 100) / 100;
+  const details = [`Order Number: ${order.orderNumber}`, `Order Date: ${emailDate(order.createdAt)}`, `Subtotal: ${emailMoney(subtotal)}`, ...(serviceTotal ? [`Booked services: ${emailMoney(serviceTotal)}`] : []), ...(delivery > 0 ? [`Delivery Charges: ${emailMoney(delivery)}`] : []), ...(handlingFee > 0 ? [`Handling Fee: ${emailMoney(handlingFee)}`] : []), ...(discount ? [`Discount: ${emailMoney(discount)}`] : []), `Final Order Total: ${emailMoney(order.totalAmount)}`, ...paymentDetails(order), `Delivery Address: ${[order.customerAddress, order.city].filter(Boolean).join(", ")}`];
   return brand({ subject: `JORO | Order Confirmed - #${order.orderNumber}`, preview: "Thank you for shopping with JORO!", greeting: `Hello ${order.customerName},`, bodyHtml: `<p>Thank you for shopping with JORO!</p><p>Your order has been confirmed successfully.</p><h2 style="font-size:19px">Order details</h2>${items.html}${detailHtml(details)}`, bodyText: `Thank you for shopping with JORO!\nYour order has been confirmed successfully.\n${items.text}\n${details.join("\n")}`, action: { label: "Track Your Order", url: `${appOrigin()}/account/orders/${encodeURIComponent(order.id)}` }, footer: orderClosing });
 }
 

@@ -140,6 +140,17 @@ test("each vendor gets only its own snapshot and amount, never parent totals or 
   assert.match(vendorOrderEmail({ ...parent, paymentMethod: "bank_transfer", paymentStatus: "received" }, shop).text, /Payment status: received/);
 });
 
+test("customer receipt separates the committed handling fee from delivery charges", () => {
+  const email = orderConfirmationEmail({ ...order, totalAmount: 2650, handlingFee: 150, couponRedemption: { discount: 100 }, services: [{ price: 200, quantity: 1 }] });
+  assert.match(email.text, /Delivery Charges: PKR 400.00/);
+  assert.match(email.text, /Handling Fee: PKR 150.00/);
+  assert.match(email.text, /Final Order Total: PKR 2,650.00/);
+  assert.doesNotMatch(email.text, /Delivery Charges: PKR 550.00/);
+  const freeDelivery = orderConfirmationEmail({ ...order, totalAmount: 2150, handlingFee: 150 });
+  assert.doesNotMatch(freeDelivery.text, /Delivery Charges:/);
+  assert.match(freeDelivery.text, /Handling Fee: PKR 150.00/);
+});
+
 test("transactional enqueue creates separate stable customer and vendor jobs on repeated events", async () => {
   const calls: unknown[] = [];
   const tx = { vendorShopOrder: { findMany: async (args: unknown) => { assert.deepEqual(args, { where: { orderId: order.id }, select: { id: true } }); return [{ id: "shop-a" }, { id: "shop-b" }]; } }, orderConfirmationEmail: { upsert: async (args: unknown) => calls.push(args) } } as unknown as Prisma.TransactionClient;
@@ -187,7 +198,7 @@ test("vendor retries use the same identifier and ambiguous SMTP outcomes are hel
 
 test("linked vendor order API enforces ownership and exposes only its own label items and totals", async () => {
   let vendor: string | null = "vendor-a";
-  const own = { ...shop, vendorId: "vendor-a", shopOrderNumber: "SHOP-A", paymentMethod: "cod", paymentStatus: "pending", commissionAmount: 100, netAmount: 1800, updatedAt: order.createdAt, statusHistory: [], order: { orderNumber: order.orderNumber, totalAmount: 98765, orderItems: [{ name: "SECRET OTHER VENDOR", quantity: 1, price: 98765 }] } };
+  const own = { ...shop, vendorId: "vendor-a", shopOrderNumber: "SHOP-A", paymentMethod: "cod", paymentStatus: "pending", commissionAmount: 100, netAmount: 1800, updatedAt: order.createdAt, statusHistory: [], order: { orderNumber: order.orderNumber, totalAmount: 98765, handlingFee: 456, orderItems: [{ name: "SECRET OTHER VENDOR", quantity: 1, price: 98765 }] } };
   const imports: Record<string, unknown> = {
     "next/server": { NextResponse },
     "@/lib/vendor-api-auth": { requireVendorSessionApi: async () => vendor ? { vendor: { id: vendor } } : { response: NextResponse.json({}, { status: 401 }) } },
@@ -204,7 +215,7 @@ test("linked vendor order API enforces ownership and exposes only its own label 
   const body = await response.json();
   assert.equal(body.order.totalAmount, "1900");
   assert.deepEqual(body.order.labelItems.map((item: { name: string }) => item.name), ["Shirt"]);
-  assert.doesNotMatch(JSON.stringify(body), /SECRET OTHER VENDOR|98765|checkoutTotalAmount/);
+  assert.doesNotMatch(JSON.stringify(body), /SECRET OTHER VENDOR|98765|checkoutTotalAmount|handlingFee|deliveryCharge/);
   vendor = "vendor-b"; assert.equal((await request()).status, 404);
   vendor = null; assert.equal((await request()).status, 401);
 });

@@ -22,14 +22,6 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
       order: {
         select: {
           orderNumber: true,
-<<<<<<< Updated upstream
-          totalAmount: true,
-          handlingFee: true,
-          orderItems: {
-            select: { quantity: true, price: true, name: true, image: true },
-          },
-=======
->>>>>>> Stashed changes
         },
       },
     },
@@ -40,16 +32,6 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
   }
 
   const order = serializeVendorShopOrder(row);
-<<<<<<< Updated upstream
-  const parentSubtotal = (row.order?.orderItems || []).reduce(
-    (sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0),
-    0
-  );
-  const checkoutTotalAmount = Number(row.order?.totalAmount || 0);
-  const handlingFee = Number(row.order?.handlingFee ?? 0);
-  const deliveryCharge = Math.max(0, checkoutTotalAmount - parentSubtotal - handlingFee);
-=======
->>>>>>> Stashed changes
   return NextResponse.json({
     order: {
       ...order,

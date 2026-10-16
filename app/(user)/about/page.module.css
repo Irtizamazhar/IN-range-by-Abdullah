@@ -1,0 +1,77 @@
+.page { max-width: 1200px; margin: auto; padding: 48px 24px 64px; color: #123d27; }
+.page h1, .page h2, .page h3, .page p { margin: 0; }
+.page .heroMessage { color: #123d27; font-size: clamp(32px, 4.5vw, 58px); line-height: 1.1; font-weight: 800; letter-spacing: -.045em; }
+.page h2 { font-size: clamp(25px, 3vw, 34px); line-height: 1.2; font-weight: 800; letter-spacing: -.025em; }
+.page h3 { font-size: 18px; line-height: 1.4; font-weight: 700; }
+.page p { font-size: 15px; line-height: 1.8; color: #52645a; overflow-wrap: anywhere; }
+.page a, .page button { touch-action: manipulation; }
+.page a:focus-visible, .page button:focus-visible { outline: 3px solid #005235; outline-offset: 4px; }
+.hero { display: grid; grid-template-columns: 1.45fr 1fr; align-items: center; gap: 48px; padding-block: 12px 48px; border-bottom: 1px solid #dfede5; }
+.page .eyebrow { margin-bottom: 12px; color: #005235; font-size: 11px; line-height: 1.5; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.page .intro { margin-top: 22px; max-width: 610px; font-size: 16px; }
+.brandCard { display: grid; justify-items: center; gap: 12px; padding: 32px 20px; border: 1px solid #dfede5; border-radius: 24px; background: #fbfcfa; text-align: center; }
+.logo { width: 100%; max-width: 300px; height: auto; max-height: 190px; object-fit: contain; }
+.page .tagline { color: #005235; font-weight: 700; font-size: 18px; }
+.brandCard > span { color: #52645a; font-size: 12px; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 26px; }
+.primary, .secondary { display: inline-flex; min-height: 46px; max-width: 100%; align-items: center; justify-content: center; gap: 10px; border: 1px solid #005235; border-radius: 11px; padding: 12px 18px; font-size: 13px; line-height: 1.6; font-weight: 700; text-decoration: none; transition: background-color 150ms ease; text-align: center; }
+.primary { background: #005235; color: white; }
+.primary:hover { background: #063d2b; }
+.secondary { background: white; color: #005235; border-color: #ceddd4; }
+.secondary:hover { background: #f4f8f5; }
+.primary svg, .secondary svg { width: 16px; height: 16px; flex-shrink: 0; }
+.story { display: grid; grid-template-columns: 1fr 1.7fr; gap: 48px; padding-block: 48px; border-bottom: 1px solid #dfede5; }
+.prose { display: grid; gap: 16px; }
+.meaning { display: grid; grid-template-columns: 1.2fr 1fr; align-items: center; gap: 48px; margin-block: 40px; padding: 32px; border: 1px solid #dfede5; border-radius: 22px; background: #fbfcfa; }
+.page .lead { margin-block: 16px 10px; color: #123d27; font-size: 18px; line-height: 1.6; font-weight: 600; }
+.connections { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.connections li { display: grid; grid-template-columns: 1fr 18px 1.2fr; align-items: center; gap: 12px; padding: 13px 15px; border: 1px solid #dfede5; border-radius: 11px; background: white; font-size: 13px; }
+.connections svg { width: 16px; color: #005235; }
+.twoColumns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.card { padding: 28px; border: 1px solid #dfede5; border-radius: 20px; }
+.card h2 { margin-block: 14px; }
+.sectionIcon { width: 24px; height: 24px; color: #005235; }
+.page .note { margin-top: 18px; font-size: 13px; }
+.tags { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0; padding: 0; list-style: none; }
+.tags li { border: 1px solid #dfede5; border-radius: 7px; background: #f7faf7; padding: 6px 10px; color: #345841; font-size: 12px; line-height: 1.5; }
+.section { padding-top: 48px; }
+.page .sectionIntro { max-width: 760px; margin-block: 16px 24px; }
+.featureGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.feature { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 24px; border: 1px solid #dfede5; border-radius: 18px; }
+.feature > svg { width: 21px; height: 21px; color: #005235; }
+.feature p { font-size: 14px; }
+.feature a { display: inline-flex; min-height: 44px; align-items: center; gap: 8px; margin-top: auto; color: #005235; font-size: 13px; font-weight: 700; }
+.feature a svg { width: 15px; height: 15px; }
+.founder { display: flex; align-items: center; gap: 20px; border: 1px solid #dfede5; border-radius: 18px; padding: 28px; background: white; }
+.avatar { display: grid; width: 60px; height: 60px; flex-shrink: 0; place-items: center; border: 1px solid #dce6df; border-radius: 50%; background: #f4f7f4; font-size: 20px; font-weight: 600; color: #52645a; }
+.founder p { margin-top: 5px; font-size: 13px; }
+.seller { display: flex; align-items: center; justify-content: space-between; gap: 32px; margin-top: 40px; padding: 32px; background: #f7faf7; border-radius: 20px; border: 1px solid #dfede5; }
+.seller p { max-width: 700px; margin-top: 14px; }
+.seller > a { flex-shrink: 0; }
+.partnership { margin-top: 40px; padding: 36px; border: 1px solid #cfdfd4; border-left: 4px solid #005235; border-radius: 20px; }
+.partnership > p { max-width: 850px; }
+.partnership > a { margin-top: 4px; }
+.contactReview { scroll-margin-top: 180px; margin-top: 24px; border-top: 1px solid #dfede5; padding-top: 20px; }
+.contactReview h3 { font-size: 15px; }
+.contactReview p { margin-top: 8px; font-size: 13px; }
+.contactReview a { color: #005235; text-decoration: underline; }
+.closing { padding: 48px 0 0; }
+.closing p { max-width: 700px; margin-top: 16px; }
+.textLink { display: inline-flex; align-items: center; min-height: 46px; color: #005235; padding: 8px; font-size: 13px; font-weight: 700; }
+@media (max-width: 900px) { .hero { gap: 24px; } .featureGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .seller { flex-direction: column; align-items: flex-start; } }
+@media (max-width: 639px) {
+  .page { padding: 28px 16px 40px; }
+  .hero, .story, .meaning, .twoColumns, .featureGrid { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .hero { padding-bottom: 28px; }
+  .brandCard { padding: 20px; }
+  .logo { max-height: 130px; }
+  .story { padding-block: 32px; }
+  .meaning { padding: 22px; margin-block: 28px; }
+  .card, .feature, .founder, .seller, .partnership { padding: 22px; }
+  .section { padding-top: 32px; }
+  .founder { gap: 16px; }
+  .avatar { width: 48px; height: 48px; font-size: 17px; }
+  .seller, .partnership { margin-top: 28px; }
+  .connections li { gap: 8px; padding: 12px; font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) { .primary, .secondary { transition: none; } }
