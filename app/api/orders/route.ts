@@ -21,6 +21,7 @@ import { queueOrderConfirmation } from "@/lib/order-confirmation-delivery";
 import { createVendorNotification } from "@/lib/vendor-notifications";
 import { primaryProductImageUrl, serializeOrder } from "@/lib/serialize";
 import { resolveCommissionPercent } from "@/lib/vendor-commission";
+import { calculateHandlingFee } from "@/lib/handling-fee";
 import { calculateCoupon, cents, findCoupon, money, normalizeCouponCode, type CouponLine } from "@/lib/coupon-service";
 import {
   generateVendorShopOrderNumber,
@@ -113,6 +114,11 @@ export async function POST(req: NextRequest) {
   let couponCode: string | null = null;
   try { couponCode = body.couponCode == null || body.couponCode === "" ? null : normalizeCouponCode(body.couponCode); }
   catch { return NextResponse.json({ error: "Enter a valid coupon code." }, { status: 400 }); }
+  // Fee the customer saw at checkout; only compared against the server-calculated fee, never trusted.
+  const expectedHandlingFee =
+    typeof body.expectedHandlingFee === "number" && Number.isFinite(body.expectedHandlingFee)
+      ? body.expectedHandlingFee
+      : null;
 
   const customer = await prisma.customer.findUnique({
     where: { id: session.user.id },
@@ -363,6 +369,26 @@ export async function POST(req: NextRequest) {
       const current = await resolveServiceAddon(tx, service.productId, service.serviceId, service.quantity, String(city));
       if (!current.price.equals(service.price) || !current.commissionAmount.equals(service.commissionAmount)) throw new ApiError(409, "Service terms changed. Refresh checkout before ordering.");
     }
+    // Product commission is charged to the customer as a Handling Fee and the vendor keeps the
+    // full sale amount (vendor rate 0 below). Negotiated quotes keep vendor-deducted commission.
+    const chargeHandlingFee = !quote;
+    const handlingFee = chargeHandlingFee
+      ? await calculateHandlingFee(
+          mp,
+          resolvedProducts.map((line, index) => ({
+            category: line.vendorSlice ? line.vendorSlice.category : line.category,
+            vendorSpecialCommissionRate: line.vendorSlice?.vendorSpecialCommissionRate ?? null,
+            baseCents:
+              cents(line.price) * line.quantity -
+              (coupon?.fundingType === "VENDOR_FUNDED"
+                ? couponResult?.allocations.find((a) => a.index === index)?.discount ?? 0
+                : 0),
+          }))
+        )
+      : { totalCents: 0, lines: [] };
+    if (expectedHandlingFee != null && cents(expectedHandlingFee) !== handlingFee.totalCents) {
+      throw new ApiError(409, "Handling fee changed. Please review your order total and place the order again.");
+    }
     const o = await tx.order.create({
       data: {
         orderNumber,
@@ -373,7 +399,10 @@ export async function POST(req: NextRequest) {
         customerEmail: customer.email,
         customerAddress: String(customerAddress).trim(),
         city: String(city).trim(),
-        totalAmount: preCouponTotal.sub(couponResult ? money(couponResult.discount) : 0),
+        totalAmount: preCouponTotal
+          .sub(couponResult ? money(couponResult.discount) : 0)
+          .add(money(handlingFee.totalCents)),
+        handlingFee: money(handlingFee.totalCents),
         paymentMethod: effectivePaymentMethod,
         bankAccount: null,
         paymentScreenshot: null,
@@ -442,11 +471,13 @@ export async function POST(req: NextRequest) {
         const vs = line.vendorSlice!;
         const vendorDiscount = coupon?.fundingType === "VENDOR_FUNDED" ? (couponResult?.allocations.find(a => a.index === resolvedProducts.indexOf(line))?.discount ?? 0) / 100 : 0;
         const saleAmount = line.price * line.quantity - vendorDiscount;
-        const rate = await resolveCommissionPercent(
-          mp,
-          vs.category,
-          vs.vendorSpecialCommissionRate
-        );
+        const rate = chargeHandlingFee
+          ? 0
+          : await resolveCommissionPercent(
+              mp,
+              vs.category,
+              vs.vendorSpecialCommissionRate
+            );
         const commissionAmount =
           Math.round(((saleAmount * rate) / 100) * 100) / 100;
         const vendorAmount =
@@ -503,11 +534,13 @@ export async function POST(req: NextRequest) {
         const vs = line.vendorSlice!;
         const item = items[i]!;
         const saleAmount = item.subtotal;
-        const rate = await resolveCommissionPercent(
-          mp,
-          vs.category,
-          vs.vendorSpecialCommissionRate
-        );
+        const rate = chargeHandlingFee
+          ? 0
+          : await resolveCommissionPercent(
+              mp,
+              vs.category,
+              vs.vendorSpecialCommissionRate
+            );
         const commissionAmount =
           Math.round(((saleAmount * rate) / 100) * 100) / 100;
         const vendorAmount =
