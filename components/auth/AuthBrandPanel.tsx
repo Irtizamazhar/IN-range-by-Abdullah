@@ -1,5 +1,4 @@
 import Image from "next/image";
-import { LogoMark } from "@/components/user/LogoMark";
 import parcelStack from "@/public/branding/auth/auth-parcel-stack.png";
 import mobileMarketplace from "@/public/branding/auth/auth-mobile-marketplace.png";
 import shoppingBag from "@/public/branding/auth/auth-shopping-bag.png";
@@ -34,12 +33,7 @@ export function AuthBrandPanel({ className = "" }: { className?: string }) {
       <MinarSilhouette className="pointer-events-none absolute right-6 top-10 h-[70%] w-auto text-white/[0.05]" />
       <div className="pointer-events-none absolute -left-16 top-1/3 h-64 w-64 rounded-full bg-brand-primary/10 blur-3xl" />
 
-      <div className={`${styles.brandContent} relative z-10 flex h-full min-h-0 w-full flex-col px-6 pt-4 lg:px-8 xl:px-10 xl:pt-5`}>
-        {/* Full JORO logo, including the built-in tagline. */}
-        <div className="shrink-0">
-          <LogoMark href={null} className={styles.brandLogo} />
-        </div>
-
+      <div className={`${styles.brandContent} relative z-10 flex h-full min-h-0 w-full flex-col px-6 pt-8 lg:px-8 xl:px-10 xl:pt-10`}>
         <div className={`${styles.brandIntro} shrink-0`}>
           <p className="mb-3 inline-flex rounded-full border border-lime-300/15 bg-lime-400/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-white xl:text-[11px]">
             Pakistan&apos;s trusted marketplace 🇵🇰
