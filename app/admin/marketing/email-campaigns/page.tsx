@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { sanitizeDescriptionHtml } from "@/lib/security/sanitize";
 import Image from "next/image";
-import brandLogo from "@/public/branding/joro-logo.png";
+import brandLogo from "@/public/logo.png";
 
 type Campaign = { id: string; subject: string; previewText: string; bodyHtml: string; audience: string; recipientIds: string[] | null; status: string; lastTestAt: string | null; lastTestStatus: string | null; updatedAt: string };
 type Recipient = { id: string; name: string; email: string; type: string; eligible: boolean };

@@ -97,7 +97,7 @@ test("deleted owners, cancelled orders and unconfirmed payments cannot send", as
 
 test("template escapes all untrusted content, shows actual PKR payment and secure order link", () => {
   const email = orderConfirmationEmail(order);
-  assert.match(email.html, /branding\/joro-logo.png/);
+  assert.match(email.html, /https:\/\/joro\.pk\/logo\.png/);
   assert.doesNotMatch(email.html, /<script>|<b>Street|<img src=x>/);
   assert.match(email.html, /&lt;script&gt;/);
   assert.match(email.text, /PKR 2,500.00/);

@@ -51,7 +51,7 @@ test("branded templates include text, logo and escaped user content", () => {
   try {
     const welcome = customerWelcomeEmail("Ahsan <script>");
     assert.equal(welcome.subject, "Welcome to JORO! Your Journey Starts Here");
-    assert.match(welcome.html, /branding\/joro-logo\.png/);
+    assert.match(welcome.html, /https:\/\/joro\.pk\/logo\.png/);
     assert.match(welcome.html, /Jo Chahiye, Yahin Mile!/);
     assert.doesNotMatch(welcome.html, /<script>/);
     assert.match(welcome.text, /https:\/\/joro\.pk/);

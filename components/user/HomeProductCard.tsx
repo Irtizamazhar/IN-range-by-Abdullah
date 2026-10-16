@@ -59,7 +59,7 @@ export const HomeProductCard = memo(function HomeProductCard({ product, showNewT
   function addToCart() {
     if (!canAdd || requiresVariant) return;
     if (existing && existing.quantity >= maxStock) { toast.error("You already have all available stock in your cart."); return; }
-    addItem({ productId: id, name: product.name, price: product.price, image: product.images?.[0] || "/branding/joro-logo.png", maxStock, variant, quantity: Math.min((existing?.quantity || 0) + 1, maxStock) });
+    addItem({ productId: id, name: product.name, price: product.price, image: product.images?.[0] || "/logo.png", maxStock, variant, quantity: Math.min((existing?.quantity || 0) + 1, maxStock) });
     setAdded(true);
     showCartSuccessToast();
     if (addedTimer.current) clearTimeout(addedTimer.current);

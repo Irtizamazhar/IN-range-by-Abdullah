@@ -31,7 +31,9 @@ export const metadata: Metadata = {
     "JORO.pk connects customers, products and sellers across Pakistan. Shop products, post your wants and discover trusted marketplace sellers.",
 
   icons: {
-    icon: "/icon.svg?v=joro-green-gold",
+    icon: [{ url: "/icon.png", type: "image/png" }],
+    shortcut: "/icon.png",
+    apple: "/icon.png",
   },
 };
 

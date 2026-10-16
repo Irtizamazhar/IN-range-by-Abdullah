@@ -5,7 +5,7 @@ import QRCode from "qrcode";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import styles from "./StoreQr.module.css";
 
-const logoPath = "/branding/joro-logo.png";
+const logoPath = "/logo.png";
 const qrOptions = { width: 680, margin: 4, errorCorrectionLevel: "H" as const, color: { dark: "#000000", light: "#ffffff" } };
 
 function rounded(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
@@ -44,9 +44,10 @@ export async function renderStoreQrCard(url: string, name: string, qrDataUrl: st
   ctx.beginPath(); ctx.ellipse(1160, 280, 155, 300, -.65, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = "#b7e895";
   ctx.beginPath(); ctx.ellipse(1200, 510, 100, 200, .7, 0, Math.PI * 2); ctx.fill();
-  const logoWidth = 555;
-  const markHeight = Math.round(logo.height * .64);
-  ctx.drawImage(logo, 0, 0, logo.width, markHeight, (1200 - logoWidth) / 2, 92, logoWidth, logoWidth * markHeight / logo.width);
+  const logoScale = Math.min(555 / logo.width, 168 / logo.height);
+  const logoWidth = logo.width * logoScale;
+  const logoHeight = logo.height * logoScale;
+  ctx.drawImage(logo, (1200 - logoWidth) / 2, 92 + (168 - logoHeight) / 2, logoWidth, logoHeight);
   ctx.textAlign = "center"; ctx.font = "700 49px Arial, sans-serif";
   ctx.fillStyle = "#063a39"; ctx.fillText("Jo Chahiye,", 474, 355);
   ctx.fillStyle = "#64b900"; ctx.fillText("Yahin Mile!", 783, 355);

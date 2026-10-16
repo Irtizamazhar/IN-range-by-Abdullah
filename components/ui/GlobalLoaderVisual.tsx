@@ -1,5 +1,5 @@
 import Image from "next/image";
-import logo from "@/public/branding/joro-logo.png";
+import logo from "@/public/logo.png";
 import styles from "./GlobalLoader.module.css";
 
 export function GlobalLoaderVisual({ message }: { message: string }) {

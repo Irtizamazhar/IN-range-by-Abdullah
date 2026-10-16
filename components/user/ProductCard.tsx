@@ -132,7 +132,7 @@ export const ProductCard = memo(function ProductCard({
       productId: String(product._id),
       name: product.name,
       price: product.price,
-      image: image || "/branding/joro-logo.png",
+      image: image || "/logo.png",
       maxStock,
       variant,
       quantity: Math.min((existing?.quantity || 0) + 1, maxStock),

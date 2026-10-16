@@ -30,7 +30,7 @@ async function run(executablePath, browserName, width) {
     await page.route("**/api/products?search=*", async route => {
       const search = new URL(route.request().url()).searchParams.get("search");
       searches.push(search);
-      await route.fulfill({ json: { products: search === "shoes" ? [{ _id: "product-1", name: "Blue Running Shoes", price: 3200, images: ["/branding/joro-logo.png"] }] : [] } });
+      await route.fulfill({ json: { products: search === "shoes" ? [{ _id: "product-1", name: "Blue Running Shoes", price: 3200, images: ["/logo.png"] }] : [] } });
     });
     await page.route("**/api/search/suggestions?q=*", route => route.fulfill({ json: { items: [{ id: "typed", kind: "products", title: "Typed result", href: "/products/typed" }] } }));
     await page.goto(base, { waitUntil: "domcontentloaded" });

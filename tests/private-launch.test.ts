@@ -128,10 +128,10 @@ test("static assets stay reachable but cannot smuggle dynamic routes", () => {
   for (const pathname of [
     "/_next/static/chunks/main.js",
     "/_next/image",
+    "/icon.png",
     "/icon.svg",
     "/favicon.ico",
     "/logo.png",
-    "/branding/joro-logo.png",
     "/uploads/promotions/banner.jpg",
     "/videos/hero.mp4",
   ]) {

@@ -4,7 +4,7 @@ import Image from "next/image";
 import { Lock } from "lucide-react";
 import { useState } from "react";
 
-import brandLogo from "@/public/branding/joro-logo.png";
+import brandLogo from "@/public/logo.png";
 
 import { GateLoginModal } from "./GateLoginModal";
 import styles from "./ComingSoonGate.module.css";
@@ -83,7 +83,7 @@ export function ComingSoonScreen() {
           <div className={`${styles.reveal} ${styles.delay1}`}>
             <Image
               src={brandLogo}
-              alt="JORO.pk — Jo Chahiye, Yaheen Milay"
+              alt="JORO.pk — Jo Chahiye, Yahin Mile!"
               className={styles.logo}
               priority
             />

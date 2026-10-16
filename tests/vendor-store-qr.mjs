@@ -40,13 +40,13 @@ const browser = await chromium.launch({
 });
 try {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  const logo = await readFile("public/branding/joro-logo.png");
+  const logo = await readFile("public/logo.png");
   await page.route("https://joro.pk/qr-test/**", route => {
-    if (route.request().url().endsWith("/branding/joro-logo.png"))
+    if (route.request().url().endsWith("/logo.png"))
       return route.fulfill({ body: logo, contentType: "image/png" });
     return route.fulfill({ body: "<html><body><div id='root'></div></body></html>", contentType: "text/html" });
   });
-  await page.route("https://joro.pk/branding/joro-logo.png", route => route.fulfill({ body: logo, contentType: "image/png" }));
+  await page.route("https://joro.pk/logo.png", route => route.fulfill({ body: logo, contentType: "image/png" }));
   await page.goto("https://joro.pk/qr-test/");
   await page.addStyleTag({ content: await readFile("components/vendor/StoreQr.module.css", "utf8") });
   await page.addScriptTag({ content: bundle.outputFiles[0].text });

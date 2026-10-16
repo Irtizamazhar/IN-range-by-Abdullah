@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "@/components/ui/LoadingLink";
-import brandLogo from "@/public/branding/joro-logo.png";
+import brandLogo from "@/public/logo.png";
 import styles from "./LogoMark.module.css";
 
 type LogoMarkProps = {
@@ -23,7 +23,7 @@ export function LogoMark({
     >
       <Image
         src={brandLogo}
-        alt="JORO.pk — Jo Chahiye, Yaheen Milay"
+        alt="JORO.pk — Jo Chahiye, Yahin Mile!"
         sizes={compact ? "(max-width: 639px) 106px, 116px" : "(max-width: 639px) 118px, 164px"}
         priority
         className={styles.image}
