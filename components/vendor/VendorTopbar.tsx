@@ -49,31 +49,37 @@ export function VendorTopbar({
     void router.push(term ? `/vendor/dashboard/orders?q=${encodeURIComponent(term)}` : "/vendor/dashboard/orders");
   }
 
+  const iconButton =
+    "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-admin-border bg-white text-admin-ink transition-colors hover:bg-admin-bg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-primary";
+
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
-      <form role="search" onSubmit={submit} className="min-w-0 flex-1 lg:max-w-[36rem]">
+    <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+      <form role="search" onSubmit={submit} className="min-w-0 flex-1 lg:max-w-[32rem]">
         <label className="relative block">
           <span className="sr-only">Search orders</span>
-          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-admin-muted" aria-hidden />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-admin-muted" aria-hidden />
           <input
             type="search"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search orders by number or customer…"
-            className="h-11 w-full min-w-0 rounded-xl border border-admin-border bg-admin-bg/60 pl-10 pr-3 text-[15px] text-admin-ink placeholder:text-admin-muted/80 focus:border-admin-primary/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-admin-primary/15"
+            className="h-10 w-full min-w-0 rounded-xl border border-admin-border bg-admin-bg pl-9 pr-3 text-sm text-admin-ink placeholder:text-admin-muted focus:border-admin-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-admin-primary/15"
           />
         </label>
       </form>
 
-      <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-3">
+      <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
         <Link
           href="/vendor/dashboard/notifications"
           aria-label={unreadNotifications > 0 ? `Notifications, ${unreadNotifications} unread` : "Notifications"}
-          className="relative inline-flex h-11 w-11 items-center justify-center rounded-xl text-admin-ink transition-colors hover:bg-admin-bg focus-visible:outline focus-visible:outline-2 focus-visible:outline-admin-primary"
+          title="Notifications"
+          className={`${iconButton} relative`}
         >
-          <Bell className="h-[22px] w-[22px]" strokeWidth={1.9} aria-hidden />
+          <Bell className="h-5 w-5" strokeWidth={1.9} aria-hidden />
           {unreadNotifications > 0 ? (
-            <span className="absolute right-2.5 top-2.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" aria-hidden />
+            <span className="absolute -right-1.5 -top-1.5 min-w-[1.25rem] rounded-full bg-admin-lime px-1 text-center text-[11px] font-bold leading-5 text-admin-dark ring-2 ring-white tabular-nums" aria-hidden>
+              {unreadNotifications > 99 ? "99+" : unreadNotifications}
+            </span>
           ) : null}
         </Link>
 
@@ -82,34 +88,37 @@ export function VendorTopbar({
             type="button"
             aria-haspopup="menu"
             aria-expanded={menuOpen}
+            aria-label={`Account menu for ${ownerName}`}
             onClick={() => setMenuOpen((v) => !v)}
-            className="flex items-center gap-3 rounded-xl p-1 pr-1.5 text-left transition-colors hover:bg-admin-bg focus-visible:outline focus-visible:outline-2 focus-visible:outline-admin-primary sm:pr-2"
+            className="flex h-10 max-w-[15rem] items-center gap-2.5 rounded-xl border border-admin-border bg-white pl-1 pr-1 text-left transition-colors hover:bg-admin-bg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-primary sm:pr-2"
           >
-            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-admin-primary text-sm font-bold text-admin-lime">
+            <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-admin-primary text-xs font-bold text-admin-lime">
               {initials(ownerName)}
             </span>
             <span className="hidden min-w-0 md:block">
-              <span className="block max-w-[11rem] truncate text-[15px] font-semibold leading-tight text-admin-ink">{ownerName}</span>
-              <span className="block text-[13px] leading-tight text-admin-muted">Store Owner</span>
+              <span className="block max-w-[10rem] truncate text-sm font-semibold leading-tight text-admin-ink">{ownerName}</span>
+              <span className="block max-w-[10rem] truncate text-[11px] leading-tight text-admin-muted" title={shopName}>{shopName || "Store Owner"}</span>
             </span>
-            <ChevronDown className={`hidden h-5 w-5 text-admin-ink transition-transform sm:block ${menuOpen ? "rotate-180" : ""}`} aria-hidden />
+            <ChevronDown className={`hidden h-4 w-4 shrink-0 text-admin-muted transition-transform sm:block ${menuOpen ? "rotate-180" : ""}`} aria-hidden />
           </button>
           {menuOpen ? (
-            <div role="menu" className="absolute right-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-xl border border-admin-border bg-white py-1 shadow-[0_12px_32px_rgba(0,61,43,0.14)]">
-              <div className="border-b border-admin-border px-4 py-3">
+            <div role="menu" aria-label="Account" className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-60 rounded-xl border border-admin-border bg-white p-1.5 shadow-[0_12px_32px_rgba(0,61,43,0.14)]">
+              <div className="border-b border-admin-border px-3 pb-2.5 pt-1.5">
                 <p className="truncate text-sm font-semibold text-admin-ink">{ownerName}</p>
                 <p className="truncate text-xs text-admin-muted" title={shopName}>{shopName}</p>
               </div>
-              {[
-                { href: "/vendor/dashboard/store", label: "Store & QR", icon: Store },
-                { href: "/vendor/dashboard/account-status", label: "Account Status", icon: ShieldCheck },
-                { href: "/vendor/dashboard/settings", label: "Settings", icon: Settings },
-              ].map(({ href, label, icon: Icon }) => (
-                <Link key={href} href={href} role="menuitem" className="flex items-center gap-3 px-4 py-2.5 text-sm text-admin-ink hover:bg-admin-bg">
-                  <Icon className="h-4 w-4 text-admin-muted" aria-hidden />
-                  {label}
-                </Link>
-              ))}
+              <div className="pt-1.5">
+                {[
+                  { href: "/vendor/dashboard/store", label: "Store & QR", icon: Store },
+                  { href: "/vendor/dashboard/account-status", label: "Account Status", icon: ShieldCheck },
+                  { href: "/vendor/dashboard/settings", label: "Settings", icon: Settings },
+                ].map(({ href, label, icon: Icon }) => (
+                  <Link key={href} href={href} role="menuitem" className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-admin-ink hover:bg-admin-bg focus-visible:bg-admin-bg focus-visible:outline-none">
+                    <Icon className="h-4 w-4 text-admin-muted" aria-hidden />
+                    {label}
+                  </Link>
+                ))}
+              </div>
             </div>
           ) : null}
         </div>
