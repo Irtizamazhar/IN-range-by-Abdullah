@@ -12,7 +12,7 @@ export function HomeMarketplace({ products, wants, services, gifts, stores }: { 
   <section id="trending-wants" aria-labelledby="trending-wants-heading">
     <header className="mb-4 mt-4 flex items-center justify-between gap-3 sm:mt-6"><h2 id="trending-wants-heading" className="text-2xl font-black tracking-tight text-emerald-950 sm:text-3xl">Trending Wants</h2><Link href="/wants?tab=trending" className="shrink-0 whitespace-nowrap rounded-lg bg-lime-100 px-2.5 py-1.5 text-xs font-bold text-emerald-900 hover:bg-lime-200 sm:rounded-xl sm:px-3 sm:py-2 sm:text-sm">View all requests →</Link></header>
     {wants.length
-      ? <div className="grid grid-cols-1 gap-3 min-[380px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">{wants.map(want => <TrendingWantCard key={want.id} want={{
+      ? <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 xl:grid-cols-6">{wants.map(want => <TrendingWantCard key={want.id} want={{
           id: want.id, title: want.title, requestType: want.requestType, city: want.city, photo: want.photo, createdAt: want.createdAt,
           budgetMin: want.budgetMin == null ? null : Number(want.budgetMin), budgetMax: want.budgetMax == null ? null : Number(want.budgetMax), budgetFlexible: want.budgetFlexible,
           joined: want._count.interests, offers: want._count.offers,

@@ -60,61 +60,29 @@ const links: {
   href: string;
   label: string;
   icon: LucideIcon;
+  dividerBefore?: boolean;
 }[] = [
   { href: "/vendor/dashboard", label: "Dashboard", icon: Home },
-  { href: "/vendor/dashboard/store", label: "Store & QR", icon: QrCode },
-  {
-    href: "/vendor/dashboard/products",
-    label: "My Products",
-    icon: Package,
-  },
+  { href: "/vendor/dashboard/store", label: "Store & QR", icon: QrCode, dividerBefore: true },
+  { href: "/vendor/dashboard/products", label: "My Products", icon: Package },
   { href: "/vendor/dashboard/services", label: "Services", icon: Cog },
   { href: "/vendor/dashboard/demand", label: "Customer Demand", icon: UsersRound },
   { href: "/vendor/dashboard/offers", label: "Offers", icon: Tag },
   { href: "/vendor/dashboard/marketing/coupons", label: "Coupons", icon: TicketPercent },
-  {
-    href: "/vendor/dashboard/orders",
-    label: "My Orders",
-    icon: ClipboardList,
-  },
-  {
-    href: "/vendor/dashboard/returns",
-    label: "Returns & Disputes",
-    icon: History,
-  },
-  {
-    href: "/vendor/dashboard/earnings",
-    label: "My Earnings",
-    icon: BarChart3,
-  },
-  {
-    href: "/vendor/dashboard/withdrawals",
-    label: "Withdrawals",
-    icon: Wallet,
-  },
-  { href: "/vendor/dashboard/followers", label: "Followers", icon: Users },
+  { href: "/vendor/dashboard/orders", label: "My Orders", icon: ClipboardList, dividerBefore: true },
+  { href: "/vendor/dashboard/returns", label: "Returns & Disputes", icon: History },
+  { href: "/vendor/dashboard/earnings", label: "My Earnings", icon: BarChart3, dividerBefore: true },
+  { href: "/vendor/dashboard/withdrawals", label: "Withdrawals", icon: Wallet },
+  { href: "/vendor/dashboard/followers", label: "Followers", icon: Users, dividerBefore: true },
   { href: "/marketing/preferences", label: "Email Preferences", icon: Settings },
-  {
-    href: "/vendor/dashboard/notifications",
-    label: "Notifications",
-    icon: Bell,
-  },
-  {
-    href: "/vendor/dashboard/account-status",
-    label: "Account Status",
-    icon: ShieldCheck,
-  },
-  {
-    href: "/vendor/dashboard/settings",
-    label: "Settings",
-    icon: Settings,
-  },
-  {
-    href: "/vendor/dashboard/help",
-    label: "Help & Support",
-    icon: CircleHelp,
-  },
+  { href: "/vendor/dashboard/notifications", label: "Notifications", icon: Bell },
+  { href: "/vendor/dashboard/account-status", label: "Account Status", icon: ShieldCheck, dividerBefore: true },
+  { href: "/vendor/dashboard/settings", label: "Settings", icon: Settings },
+  { href: "/vendor/dashboard/help", label: "Help & Support", icon: CircleHelp },
 ];
+
+const badgeBase =
+  "ml-auto min-w-[1.375rem] shrink-0 rounded-full px-1.5 py-0.5 text-center text-[11px] font-bold leading-4 tabular-nums";
 
 function linkActive(pathname: string | null, href: string): boolean {
   if (pathname == null) return false;
@@ -132,8 +100,10 @@ function linkActive(pathname: string | null, href: string): boolean {
 
 export function VendorSidebar({
   unreadNotifications = 0,
+  collapsed = false,
 }: {
   unreadNotifications?: number;
+  collapsed?: boolean;
 }) {
   const pathname = usePathname();
   const [pendingOrders, setPendingOrders] = useState(0);
@@ -187,66 +157,85 @@ export function VendorSidebar({
 
   return (
     <aside className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden bg-admin-dark text-white">
-      <div className="shrink-0 px-4 pb-3 pt-2">
+      <div className={`flex shrink-0 items-center border-b border-white/10 ${collapsed ? "justify-center px-2 py-3" : "gap-2 px-4 py-2"}`}>
         {/* Shared brand mark with the customer navbar; sized down so it fits the sidebar. */}
         <LogoMark
           inverse
           href="/vendor/dashboard"
-          className="shrink-0 [&_span:has(>img)]:!my-0 [&_span:has(>img)]:!h-[4.25rem] [&_span:has(>img)]:!w-[8.25rem]"
+          className={
+            collapsed
+              ? "shrink-0 [&_span:has(>img)]:!m-0 [&_span:has(>img)]:!h-10 [&_span:has(>img)]:!w-14"
+              : "shrink-0 [&_span:has(>img)]:!my-0 [&_span:has(>img)]:!h-[4.25rem] [&_span:has(>img)]:!w-[8.25rem]"
+          }
         />
-        <span className="block pl-1 text-[15px] font-medium text-white/80">Vendor Center</span>
+        {!collapsed ? (
+          <span className="ml-auto mr-8 rounded-md bg-admin-lime/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-admin-lime lg:mr-0">
+            Vendor
+          </span>
+        ) : null}
       </div>
-      <nav aria-label="Vendor navigation" tabIndex={0} className="admin-sidebar-scrollbar min-h-0 flex-1 space-y-1 overflow-x-hidden overflow-y-auto overscroll-y-contain px-3 pb-3 focus-visible:outline-none">
-        {links.map(({ href, label, icon: Icon }) => {
-          const active = linkActive(pathname, href);
-          const onOrdersSection = isVendorOrdersPath(pathname);
-          const pendingNew =
-            pendingAck == null
-              ? pendingOrders
-              : Math.max(0, pendingOrders - pendingAck);
-          const showPendingBadge =
-            href === "/vendor/dashboard/orders" &&
-            pendingNew > 0 &&
-            !onOrdersSection;
-          return (
-            <Link
-              key={href}
-              href={href}
-              aria-current={active ? "page" : undefined}
-              className={`flex min-h-[3rem] items-center gap-3.5 rounded-xl px-3.5 text-[15px] transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-admin-lime ${
-                active
-                  ? "bg-admin-lime font-semibold text-admin-dark shadow-sm"
-                  : "font-medium text-white/90 hover:bg-white/10 hover:text-white"
-              }`}
-            >
-              <Icon className="h-[22px] w-[22px] shrink-0" strokeWidth={1.8} aria-hidden />
-              <span className="min-w-0 truncate">
-                {label}
-                {href === "/vendor/dashboard/notifications" && unreadNotifications > 0 ? (
-                  <span className="ml-1 inline-block h-2 w-2 -translate-y-2 rounded-full bg-red-500" title={`${unreadNotifications} unread`} aria-label={`${unreadNotifications} unread`} />
-                ) : null}
-              </span>
-              <span className="flex-1" aria-hidden />
-              {showPendingBadge ? (
-                <span
-                  className="ml-auto min-w-[1.25rem] rounded-full bg-admin-lime px-2 py-0.5 text-center text-[11px] font-bold text-admin-dark tabular-nums"
-                  title={`${pendingNew} new order(s) to process`}
+      <nav aria-label="Vendor navigation" tabIndex={0} className={`admin-sidebar-scrollbar min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain py-3 focus-visible:outline-none ${collapsed ? "px-2" : "px-3"}`}>
+        <ul className="space-y-0.5">
+          {links.map(({ href, label, icon: Icon, dividerBefore }) => {
+            const active = linkActive(pathname, href);
+            const onOrdersSection = isVendorOrdersPath(pathname);
+            const pendingNew =
+              pendingAck == null
+                ? pendingOrders
+                : Math.max(0, pendingOrders - pendingAck);
+            const showPendingBadge =
+              href === "/vendor/dashboard/orders" &&
+              pendingNew > 0 &&
+              !onOrdersSection;
+            let badge: { count: number; title: string } | null = null;
+            if (showPendingBadge) {
+              badge = { count: pendingNew, title: `${pendingNew} new order(s) to process` };
+            } else if (href === "/vendor/dashboard/notifications" && unreadNotifications > 0) {
+              badge = { count: unreadNotifications, title: `${unreadNotifications} unread` };
+            }
+            return (
+              <li key={href} className={dividerBefore ? "mt-2 border-t border-white/10 pt-2" : undefined}>
+                <Link
+                  href={href}
+                  aria-current={active ? "page" : undefined}
+                  aria-label={collapsed ? (badge ? `${label}, ${badge.title}` : label) : undefined}
+                  title={collapsed ? label : undefined}
+                  className={`relative flex min-h-[2.5rem] items-center gap-3 rounded-lg text-[14px] ${collapsed ? "justify-center px-0" : "px-3"} font-medium transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-admin-lime ${
+                    active
+                      ? "bg-admin-lime font-semibold text-admin-dark shadow-sm"
+                      : "text-white/85 hover:bg-white/10 hover:text-white"
+                  }`}
                 >
-                  {pendingNew > 99 ? "99+" : pendingNew}
-                </span>
-              ) : null}
-            </Link>
-          );
-        })}
+                  <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={1.9} aria-hidden />
+                  {!collapsed ? <span className="min-w-0 flex-1 truncate">{label}</span> : null}
+                  {badge && collapsed ? (
+                    <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-admin-lime ring-2 ring-admin-dark" aria-hidden />
+                  ) : null}
+                  {badge && !collapsed ? (
+                    <span
+                      className={`${badgeBase} ${active ? "bg-admin-dark text-admin-lime" : "bg-admin-lime text-admin-dark"}`}
+                      title={badge.title}
+                      aria-label={badge.title}
+                    >
+                      {badge.count > 99 ? "99+" : badge.count}
+                    </span>
+                  ) : null}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
       </nav>
-      <div className="mx-3 shrink-0 border-t border-white/15 py-3">
+      <div className={`shrink-0 border-t border-white/10 py-3 ${collapsed ? "px-2" : "px-3"}`}>
         <LoadingButton
           type="button"
           loadingLabel="Signing out…" onClick={() => logout()}
-          className="flex min-h-[3rem] w-full items-center gap-3.5 rounded-xl px-3.5 text-[15px] font-medium text-white/90 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-admin-lime"
+          aria-label={collapsed ? "Logout" : undefined}
+          title={collapsed ? "Logout" : undefined}
+          className={`flex min-h-[2.5rem] w-full items-center gap-3 rounded-lg text-[14px] ${collapsed ? "justify-center px-0" : "px-3"} font-medium text-white/85 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-admin-lime`}
         >
-          <LogOut className="h-[22px] w-[22px] shrink-0" strokeWidth={1.8} aria-hidden />
-          Logout
+          <LogOut className="h-[18px] w-[18px] shrink-0" strokeWidth={1.9} aria-hidden />
+          {!collapsed ? "Logout" : null}
         </LoadingButton>
       </div>
     </aside>

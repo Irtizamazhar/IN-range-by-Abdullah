@@ -33,19 +33,20 @@ export function VendorChrome({
     <DashboardShell
       label="Vendor"
       className="vendor-ui"
+      collapseKey="vendor_sidebar_collapsed"
       topbar={<VendorTopbar ownerName={ownerName} shopName={shopName} unreadNotifications={unread} />}
-      sidebar={
+      sidebar={(collapsed) => (
         <Suspense
           fallback={
             <aside
-              className="hidden w-60 shrink-0 bg-admin-dark text-white lg:block"
+              className="hidden h-full w-full shrink-0 bg-admin-dark text-white lg:block"
               aria-hidden
             />
           }
         >
-          <VendorSidebar unreadNotifications={unread} />
+          <VendorSidebar unreadNotifications={unread} collapsed={collapsed} />
         </Suspense>
-      }
+      )}
     >
       <div className="min-h-full">{children}</div>
     </DashboardShell>

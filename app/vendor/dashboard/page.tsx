@@ -14,15 +14,13 @@ import { SalesOverviewChart, type SalesPoint } from "@/components/admin/dashboar
 import { SalesRangeSelect } from "@/components/vendor/dashboard/SalesRangeSelect";
 import {
   ArrowDown,
+  ArrowRight,
   ArrowUp,
-  BarChart3,
   Box,
   ChevronRight,
   Clock,
   ExternalLink,
-  FileText,
   Landmark,
-  MoreVertical,
   Package,
   Plus,
   ShoppingCart,
@@ -53,12 +51,12 @@ type TopProduct = { id: string; name: string; price: number; sold: number; image
 
 function statusBadgeClass(status: string) {
   const s = status.toLowerCase();
-  if (s === "delivered") return "bg-green-100 text-green-700";
-  if (s === "pending") return "bg-amber-100 text-amber-800";
-  if (s === "cancelled") return "bg-red-100 text-red-700";
-  if (s === "shipped") return "bg-emerald-100 text-emerald-800";
-  if (s === "confirmed" || s === "packed") return "bg-sky-100 text-sky-700";
-  return "bg-brand-soft text-brand-dark";
+  if (s === "delivered") return "bg-emerald-50 text-emerald-700 ring-emerald-200";
+  if (s === "pending") return "bg-amber-50 text-amber-800 ring-amber-200";
+  if (s === "cancelled") return "bg-red-50 text-red-700 ring-red-200";
+  if (s === "shipped") return "bg-sky-50 text-sky-800 ring-sky-200";
+  if (s === "confirmed" || s === "packed") return "bg-indigo-50 text-indigo-700 ring-indigo-200";
+  return "bg-[#EAF4EC] text-admin-primary ring-[#CFE3D5]";
 }
 
 function startOfDay(d: Date) {
@@ -95,9 +93,9 @@ function firstItem(items: unknown): { name: string; vendorProductId: string | nu
 
 function Thumb({ src, alt }: { src: string | null; alt: string }) {
   return (
-    <span className="relative inline-flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-admin-border bg-admin-bg">
+    <span className="relative inline-flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-admin-border bg-admin-bg">
       {src ? (
-        <Image src={src} alt={alt} fill sizes="48px" className="object-cover" unoptimized={shouldUnoptimizeImageSrc(src)} />
+        <Image src={src} alt={alt} fill sizes="40px" className="object-cover" unoptimized={shouldUnoptimizeImageSrc(src)} />
       ) : (
         <Package className="h-5 w-5 text-admin-muted" aria-hidden />
       )}
@@ -105,7 +103,8 @@ function Thumb({ src, alt }: { src: string | null; alt: string }) {
   );
 }
 
-const card = "rounded-2xl border border-admin-border bg-white shadow-[0_1px_2px_rgba(16,42,32,0.04)]";
+/** Same card surface as the admin dashboard. */
+const card = "rounded-2xl border border-admin-border bg-white shadow-[0_1px_2px_rgba(0,61,43,0.04),0_8px_24px_rgba(0,61,43,0.05)]";
 
 export default async function VendorDashboardPage({
   searchParams,
@@ -255,10 +254,10 @@ export default async function VendorDashboardPage({
     ordersPrev7 > 0 ? Math.round(((ordersLast7 - ordersPrev7) / ordersPrev7) * 100) : null;
 
   const kpis = [
-    { label: "Total Earnings", value: formatPKR(revenue), hint: "From delivered line items", icon: ShoppingCart, chip: "bg-admin-lime/25 text-admin-primary", href: "/vendor/dashboard/earnings" },
-    { label: "Orders", value: String(totalOrders), hint: `${ordersLast7} in the last 7 days`, trend: orderTrend, icon: Box, chip: "bg-sky-100 text-sky-600", href: "/vendor/dashboard/orders" },
-    { label: "My Products", value: String(productCount), hint: "Active catalog SKUs", icon: Tag, chip: "bg-violet-100 text-violet-600", href: "/vendor/dashboard/products" },
-    { label: "Pending Orders", value: String(shopStats.pending), hint: "Needs your action", icon: Clock, chip: "bg-amber-100 text-amber-600", href: "/vendor/dashboard/orders?status=pending" },
+    { label: "Total Earnings", value: formatPKR(revenue), hint: "From delivered line items", icon: ShoppingCart, href: "/vendor/dashboard/earnings" },
+    { label: "Orders", value: String(totalOrders), hint: `${ordersLast7} in the last 7 days`, trend: orderTrend, icon: Box, href: "/vendor/dashboard/orders" },
+    { label: "My Products", value: String(productCount), hint: "Active catalog SKUs", icon: Tag, href: "/vendor/dashboard/products" },
+    { label: "Pending Orders", value: String(shopStats.pending), hint: "Needs your action", icon: Clock, href: "/vendor/dashboard/orders?status=pending" },
   ];
 
   const hub = [
@@ -268,47 +267,39 @@ export default async function VendorDashboardPage({
     { label: "Cancelled", value: shopStats.cancelled, href: "/vendor/dashboard/orders?status=cancelled" },
   ];
 
+  const sectionHead = "flex flex-wrap items-center justify-between gap-3 border-b border-admin-border px-4 py-3.5 sm:px-5 sm:py-4";
+  const viewAll = "inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-admin-primary hover:underline";
+  const secondaryButton = "inline-flex h-10 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-admin-border bg-white px-4 text-sm font-semibold text-admin-primary transition-colors hover:bg-admin-bg sm:flex-none";
+
   return (
-    <div className="mx-auto w-full max-w-[1600px] px-4 py-5 sm:px-6 sm:py-6 lg:px-7">
-      <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+    <div className="mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="text-[1.9rem] font-extrabold leading-tight tracking-tight text-admin-ink sm:text-[2.5rem]">
-            Vendor Dashboard
-          </h1>
-          <p className="mt-0.5 text-xl font-bold text-admin-ink sm:text-2xl">
-            Welcome back,{" "}
-            <span className="text-admin-primary">{vendorWelcomeDisplayName(v.ownerName)}</span>
+          <h1 className="text-2xl font-bold tracking-tight text-admin-ink">Vendor Dashboard</h1>
+          <p className="mt-1 text-sm text-admin-muted">
+            Welcome back, <span className="font-semibold text-admin-primary">{vendorWelcomeDisplayName(v.ownerName)}</span>. Here&apos;s how your store is doing today.
           </p>
-          <p className="mt-1 text-base text-admin-muted sm:text-[17px]">Here&apos;s how your store is doing today.</p>
         </div>
         {approved ? (
-          <div className="flex w-full flex-wrap gap-3 sm:mt-2 sm:w-auto">
-            <Link
-              href="/vendor/dashboard/products/new"
-              className="inline-flex h-12 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-admin-primary px-5 text-base font-semibold text-white shadow-sm transition-colors hover:bg-admin-dark sm:flex-none"
-            >
-              <Plus className="h-5 w-5" aria-hidden />
-              Add Product
-            </Link>
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
             {storeSlug ? (
-              <a
-                href={`/stores/${encodeURIComponent(storeSlug)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex h-12 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border-2 border-admin-primary bg-white px-5 text-base font-semibold text-admin-primary transition-colors hover:bg-admin-bg sm:flex-none"
-              >
-                <ExternalLink className="h-5 w-5" aria-hidden />
+              <a href={`/stores/${encodeURIComponent(storeSlug)}`} target="_blank" rel="noopener noreferrer" className={secondaryButton}>
+                <ExternalLink className="h-4 w-4" aria-hidden />
                 View Store
               </a>
             ) : (
-              <Link
-                href="/vendor/dashboard/store"
-                className="inline-flex h-12 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border-2 border-admin-primary bg-white px-5 text-base font-semibold text-admin-primary transition-colors hover:bg-admin-bg sm:flex-none"
-              >
-                <ExternalLink className="h-5 w-5" aria-hidden />
+              <Link href="/vendor/dashboard/store" className={secondaryButton}>
+                <ExternalLink className="h-4 w-4" aria-hidden />
                 Set up store
               </Link>
             )}
+            <Link
+              href="/vendor/dashboard/products/new"
+              className="inline-flex h-10 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-admin-primary px-4 text-sm font-semibold text-white transition-colors hover:bg-admin-dark sm:flex-none"
+            >
+              <Plus className="h-4 w-4" aria-hidden />
+              Add Product
+            </Link>
           </div>
         ) : null}
       </div>
@@ -320,103 +311,106 @@ export default async function VendorDashboardPage({
         </div>
       ) : null}
 
-      <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:gap-5 xl:grid-cols-4">
-        {kpis.map(({ label, value, hint, trend, icon: Icon, chip, href }) => (
+      <section aria-label="Summary" className="mb-6 grid grid-cols-1 gap-4 min-[480px]:grid-cols-2 xl:grid-cols-4">
+        {kpis.map(({ label, value, hint, trend, icon: Icon, href }) => (
           <Link
             key={label}
             href={href}
-            className={`${card} relative flex min-w-0 items-center gap-4 p-5 transition hover:border-admin-primary/30 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-admin-primary`}
+            className={`${card} group flex min-w-0 items-start gap-4 p-5 transition-colors hover:border-admin-primary/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-admin-primary`}
           >
-            <span className={`inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full ${chip}`}>
-              <Icon className="h-6 w-6" strokeWidth={1.9} aria-hidden />
+            <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#EAF4EC] text-admin-primary">
+              <Icon className="h-5 w-5" strokeWidth={1.9} aria-hidden />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate pr-6 text-[15px] font-medium text-admin-ink">{label}</p>
-              <p className="mt-0.5 truncate text-[1.65rem] font-extrabold leading-tight tabular-nums text-admin-ink">{value}</p>
-              <p className="mt-1 flex flex-wrap items-center gap-x-2 text-[13px] text-admin-muted">
+              <p className="flex items-center justify-between gap-2 text-sm font-medium text-admin-muted">
+                <span className="truncate">{label}</span>
+                <ChevronRight className="h-4 w-4 shrink-0 text-admin-muted/50 transition-colors group-hover:text-admin-primary" aria-hidden />
+              </p>
+              <p className="mt-1 truncate text-2xl font-bold tracking-tight tabular-nums text-admin-ink" title={value}>{value}</p>
+              <p className="mt-1 flex min-w-0 items-center gap-x-1.5 text-xs text-admin-muted">
                 {trend != null ? (
-                  <span className={`inline-flex items-center gap-0.5 font-semibold ${trend >= 0 ? "text-green-700" : "text-red-600"}`}>
-                    {trend >= 0 ? <ArrowUp className="h-3.5 w-3.5" aria-hidden /> : <ArrowDown className="h-3.5 w-3.5" aria-hidden />}
+                  <span className={`inline-flex shrink-0 items-center gap-0.5 font-semibold ${trend >= 0 ? "text-emerald-700" : "text-red-600"}`}>
+                    {trend >= 0 ? <ArrowUp className="h-3 w-3" aria-hidden /> : <ArrowDown className="h-3 w-3" aria-hidden />}
                     {Math.abs(trend)}%
                   </span>
                 ) : null}
                 <span className="truncate">{trend != null ? "vs. previous 7 days" : hint}</span>
               </p>
             </div>
-            <BarChart3 className="absolute right-4 top-4 h-5 w-5 text-admin-muted/40" aria-hidden />
           </Link>
         ))}
-      </div>
+      </section>
 
       {approved ? (
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,23.5rem)]">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,23.5rem)]">
           {/* Sales overview */}
-          <section className={`${card} min-w-0 p-5`} aria-labelledby="sales-heading">
-            <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-admin-lime/25 text-admin-primary">
-                  <BarChart3 className="h-5 w-5" aria-hidden />
-                </span>
-                <div className="min-w-0">
-                  <h2 id="sales-heading" className="text-lg font-bold text-admin-ink">Sales Overview</h2>
-                  <p className="text-sm text-admin-muted">Order value for the last {rangeDays} days</p>
-                </div>
+          <section className={`${card} min-w-0 overflow-hidden`} aria-labelledby="sales-heading">
+            <div className={sectionHead}>
+              <div className="min-w-0">
+                <h2 id="sales-heading" className="text-base font-bold text-admin-ink">Sales Overview</h2>
+                <p className="text-xs text-admin-muted">Order value for the last {rangeDays} days · PKR</p>
               </div>
               <SalesRangeSelect value={range} />
             </div>
-            <SalesOverviewChart points={series} />
-            <div className="mt-3 grid grid-cols-2 gap-2 border-t border-admin-border pt-3 sm:grid-cols-4">
-              {hub.map((h) => (
-                <Link key={h.label} href={h.href} className="rounded-lg px-2 py-1.5 transition-colors hover:bg-admin-bg">
-                  <p className="text-xs text-admin-muted">{h.label}</p>
-                  <p className="text-lg font-bold tabular-nums text-admin-ink">{h.value}</p>
+            <div className="p-4 sm:p-5">
+              <SalesOverviewChart points={series} />
+            </div>
+            <div className="grid grid-cols-2 border-t border-admin-border sm:grid-cols-4">
+              {hub.map((h, i) => (
+                <Link
+                  key={h.label}
+                  href={h.href}
+                  className={`min-w-0 px-4 py-3 transition-colors hover:bg-admin-bg sm:px-5 ${i % 2 ? "border-l border-admin-border" : ""} ${i > 1 ? "border-t border-admin-border sm:border-t-0" : ""} ${i === 2 ? "sm:border-l sm:border-admin-border" : ""}`}
+                >
+                  <p className="truncate text-xs font-medium text-admin-muted">{h.label}</p>
+                  <p className="mt-0.5 text-lg font-bold tabular-nums text-admin-ink">{h.value}</p>
                 </Link>
               ))}
             </div>
           </section>
 
           {/* Balance + stock */}
-          <div className="grid min-w-0 grid-cols-1 content-start gap-5 md:grid-cols-2 xl:grid-cols-1">
-            <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-admin-primary to-admin-dark p-5 text-white shadow-sm" aria-labelledby="balance-heading">
+          <div className="grid min-w-0 grid-cols-1 content-start gap-4 md:grid-cols-2 xl:grid-cols-1">
+            <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-admin-primary to-admin-dark p-5 text-white shadow-[0_8px_24px_rgba(0,61,43,0.18)]" aria-labelledby="balance-heading">
               <svg className="pointer-events-none absolute -right-6 bottom-0 h-40 w-56 text-white/[0.06]" viewBox="0 0 200 140" aria-hidden>
                 <path d="M0 140 L120 0 L200 0 L200 140 Z" fill="currentColor" />
                 <path d="M60 140 L170 10 L200 10 L200 140 Z" fill="currentColor" />
               </svg>
               <div className="relative flex items-center gap-3">
-                <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-white/10">
+                <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-admin-lime">
                   <Wallet className="h-5 w-5" aria-hidden />
                 </span>
-                <h2 id="balance-heading" className="text-lg font-semibold">Available Balance</h2>
+                <h2 id="balance-heading" className="text-sm font-semibold uppercase tracking-[0.12em] text-white/80">Available Balance</h2>
               </div>
-              <p className="relative mt-4 break-words text-[2.2rem] font-extrabold leading-tight tabular-nums">{formatPKR(availableBalance)}</p>
-              <p className="relative text-[15px] text-white/75">Earnings after deductions</p>
+              <p className="relative mt-4 break-words text-3xl font-bold leading-tight tracking-tight tabular-nums">{formatPKR(availableBalance)}</p>
+              <p className="relative mt-0.5 text-sm text-white/70">Earnings after deductions</p>
               <Link
                 href="/vendor/dashboard/withdrawals"
-                className="relative mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-admin-lime text-base font-bold text-admin-dark transition-colors hover:bg-[#a3d328]"
+                className="relative mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-admin-lime text-sm font-bold text-admin-dark transition-colors hover:bg-[#a3d328]"
               >
-                <Landmark className="h-5 w-5" aria-hidden />
+                <Landmark className="h-4 w-4" aria-hidden />
                 Withdraw
               </Link>
             </section>
 
-            <section className={`${card} p-4`} aria-labelledby="stock-heading">
-              <Link href="/vendor/dashboard/products" className="flex items-start gap-3 rounded-lg">
-                <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
-                  <Box className="h-6 w-6" aria-hidden />
+            <section className={`${card} p-5`} aria-labelledby="stock-heading">
+              <Link href="/vendor/dashboard/products" className="group flex items-start gap-3 rounded-lg">
+                <span className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${lowStock > 0 ? "bg-amber-50 text-amber-700" : "bg-[#EAF4EC] text-admin-primary"}`}>
+                  <Box className="h-5 w-5" aria-hidden />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span id="stock-heading" className="block font-bold text-admin-ink">
+                  <span id="stock-heading" className="block text-sm font-bold text-admin-ink">
                     {lowStock > 0 ? `${lowStock} product${lowStock === 1 ? "" : "s"} running low` : "Stock levels look good"}
                   </span>
-                  <span className="block text-sm text-admin-muted">
+                  <span className="mt-0.5 block text-xs text-admin-muted">
                     {lowStock > 0 ? `${LOW_STOCK_UNITS} or fewer units left in stock.` : `No active product has ${LOW_STOCK_UNITS} or fewer units.`}
                   </span>
                 </span>
-                <ChevronRight className="mt-3 h-5 w-5 shrink-0 text-admin-ink" aria-hidden />
+                <ChevronRight className="mt-2.5 h-4 w-4 shrink-0 text-admin-muted transition-colors group-hover:text-admin-primary" aria-hidden />
               </Link>
               <Link
                 href="/vendor/dashboard/products"
-                className="mt-3 flex h-9 items-center justify-center rounded-lg bg-admin-lime/20 text-sm font-semibold text-admin-dark transition-colors hover:bg-admin-lime/35 sm:ml-[3.75rem]"
+                className="mt-4 flex h-10 items-center justify-center rounded-xl border border-admin-border text-sm font-semibold text-admin-primary transition-colors hover:bg-admin-bg"
               >
                 Manage inventory
               </Link>
@@ -425,49 +419,44 @@ export default async function VendorDashboardPage({
 
           {/* Recent orders */}
           <section className={`${card} min-w-0 overflow-hidden`} aria-labelledby="recent-heading">
-            <div className="flex items-center justify-between gap-3 p-5 pb-3">
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-admin-lime/25 text-admin-primary">
-                  <FileText className="h-5 w-5" aria-hidden />
-                </span>
-                <div className="min-w-0">
-                  <h2 id="recent-heading" className="text-lg font-bold text-admin-ink">Recent Orders</h2>
-                  <p className="text-sm text-admin-muted">Latest orders from your store</p>
-                </div>
+            <div className={sectionHead}>
+              <div className="min-w-0">
+                <h2 id="recent-heading" className="text-base font-bold text-admin-ink">Recent Orders</h2>
+                <p className="text-xs text-admin-muted">Latest orders from your store</p>
               </div>
-              <Link href="/vendor/dashboard/orders" className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-admin-primary hover:underline">
-                View All <ChevronRight className="h-4 w-4" aria-hidden />
+              <Link href="/vendor/dashboard/orders" className={viewAll}>
+                View all <ArrowRight className="h-4 w-4" aria-hidden />
               </Link>
             </div>
-            <div className="overflow-x-auto px-3 pb-3 sm:px-5 sm:pb-4">
-              <table className="w-full min-w-[640px] text-left text-sm">
-                <thead className="bg-admin-bg text-[13px] text-admin-ink">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[680px] text-left text-sm">
+                <thead className="bg-admin-bg text-xs font-semibold uppercase tracking-wide text-admin-muted">
                   <tr>
-                    <th className="rounded-l-lg px-3 py-2.5 font-semibold">Order ID</th>
-                    <th className="px-3 py-2.5 font-semibold">Product</th>
-                    <th className="px-3 py-2.5 font-semibold">Customer</th>
-                    <th className="px-3 py-2.5 font-semibold">Amount</th>
-                    <th className="px-3 py-2.5 font-semibold">Status</th>
-                    <th className="w-10 rounded-r-lg px-2 py-2.5"><span className="sr-only">Actions</span></th>
+                    <th className="px-5 py-3">Order#</th>
+                    <th className="px-4 py-3">Product</th>
+                    <th className="px-4 py-3">Customer</th>
+                    <th className="px-4 py-3 text-right">Amount</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-5 py-3 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {recent.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="p-6 text-center text-admin-muted">
+                      <td colSpan={6} className="px-5 py-10 text-center text-sm text-admin-muted">
                         No orders yet containing your products.
                       </td>
                     </tr>
                   ) : (
                     recent.map((r) => (
-                      <tr key={r.id} className="border-b border-admin-border last:border-0">
-                        <td className="px-3 py-2.5 align-middle">
-                          <Link href={`/vendor/dashboard/orders/${r.id}`} className="font-semibold text-admin-ink hover:text-admin-primary hover:underline">
+                      <tr key={r.id} className="border-t border-admin-border transition-colors hover:bg-admin-bg/60">
+                        <td className="whitespace-nowrap px-5 py-3 align-middle">
+                          <Link href={`/vendor/dashboard/orders/${r.id}`} className="font-semibold text-admin-primary hover:underline">
                             #{r.orderNumber}
                           </Link>
                           <p className="text-xs text-admin-muted">{r.dateLabel}</p>
                         </td>
-                        <td className="px-3 py-2.5">
+                        <td className="px-4 py-3">
                           <div className="flex min-w-0 items-center gap-3">
                             <Thumb src={r.image} alt={r.productName} />
                             <div className="min-w-0">
@@ -478,24 +467,23 @@ export default async function VendorDashboardPage({
                             </div>
                           </div>
                         </td>
-                        <td className="px-3 py-2.5">
-                          <p className="max-w-[10rem] truncate text-admin-ink" title={r.customerName}>{r.customerName}</p>
+                        <td className="px-4 py-3">
+                          <p className="max-w-[10rem] truncate font-medium text-admin-ink" title={r.customerName}>{r.customerName}</p>
                           <p className="text-xs text-admin-muted">{r.city}</p>
                         </td>
-                        <td className="whitespace-nowrap px-3 py-2.5 tabular-nums text-admin-ink">{formatPKR(r.amount)}</td>
-                        <td className="px-3 py-2.5">
-                          <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold capitalize ${statusBadgeClass(r.status)}`}>
+                        <td className="whitespace-nowrap px-4 py-3 text-right font-semibold tabular-nums text-admin-ink">{formatPKR(r.amount)}</td>
+                        <td className="whitespace-nowrap px-4 py-3">
+                          <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize ring-1 ring-inset ${statusBadgeClass(r.status)}`}>
                             {r.status}
                           </span>
                         </td>
-                        <td className="px-2 py-2.5 text-right">
+                        <td className="whitespace-nowrap px-5 py-3 text-right">
                           <Link
                             href={`/vendor/dashboard/orders/${r.id}`}
                             aria-label={`Open order ${r.orderNumber}`}
-                            title="Open order"
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-admin-ink hover:bg-admin-bg"
+                            className="inline-flex h-8 items-center rounded-lg border border-admin-border px-3 text-xs font-semibold text-admin-primary hover:bg-admin-bg"
                           >
-                            <MoreVertical className="h-4 w-4" aria-hidden />
+                            View
                           </Link>
                         </td>
                       </tr>
@@ -507,42 +495,38 @@ export default async function VendorDashboardPage({
           </section>
 
           {/* Top products */}
-          <section className={`${card} min-w-0 p-5`} aria-labelledby="top-heading">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-admin-lime/25 text-admin-primary">
-                  <BarChart3 className="h-5 w-5" aria-hidden />
-                </span>
-                <div className="min-w-0">
-                  <h2 id="top-heading" className="text-lg font-bold text-admin-ink">Top Products</h2>
-                  <p className="text-sm text-admin-muted">Best performing products</p>
-                </div>
+          <section className={`${card} min-w-0 overflow-hidden`} aria-labelledby="top-heading">
+            <div className={sectionHead}>
+              <div className="min-w-0">
+                <h2 id="top-heading" className="text-base font-bold text-admin-ink">Top Products</h2>
+                <p className="text-xs text-admin-muted">Best performing products</p>
               </div>
-              <Link href="/vendor/dashboard/products" className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-admin-primary hover:underline">
-                View All <ChevronRight className="h-4 w-4" aria-hidden />
+              <Link href="/vendor/dashboard/products" className={viewAll}>
+                View all <ArrowRight className="h-4 w-4" aria-hidden />
               </Link>
             </div>
             {topProducts.length === 0 ? (
-              <p className="py-6 text-center text-sm text-admin-muted">No product sales yet.</p>
+              <p className="px-5 py-10 text-center text-sm text-admin-muted">No product sales yet.</p>
             ) : (
               <ul className="divide-y divide-admin-border">
-                {topProducts.map((p) => (
+                {topProducts.map((p, i) => (
                   <li key={p.id}>
-                    <Link href={`/vendor/dashboard/products/${p.id}/edit`} className="flex items-center gap-3 py-3 hover:bg-admin-bg/60">
-                      <span className="relative inline-flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-admin-border bg-admin-bg">
+                    <Link href={`/vendor/dashboard/products/${p.id}/edit`} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-admin-bg/60 sm:px-5">
+                      <span className="w-4 shrink-0 text-center text-xs font-bold tabular-nums text-admin-muted">{i + 1}</span>
+                      <span className="relative inline-flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-admin-border bg-admin-bg">
                         {p.image ? (
-                          <Image src={p.image} alt={p.name} fill sizes="64px" className="object-cover" unoptimized={shouldUnoptimizeImageSrc(p.image)} />
+                          <Image src={p.image} alt={p.name} fill sizes="48px" className="object-cover" unoptimized={shouldUnoptimizeImageSrc(p.image)} />
                         ) : (
-                          <Package className="h-6 w-6 text-admin-muted" aria-hidden />
+                          <Package className="h-5 w-5 text-admin-muted" aria-hidden />
                         )}
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate font-medium text-admin-ink" title={p.name}>{p.name}</span>
-                        <span className="block text-sm text-admin-muted">{formatPKR(p.price)}</span>
+                        <span className="block truncate text-sm font-medium text-admin-ink" title={p.name}>{p.name}</span>
+                        <span className="block text-xs text-admin-muted">{formatPKR(p.price)}</span>
                       </span>
-                      <span className="shrink-0 text-right">
-                        <span className="block text-xl font-bold tabular-nums text-admin-ink">{p.sold}</span>
-                        <span className="block text-xs text-admin-muted">sold</span>
+                      <span className="shrink-0 rounded-lg bg-[#EAF4EC] px-2.5 py-1 text-right">
+                        <span className="block text-sm font-bold leading-tight tabular-nums text-admin-primary">{p.sold}</span>
+                        <span className="block text-[10px] font-medium uppercase tracking-wide text-admin-muted">sold</span>
                       </span>
                     </Link>
                   </li>
