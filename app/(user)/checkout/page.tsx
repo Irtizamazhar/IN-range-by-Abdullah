@@ -11,7 +11,7 @@ import { getSession, useSession } from "next-auth/react";
 import { useCart } from "@/context/CartContext";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
 import { formatPKR } from "@/lib/format";
-import { PAKISTANI_CITIES } from "@/lib/pakistani-cities";
+import { PakistanCitySelect } from "@/components/ui/PakistanCitySelect";
 import { WhatsAppButton } from "@/components/user/WhatsAppButton";
 import type { ISettings } from "@/types/settings";
 type PaymentMethod = "cod";
@@ -438,20 +438,7 @@ export default function CheckoutPage() {
                 onChange={(e) => setApartment(e.target.value)}
               />
               <div className="grid gap-3 sm:grid-cols-2">
-                <select
-                  required
-                  aria-label="Delivery city"
-                  className="w-full rounded-md border border-borderGray px-3 py-2.5"
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                >
-                  <option value="">City</option>
-                  {PAKISTANI_CITIES.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
+                <PakistanCitySelect required aria-label="Delivery city" value={city} onValueChange={setCity} maxLength={120} />
                 <input
                   aria-label="Postal code"
                   className="w-full rounded-md border border-borderGray px-3 py-2.5"
@@ -578,19 +565,7 @@ export default function CheckoutPage() {
                         onChange={(e) => setBillingApartment(e.target.value)}
                       />
                       <div className="grid gap-3 sm:grid-cols-2">
-                        <select
-                          aria-label="Billing city"
-                          className="w-full rounded-md border border-borderGray px-3 py-2.5"
-                          value={billingCity}
-                          onChange={(e) => setBillingCity(e.target.value)}
-                        >
-                          <option value="">City</option>
-                          {PAKISTANI_CITIES.map((c) => (
-                            <option key={c} value={c}>
-                              {c}
-                            </option>
-                          ))}
-                        </select>
+                        <PakistanCitySelect aria-label="Billing city" value={billingCity} onValueChange={setBillingCity} maxLength={120} />
                         <input
                           aria-label="Billing postal code"
                           className="w-full rounded-md border border-borderGray px-3 py-2.5"

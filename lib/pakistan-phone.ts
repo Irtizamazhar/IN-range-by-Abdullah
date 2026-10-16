@@ -1,5 +1,5 @@
 export const PAKISTAN_MOBILE_ERROR =
-  "Enter a valid Pakistani mobile number, e.g. 0300-1234567 or +92 300 1234567.";
+  "Enter 10 mobile digits starting with 3, e.g. +92 300-1234567.";
 
 /** Add separators and cap supported mobile digits while keeping invalid input visible. */
 export function formatPakistanMobileInput(value: string): string {

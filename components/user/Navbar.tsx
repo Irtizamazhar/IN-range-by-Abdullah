@@ -489,7 +489,7 @@ export function Navbar({
                 <span className="flex items-center gap-3">
                   <Heart className="h-4 w-4" />
 
-                  Want Post Karo
+                  Request a Want
                 </span>
               </PostWantButton>
 

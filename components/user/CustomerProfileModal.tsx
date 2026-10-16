@@ -5,6 +5,7 @@ import { LoadingButton } from "@/components/ui/LoadingButton";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Image from "next/image";
 import { Lock, Phone, User, X } from "lucide-react";
+import Link from "@/components/ui/LoadingLink";
 import { useEffect, useRef, type ComponentType } from "react";
 
 const transition = { duration: 0.25, ease: [0.4, 0, 0.2, 1] as const };
@@ -160,6 +161,7 @@ export function CustomerProfileModal({
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto bg-[#F7FAF7] px-5 py-5 sm:px-6">
+              <Link href="/account?tab=saved" onClick={onClose} className="mb-5 flex min-h-11 items-center justify-between rounded-xl border border-[#DFEDE5] bg-white px-4 py-3 text-sm font-bold text-[#005235]">Saved Items <span aria-hidden="true">→</span></Link>
               {loading ? (
                 <PageSkeleton label="Loading your profile…" rows={3} />
               ) : (

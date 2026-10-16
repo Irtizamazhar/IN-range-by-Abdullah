@@ -3,7 +3,7 @@ import Link from "@/components/ui/LoadingLink";
 import { usePathname, useSearchParams } from "next/navigation";
 export const accountDestinations = [
   ["overview","Overview","/account"], ["orders","Orders","/account?tab=orders"], ["wants","My Wants","/account?tab=wants"],
-  ["offers","Received Offers","/account/offers"], ["saved","Saved","/account?tab=saved"], ["stores","Following","/account?tab=stores"],
+  ["offers","Received Offers","/account/offers"], ["saved","Saved Items","/account?tab=saved"], ["stores","Following","/account?tab=stores"],
   ["notifications","Notifications","/account/notifications"], ["stuff","My Stuff","/my-stuff"],
   ["together","Family Cart","/account/together"],
   ["services","Service Bookings","/account/services"], ["profile","Account Settings","/account?tab=profile"], ["addresses","Addresses","/account?tab=addresses"],

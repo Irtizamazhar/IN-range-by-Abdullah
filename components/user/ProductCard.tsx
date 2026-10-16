@@ -174,7 +174,7 @@ export const ProductCard = memo(function ProductCard({
           onClick={() => toggle(String(product._id))}
           disabled={savedLoading || saving}
           aria-label={saved ? `Remove ${product.name} from saved products` : `Save ${product.name}`}
-          title={saved ? "Remove from wishlist" : "Add to wishlist"}
+          title={saved ? "Remove from saved items" : "Add to Saved Items"}
           aria-pressed={saved}
           className={styles.wishlist}
         >

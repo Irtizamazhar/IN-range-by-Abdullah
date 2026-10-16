@@ -3,6 +3,7 @@ import { ServiceCard } from "@/components/user/services/ServiceCard";
 import { CategoryFilterRail } from "@/components/user/CategoryFilterRail";
 import { publicServices } from "@/lib/public-services";
 import { prisma } from "@/lib/prisma";
+import { PakistanCitySelect } from "@/components/ui/PakistanCitySelect";
 import { SERVICE_TYPES } from "@/lib/service-types";
 
 export const dynamic = "force-dynamic";
@@ -28,7 +29,7 @@ export default async function ServicesPage({ searchParams }: { searchParams?: { 
     <form action="/services" className="mt-7 grid gap-3 rounded-2xl border bg-white p-4 sm:grid-cols-[2fr_1fr_1fr_auto]">
       <label className="text-sm font-semibold">Search services<input name="search" defaultValue={search} maxLength={100} placeholder="e.g. AC repair" className="mt-1 w-full rounded-xl border px-3 py-2.5" /></label>
       <label className="text-sm font-semibold">Category<select name="category" defaultValue={category} className="mt-1 min-h-11 w-full rounded-xl border px-3 py-2.5"><option value="">All categories</option>{categoryNames.map(type => <option key={type} value={type}>{type}</option>)}</select></label>
-      <label className="text-sm font-semibold">City<input name="city" defaultValue={city} maxLength={100} placeholder="All cities" className="mt-1 w-full rounded-xl border px-3 py-2.5" /></label>
+      <label className="text-sm font-semibold">City<PakistanCitySelect name="city" defaultValue={city} maxLength={100} placeholder="All cities" wrapperClassName="mt-1" /></label>
       <button className="self-end rounded-xl bg-brand-primary px-5 py-2.5 font-bold text-brand-dark">Search</button>
     </form>
     <div className="mb-4 mt-8 flex items-baseline justify-between gap-3"><h2 className="text-2xl font-black text-emerald-950">Available services</h2><span className="text-sm text-gray-500">{services.length} shown</span></div>

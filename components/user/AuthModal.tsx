@@ -26,6 +26,7 @@ import toast from "react-hot-toast";
 import { LogoMark } from "@/components/user/LogoMark";
 import { PasswordStrength } from "@/components/auth/PasswordStrength";
 import { setCustomerOAuthRememberChoice } from "@/lib/customer-remember-policy";
+import { PakistanMobileInput } from "@/components/ui/PakistanMobileInput";
 import { normalizePakistanMobile, PAKISTAN_MOBILE_ERROR } from "@/lib/pakistan-phone";
 
 export type AuthModalView = "login" | "signup" | "forgot";
@@ -356,7 +357,7 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
                     exit={{ opacity: 0, y: -8 }}
                     transition={transition}
                   >
-                    <LoadingForm onSubmit={(e) => onLogin(e)} className="space-y-4">
+                    <LoadingForm onSubmit={(e) => onLogin(e)} className="space-y-5">
                       <AuthField icon={Mail}>
                         <input
                           type="email"
@@ -479,7 +480,7 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
                     exit={{ opacity: 0, y: -8 }}
                     transition={transition}
                   >
-                    <LoadingForm onSubmit={(e) => onSignup(e)} className="space-y-4">
+                    <LoadingForm onSubmit={(e) => onSignup(e)} className="space-y-5">
                       {(
                         [
                           {
@@ -512,8 +513,8 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
                         ] as const
                       ).map((f) => (
                         <div key={f.key}>
-                          <label htmlFor={`signup-${f.key}`} className="mb-1 block text-xs font-semibold text-gray-700">{f.key === "suPhone" ? "Phone number (optional)" : f.key === "suName" ? "Full name" : "Email"}</label>
-                          <AuthField icon={f.icon}>
+                          <label htmlFor={`signup-${f.key}`} className="mb-2 block text-xs font-semibold text-gray-700">{f.key === "suPhone" ? "Phone number (optional)" : f.key === "suName" ? "Full name" : "Email"}</label>
+                          {f.key === "suPhone" ? <PakistanMobileInput id="signup-suPhone" aria-label="Phone number (optional)" value={suPhone} onValueChange={value=>{setSuPhone(value);setErrors(previous=>({...previous,suPhone:undefined}));}} aria-invalid={Boolean(errors.suPhone)}/> : <AuthField icon={f.icon}>
                             <input
                               id={`signup-${f.key}`}
                               type={f.type}
@@ -521,14 +522,14 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
                               placeholder={f.placeholder}
                               value={f.value}
                               onChange={(e) => {
-                                f.set(f.key === "suPhone" ? e.target.value.slice(0, 30) : e.target.value);
+                                f.set(e.target.value);
                                 const k = f.key as keyof Errors;
                                 if (errors[k])
                                   setErrors((o) => ({ ...o, [k]: undefined }));
                               }}
                               className={inputClass}
                             />
-                          </AuthField>
+                          </AuthField>}
                           {errors[f.key as keyof Errors] ? (
                             <p className="mt-1 text-xs text-red-600">
                               {errors[f.key as keyof Errors]}
@@ -623,7 +624,7 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
                     exit={{ opacity: 0, y: -8 }}
                     transition={transition}
                   >
-                    <LoadingForm onSubmit={(e) => onForgot(e)} className="space-y-4">
+                    <LoadingForm onSubmit={(e) => onForgot(e)} className="space-y-5">
                       <AuthField icon={Mail}>
                         <input
                           type="email"

@@ -1,25 +1,5 @@
-/** Common cities for dropdowns — extend as needed */
-export const PAKISTANI_CITIES = [
-  "Karachi",
-  "Lahore",
-  "Islamabad",
-  "Rawalpindi",
-  "Faisalabad",
-  "Multan",
-  "Peshawar",
-  "Quetta",
-  "Sialkot",
-  "Gujranwala",
-  "Hyderabad",
-  "Abbottabad",
-  "Bahawalpur",
-  "Sargodha",
-  "Mardan",
-  "Sukkur",
-  "Larkana",
-  "Sheikhupura",
-  "Rahim Yar Khan",
-  "Jhang",
-  "Taxila",
-  "Other",
-].sort((a, b) => a.localeCompare(b));
+import cities from "@/data/pakistan-cities.json";
+
+/** GeoNames cities1000 (CC BY 4.0), plus existing names and regional towns.
+ * See data/PAKISTAN-CITIES.md. These are suggestions, not a backend allowlist. */
+export const PAKISTANI_CITIES: readonly string[] = cities;

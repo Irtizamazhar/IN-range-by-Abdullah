@@ -6,7 +6,7 @@ import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import { LoadingForm } from "@/components/ui/LoadingForm";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import Link from "@/components/ui/LoadingLink";
 
@@ -16,7 +16,7 @@ import { useLoadingRouter as useRouter } from "@/hooks/useLoadingRouter";
 
 import { getSession, signIn, signOut, useSession } from "next-auth/react";
 
-import { ArrowLeft, Lock, Mail, Phone, Store, User } from "lucide-react";
+import { ArrowLeft, Lock, Mail, Store, User } from "lucide-react";
 
 import { LogoMark } from "@/components/user/LogoMark";
 
@@ -25,13 +25,14 @@ import { PasswordToggleInput } from "@/components/ui/PasswordToggleInput";
 import { AuthBrandPanel } from "@/components/auth/AuthBrandPanel";
 import { PasswordStrength } from "@/components/auth/PasswordStrength";
 import styles from "./AuthLayout.module.css";
+import { PakistanMobileInput } from "@/components/ui/PakistanMobileInput";
 
 import { vendorEntry } from "@/lib/vendor-entry";
 
 import { safeAccountLink } from "@/lib/customer-account-policy";
 import { setCustomerOAuthRememberChoice } from "@/lib/customer-remember-policy";
 
-import { formatPakistanMobileInput, normalizePakistanMobile, pakistanMobileInputMaxLength, PAKISTAN_MOBILE_ERROR } from "@/lib/pakistan-phone";
+import { normalizePakistanMobile, PAKISTAN_MOBILE_ERROR } from "@/lib/pakistan-phone";
 
 
 
@@ -102,7 +103,7 @@ export function LoginExperience({initialRole,initialMode,googleEnabled,developme
 
     {(role==="customer"?status==="loading":vendorLoading)?<PageSkeleton label="Checking your session…" rows={2} />:authenticated?<div className="py-8"><h1 className="text-2xl font-bold">Welcome back, {role==="customer"?session?.user?.name:vendor?.ownerName}</h1>{role==="customer"?<div className="mt-5 grid gap-3"><Link className="joro-auth-primary" href="/">Continue Shopping</Link><Link className="text-center font-bold text-emerald-800" href="/account">My Account</Link></div>:<Link className="joro-auth-primary mt-5" href={vendorEntry(vendor?.status).href}>{vendorEntry(vendor?.status).label}</Link>}<LoadingButton className="mt-5 underline" onClick={async()=>{if(role==="customer")await signOut({redirect:false});else {const r=await fetch("/api/vendor/logout",{method:"POST"});if(!r.ok)throw new Error("Could not sign out. Please try again.");setVendor(null);}await router.refresh();}}>Logout</LoadingButton></div>:<AuthForm key={`${role}:${mode}`} role={role} mode={mode} callback={callback} google={googleEnabled} development={development} setBusy={setBusy}/>}
 
-    {!(mode==="signup"&&role==="customer")&&<p className="mt-2 text-center text-[10px] leading-4 text-neutral-500 sm:text-[11px]">By continuing, you agree to our <Link href="/terms-and-conditions" className="font-semibold text-emerald-800 underline">Terms &amp; Conditions</Link>.</p>}
+    {!(mode==="signup"&&role==="customer")&&<p className="mt-4 text-center text-xs leading-5 text-neutral-500">By continuing, you agree to our <Link href="/terms-and-conditions" className="font-semibold text-emerald-800 underline">Terms &amp; Conditions</Link>.</p>}
 
    </div>
 
@@ -124,66 +125,6 @@ function AuthForm({role,mode,callback,google,development,setBusy}:{role:Role;mod
 
  function saveTermsDraft(){try{sessionStorage.setItem("joro:customer-signup-terms-draft",JSON.stringify({name:values.name,email:values.email,phone:values.phone,savedAt:Date.now()}));}catch{/* The form remains usable if storage is disabled. */}}
 
- const phoneInputRef = useRef<HTMLInputElement>(null);
-
- const phoneSelectionRef = useRef<{ start: number; end: number } | null>(null);
-
- useLayoutEffect(() => {
-
-  const selection = phoneSelectionRef.current;
-
-  phoneSelectionRef.current = null;
-
-  if (selection && document.activeElement === phoneInputRef.current) {
-
-   phoneInputRef.current?.setSelectionRange(selection.start, selection.end);
-
-  }
-
- });
-
- function updatePhone(input: HTMLInputElement) {
-
-  const raw = input.value;
-
-  const formatted = formatPakistanMobileInput(raw);
-
-  if (formatted !== raw) {
-
-   const mapPosition = (position: number) => {
-
-    const characters = raw.slice(0, position).replace(/[ -]/g, "").length;
-
-    if (!characters) return 0;
-
-    let count = 0;
-
-    for (let index = 0; index < formatted.length; index++) {
-
-     if (formatted[index] !== " " && formatted[index] !== "-" && ++count === characters) return index + 1;
-
-    }
-
-    return formatted.length;
-
-   };
-
-   phoneSelectionRef.current = {
-
-    start: mapPosition(input.selectionStart ?? raw.length),
-
-    end: mapPosition(input.selectionEnd ?? raw.length),
-
-   };
-
-  }
-
-  setValues(previous => ({...previous, phone: formatted}));
-
-  setErrors(previous => ({...previous, phone: ""}));
-
- }
-
  useEffect(()=>()=>setBusy(false),[setBusy]);
 
  async function submit(e:React.FormEvent){e.preventDefault();setErrors({});setMessage("");const normalizedPhone=normalizePakistanMobile(values.phone);const issues:Record<string,string>={};if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim()))issues.email="Enter a valid email address.";if(signup&&vendor&&!normalizedPhone)issues.phone=PAKISTAN_MOBILE_ERROR;if(signup&&!vendor&&values.phone.trim()&&!normalizedPhone)issues.phone=PAKISTAN_MOBILE_ERROR;if(signup&&!values.name.trim())issues.name="Full name is required.";if(!forgot&&!values.password)issues.password="Password is required.";if(signup&&values.password.length<(vendor?8:6))issues.password=`Use at least ${vendor?8:6} characters.`;if(signup&&values.confirm!==values.password)issues.confirm="Passwords do not match.";if(Object.keys(issues).length){setErrors(issues);return;}setPending(true);setBusy(true);
@@ -203,112 +144,29 @@ function AuthForm({role,mode,callback,google,development,setBusy}:{role:Role;mod
  }catch(error){setMessage(error instanceof Error?error.message:"Could not reach the server. Please try again.");}finally{setPending(false);setBusy(false);}}
 
  const field = (name: keyof typeof values, label: string, type = "text") => {
-
   const phone = name === "phone";
-
   const description = [phone ? "hint-phone" : "", errors[name] ? `error-${name}` : ""].filter(Boolean).join(" ") || undefined;
-
-  return <div key={name}>
-
-   <label htmlFor={`auth-${name}`} className="mb-0.5 block text-xs font-bold">{label}</label>
-
-   <div className="relative">
-
-    {type === "password" ? <Lock aria-hidden className="joro-auth-field-icon" /> : name === "email" ? <Mail aria-hidden className="joro-auth-field-icon" /> : phone ? <Phone aria-hidden className="joro-auth-field-icon" /> : <User aria-hidden className="joro-auth-field-icon" />}
-
-    {type === "password" ? <PasswordToggleInput id={`auth-${name}`} autoComplete={signup ? "new-password" : "current-password"} value={values[name]} onChange={e => setValues({...values, [name]: e.target.value})} placeholder={name === "confirm" ? "Repeat your password" : "Enter your password"} className="joro-auth-input pr-11" aria-invalid={Boolean(errors[name])} aria-describedby={description} maxLength={72} /> : <input
-
-     ref={phone ? phoneInputRef : undefined}
-
-     id={`auth-${name}`} type={type} inputMode={phone ? "tel" : undefined}
-
-     autoComplete={name === "name" ? "name" : phone ? "tel" : "email"}
-
-     value={values[name]}
-
-     onChange={e => {
-
-      if (phone) updatePhone(e.currentTarget);
-
-      else setValues({...values, [name]: e.target.value});
-
-     }}
-
-     onPaste={phone ? e => {
-
-      const input = e.currentTarget;
-
-      if (input.selectionStart === 0 && input.selectionEnd === input.value.length) {
-
-       // A pasted international number may be longer than the previous local format.
-
-       e.preventDefault();
-
-       const pasted = formatPakistanMobileInput(e.clipboardData.getData("text"));
-
-       if (pasted.length > pakistanMobileInputMaxLength(pasted)) return;
-
-       input.setRangeText(pasted, 0, input.value.length, "end");
-
-       updatePhone(input);
-
-      }
-
-     } : undefined}
-
-     onKeyDown={phone ? e => {
-
-      const input = e.currentTarget;
-
-      const position = input.selectionStart;
-
-      if (position === null || position !== input.selectionEnd || e.ctrlKey || e.metaKey || e.altKey) return;
-
-      // Delete the adjacent digit instead of getting stuck on an inserted dash.
-
-      if (e.key === "Backspace" && input.value[position - 1] === "-") input.setSelectionRange(position - 1, position - 1);
-
-      if (e.key === "Delete" && input.value[position] === "-") input.setSelectionRange(position + 1, position + 1);
-
-     } : undefined}
-
-     onBlur={phone ? e => {
-
-      const normalized = normalizePakistanMobile(e.target.value);
-
-      if (normalized) setValues(previous => ({...previous, phone: normalized}));
-
-     } : undefined}
-
-     placeholder={name === "name" ? "Your full name" : phone ? "0300-1234567" : "you@example.com"}
-
-     className="joro-auth-input" maxLength={phone ? pakistanMobileInputMaxLength(values.phone) : name === "name" ? 200 : 255}
-
-     aria-invalid={Boolean(errors[name])} aria-describedby={description}
-
-    />}
-
-   </div>
-
-   {phone && <p id="hint-phone" className="mt-1 text-xs text-neutral-500">Use 03XX-XXXXXXX or +92-3XX-XXXXXXX.</p>}
-
+  return <div key={name} className={styles.field}>
+   <label htmlFor={`auth-${name}`} className="mb-2 block text-xs font-bold">{label}</label>
+   {phone ? <PakistanMobileInput id={`auth-${name}`} aria-label={label} value={values.phone} onValueChange={value=>{setValues(previous=>({...previous,phone:value}));setErrors(previous=>({...previous,phone:""}));}} className="joro-auth-input" aria-invalid={Boolean(errors.phone)} aria-describedby={description}/> : <div className="relative">
+    {type === "password" ? <Lock aria-hidden className="joro-auth-field-icon" /> : name === "email" ? <Mail aria-hidden className="joro-auth-field-icon" /> : <User aria-hidden className="joro-auth-field-icon" />}
+    {type === "password" ? <PasswordToggleInput id={`auth-${name}`} autoComplete={signup ? "new-password" : "current-password"} value={values[name]} onChange={e => setValues({...values, [name]: e.target.value})} placeholder={name === "confirm" ? "Repeat your password" : "Enter your password"} className="joro-auth-input pr-11" aria-invalid={Boolean(errors[name])} aria-describedby={description} maxLength={72} /> : <input id={`auth-${name}`} type={type} autoComplete={name === "name" ? "name" : "email"} value={values[name]} onChange={e => setValues({...values, [name]: e.target.value})} placeholder={name === "name" ? "Your full name" : "you@example.com"} className="joro-auth-input" maxLength={name === "name" ? 200 : 255} aria-invalid={Boolean(errors[name])} aria-describedby={description}/>}
+   </div>}
+   {phone && <p id="hint-phone" className="mt-2 text-xs leading-5 text-neutral-500">Enter 10 digits starting with 3. Country code +92 is included.</p>}
    {errors[name] && <p id={`error-${name}`} className="mt-1 text-xs text-red-700">{errors[name]}</p>}
-
   </div>;
-
  };
-
  return <div className="mt-2 sm:mt-3">{forgot&&<p className="mb-4 text-sm text-neutral-600">Enter your email to receive a password reset link.</p>}
 
      {message&&<p role="alert" className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{message}{vendorCode==="suspended"&&<Link href="/vendor/login?appeal=1" className="ml-2 underline">Request reactivation</Link>}{vendorCode==="unverified"&&<Link href="/vendor/verify-email" className="ml-2 underline">Verify email</Link>}</p>}
 
- <LoadingForm onSubmit={submit} noValidate className="mt-2"><fieldset disabled={pending} className="grid gap-1.5">{signup&&field("name","Full Name")}{field("email","Email","email")}{signup&&field("phone",vendor?"Mobile Number":"Phone number (optional)","tel")}{!forgot&&field("password","Password","password")}{signup&&<PasswordStrength password={values.password} minLength={vendor?8:6}/>} {signup&&field("confirm","Confirm Password","password")}{!signup&&!forgot&&<div className="flex items-center justify-between gap-3 text-xs"><label className="flex items-center gap-2"><input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)}/>Remember me</label>{vendor?<Link href="/vendor/forgot-password" className="font-bold text-emerald-800">Forgot password?</Link>:<LoadingButton type="button" onClick={()=>{setForgot(true);setValues({...values,password:"",confirm:""});setErrors({});}} className="font-bold text-emerald-800">Forgot password?</LoadingButton>}</div>}<LoadingButton className="joro-auth-primary" type="submit" loadingLabel={forgot?"Sending…":signup?"Creating account…":"Signing in…"}>{forgot?"Send reset link":signup?(vendor?"Create Seller Account":"Create Account"):(vendor?"Sign In as Vendor":"Sign In")}</LoadingButton>{forgot&&<LoadingButton type="button" className="text-sm underline" onClick={()=>setForgot(false)}>Back to sign in</LoadingButton>}</fieldset></LoadingForm>
+ <LoadingForm onSubmit={submit} noValidate className="mt-2"><fieldset disabled={pending} className={styles.fields}>{signup&&field("name","Full Name")}{field("email","Email","email")}{signup&&field("phone",vendor?"Mobile Number":"Phone number (optional)","tel")}{!forgot&&field("password","Password","password")}{signup&&<PasswordStrength password={values.password} minLength={vendor?8:6}/>} {signup&&field("confirm","Confirm Password","password")}{!signup&&!forgot&&<div className="flex min-h-11 flex-wrap items-center justify-between gap-x-4 gap-y-2 py-1 text-xs"><label className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)}/>Remember me</label>{vendor?<Link href="/vendor/forgot-password" className="inline-flex min-h-11 items-center px-1 font-bold text-emerald-800">Forgot password?</Link>:<LoadingButton type="button" onClick={()=>{setForgot(true);setValues({...values,password:"",confirm:""});setErrors({});}} className="inline-flex min-h-11 items-center px-1 font-bold text-emerald-800">Forgot password?</LoadingButton>}</div>}<LoadingButton className="joro-auth-primary mt-1" type="submit" loadingLabel={forgot?"Sending…":signup?"Creating account…":"Signing in…"}>{forgot?"Send reset link":signup?(vendor?"Create Seller Account":"Create Account"):(vendor?"Sign In as Vendor":"Sign In")}</LoadingButton>{forgot&&<LoadingButton type="button" className="text-sm underline" onClick={()=>setForgot(false)}>Back to sign in</LoadingButton>}</fieldset></LoadingForm>
 
- {signup&&!vendor&&<p className="mt-2 text-center text-xs leading-5 text-neutral-600">By continuing, you agree to our <Link href="/terms-and-conditions" onClick={saveTermsDraft} className="font-semibold text-emerald-800 underline">Terms &amp; Conditions</Link>. {draftRestored&&"Your details were restored. Re-enter your password to continue."}</p>}
+ {signup&&!vendor&&<p className="mt-4 text-center text-xs leading-5 text-neutral-600">By continuing, you agree to our <Link href="/terms-and-conditions" onClick={saveTermsDraft} className="font-semibold text-emerald-800 underline">Terms &amp; Conditions</Link>. {draftRestored&&"Your details were restored. Re-enter your password to continue."}</p>}
 
  {signup&&vendor&&<p className="mt-2 text-xs leading-5 text-neutral-500">Next: business details and verification. Admin approval is required before selling.</p>}
 
- {!vendor&&!forgot&&(development||google)&&<><div className="my-2 flex items-center gap-3 text-xs text-neutral-500"><span className="h-px flex-1 bg-neutral-200"/>OR<span className="h-px flex-1 bg-neutral-200"/></div><div className="grid gap-2 min-[420px]:grid-cols-1">{(development||google)&&<LoadingButton type="button" disabled={pending} title={google?undefined:"Google configuration required in .env.local"} onClick={async()=>{if(!google){setMessage("Google login is not configured. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env.local, then restart the server.");return;}setPending(true);setBusy(true);try{setCustomerOAuthRememberChoice(!signup&&remember);await signIn("google",{callbackUrl:callback},{prompt:"select_account"});}catch{setMessage("Social sign-in could not start. Please try again.");}finally{setPending(false);setBusy(false);}}} className="flex h-10 items-center justify-center gap-2 rounded-xl border border-neutral-300 px-2 text-xs font-bold hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-700"><ProviderIcon provider="google"/>Continue with Google</LoadingButton>}</div></>}
+ {!vendor&&!forgot&&(development||google)&&<><div className="my-5 flex items-center gap-3 text-xs text-neutral-500"><span className="h-px flex-1 bg-neutral-200"/>OR<span className="h-px flex-1 bg-neutral-200"/></div><div className="grid gap-2 min-[420px]:grid-cols-1">{(development||google)&&<LoadingButton type="button" disabled={pending} title={google?undefined:"Google configuration required in .env.local"} onClick={async()=>{if(!google){setMessage("Google login is not configured. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env.local, then restart the server.");return;}setPending(true);setBusy(true);try{setCustomerOAuthRememberChoice(!signup&&remember);await signIn("google",{callbackUrl:callback},{prompt:"select_account"});}catch{setMessage("Social sign-in could not start. Please try again.");}finally{setPending(false);setBusy(false);}}} className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-neutral-300 px-2 text-xs font-bold hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-700"><ProviderIcon provider="google"/>Continue with Google</LoadingButton>}</div></>}
 
  </div>;
 

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "@/components/ui/LoadingLink";
-import { Gift, MapPin, Package, Wrench } from "lucide-react";
+import { ArrowRight, Gift, MapPin, Package, Wrench } from "lucide-react";
 import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 
 export type TrendingWant = {
@@ -62,8 +62,8 @@ export function TrendingWantCard({ want }: { want: TrendingWant }) {
         <span className="whitespace-nowrap rounded-full bg-lime-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800 sm:px-2 sm:text-[10.5px]">{want.offers} {want.offers === 1 ? "offer" : "offers"}</span>
       </div>
     </div>
-    <div className="mt-auto flex shrink-0 items-center justify-center border-t border-[#E6EEDF] px-2 py-2">
-      <span className="whitespace-nowrap text-[12px] font-medium sm:text-[12.5px] text-emerald-700 transition-colors group-hover:text-emerald-900">Join request →</span>
+    <div className="mt-auto shrink-0 border-t border-[#E6EEDF] p-2">
+      <span className="flex min-h-11 items-center justify-center gap-2 rounded-lg border border-emerald-100 bg-emerald-50 px-2.5 py-2 text-[12px] font-semibold text-emerald-800 transition duration-150 group-hover:border-emerald-200 group-hover:bg-emerald-100 group-active:translate-y-px sm:text-[12.5px]">Join Request <ArrowRight aria-hidden="true" className="h-3.5 w-3.5 shrink-0"/></span>
     </div>
   </Link>;
 }

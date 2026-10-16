@@ -59,7 +59,7 @@ async function main() {
     await page.screenshot({ path: 'coverage/wants-live/mobile.png' });
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
     await page.goto(base, { waitUntil: 'networkidle', timeout: 90000 });
-    const cta = page.getByRole('button', { name: 'Want Post Karo', exact: true }).filter({ visible: true }).first();
+    const cta = page.getByRole('button', { name: 'Request a Want', exact: true }).filter({ visible: true }).first();
     await cta.click();
     await page.getByRole('dialog', { name: 'Post a Want' }).waitFor();
     assert.equal(new URL(page.url()).pathname, '/');

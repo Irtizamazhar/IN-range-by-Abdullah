@@ -24,7 +24,7 @@ async function main() {
     } }],
   });
   const config = loadConfig(path.join(root, 'tailwind.config.ts'));
-  const styles = await postcss([tailwind({ ...config, content: [path.join(root, 'components/vendor/VendorOnboardingForm.tsx')] })]).process('@tailwind base; @tailwind components; @tailwind utilities;', { from: undefined });
+  const styles = await postcss([tailwind({ ...config, content: [path.join(root, 'components/vendor/VendorOnboardingForm.tsx'), path.join(root, 'components/ui/Pakistan*.tsx')] })]).process('@tailwind base; @tailwind components; @tailwind utilities;', { from: undefined });
   const js = build.outputFiles.find(file => file.path.endsWith('.js')).text;
   const css = styles.css + '\n' + (build.outputFiles.find(file => file.path.endsWith('.css'))?.text || '');
   const server = http.createServer((req, res) => {
@@ -69,11 +69,28 @@ async function main() {
       await page.getByLabel('Store Name', { exact: true }).waitFor();
       const primary = page.getByRole('button', { name: 'Save & Continue', exact: true });
       const secondary = page.getByRole('button', { name: 'Save Progress', exact: true });
+      async function typeFocused(label, value) {
+        const input = page.getByLabel(label, { exact: true });
+        await input.fill(''); await input.click();
+        const element = await input.elementHandle();
+        await input.pressSequentially(value, { delay: 4 });
+        assert.equal(await element.evaluate(node => node.isConnected && document.activeElement === node), true, `${label}: typing must preserve the same focused DOM node`);
+      }
+      // Reproduces the original effect bug before validation has ever run.
+      await typeFocused('Store Name', 'Draft Store');
+      await typeFocused('Store Slug', 'draft-store');
+      await page.getByLabel('Store Slug', { exact: true }).evaluate(node => node.setSelectionRange(2, 2));
+      await page.keyboard.type('x');
+      assert.equal(await page.getByLabel('Store Slug', { exact: true }).evaluate(node => node.selectionStart), 3);
+      await page.keyboard.press('Tab');
+      assert.equal(await page.getByLabel('Primary Product Category', { exact: true }).evaluate(node => document.activeElement === node), true);
+      await page.getByLabel('Store Name', { exact: true }).fill('');
+      await page.getByLabel('Store Slug', { exact: true }).fill('');
       await primary.click();
       assert.equal(writes, 0, 'invalid active step must not be sent');
       await page.getByRole('alert').first().waitFor();
       await page.waitForFunction(() => document.activeElement?.getAttribute('name') === 'shopName');
-      for (const [label, value] of Object.entries({ 'Store Name': 'Pakistani Store', 'Store / Business Description': 'Carefully selected products for your home.', 'Contact Number': '03001234567', 'Business Address': '123 Test Street', 'City': 'Lahore', 'Province / Region': 'Punjab', 'Postal Code (optional)': '54000' })) await page.getByLabel(label, { exact: true }).fill(value);
+      for (const [label, value] of Object.entries({ 'Store Name': 'Pakistani Store', 'Store / Business Description': 'Carefully selected products for your home.', 'Contact Number': '3001234567', 'Business Address': '123 Test Street', 'City': 'Lahore', 'Province / Region': 'Punjab', 'Postal Code (optional)': '54000' })) await typeFocused(label, value);
       // Save Progress persists without navigating.
       await secondary.click();
       await page.getByText('Progress saved.', { exact: false }).waitFor();
@@ -112,15 +129,31 @@ async function main() {
       await page.getByLabel('Seller Type').selectOption('company');
       await primary.click();
       await page.getByLabel('Registered Business Name', { exact: true }).waitFor();
-      await page.getByLabel('CNIC Number', { exact: true }).fill('1234512345671');
+      await typeFocused('Legal Full Name', 'Test Seller');
+      await typeFocused('CNIC Number', '1234512345671');
       await primary.click();
       await page.getByRole('alert').first().waitFor();
       assert.equal(await page.getByLabel('CNIC Number', { exact: true }).inputValue(), '12345-1234567-1');
-      await page.getByLabel('Registered Business Name', { exact: true }).fill('Example Limited');
-      await page.getByLabel('Business Registration Number', { exact: true }).fill('REG-123');
+      await typeFocused('Registered Business Name', 'Example Limited');
+      await typeFocused('Business Registration Number', 'REG-123');
       for (const label of ['CNIC front', 'CNIC back', 'Business registration document']) await page.getByLabel(label, { exact: true }).setInputFiles({ name: 'fixture.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jfRsAAAAASUVORK5CYII=', 'base64') });
       await primary.click();
       await page.getByLabel('Pickup Address', { exact: true }).waitFor();
+      for (const [label, value] of Object.entries({ 'Pickup Address': '123 Test Street', 'Pickup City': 'Lahore', 'Pickup Province': 'Punjab', 'Pickup Contact Person': 'Test Seller', 'Pickup Contact Phone': '3117654321' })) await typeFocused(label, value);
+      await page.getByRole('checkbox', { name: 'Return address same as pickup' }).uncheck();
+      for (const [label, value] of Object.entries({ 'Return Address': '456 Return Street', 'Return City': 'Karachi', 'Return Province': 'Sindh', 'Return Contact Person': 'Returns Contact', 'Return Contact Phone': '3009876543' })) await typeFocused(label, value);
+      await primary.click();
+      await page.getByLabel('Account Title', { exact: true }).waitFor();
+      for (const [label, value] of Object.entries({ 'Account Title': 'Test Seller', 'Bank Name': 'Test Bank', 'Account Number': '123456789' })) await typeFocused(label, value);
+      await secondary.click();
+      await page.getByText('Progress saved.', { exact: false }).waitFor();
+      assert.equal(saved.onboardingData.step, 3);
+      await primary.click();
+      await page.getByRole('button', { name: 'Submit for Approval' }).waitFor();
+      await page.getByRole('button', { name: 'Edit Bank / Payout' }).click();
+      await page.getByLabel('Account Title', { exact: true }).waitFor();
+      assert.equal(await page.getByLabel('Account Number', { exact: true }).inputValue(), '123456789');
+      await typeFocused('Account Title', 'Updated Seller');
       // Form actions are ordered left/right and fit the viewport at both sizes.
       const left = await secondary.boundingBox();
       const right = await primary.boundingBox();
@@ -129,7 +162,7 @@ async function main() {
       assert.ok(right.x + right.width <= width);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
       assert.deepEqual(clientErrors, []);
-      console.log(`PASS ${width}px: validation, Save Progress, failed/invalid responses, duplicate prevention, advance, refresh persistence, Business fields, action layout, no horizontal overflow`);
+      console.log(`PASS ${width}px: continuous focus/caret/Tab retention before and after validation across all editable steps, Review editing, fixed mobile fields, validation, Save Progress/Continue, error preservation, refresh persistence, action layout, no horizontal overflow`);
       await context.close();
     }
   } finally { if (browser) await browser.close(); await new Promise(resolve => server.close(resolve)); }

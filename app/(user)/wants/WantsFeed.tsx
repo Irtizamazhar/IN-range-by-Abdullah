@@ -16,12 +16,12 @@ import { WantsFeedPager, type RestoredFeed } from "@/lib/wants-feed-client";
 import type { WantRequestType, WantsFeedItem, WantsFeedTab } from "@/lib/wants-feed-types";
 import { relativeTime, WANT_TYPE_LABELS } from "@/lib/want-social";
 import styles from "./WantsFeed.module.css";
+import { PakistanCitySelect } from "@/components/ui/PakistanCitySelect";
 
 type CachedFeed = RestoredFeed & { scrollY: number; savedAt: number; resume: boolean };
 type Filters = { tab: WantsFeedTab; city: string; category: string; type: WantRequestType | ""; q: string };
 const memory = new Map<string, CachedFeed>();
 const storagePrefix = "joro-wants-feed-v2:";
-const cities = ["Islamabad", "Karachi", "Lahore", "Rawalpindi", "Faisalabad", "Multan", "Peshawar", "Quetta", "Sialkot", "Taxila"];
 const TABS = [
   { id: "all", label: "Latest", Icon: MessageSquareText },
   { id: "trending", label: "Trending", Icon: Flame },
@@ -225,8 +225,7 @@ export function WantsFeed({ categories }: { categories: string[] }) {
       <div className={styles.typeRow} role="group" aria-label="Request type">{TYPES.map(({ id, label, Icon }) => <LoadingButton key={label} type="button" className={styles.chip} aria-pressed={filters.type === id} loadingLabel="Loading…" onClick={() => changeFilters({ type: id })}><Icon aria-hidden="true" />{label}</LoadingButton>)}</div>
       <LoadingForm className={styles.filterForm} onSubmit={event => { event.preventDefault(); return changeFilters({ city: cityDraft, category: categoryDraft, q: qDraft }); }}>
         <label className={`${styles.field} ${styles.searchField}`}><span>Search</span><div className={styles.inputIcon}><Search aria-hidden="true" /><input type="search" placeholder="Search requests" aria-label="Search Wants" value={qDraft} maxLength={100} onChange={event => setQDraft(event.target.value)} /></div></label>
-        <label className={styles.field}><span>City</span><input list="wants-city-options" placeholder="All cities" aria-label="Filter by city" value={cityDraft} maxLength={100} onChange={event => setCityDraft(event.target.value)} /></label>
-        <datalist id="wants-city-options">{cities.map(name => <option key={name} value={name} />)}</datalist>
+        <label className={styles.field}><span>City</span><PakistanCitySelect placeholder="All cities" aria-label="Filter by city" value={cityDraft} maxLength={100} onValueChange={setCityDraft} /></label>
         <label className={styles.field}><span>Category</span><select value={categoryDraft} onChange={event => setCategoryDraft(event.target.value)}><option value="">All categories</option>{categories.map(name => <option key={name} value={name}>{name}</option>)}{filters.category && !categories.includes(filters.category) && <option value={filters.category}>{filters.category}</option>}</select></label>
         <LoadingButton type="submit" className={styles.secondary} loadingLabel="Filtering…"><ListFilter aria-hidden="true" /> Apply</LoadingButton>
       </LoadingForm>

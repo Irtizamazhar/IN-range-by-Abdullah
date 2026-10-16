@@ -22,6 +22,9 @@
   padding-bottom: 14px;
 }
 .formInner { min-width: 0; }
+.fields { display: grid; gap: 16px; margin-top: 16px; min-width: 0; }
+.field { min-width: 0; }
+.field label { line-height: 1.5; }
 .logoRow {
   display: flex;
   width: 100%;

@@ -99,6 +99,8 @@
   display: flex;
   width: 44px;
   height: 44px;
+  min-width: 44px;
+  min-height: 44px;
   align-items: center;
   justify-content: center;
   border: 1px solid #e5e9e0;
@@ -517,7 +519,7 @@
 @container product-card (max-width: 160px) {
   .card:not(.marketplace) .body { padding: 9px; }
   .card:not(.marketplace) .image { padding: 9px; }
-  .card:not(.marketplace) .badge { top: 7px; left: 7px; max-width: calc(100% - 54px); padding: 3px 5px; font-size: 10px; }
+  .card:not(.marketplace) .badge { top: 7px; left: 7px; max-width: calc(100% - 68px); padding: 3px 5px; font-size: 10px; }
   .card:not(.marketplace) .wishlist { top: 7px; right: 7px; width: 34px; height: 34px; }
   .card:not(.marketplace) .action { gap: 4px; padding-inline: 4px; font-size: 11px; }
 }

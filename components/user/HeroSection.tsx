@@ -58,7 +58,7 @@ export function HeroSection({
               className="group inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-brand-primary px-5 text-[13px] font-black text-brand-dark shadow-lime transition duration-300 hover:-translate-y-0.5 hover:bg-brand-hover"
             >
               <Megaphone className="h-4 w-4" />
-              Want Post Karo
+              Request a Want
               <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1" />
             </PostWantButton>
 

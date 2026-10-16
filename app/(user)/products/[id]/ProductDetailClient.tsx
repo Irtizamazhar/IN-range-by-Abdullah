@@ -1,6 +1,7 @@
 "use client";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { ProductServices } from "@/components/user/ProductServices";
+import { SaveProductButton } from "@/components/user/SaveProductButton";
 
 import Image from "next/image";
 import Link from "@/components/ui/LoadingLink";
@@ -314,6 +315,7 @@ export function ProductDetailClient({
               <h1 className="line-clamp-3 text-xl font-black leading-snug text-[#063D2B]">
                 {product.name}
               </h1>
+              <SaveProductButton productId={product._id} name={product.name}/>
 
               {reviewsCount > 0 ? (
                 <div className="mt-2">

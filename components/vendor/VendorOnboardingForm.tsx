@@ -7,6 +7,8 @@ import Link from "@/components/ui/LoadingLink";
 import { useLoadingRouter as useRouter } from "@/hooks/useLoadingRouter";
 import { LogoMark } from "@/components/user/LogoMark";
 import { CnicInput } from "@/components/ui/CnicInput";
+import { PakistanMobileInput } from "@/components/ui/PakistanMobileInput";
+import { PakistanCitySelect } from "@/components/ui/PakistanCitySelect";
 import { slugifyStoreName } from "@/lib/store-slug";
 import { vendorSetupSchema, setupStepErrors } from "@/lib/vendor-onboarding-schema";
 const SAVE_TIMEOUT_MS=30000;
@@ -22,6 +24,7 @@ export function VendorOnboardingForm(){
  const [email,setEmail]=useState("");const [current,setCurrent]=useState(0);const [docs,setDocs]=useState<{id:string;documentType:string}[]>([]);
  const [files,setFiles]=useState<Record<string,File>>({});const [loading,setLoading]=useState(true);const [busy,setBusy]=useState(false);
  const saveLock=useRef(false);
+ const pendingErrorFocus=useRef<string|null>(null);
  const [loadError,setLoadError]=useState("");const [message,setMessage]=useState("");const [errors,setErrors]=useState<Record<string,string>>({});const [rejection,setRejection]=useState("");
  const [saveError,setSaveError]=useState(false);
  const load=useCallback(async(signal?:AbortSignal)=>{
@@ -32,13 +35,14 @@ export function VendorOnboardingForm(){
   }catch(error){if(!signal?.aborted)setLoadError(error instanceof Error?error.message:"Could not load setup.");}finally{if(!signal?.aborted)setLoading(false);}
  },[]);
  useEffect(()=>{const controller=new AbortController();void load(controller.signal);return()=>controller.abort();},[load]);
- useEffect(()=>{const key=Object.keys(errors)[0];if(key)document.querySelector<HTMLElement>(`[name="${key}"]`)?.focus();},[errors]);
+ useEffect(()=>{const key=pendingErrorFocus.current;pendingErrorFocus.current=null;if(key)(document.getElementsByName(key)[0] as HTMLElement|undefined)?.focus();},[errors]);
+ function reportErrors(next:Record<string,string>){pendingErrorFocus.current=Object.keys(next).find(key=>Boolean(next[key]))||null;setErrors(next);}
  function change(key:string,value:string|boolean){setValues(v=>({...v,[key]:value,...(key==="shopName"&&(!v.storeSlug||v.storeSlug===slugifyStoreName(String(v.shopName||"")))?{storeSlug:slugifyStoreName(String(value))}:{})}));setErrors(e=>({...e,[key]:""}));}
  async function save(submit=false,next=current){
   if(saveLock.current)return false;
   setMessage("");setErrors({});setSaveError(false);
-  if(next>current){const fieldErrors=setupStepErrors(values,current);if(current===1){const required=values.businessType==="company"?["cnic_front","cnic_back","license"]:["cnic_front","cnic_back"];if(required.some(type=>!files[type]&&!docs.some(doc=>doc.documentType===type)))fieldErrors.documents="Upload all required verification documents before continuing.";}if(Object.keys(fieldErrors).length){setErrors(fieldErrors);setSaveError(true);setMessage("Please check the highlighted details before continuing.");return false;}}
-  if(submit){const checked=vendorSetupSchema.safeParse(values);if(!checked.success){setErrors(Object.fromEntries(checked.error.issues.map(i=>[i.path.join("."),i.message])));setSaveError(true);setMessage("Please edit the highlighted details before submitting.");return false;}}
+  if(next>current){const fieldErrors=setupStepErrors(values,current);if(current===1){const required=values.businessType==="company"?["cnic_front","cnic_back","license"]:["cnic_front","cnic_back"];if(required.some(type=>!files[type]&&!docs.some(doc=>doc.documentType===type)))fieldErrors.documents="Upload all required verification documents before continuing.";}if(Object.keys(fieldErrors).length){reportErrors(fieldErrors);setSaveError(true);setMessage("Please check the highlighted details before continuing.");return false;}}
+  if(submit){const checked=vendorSetupSchema.safeParse(values);if(!checked.success){reportErrors(Object.fromEntries(checked.error.issues.map(i=>[i.path.join("."),i.message])));setSaveError(true);setMessage("Please edit the highlighted details before submitting.");return false;}}
   saveLock.current=true;setBusy(true);
   try {
    const form=new FormData();
@@ -49,7 +53,7 @@ export function VendorOnboardingForm(){
    let r:Response;let d:{ok?:boolean;error?:string;fieldErrors?:Record<string,string>;documents?:{id:string;documentType:string}[]}|null;
    try{r=await fetch("/api/vendor/onboarding",{method:submit?"POST":"PATCH",body:form,signal:controller.signal,credentials:"same-origin"});d=await r.json().catch(error=>{if(controller.signal.aborted)throw error;return null;});}
    finally{clearTimeout(timeout);}
-   if(!r.ok){if(d?.fieldErrors)setErrors(d.fieldErrors);if(r.status===401)throw Error("Your seller session has expired. Sign in again, then return to this page. Your entries remain here.");throw Error(typeof d?.error==="string"?d.error:"The server could not save your details. Please retry in a moment.");}
+   if(!r.ok){if(d?.fieldErrors)reportErrors(d.fieldErrors);if(r.status===401)throw Error("Your seller session has expired. Sign in again, then return to this page. Your entries remain here.");throw Error(typeof d?.error==="string"?d.error:"The server could not save your details. Please retry in a moment.");}
    if(d?.ok!==true)throw Error("The server did not confirm your save. Please try again.");
    if(submit){await router.push("/vendor/status");return true;}
    if(d.documents){setDocs(d.documents);setFiles({});}
@@ -66,7 +70,7 @@ export function VendorOnboardingForm(){
   };
   return <label key={key} className="block min-w-0 text-sm font-semibold">{label}{key==="cnic"
    ?<CnicInput {...inputProps} onValueChange={value=>change(key,value)}/>
-   :key==="shopDescription"||key.toLowerCase().includes("address")?<textarea {...inputProps} rows={3} className={inputProps.className+" h-auto min-h-28 py-3"} onChange={e=>change(key,e.target.value)}/>:<input {...inputProps} list={key.toLowerCase().includes("province")?"pakistan-provinces":undefined} onChange={e=>change(key,e.target.value)}/>}
+   :key==="phone"||key.toLowerCase().endsWith("phone")?<PakistanMobileInput {...inputProps} wrapperClassName="mt-2" value={String(values[key]??"")} onValueChange={value=>change(key,value)}/>:key==="city"||key.endsWith("City")?<PakistanCitySelect {...inputProps} onValueChange={value=>change(key,value)}/>:key==="shopDescription"||key.toLowerCase().includes("address")?<textarea {...inputProps} rows={3} className={inputProps.className+" h-auto min-h-28 py-3"} onChange={e=>change(key,e.target.value)}/>:<input {...inputProps} list={key.toLowerCase().includes("province")?"pakistan-provinces":undefined} onChange={e=>change(key,e.target.value)}/>}
    {errors[key]&&<span id={key+"-error"} className="mt-1 block text-xs text-red-700">{errors[key]}</span>}</label>;
  });}
  const groups=[business,values.businessType==="company"?[...identity,["businessLegalName","Registered Business Name"],["businessRegNo","Registration Number"],["taxNumber","NTN (optional)"]]:identity,pickup,bank];

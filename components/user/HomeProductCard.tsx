@@ -81,8 +81,8 @@ export const HomeProductCard = memo(function HomeProductCard({ product, showNewT
         {discount && <span className="rounded-full bg-red-50 px-1.5 py-0.5 text-[10.5px] font-bold text-red-600 sm:text-[11px]">-{discount.percent}%</span>}
         {isNew && <span className="rounded-full bg-lime-100 px-1.5 py-0.5 text-[10.5px] font-bold text-emerald-800 sm:text-[11px]">New</span>}
       </span>}
-      <button type="button" onClick={() => void toggle(id)} disabled={savedLoading || saving} aria-pressed={saved} aria-label={saved ? `Remove ${product.name} from wishlist` : `Save ${product.name} to wishlist`} title={saved ? "Remove from wishlist" : "Add to wishlist"}
-        className="absolute right-3.5 top-3.5 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-white/95 text-neutral-500 shadow-sm transition hover:text-red-500 disabled:opacity-60">
+      <button type="button" onClick={() => void toggle(id)} disabled={savedLoading || saving} aria-pressed={saved} aria-label={saved ? `Remove ${product.name} from saved items` : `Save ${product.name} to saved items`} title={saved ? "Remove from saved items" : "Add to saved items"}
+        className="absolute right-3.5 top-3.5 z-20 flex h-11 w-11 items-center justify-center rounded-full bg-white/95 text-neutral-500 shadow-sm transition hover:text-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-700 disabled:opacity-60">
         <Heart className={`h-3.5 w-3.5 ${saved ? "fill-red-500 text-red-500" : ""}`} aria-hidden="true" />
       </button>
     </div>

@@ -8,6 +8,7 @@ import { LoadingLink } from "@/components/ui/LoadingLink";
 import { useLoadingRouter } from "@/hooks/useLoadingRouter";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
 import { wantInput } from "@/lib/want-schema";
+import { PakistanCitySelect } from "@/components/ui/PakistanCitySelect";
 
 export type SubmittedWant = { id: string; status: string };
 /** Existing Want loaded for editing; saving sends it back through moderation. */
@@ -154,7 +155,7 @@ export function WantForm({ categories, initialTitle, initialType = "PRODUCT", fo
       <label className="font-semibold text-brand-dark">What do you need? <span aria-hidden="true">*</span><input name="title" autoFocus={embedded} required minLength={3} maxLength={160} value={values.title} onChange={event => change("title", event.target.value)} placeholder="e.g. A study desk for my home office" /></label>
       <div className="grid gap-5 sm:grid-cols-2">
         <label className="font-semibold text-brand-dark">Category <span aria-hidden="true">*</span>{values.requestType === "PRODUCT" && categories.length ? <select name="category" required disabled={lockKeyFields} value={values.category} onChange={event => change("category", event.target.value)}><option value="">Choose a category</option>{categories.map(category => <option key={category}>{category}</option>)}{values.category && !categories.includes(values.category) && <option>{values.category}</option>}</select> : <input name="category" required readOnly={lockKeyFields} maxLength={100} value={values.category} onChange={event => change("category", event.target.value)} placeholder={values.requestType === "SERVICE" ? "e.g. AC Repair" : values.requestType === "GIFT" ? "e.g. Birthday Gifts" : "Product category"} />}</label>
-        <label className="font-semibold text-brand-dark">City <span aria-hidden="true">*</span><input name="city" required maxLength={100} value={values.city} onChange={event => change("city", event.target.value)} placeholder="e.g. Lahore" autoComplete="address-level2" /></label>
+        <label className="font-semibold text-brand-dark">City <span aria-hidden="true">*</span><PakistanCitySelect name="city" aria-label="City" required maxLength={100} value={values.city} onValueChange={value => change("city", value)} /></label>
       </div>
       <div className="grid gap-5 sm:grid-cols-2">
         <label className="font-semibold text-brand-dark">Quantity <span aria-hidden="true">*</span><input name="quantity" type="number" min={1} max={10000} step={1} required value={values.quantity} onChange={event => change("quantity", event.target.value)} /></label>
