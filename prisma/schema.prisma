@@ -887,6 +887,23 @@ model CommissionSetting {
   @@map("commissionsetting")
 }
 
+/// Admin-managed price ranges for service booking commission (inclusive bounds, PKR).
+/// Bookings snapshot the applied rate/amount on OrderService, so edits are never retroactive.
+model ServiceCommissionRange {
+  id                   String   @id @default(cuid())
+  minAmount            Decimal  @db.Decimal(12, 2)
+  maxAmount            Decimal  @db.Decimal(12, 2)
+  commissionPercentage Decimal  @db.Decimal(5, 2)
+  isActive             Boolean  @default(true)
+  sortOrder            Int      @default(0)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@unique([minAmount, maxAmount])
+  @@index([isActive, minAmount])
+  @@map("servicecommissionrange")
+}
+
 model VendorEarning {
   id                String              @id @default(cuid())
   vendorId          String

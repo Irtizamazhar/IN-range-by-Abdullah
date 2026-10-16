@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import toast from "react-hot-toast";
 import { Box, Gift, Info, Settings, Truck } from "lucide-react";
 import type { ISettings } from "@/types/settings";
+import { ServiceCommissionRanges } from "./ServiceCommissionRanges";
 
 type Cat = {
   id: string;
@@ -54,23 +55,14 @@ function EmptyState({ title, children }: { title: string; children: ReactNode })
   );
 }
 
-function parseRate(raw: string | undefined): number | null {
-  if (raw == null || raw.trim() === "") return null;
-  const n = Number(raw);
-  if (!Number.isFinite(n) || n < 0 || n > 100) return null;
-  return n;
-}
-
 export function CommissionClient() {
   const [tab, setTab] = useState<TabKey>("products");
   const [categories, setCategories] = useState<Cat[]>([]);
-  const [servicesRow, setServicesRow] = useState<Cat | null>(null);
   const [giftCategoryIds, setGiftCategoryIds] = useState<string[]>([]);
   const [giftTerms, setGiftTerms] = useState<string[]>([]);
   const [vendors, setVendors] = useState<VendorRow[]>([]);
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [vEdits, setVEdits] = useState<Record<string, string>>({});
-  const [serviceEdit, setServiceEdit] = useState("");
   const [loading, setLoading] = useState(true);
 
   const [siteSettings, setSiteSettings] = useState<ISettings | null>(null);
@@ -91,7 +83,6 @@ export function CommissionClient() {
       if (c.ok) {
         const d = (await c.json()) as {
           categories: Cat[];
-          services?: Cat | null;
           giftCategoryIds?: string[];
           giftTerms?: string[];
         };
@@ -101,8 +92,6 @@ export function CommissionClient() {
           e[x.id] = String(x.commissionPercentage);
         }
         setEdits(e);
-        setServicesRow(d.services ?? null);
-        setServiceEdit(d.services ? String(d.services.commissionPercentage) : "");
         setGiftCategoryIds(d.giftCategoryIds || []);
         setGiftTerms(d.giftTerms || []);
       }
@@ -203,34 +192,6 @@ export function CommissionClient() {
       toast.success("Vendor commission saved");
       await load(false);
 
-  }
-
-  async function saveServicesCommission() {
-    const n = parseRate(serviceEdit);
-    if (n == null) {
-      toast.error("Rate must be 0–100");
-      return;
-    }
-    const r = servicesRow
-      ? await fetch("/api/admin/commission-settings", {
-          method: "PATCH",
-          credentials: "same-origin",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: servicesRow.id, commissionPercentage: n }),
-        })
-      : await fetch("/api/admin/commission-settings", {
-          method: "POST",
-          credentials: "same-origin",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ categoryName: "Services", commissionPercentage: n }),
-        });
-    if (!r.ok) {
-      toast.error(r.status === 409 ? "Services commission already exists — reloaded" : "Update failed");
-      await load(false);
-      return;
-    }
-    toast.success("Services commission updated");
-    await load(false);
   }
 
   async function saveDeliveryFee() {
@@ -451,66 +412,10 @@ export function CommissionClient() {
           </>
         )}
 
-        {tab === "services" && (
-          <>
-            <InfoNote>
-              One platform rate applies to every booked service add-on. It is
-              snapshotted on each booking at checkout; vendor overrides do not
-              apply to services. Changes affect new bookings only.
-            </InfoNote>
-            {!servicesRow && (
-              <EmptyState title="Services commission is not configured">
-                Service checkout is blocked until a rate is set. Enter a rate
-                below and save to enable it.
-              </EmptyState>
-            )}
-            <div className="mt-4 overflow-x-auto rounded-card border border-borderGray bg-white shadow-card">
-              <table className="w-full min-w-[480px] text-left text-sm">
-                <thead className="border-b border-borderGray bg-lightGray">
-                  <tr>
-                    <th className="p-3">Category</th>
-                    <th className="p-3">Commission Rate %</th>
-                    <th className="p-3">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-b border-borderGray hover:bg-lightGray/40">
-                    <td className="p-3 font-medium">
-                      All services
-                      {!servicesRow && (
-                        <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
-                          Not set
-                        </span>
-                      )}
-                    </td>
-                    <td className="p-3">
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        step={0.01}
-                        placeholder="—"
-                        aria-label="Services commission rate"
-                        value={serviceEdit}
-                        onChange={(e) => setServiceEdit(e.target.value)}
-                        className={inputClass}
-                      />
-                    </td>
-                    <td className="p-3">
-                      <LoadingButton loadingLabel="Saving…"
-                        type="button"
-                        onClick={() => saveServicesCommission()}
-                        className={saveButtonClass}
-                      >
-                        Save
-                      </LoadingButton>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
+        {/* Kept mounted so unsaved range edits survive switching tabs. */}
+        <div className={tab === "services" ? "" : "hidden"}>
+          <ServiceCommissionRanges />
+        </div>
 
         {tab === "gifts" && (
           <>
