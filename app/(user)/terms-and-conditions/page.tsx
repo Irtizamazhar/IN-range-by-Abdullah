@@ -3,7 +3,14 @@ import Link from "@/components/ui/LoadingLink";
 export default function TermsAndConditionsPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
-      <h1 className="text-3xl font-extrabold text-yellow-400">Terms & Conditions</h1>
+      <h1 className="text-3xl font-extrabold text-brand-dark">Terms & Conditions</h1>
+      <aside className="mt-6 rounded-xl border border-brand-secondary bg-white p-6" aria-labelledby="terms-review">
+        <h2 id="terms-review" className="text-lg font-bold text-brand-dark">Official JORO terms pending approval</h2>
+        <p className="mt-3 text-sm leading-relaxed">The approved source document, 02_JORO_Terms_and_Conditions.docx (version 1.0, dated 13 October 2026), has not yet been supplied. The legacy content below has not been approved as that document.</p>
+        <p className="mt-3 text-sm leading-relaxed">Owner review is required to confirm the registered business name, registered address and official support details before the JORO terms can be finalized.</p>
+        <Link href="/account/help" className="mt-4 inline-block font-semibold text-brand-dark underline">Visit the Support Centre</Link>
+      </aside>
+      <h2 className="mt-8 text-xl font-bold text-brand-dark">Legacy terms — awaiting review</h2>
       <p className="mt-2 text-sm text-darkText/60">
         In Range By Abdullah use karte waqt neeche di gayi terms apply hoti hain.
       </p>

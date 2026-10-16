@@ -34,9 +34,9 @@ export function HeroSection({
           <HeroHeadline />
 
           <h2 className="mt-2 text-[24px] font-black leading-tight tracking-[-0.045em] text-white sm:text-[29px]">
-            Na mile?{" "}
+            Na Mile?{" "}
             <span className="text-brand-primary">
-              Want post karo.
+              Request a Want
             </span>
           </h2>
 

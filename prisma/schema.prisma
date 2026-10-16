@@ -226,7 +226,7 @@ model Order {
   services              OrderService[]
   offerQuote            OfferQuote?
   couponRedemption      CouponRedemption?
-  confirmationEmail     OrderConfirmationEmail?
+  confirmationEmails    OrderConfirmationEmail[]
 
   @@index([customerId, createdAt])
 
@@ -235,7 +235,8 @@ model Order {
 
 model OrderConfirmationEmail {
   id          String   @id @default(cuid())
-  orderId     String   @unique
+  orderId     String
+  recipientKey String  @default("customer") @db.VarChar(191)
   order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   status      String   @default("pending") @db.VarChar(20)
   attempts    Int      @default(0)
@@ -246,6 +247,7 @@ model OrderConfirmationEmail {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  @@unique([orderId, recipientKey])
   @@index([status, availableAt])
 }
 

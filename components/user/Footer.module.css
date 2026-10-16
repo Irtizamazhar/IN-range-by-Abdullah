@@ -9,10 +9,14 @@
 .column h2 { margin: 2px 0 16px; color: #005235; font-size: 13px; font-weight: 900; letter-spacing: .07em; text-transform: uppercase; }
 .column h2::after { content: ""; display: block; width: 30px; height: 3px; margin-top: 8px; border-radius: 3px; background: #b7e33a; }
 .links { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; font-size: 13px; }
-.links a { display: inline-flex; align-items: center; gap: 11px; color: #123d27; text-decoration: none; transition: color .2s ease; }
-.links a svg { width: 17px; height: 17px; flex: none; color: #005235; stroke-width: 1.8; }
-.links a:hover, .motto a:hover { color: #008b3b; text-decoration: underline; }
+.links a, .links button, .unavailable { display: inline-flex; min-height: 28px; align-items: center; gap: 11px; color: #123d27; text-decoration: none; transition: color .2s ease; }
+.links button { border: 0; background: none; padding: 0; font: inherit; cursor: pointer; text-align: left; }
+.links svg { width: 17px; height: 17px; flex: none; color: #005235; stroke-width: 1.8; }
+.unavailable { flex-wrap: wrap; color: #647369; cursor: default; }
+.unavailable small { border: 1px solid #dfede5; border-radius: 5px; padding: 1px 4px; font-size: 9px; line-height: 1.5; }
+.links a:hover, .links button:hover, .motto a:hover { color: #008b3b; text-decoration: underline; }
 .links a:focus-visible, .contact:focus-visible, .socialIcon:focus-visible, .motto a:focus-visible, .accordion summary:focus-visible { outline: 2px solid #128546; outline-offset: 3px; }
+.links button:focus-visible, .unavailable:focus-visible { outline: 2px solid #128546; outline-offset: 3px; }
 .payment, .contact { display: flex; align-items: center; gap: 11px; min-height: 55px; border: 1px solid #dfede5; border-radius: 14px; background: #fff; padding: 9px 11px; font-size: 12px; line-height: 1.35; color: #123d27; }
 .payment > svg, .contact > svg:first-child { width: 24px; height: 24px; flex: none; color: #008b3b; }
 .payment span { display: grid; gap: 2px; }
@@ -30,6 +34,9 @@
 .socialImage { width: 28px; height: 28px; object-fit: contain; }
 .motto { display: flex; justify-content: flex-end; align-items: center; gap: 10px; white-space: nowrap; }
 .motto a { color: #123d27; text-decoration: none; }
+.shortcutRequest { min-height: 44px; border: 0; background: none; padding: 0; color: inherit; font: inherit; cursor: pointer; }
+.shortcutRequest:hover { color: #008b3b; text-decoration: underline; }
+.shortcutRequest:focus-visible { outline: 2px solid #128546; outline-offset: 3px; }
 .motto b { color: #009a47; }
 .mobile { display: none; }
 @media (max-width: 1050px) and (min-width: 640px) { .desktop { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 25px; } .column:nth-child(3) { border-left: 0; padding-left: 0; } .skyline { height: 65px; } }
@@ -47,6 +54,7 @@
   .accordion summary svg:last-child { margin-left: auto; transition: transform .2s ease; }
   .accordion[open] summary svg:last-child { transform: rotate(180deg); }
   .accordion .links { padding: 3px 14px 14px 39px; }
+  .links a, .links button, .unavailable { min-height: 44px; }
   .accordion .payment { margin: 0 10px 10px; }
   .mobile > .contact { margin-top: 2px; }
   .skyline { order: 3; height: 82px; margin-top: 0; }

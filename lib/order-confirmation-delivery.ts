@@ -1,13 +1,16 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { sendMailOutcome } from "@/lib/mailer";
-import { orderConfirmationEmail } from "@/lib/joro-email-templates";
+import { orderConfirmationEmail, vendorOrderEmail } from "@/lib/joro-email-templates";
 import { orderConfirmationEligible, confirmationRetry } from "@/lib/order-confirmation-policy";
 
 /** Called in the same transaction as the authoritative order/payment write. */
 export async function queueOrderConfirmation(tx: Prisma.TransactionClient, order: { id: string; orderStatus: string; paymentMethod: string; paymentStatus: string }) {
   if (!orderConfirmationEligible(order)) return;
-  await tx.orderConfirmationEmail.upsert({ where: { orderId: order.id }, create: { orderId: order.id }, update: {} });
+  const recipients = ["customer", ...(await tx.vendorShopOrder.findMany({ where: { orderId: order.id }, select: { id: true } })).map(shop => `vendor:${shop.id}`)];
+  for (const recipientKey of recipients) {
+    await tx.orderConfirmationEmail.upsert({ where: { orderId_recipientKey: { orderId: order.id, recipientKey } }, create: { orderId: order.id, recipientKey }, update: {} });
+  }
 }
 
 /** One message per invocation bounds runtime; concurrent workers use an atomic claim. */
@@ -21,22 +24,34 @@ export async function deliverOrderConfirmation(db = prisma, send = sendMailOutco
   if (!claimed.count) return { processed: 0 };
   let order;
   let email;
+  let recipient: string | undefined;
   try {
-    order = await db.order.findUnique({ where: { id: job.orderId }, include: { customer: true, orderItems: true } });
-    if (order) email = orderConfirmationEmail(order);
+    order = await db.order.findUnique({ where: { id: job.orderId }, include: { customer: true, orderItems: true, couponRedemption: true, services: true } });
+    if (order && orderConfirmationEligible(order)) {
+      if (job.recipientKey.startsWith("vendor:")) {
+        const shop = await db.vendorShopOrder.findFirst({ where: { id: job.recipientKey.slice(7), orderId: order.id }, include: { vendor: { select: { email: true, shopName: true, ownerName: true, status: true } } } });
+        if (shop && shop.status !== "cancelled" && shop.vendor.status === "approved") {
+          recipient = shop.vendor.email;
+          email = vendorOrderEmail(order, shop);
+        }
+      } else if (job.recipientKey === "customer" && order.customer?.isActive) {
+        recipient = order.customer.email;
+        email = orderConfirmationEmail(order);
+      }
+    }
   } catch {
     // No SMTP call has begun, so this failure can safely be retried.
     await db.orderConfirmationEmail.update({ where: { id: job.id }, data: { status: job.attempts + 1 >= 5 ? "failed" : "pending", availableAt: confirmationRetry(job.attempts + 1), lastError: "Could not load order or prepare template" } });
     return { processed: 1 };
   }
-  if (!order || !orderConfirmationEligible(order) || !order.customer?.isActive) {
+  if (!email || !recipient || !/^[^\s@<>\r\n]+@[^\s@<>\r\n]+\.[^\s@<>\r\n]+$/.test(recipient)) {
     await db.orderConfirmationEmail.update({ where: { id: job.id }, data: { status: "skipped", lastError: "Order or owner no longer eligible" } });
     return { processed: 1 };
   }
   // Customer auth currently has no local email-verification flag. Google verification
   // remains enforced by the existing OAuth flow. Never use checkout-supplied email.
   let outcome: "accepted" | "retry" | "uncertain";
-  try { outcome = await send({ to: order.customer.email, ...email!, messageId: `<joro-order-confirmation-${job.id}@joro.pk>` }); }
+  try { outcome = await send({ to: recipient, ...email, messageId: `<joro-order-confirmation-${job.id}@joro.pk>` }); }
   catch { outcome = "uncertain"; }
   await db.orderConfirmationEmail.update({ where: { id: job.id }, data: {
     status: outcome === "accepted" ? "accepted" : outcome === "uncertain" ? "uncertain" : job.attempts + 1 >= 5 ? "failed" : "pending",
