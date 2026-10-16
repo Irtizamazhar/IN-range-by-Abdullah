@@ -23,6 +23,7 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
         select: {
           orderNumber: true,
           totalAmount: true,
+          handlingFee: true,
           orderItems: {
             select: { quantity: true, price: true, name: true, image: true },
           },
@@ -41,7 +42,8 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
     0
   );
   const checkoutTotalAmount = Number(row.order?.totalAmount || 0);
-  const deliveryCharge = Math.max(0, checkoutTotalAmount - parentSubtotal);
+  const handlingFee = Number(row.order?.handlingFee ?? 0);
+  const deliveryCharge = Math.max(0, checkoutTotalAmount - parentSubtotal - handlingFee);
   return NextResponse.json({
     order: {
       ...order,

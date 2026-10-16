@@ -19,7 +19,8 @@ export default async function InvoicePage({ params }: { params: { orderId: strin
     (sum, item) => sum + Number(item.price) * item.quantity,
     0
   );
-  const delivery = Math.max(0, Number(order.totalAmount) - itemsTotal);
+  const handlingFee = Number(order.handlingFee ?? 0);
+  const delivery = Math.max(0, Number(order.totalAmount) - itemsTotal - handlingFee);
   const refunded = order.refunds.reduce((sum, refund) => sum + Number(refund.amount), 0);
 
   return (
@@ -48,6 +49,7 @@ export default async function InvoicePage({ params }: { params: { orderId: strin
 
         <dl className="ml-auto max-w-sm space-y-2 text-sm">
           <div className="flex justify-between"><dt className="text-darkText/55">Items</dt><dd>{formatPKR(itemsTotal)}</dd></div>
+          {handlingFee > 0 && <div className="flex justify-between"><dt className="text-darkText/55">Handling fee</dt><dd>{formatPKR(handlingFee)}</dd></div>}
           <div className="flex justify-between"><dt className="text-darkText/55">Delivery</dt><dd>{formatPKR(delivery)}</dd></div>
           <div className="flex justify-between border-t border-borderGray pt-3 text-base font-black text-brand-dark"><dt>Order total</dt><dd>{formatPKR(Number(order.totalAmount))}</dd></div>
           {refunded > 0 ? <div className="flex justify-between font-bold text-emerald-700"><dt>Refunded</dt><dd>-{formatPKR(refunded)}</dd></div> : null}

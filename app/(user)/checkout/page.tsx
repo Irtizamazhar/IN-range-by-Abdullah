@@ -14,6 +14,7 @@ import { formatPKR } from "@/lib/format";
 import { PakistanCitySelect } from "@/components/ui/PakistanCitySelect";
 import { WhatsAppButton } from "@/components/user/WhatsAppButton";
 import type { ISettings } from "@/types/settings";
+import { Info } from "lucide-react";
 type PaymentMethod = "cod";
 
 export default function CheckoutPage() {
@@ -30,6 +31,9 @@ export default function CheckoutPage() {
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number } | null>(null);
   const [couponMessage, setCouponMessage] = useState("");
   const [couponBusy, setCouponBusy] = useState(false);
+  const [handlingFee, setHandlingFee] = useState<number | null>(null);
+  const [handlingFeeError, setHandlingFeeError] = useState("");
+  const [handlingFeeVersion, setHandlingFeeVersion] = useState(0);
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -137,9 +141,39 @@ export default function CheckoutPage() {
       (c) => c.toLowerCase() === city.trim().toLowerCase()
     ) ?? false;
   const deliveryCharge = items.length === 1 && items[0].quoteId ? Number(items[0].quoteShipping || 0) : Number(settings?.codCharges ?? 0);
-  const totalAmount = subtotal + deliveryCharge - (appliedCoupon?.discount || 0);
+  const totalAmount = subtotal + (handlingFee ?? 0) + deliveryCharge - (appliedCoupon?.discount || 0);
   const cartSignature = JSON.stringify(items.map(i => [i.productId, i.quantity, i.price, i.variant, i.serviceId, i.quoteId]));
   useEffect(() => { setAppliedCoupon(null); setCouponMessage(""); }, [cartSignature]);
+
+  // Server-calculated preview; POST /api/orders recalculates and rejects a mismatch.
+  const appliedCouponCode = appliedCoupon?.code;
+  useEffect(() => {
+    if (!isCustomer || items.length === 0) return;
+    const controller = new AbortController();
+    setHandlingFee(null);
+    setHandlingFeeError("");
+    const timer = setTimeout(async () => {
+      try {
+        const response = await fetch("/api/checkout/handling-fee", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
+          body: JSON.stringify({
+            couponCode: appliedCouponCode,
+            quoteId: items.find(i => i.quoteId)?.quoteId,
+            products: items.map(i => ({ productId: i.productId, quantity: i.quantity })),
+          }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || typeof data.handlingFee !== "number") throw new Error(data.error || "Could not calculate the handling fee.");
+        setHandlingFee(data.handlingFee);
+      } catch (error) {
+        if (!controller.signal.aborted) setHandlingFeeError(error instanceof Error ? error.message : "Could not calculate the handling fee.");
+      }
+    }, 250);
+    return () => { controller.abort(); clearTimeout(timer); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- cartSignature captures the relevant item fields.
+  }, [cartSignature, appliedCouponCode, isCustomer, handlingFeeVersion]);
 
   async function applyCoupon() {
     setCouponBusy(true);
@@ -194,6 +228,7 @@ export default function CheckoutPage() {
           city,
           paymentMethod,
           couponCode: appliedCoupon?.code,
+          expectedHandlingFee: handlingFee ?? undefined,
           quoteId: items.find(i => i.quoteId)?.quoteId,
           products: items.map((i) => ({
             serviceId: i.serviceId,
@@ -229,6 +264,7 @@ export default function CheckoutPage() {
       }
       if (!res.ok) {
         toast.error(data.error || "Could not place order");
+        if (res.status === 409) setHandlingFeeVersion((v) => v + 1);
         return;
       }
       toast.success("Order placed successfully!");
@@ -268,6 +304,7 @@ export default function CheckoutPage() {
   const placeOrderDisabled =
     loading ||
     items.length === 0 ||
+    handlingFee === null ||
     !infoComplete ||
     (paymentMethod === "cod" && !codAllowed);
 
@@ -646,6 +683,22 @@ export default function CheckoutPage() {
                 <span className="font-semibold">{formatPKR(subtotal)}</span>
               </div>
               <div className="flex items-center justify-between">
+                <span className="inline-flex items-center gap-1 text-darkText/70">
+                  Handling Fee
+                  <Info className="h-3.5 w-3.5" aria-label="Platform fee based on applicable product commission" />
+                </span>
+                <span className="font-semibold">
+                  {handlingFeeError ? (
+                    <button type="button" onClick={() => setHandlingFeeVersion((v) => v + 1)} className="text-xs font-semibold text-red-600 underline">Retry</button>
+                  ) : handlingFee === null ? (
+                    <span className="inline-block h-4 w-14 animate-pulse rounded bg-lightGray" aria-label="Calculating handling fee" />
+                  ) : (
+                    formatPKR(handlingFee)
+                  )}
+                </span>
+              </div>
+              {handlingFeeError && <p role="alert" className="text-xs text-red-600">{handlingFeeError}</p>}
+              <div className="flex items-center justify-between">
                 <span className="text-darkText/70">Delivery charges</span>
                 <span className="font-semibold">
                   {deliveryCharge === 0 ? "FREE" : formatPKR(deliveryCharge)}
@@ -654,9 +707,8 @@ export default function CheckoutPage() {
               {appliedCoupon && <div className="flex items-center justify-between text-[#005235]"><span>Coupon ({appliedCoupon.code})</span><span>-{formatPKR(appliedCoupon.discount)}</span></div>}
               <div className="flex items-center justify-between border-t border-borderGray pt-2 text-base font-bold text-darkText">
                 <span>Total</span>
-                <span>{formatPKR(totalAmount)}</span>
-              </div>
-            </div>
+                <span>{handlingFee === null ? "…" : formatPKR(totalAmount)}</span>
+              </div>            </div>
           </aside>
         </LoadingForm>
       </div>
