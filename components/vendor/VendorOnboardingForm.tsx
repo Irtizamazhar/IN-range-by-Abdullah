@@ -9,6 +9,7 @@ import { LogoMark } from "@/components/user/LogoMark";
 import { CnicInput } from "@/components/ui/CnicInput";
 import { slugifyStoreName } from "@/lib/store-slug";
 import { vendorSetupSchema, setupStepErrors } from "@/lib/vendor-onboarding-schema";
+const SAVE_TIMEOUT_MS=30000;
 const steps=["Store & Business","Identity / KYC","Pickup & Return","Bank / Payout","Review"];
 type Values=Record<string,string|boolean|number>;
 const business=[["shopName","Store Name"],["storeSlug","Store Slug"],["category","Primary Product Category"],["shopDescription","Store / Business Description"],["phone","Contact Number"],["address","Business Address"],["city","City"],["province","Province / Region"],["postalCode","Postal Code (optional)"]];
@@ -31,6 +32,7 @@ export function VendorOnboardingForm(){
   }catch(error){if(!signal?.aborted)setLoadError(error instanceof Error?error.message:"Could not load setup.");}finally{if(!signal?.aborted)setLoading(false);}
  },[]);
  useEffect(()=>{const controller=new AbortController();void load(controller.signal);return()=>controller.abort();},[load]);
+ useEffect(()=>{const key=Object.keys(errors)[0];if(key)document.querySelector<HTMLElement>(`[name="${key}"]`)?.focus();},[errors]);
  function change(key:string,value:string|boolean){setValues(v=>({...v,[key]:value,...(key==="shopName"&&(!v.storeSlug||v.storeSlug===slugifyStoreName(String(v.shopName||"")))?{storeSlug:slugifyStoreName(String(value))}:{})}));setErrors(e=>({...e,[key]:""}));}
  async function save(submit=false,next=current){
   if(saveLock.current)return false;
@@ -41,13 +43,18 @@ export function VendorOnboardingForm(){
   try {
    const form=new FormData();
    const allowed=[...business,...identity,...bank,...pickup,...returns].map(([key])=>key).concat(["businessType","businessRegNo","businessLegalName","taxNumber","returnSameAsPickup","declarationAccepted"]);
-   for(const key of allowed)if(values[key]!==undefined)form.set(key,String(values[key]));
+   for(const key of allowed)if(values[key]!==undefined&&values[key]!==null)form.set(key,String(values[key]));
    form.set("step",String(next));if(next>current){form.set("intent","continue");form.set("currentStep",String(current));}for(const [key,file] of Object.entries(files))form.set(key,file);
-   const r=await fetch("/api/vendor/onboarding",{method:submit?"POST":"PATCH",body:form});const d=await r.json();if(!r.ok){if(d.fieldErrors)setErrors(d.fieldErrors);throw Error(d.error||"Could not save setup.");}if(d.ok!==true)throw Error("The server did not confirm your save. Please try again.");
+   const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),SAVE_TIMEOUT_MS);
+   let r:Response;let d:{ok?:boolean;error?:string;fieldErrors?:Record<string,string>;documents?:{id:string;documentType:string}[]}|null;
+   try{r=await fetch("/api/vendor/onboarding",{method:submit?"POST":"PATCH",body:form,signal:controller.signal,credentials:"same-origin"});d=await r.json().catch(error=>{if(controller.signal.aborted)throw error;return null;});}
+   finally{clearTimeout(timeout);}
+   if(!r.ok){if(d?.fieldErrors)setErrors(d.fieldErrors);if(r.status===401)throw Error("Your seller session has expired. Sign in again, then return to this page. Your entries remain here.");throw Error(typeof d?.error==="string"?d.error:"The server could not save your details. Please retry in a moment.");}
+   if(d?.ok!==true)throw Error("The server did not confirm your save. Please try again.");
    if(submit){await router.push("/vendor/status");return true;}
    if(d.documents){setDocs(d.documents);setFiles({});}
    setCurrent(next);setMessage("Progress saved. You can continue setup after signing in again.");return true;
-  }catch(e){setSaveError(true);setMessage(e instanceof Error?e.message:"Could not save setup.");return false;}finally{saveLock.current=false;setBusy(false);}
+  }catch(e){setSaveError(true);setMessage(e instanceof Error&&e.name==="AbortError"?"The save timed out. Your entries are still here; check your saved progress before retrying.":e instanceof Error?e.message:"Could not save setup. Please retry.");return false;}finally{saveLock.current=false;setBusy(false);}
  }
  function fields(list:string[][]){return list.map(([key,label])=>{
   const inputProps={

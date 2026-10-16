@@ -42,10 +42,12 @@ async function main() {
       const page = await context.newPage();
       const clientErrors = [];
       page.on('pageerror', error => clientErrors.push(error.message));
-      let saved = { ownerName: 'Test Seller', email: 'seller@example.invalid', phone: '', city: '', address: '', shopName: '', businessType: 'individual', primaryCategory: 'Other', documents: [], onboardingData: {} };
+      let saved = { ownerName: 'Test Seller', email: 'seller@example.invalid', phone: '', city: '', address: '', shopName: '', bankName: null, businessType: 'individual', primaryCategory: 'Other', documents: [], onboardingData: {} };
       let writes = 0;
       let fail = false;
       let malformed = false;
+      let expired = false;
+      let proxyError = false;
       let release;
       let hold = false;
       await page.route('**/api/vendor/onboarding', async route => {
@@ -54,8 +56,11 @@ async function main() {
         const form = await new Request(route.request().url(), { method: route.request().method(), headers: route.request().headers(), body: route.request().postDataBuffer() }).formData();
         if (hold) await new Promise(resolve => { release = resolve; });
         if (fail) return route.fulfill({ status: 503, json: { error: 'Setup could not be saved. Please retry.' } });
+        if (expired) return route.fulfill({ status: 401, json: { error: 'Seller sign-in required.' } });
+        if (proxyError) return route.fulfill({ status: 502, contentType: 'text/html', body: '<h1>Bad Gateway</h1>' });
         if (malformed) return route.fulfill({ json: {} });
         const values = Object.fromEntries(form);
+        assert.equal('bankName' in values && values.bankName === 'null', false, 'nullable saved fields must never be persisted as literal null text');
         saved = { ...saved, ...values, ownerName: values.name, primaryCategory: values.category, onboardingData: { ...values, step: Number(values.step), returnSameAsPickup: values.returnSameAsPickup === 'true' } };
         return route.fulfill({ json: { ok: true, documents: [] } });
       });
@@ -67,6 +72,7 @@ async function main() {
       await primary.click();
       assert.equal(writes, 0, 'invalid active step must not be sent');
       await page.getByRole('alert').first().waitFor();
+      await page.waitForFunction(() => document.activeElement?.getAttribute('name') === 'shopName');
       for (const [label, value] of Object.entries({ 'Store Name': 'Pakistani Store', 'Store / Business Description': 'Carefully selected products for your home.', 'Contact Number': '03001234567', 'Business Address': '123 Test Street', 'City': 'Lahore', 'Province / Region': 'Punjab', 'Postal Code (optional)': '54000' })) await page.getByLabel(label, { exact: true }).fill(value);
       // Save Progress persists without navigating.
       await secondary.click();
@@ -74,15 +80,18 @@ async function main() {
       assert.equal(saved.onboardingData.step, 0);
       await page.getByLabel('Store Name', { exact: true }).waitFor();
       // Failed and malformed saves retain all values and the current step.
-      for (const mode of ['failure', 'malformed']) {
+      for (const mode of ['failure', 'malformed', 'expired', 'proxy']) {
         fail = mode === 'failure'; malformed = mode === 'malformed';
+        expired = mode === 'expired'; proxyError = mode === 'proxy';
         await primary.click();
-        await page.getByRole('alert').first().waitFor();
+        await page.getByText(mode === 'failure' ? 'Setup could not be saved. Please retry.' : mode === 'malformed' ? 'The server did not confirm your save. Please try again.' : mode === 'expired' ? /session has expired/i : /server could not save your details/i).waitFor();
+        if (expired) assert.match(await page.getByRole('alert').first().innerText(), /session has expired/i);
+        if (proxyError) assert.match(await page.getByRole('alert').first().innerText(), /could not save your details/i);
         assert.equal(await page.getByLabel('City', { exact: true }).inputValue(), 'Lahore');
         assert.equal(await page.getByLabel('Postal Code (optional)', { exact: true }).inputValue(), '54000');
         assert.equal(saved.onboardingData.step, 0);
       }
-      fail = false; malformed = false; hold = true;
+      fail = false; malformed = false; expired = false; proxyError = false; hold = true;
       const before = writes;
       await primary.click();
       await page.waitForFunction(() => document.querySelector('form')?.getAttribute('aria-busy') === 'true');

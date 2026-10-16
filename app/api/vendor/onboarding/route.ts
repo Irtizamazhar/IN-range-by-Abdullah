@@ -7,8 +7,20 @@ import { saveVendorDocumentBuffer } from "@/lib/vendor-doc-upload";
 import { imageExtension } from "@/lib/security/image-signature";
 import { setupStepErrors } from "@/lib/vendor-onboarding-schema";
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
+
+function onboardingApi(operation: "load" | "save" | "submit", work: () => Promise<unknown>) {
+  return api(async () => {
+    try { return await work(); }
+    catch (error) {
+      // Log only the operation and Prisma error code. Never log form fields or identity documents.
+      if (!(error instanceof ApiError)) console.error("Vendor onboarding failed", { operation, error: error instanceof Error ? error.name : "Unknown", ...(error instanceof Prisma.PrismaClientKnownRequestError ? { code: error.code } : {}) });
+      throw error;
+    }
+  });
+}
 
 async function actor() {
   const session = await getVendorFromSession({ allowUnapproved: true });
@@ -40,7 +52,7 @@ async function setupRequest(request: Request) {
 }
 
 export async function GET() {
-  return api(async () => {
+  return onboardingApi("load", async () => {
     const vendor = await actor();
     return { vendor: await prisma.vendor.findUnique({
       where: { id: vendor.id },
@@ -53,7 +65,7 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
-  return api(async () => {
+  return onboardingApi("save", async () => {
     sameOrigin(request);
     const vendor = await actor();
     if (!["onboarding","rejected"].includes(vendor.status)) throw new ApiError(409, "This application is no longer editable.");
@@ -83,7 +95,7 @@ export async function PATCH(request: Request) {
 }
 
 export async function POST(request: Request) {
-  return api(async () => {
+  return onboardingApi("submit", async () => {
     sameOrigin(request);
     const vendor = await actor();
     if (!["onboarding","rejected"].includes(vendor.status)) throw new ApiError(409, "This application is no longer editable.");

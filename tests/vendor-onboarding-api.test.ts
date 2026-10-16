@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { api, ApiError, sameOrigin } from "../lib/marketplace-api";
 import { vendorSetupDraftSchema, vendorSetupSchema, setupStepErrors } from "../lib/vendor-onboarding-schema";
 
@@ -22,6 +23,7 @@ function routeFixture() {
     "@/lib/vendor-doc-upload": { saveVendorDocumentBuffer: async () => {} },
     "@/lib/security/image-signature": { imageExtension: () => "png" },
     "next/server": { NextResponse },
+    "@prisma/client": { Prisma },
   };
   const output = ts.transpileModule(readFileSync(resolve("app/api/vendor/onboarding/route.ts"), "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   const exported: { PATCH?: (request: Request) => Promise<Response>; POST?: (request: Request) => Promise<Response> } = {};
