@@ -1,0 +1,103 @@
+# Verifies the Prisma migration workflow and the production build on a GitHub-hosted runner.
+# Uses only throwaway MySQL 8.0 and MariaDB 11.8 service containers on the runner, with CI-only
+# credentials defined here. No repository secrets are used and no production database is reachable.
+# This workflow does not deploy anything; Hostinger deploys independently.
+name: Migration safety
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: migration-safety-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ci-only-root-password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pci-only-root-password"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+      mariadb:
+        # Production runs MariaDB 11.8 with case-sensitive table names (the Linux default).
+        image: mariadb:11.8
+        env:
+          MARIADB_ROOT_PASSWORD: ci-only-root-password
+        ports:
+          - 3307:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+
+    env:
+      # CI-only values. None of these are secrets and none point outside the runner.
+      DATABASE_URL: mysql://root:ci-only-root-password@127.0.0.1:3306/joro_disposable_ci
+      MYSQL_TEST_SERVER_URL: mysql://root:ci-only-root-password@127.0.0.1:3306
+      MARIADB_TEST_SERVER_URL: mysql://root:ci-only-root-password@127.0.0.1:3307
+      NEXTAUTH_SECRET: ci-placeholder-not-a-real-secret
+      NEXTAUTH_URL: http://localhost:3000
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      VENDOR_JWT_SECRET: ci-placeholder-not-a-real-secret
+      NEXT_TELEMETRY_DISABLED: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Refuse anything but the local CI databases
+        run: node tests/migration-scenarios/assert-ci-databases.mjs
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate Prisma schema
+        run: npx prisma validate
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Missing-migration check
+        run: npm run db:check
+
+      - name: Replay all migrations into an empty database (MySQL 8.0)
+        env:
+          MIGRATION_CHECK_DATABASE_URL: mysql://root:ci-only-root-password@127.0.0.1:3306/joro_disposable_replay
+        run: npm run db:check:full
+
+      - name: Migration workflow scenarios (MySQL 8.0)
+        env:
+          MIGRATION_TEST_SERVER_URL: ${{ env.MYSQL_TEST_SERVER_URL }}
+        run: bash tests/migration-scenarios/run-scenarios.sh
+
+      - name: Schema watcher test (MySQL 8.0)
+        env:
+          MIGRATION_TEST_SERVER_URL: ${{ env.MYSQL_TEST_SERVER_URL }}
+        run: node tests/migration-scenarios/watch.test.mjs
+
+      - name: Production-shaped deployment rehearsal (MariaDB 11.8)
+        env:
+          MIGRATION_TEST_SERVER_URL: ${{ env.MARIADB_TEST_SERVER_URL }}
+        run: bash tests/migration-scenarios/deploy-rehearsal.sh
+
+      - name: Prepare the build database
+        run: npx prisma migrate deploy
+
+      - name: Production build
+        run: npm run build

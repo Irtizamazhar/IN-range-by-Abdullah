@@ -1,2 +1,5 @@
 # Prisma checksums migration files; keep identical bytes on Windows and Hostinger.
 prisma/migrations/**/*.sql text eol=lf
+# Git hooks and shell scripts run under sh/bash, including on Linux CI runners.
+.githooks/* text eol=lf
+*.sh text eol=lf

@@ -25,28 +25,126 @@ Prisma does not read that folder. The active history is:
 
 ## Workflow for every schema change
 
-1. Edit `prisma/schema.prisma`. Give new models a lowercase `@@map("tablename")`.
-2. Run `npx prisma migrate dev --name <descriptive_name>` against your local database.
-3. Read the generated `migration.sql`, then test the feature locally.
-4. Commit the schema change, the new migration folder, and the application code together, then push.
-5. The Hostinger build applies pending migrations before building (see below).
+No Prisma command needs to be typed for routine work. `npm run dev` does it:
 
-Rules:
+1. `git pull --rebase` first, so you start from your teammate's latest migrations.
+2. Run `npm run dev`. Before starting Next.js it applies any committed migrations you do not have yet.
+3. Edit `prisma/schema.prisma` while the dev server runs. Give new models a lowercase `@@map("tablename")`.
+   On every save the dev server pauses, and `scripts/db-migrations.mjs`:
+   - generates a timestamped migration named after the change (for example `20261020101500_add_giftcard_table`);
+   - applies it to your local development database if it is purely additive;
+   - regenerates Prisma Client, updates `prisma/migration-manifest.json`, stages the new migration folder and
+     the manifest with `git add`, and restarts the dev server.
+   Saves that need no database change (comments, formatting) create nothing. Rapid saves are queued, and only
+   one migration process runs at a time.
+4. Read the generated `prisma/migrations/<timestamp>_<name>/migration.sql`.
+5. Commit `prisma/schema.prisma`, the migration folder, `prisma/migration-manifest.json` and the code together.
+6. `git pull --rebase`, then `git push`. Never force-push.
 
-- Never run `prisma db push`, `prisma migrate reset`, or manual `ALTER TABLE` statements against production.
-- Never edit a migration after it has been applied anywhere; add a new migration instead.
-- Keep changes compatible with the code that is still running while the migration applies:
-  add columns as nullable or with a default, and remove old columns in a later release.
+Without the dev server, `npm run db:migrate` runs the same cycle once (`npm run db:migrate -- --name <name>` to
+choose the name). `SKIP_DB_MIGRATE=1 npm run dev` starts Next.js without touching the database.
+
+### Changes that need approval
+
+The cycle generates the SQL first and applies it only if every statement is additive (new tables, optional
+columns, columns with a default, ordinary indexes, foreign keys and unique keys on new tables). It stops,
+applies nothing, and explains each statement when a change can lose data or fail on existing rows:
+
+| Change | Why it stops | Usual safe approach |
+| --- | --- | --- |
+| Dropping a table or column, changing the primary key | Data is deleted | Remove the code first; drop in a later release after a backup |
+| Renaming a column or table | Prisma generates drop + add, which deletes the data | Edit the SQL to `RENAME COLUMN` / `RENAME TABLE` before approving |
+| Changing a type, length, precision, nullability, default or enum values | Can fail or truncate existing values | Check existing data; widen first, or stage the change |
+| Adding a required column without a default | Fails on a table that has rows | Add a `@default`, or make it optional, backfill, then make it required |
+| New unique constraint or foreign key on an existing table | Fails if existing rows violate it | Check for duplicates or orphan rows first |
+| Any other statement it does not recognise | Unknown effect | Review it |
+
+Then either approve (after reviewing or editing the SQL) with `npm run db:migrate:approve`, or discard the
+unapplied migration with `npm run db:migrate -- --discard` and change the schema. If you change the schema again
+before approving, the unapproved migration is regenerated automatically unless you edited its SQL.
+
+The cycle also stops, without changing anything, on drift (the development database was changed outside the
+migrations), on a previously failed migration, on database history that is not in `prisma/migrations`, on
+duplicate migration timestamps, and on a missing or non-local `DATABASE_URL`.
+
+### Safety rules built into the tooling
+
+- Development commands only accept `localhost`, `127.0.0.1` or `::1` (extra hosts via `DEV_DATABASE_HOSTS`),
+  refuse database names that look like Hostinger's (`u<digits>_...`), and refuse `NODE_ENV=production`.
+- Prisma is never given a terminal, so it can never prompt for, or perform, a database reset. Nothing runs
+  `prisma db push`, `prisma migrate reset` or `prisma migrate resolve`.
+- Never edit a migration after it has been applied anywhere; add a new migration instead. The check below
+  detects edited migrations.
+- Keep changes compatible with the code that is still running while a migration applies.
 - Never execute the SQL produced by `prisma migrate diff` against production (see "Accepted differences").
+
+### Missing-migration checks
+
+`prisma/migration-manifest.json` records a fingerprint of `schema.prisma` (comments and formatting ignored) and
+the SHA-256 of every migration. `npm run db:check` fails when the schema changed without a migration, a
+migration is missing or unrecorded, a migration was edited, timestamps collide, or the lock file is wrong.
+It runs:
+
+- in the Git `pre-push` hook (`.githooks/pre-push`, enabled by `npm install` through the `prepare` script),
+  against the commit being pushed;
+- in `npm test` (`tests/migration-workflow.test.ts`);
+- in `npm run build:deploy` before any database change.
+
+`npm run db:check:full` additionally replays every migration into a temporary local database and compares the
+result with `schema.prisma` exactly. If Prisma Client cannot be regenerated (for example on Windows while a dev
+server holds it), `npm run db:check:full -- --update-manifest` records the manifest after that replay passes.
+
+### Continuous integration
+
+`.github/workflows/migration-safety.yml` runs on every push and pull request on a GitHub-hosted runner, in
+order: unit tests, `db:check`, `db:check:full`, the migration scenarios (`tests/migration-scenarios/run-scenarios.sh`),
+the schema watcher test, a production-shaped deployment rehearsal on MariaDB 11.8, and `npm run build`. It uses
+throwaway MySQL 8.0 and MariaDB 11.8 service containers with CI-only credentials, no repository secrets, and a
+first step that refuses any database URL that is not local. It does not deploy.
+
+The same tests run locally against a disposable server, never a database you use:
+`MIGRATION_TEST_SERVER_URL=mysql://user:password@127.0.0.1:3306 npm run test:migrations:scenarios`
+(also `test:migrations:watch` and `test:migrations:deploy`). They only create and drop `joro_disposable_*` databases.
+
+### Two developers on `main`
+
+- Pull before changing the schema and before pushing. `npm run dev` applies the other developer's migrations.
+- If both of you changed the schema, `prisma/migration-manifest.json` conflicts on purpose. Resolve the
+  conflicts in `schema.prisma`, keep both migration folders, take either side of the manifest, then run
+  `npm run db:migrate`. It applies the other migration, generates a follow-up migration if the merged schema
+  still needs one, and rewrites the manifest. Commit the result.
+- Two migration folders with the same timestamp, or a migration already applied locally that is no longer in
+  `prisma/migrations`, are reported instead of being guessed at.
+
+### Local databases created before the baseline
+
+A development database that still has the archived history reports "migration history that is not in
+prisma/migrations". Either point `DATABASE_URL` in `.env.local` at a new empty database (the cycle creates the
+whole schema), or give the existing local database the same one-time baseline as production: confirm with
+`npx prisma migrate diff --from-url <local> --to-schema-datamodel prisma/schema.prisma` that only accepted
+differences remain, run `npx prisma migrate resolve --applied 0_baseline` against that local database, then
+`npm run db:migrate`.
 
 ## Hostinger deployment
 
-- Build command: `npm run build:deploy`
-  (`prisma migrate deploy`, then `prisma generate`, then `next build`; a failed migration stops the build).
-  Use it only after the one-time baseline below has been completed.
+- Build command: `npm run build:deploy`, which runs in order:
+  1. `node scripts/db-migrations.mjs deploy-preflight`: requires `DATABASE_URL` (mysql://), verifies the
+     committed migrations against the manifest, checks the database connection, and stops if the database
+     already has tables but `0_baseline` is not recorded (read-only checks);
+  2. `prisma migrate deploy`: applies committed migrations only, under Prisma's database lock, so concurrent
+     deployments wait instead of running twice;
+  3. `prisma migrate status`: prints the migration state to the build log and fails unless it is up to date;
+  4. `npm run build`: `prisma generate`, then `next build`.
+  Each step runs only if the previous one succeeded. Hostinger's documentation says the live version is switched
+  only after a successful build; confirm this once on the first real deployment.
+  Switch to it only after the one-time baseline below has been completed; before that, step 1 stops the
+  deployment without touching the database.
 - Start command: `npm start`.
 - `DATABASE_URL` must be set in Hostinger's environment variables. Hostinger injects environment variables
-  into the build and the running app. Never commit it.
+  into the build and the running app. Never commit it. Development and production use different credentials;
+  the development tooling refuses non-local hosts.
+- After a deployment that applied a migration, the build log lists `Applying migration ...`; check the new
+  tables or columns, then the affected pages.
 
 ## Local testing
 

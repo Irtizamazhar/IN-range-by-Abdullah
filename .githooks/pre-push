@@ -1,0 +1,9 @@
+#!/bin/sh
+# Blocks a push when the committed schema.prisma is not represented by committed migrations.
+# Installed by `npm install` (scripts/install-git-hooks.mjs). See docs/DATABASE_MIGRATIONS.md.
+node scripts/db-migrations.mjs check --ref HEAD || {
+  echo "" >&2
+  echo "Push blocked: commit schema.prisma, its migration folder and prisma/migration-manifest.json together." >&2
+  echo "Run npm run db:migrate (or npm run dev), commit, then push again." >&2
+  exit 1
+}
