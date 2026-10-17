@@ -7,6 +7,7 @@ import path from "path";
 import { getCustomerSession } from "@/lib/sessions";
 import { requireAdminPermission } from "@/lib/admin-rbac";
 import { prisma } from "@/lib/prisma";
+import { ApiError, sameOrigin } from "@/lib/marketplace-api";
 
 const GUEST_FOLDER = "inrange-payments";
 /** Legacy folder token; review photos now require order-scoped `/api/reviews/photo`. */
@@ -29,12 +30,13 @@ const MAX_ADMIN = 8 * 1024 * 1024;
 const MAX_GUEST = 5 * 1024 * 1024;
 
 export async function POST(req: NextRequest) {
-  const origin = req.headers.get("origin");
-  if (origin && origin !== new URL(req.url).origin) {
-    return NextResponse.json(
-      { error: "Cross-origin requests are not allowed" },
-      { status: 403 }
-    );
+  // In production req.url is the standalone server's own address (for example https://0.0.0.0:<port>),
+  // never https://joro.pk, so the browser Origin is checked against the public-origin allowlist instead.
+  try {
+    sameOrigin(req);
+  } catch (error) {
+    if (error instanceof ApiError) return NextResponse.json({ error: error.message }, { status: error.status });
+    throw error;
   }
 
   const formData = await req.formData();
