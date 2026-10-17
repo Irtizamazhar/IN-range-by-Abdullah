@@ -1,0 +1,130 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { runInNewContext } from "node:vm";
+import { randomUUID } from "node:crypto";
+import ts from "typescript";
+import { Prisma } from "@prisma/client";
+import { NextResponse } from "next/server";
+import { ApiError } from "../lib/marketplace-api";
+import { checkoutAddresses } from "../lib/checkout-addresses";
+import { checkoutDiagnostic, checkoutFailure } from "../lib/checkout-diagnostics";
+import { readCheckoutReceipt, checkoutAttemptKey, clearCheckoutAttempt } from "../lib/checkout-response";
+import { calculateHandlingFee } from "../lib/handling-fee";
+import { queueOrderConfirmation } from "../lib/order-confirmation-delivery";
+import * as couponService from "../lib/coupon-service";
+
+const payload = { customerName: "Ali Khan", customerPhone: "03001234567", customerAddress: "12 Street, Apartment 2", city: "Lahore", paymentMethod: "cod", products: [{ productId: "cream", quantity: 1 }], expectedHandlingFee: 200 };
+type Row = Record<string, any>;
+function fixture() {
+  const state = { orders: [] as Row[], items: [] as Row[], bundles: [] as Row[], events: [] as Row[], jobs: [] as Row[], stocks: { cream: 5, soap: 5 } as Record<string, number> };
+  const logs: unknown[] = [];
+  const options = { signedIn: true, failAt: "", smtpFails: false, failReceipt: false, foreignOwner: false, coupon: false, outboxMissing: false, transactionStockRace: false };
+  const products: Record<string, Row> = { cream: { id: "cream", name: "cream", price: new Prisma.Decimal(2000), stock: 5, isActive: true, variants: [], category: "Skin", categoryRecordId: null, originalPrice: null }, soap: { id: "soap", name: "soap", price: new Prisma.Decimal(500), stock: 5, isActive: true, variants: [], category: "Skin", categoryRecordId: null, originalPrice: null } };
+  const owners = new Map<string, string>();
+  const error = (code: string, column?: string) => Object.assign(new Error("PRIVATE SQL password=secret"), { code, meta: { modelName: "OrderConfirmationEmail", column } });
+  const db: Row = {
+    customer: { findUnique: async () => { if (options.failAt === "customer") throw error("P2022", "order.handlingFee"); return { id: "customer-a", email: "owner@example.invalid" }; } },
+    order: {
+      findUnique: async ({ where }: Row) => { if (where.id && options.failReceipt) throw error("P2022", "order.missing"); return state.orders.find(o => where.checkoutKey ? o.checkoutKey === where.checkoutKey : o.id === where.id) || null; },
+      create: async ({ data }: Row) => { if (state.orders.some(o => o.checkoutKey === data.checkoutKey)) throw error("P2002"); const row = { ...data, id: "order-" + (state.orders.length + 1) }; state.orders.push(row); return row; },
+    },
+    product: { findUnique: async ({ where }: Row) => products[where.id] || null, findFirst: async ({ where }: Row) => products[where.id] || null, updateMany: async ({ where, data }: Row) => { if (options.transactionStockRace || state.stocks[where.id] < where.stock.gte) return { count: 0 }; state.stocks[where.id] -= data.stock.decrement; return { count: 1 }; } },
+    vendorProduct: { findFirst: async ({ where }: Row) => { const vendorId = owners.get(where.publishedProductId); return vendorId ? { id: "vp-" + where.publishedProductId, vendorId, stock: 5, category: "Skin", vendor: { id: vendorId, status: "approved", specialCommissionRate: null } } : null; }, updateMany: async () => ({ count: 1 }) },
+    vendorShopOrder: { create: async ({ data }: Row) => { const row = { ...data, id: "bundle-" + data.vendorId }; state.bundles.push(row); return row; }, findMany: async ({ where }: Row) => state.bundles.filter(b => b.orderId === where.orderId) },
+    vendorOrder: { create: async () => ({}) }, vendor: { update: async () => ({}) },
+    orderItem: { create: async ({ data }: Row) => { const row = { ...data, id: "item-" + state.items.length }; state.items.push(row); return row; } },
+    orderInventoryLine: { create: async () => ({}) },
+    orderStatusEvent: { create: async ({ data }: Row) => { state.events.push(data); return data; } },
+    commissionSetting: { findUnique: async () => ({ commissionPercentage: 10 }) },
+    orderConfirmationEmail: { upsert: async ({ create }: Row) => { if (options.outboxMissing) throw error("P2022", "OrderConfirmationEmail.recipientKey"); if (!state.jobs.some(j => j.orderId === create.orderId && j.recipientKey === create.recipientKey)) state.jobs.push(create); return create; } },
+    couponRedemption: { count: async () => 0, create: async () => ({}) }, vendorCoupon: { updateMany: async () => ({ count: 1 }) },
+  };
+  db.$transaction = async (fn: (tx: Row) => Promise<unknown>) => {
+    const saved = { ...state, orders: [...state.orders], items: [...state.items], bundles: [...state.bundles], events: [...state.events], jobs: [...state.jobs], stocks: { ...state.stocks } };
+    try { if (options.failAt === "transaction") throw error("P2034"); return await fn(db); }
+    catch (e) { Object.assign(state, saved); throw e; }
+  };
+  const modules: Row = {
+    "next/server": { NextResponse }, "node:crypto": { randomUUID }, "@prisma/client": { Prisma },
+    "@/lib/prisma": { prisma: db }, "@/lib/marketplace-api": { ApiError },
+    "@/lib/checkout-addresses": { checkoutAddresses }, "@/lib/checkout-diagnostics": { checkoutDiagnostic, checkoutFailure },
+    "@/lib/sessions": { getCustomerSession: async () => options.signedIn ? { user: { id: "customer-a", email: "owner@example.invalid", role: "customer" } } : null },
+    "@/lib/admin-rbac": {}, "@/lib/auto-cancel-orders": {},
+    "@/lib/settings-db": { getOrCreateSettings: async () => ({ codAvailableCities: ["Lahore"], codCharges: 100 }) },
+    "@/lib/order-number": { generateOrderNumber: async () => "IRB-001" },
+    "@/lib/catalog-product-select": { catalogProductSelect: () => ({ id: true }) },
+    "@/lib/prisma-order-includes": { ORDER_INCLUDE_SERIALIZE: {} },
+    "@/lib/order-emails": { notifyAdminNewOrder: async () => { if (options.smtpFails) throw Error("SMTP credentials secret"); } },
+    "@/lib/order-confirmation-delivery": { queueOrderConfirmation },
+    "@/lib/vendor-notifications": { createVendorNotification: async () => {} },
+    "@/lib/serialize": { primaryProductImageUrl: () => "", serializeOrder: (o: Row) => ({ _id: o.id, orderNumber: o.orderNumber, customerPhone: o.customerPhone, customerName: o.customerName, customerEmail: o.customerEmail, totalAmount: Number(o.totalAmount) }) },
+    "@/lib/vendor-commission": {}, "@/lib/handling-fee": { calculateHandlingFee },
+    "@/lib/coupon-service": { ...couponService, findCoupon: async () => { if (!options.coupon) throw new ApiError(400, "Coupon is inactive."); return { id: "coupon", couponCode: "SAVE", status: "active", ownerType: "ADMIN", approvedAt: new Date(), approvals: [], selectedVendorIds: [], productIds: ["cream"], categories: [], customerIds: [], fundingType: "PLATFORM_FUNDED", discountType: "fixed", discountValue: 100, minOrderAmount: 0, maxDiscount: null, maxUses: null, perCustomerLimit: null, budget: null, spent: 0 }; } },
+    "@/lib/vendor-shop-order-number": { generateVendorShopOrderNumber: async () => "SHOP-" + state.bundles.length },
+    "@/lib/marketplace-prisma": { getMarketplacePrisma: () => db, getMarketplaceTx: () => db },
+    "@/lib/offer-checkout-service": {}, "@/lib/service-checkout-service": {},
+  };
+  const exported = {} as { POST: (request: Request) => Promise<Response> };
+  const js = ts.transpileModule(readFileSync("app/api/orders/route.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+  runInNewContext(js, { exports: exported, Error, console: { error: (...args: unknown[]) => logs.push(args) }, require: (name: string) => { assert.ok(name in modules, name); return modules[name]; } });
+  const post = (body: Row = payload, key = "checkout-request-123456") => exported.POST(new Request("https://joro.pk/api/orders", { method: "POST", headers: { "content-type": "application/json", "Idempotency-Key": key }, body: JSON.stringify(body) }));
+  return { state, options, post, owners, products, logs };
+}
+
+test("COD checkout records correct totals/status/addresses/outbox and replays the same order", async () => {
+  const f = fixture(); const first = await f.post(); assert.equal(first.status, 200); assert.equal((await first.json()).orderNumber, "IRB-001");
+  assert.equal(Number(f.state.orders[0].totalAmount), 2300); assert.equal(Number(f.state.orders[0].handlingFee), 200);
+  assert.equal(f.state.orders[0].paymentStatus, "pending"); assert.equal(f.state.orders[0].orderStatus, "confirmed");
+  assert.equal(f.state.events[0].details.addresses.billing.address, payload.customerAddress);
+  assert.equal(f.state.stocks.cream, 4); assert.equal(f.state.jobs.length, 1);
+  assert.equal((await f.post()).headers.get("X-Idempotent-Replay"), "true"); assert.equal(f.state.orders.length, 1); assert.equal(f.state.stocks.cream, 4);
+});
+test("different billing address is preserved in the existing order-created event", async () => {
+  const f = fixture(); const response = await f.post({ ...payload, sameBillingAddress: false, billingAddress: { name: "Company", address: "20 Billing Street", city: "Karachi", country: "Pakistan", postalCode: "74000" } });
+  assert.equal(response.status, 200); assert.equal(f.state.events[0].details.addresses.billing.address, "20 Billing Street"); assert.equal(f.state.orders[0].customerAddress, payload.customerAddress);
+});
+test("multi-vendor products retain grouping, stock, fees, totals and separate notification keys", async () => {
+  const f = fixture(); f.owners.set("cream", "vendor-a"); f.owners.set("soap", "vendor-b");
+  const response = await f.post({ ...payload, products: [...payload.products, { productId: "soap", quantity: 2 }], expectedHandlingFee: 300 });
+  assert.equal(response.status, 200); assert.equal(Number(f.state.orders[0].totalAmount), 3400); assert.equal(f.state.bundles.length, 2);
+  assert.equal(f.state.bundles[0].items[0].productName, "cream"); assert.equal(f.state.bundles[1].items[0].productName, "soap");
+  assert.deepEqual(f.state.jobs.map(j => j.recipientKey), ["customer", "vendor:bundle-vendor-a", "vendor:bundle-vendor-b"]);
+});
+test("coupon remains server-calculated and invalid codes do not create an order", async () => {
+  const f = fixture(); assert.equal((await f.post({ ...payload, couponCode: "SAVE" })).status, 400); assert.equal(f.state.orders.length, 0);
+  f.options.coupon = true; const response = await f.post({ ...payload, couponCode: "SAVE" }); assert.equal(response.status, 200); assert.equal(Number(f.state.orders[0].totalAmount), 2200);
+});
+test("validation, session expiry, unimplemented payments and insufficient stock cannot create orders", async () => {
+  for (const change of [{ customerAddress: " " }, { city: "Karachi" }, { paymentMethod: "card" }, { products: [{ productId: "cream", quantity: 99 }] }, { sameBillingAddress: false, billingAddress: {} }]) {
+    const f = fixture(); assert.equal((await f.post({ ...payload, ...change })).status, 400); assert.equal(f.state.orders.length, 0);
+  }
+  const f = fixture(); f.options.signedIn = false; assert.equal((await f.post()).status, 401);
+});
+test("production's missing recipientKey rolls back the entire transaction and returns a sanitized reference", async () => {
+  const f = fixture(); f.options.outboxMissing = true; const response = await f.post(); assert.equal(response.status, 503);
+  assert.equal(f.state.orders.length, 0); assert.equal(f.state.jobs.length, 0); assert.equal(f.state.stocks.cream, 5);
+  assert.match(response.headers.get("X-Request-ID")!, /^[a-f0-9-]+$/); assert.doesNotMatch(await response.text(), /recipientKey|SQL|secret|password/);
+  assert.match(JSON.stringify(f.logs), /P2022/); assert.match(JSON.stringify(f.logs), /recipientKey/); assert.doesNotMatch(JSON.stringify(f.logs), /PRIVATE|password|owner@example/);
+});
+test("stock race and transaction failure roll back; preflight database errors are also sanitized JSON", async () => {
+  const f = fixture(); f.options.transactionStockRace = true; assert.equal((await f.post()).status, 409); assert.equal(f.state.orders.length, 0);
+  f.options.transactionStockRace = false; f.options.failAt = "transaction"; assert.equal((await f.post()).status, 503); assert.equal(f.state.orders.length, 0);
+  f.options.failAt = "customer"; const response = await f.post(); assert.equal(response.status, 503); assert.equal(response.headers.get("Content-Type"), "application/json");
+});
+test("SMTP rejection and receipt read failure after commit cannot turn success into a failed checkout", async () => {
+  const f = fixture(); f.options.smtpFails = true; f.options.failReceipt = true;
+  const response = await f.post(); assert.equal(response.status, 200); const receipt = await readCheckoutReceipt(response); assert.equal(receipt.orderNumber, "IRB-001"); assert.equal(f.state.orders.length, 1); assert.equal(f.state.jobs.length, 1);
+});
+test("client rejects malformed or empty success without permitting cart clearing, and maps expired sessions", async () => {
+  for (const body of ["", "<html>Bad gateway</html>", "{}", '{"_id":"order"}']) await assert.rejects(readCheckoutReceipt(new Response(body)), /could not confirm/);
+  await assert.rejects(readCheckoutReceipt(new Response("{}", { status: 401 })), /session has expired/);
+  await assert.rejects(readCheckoutReceipt(new Response('{"error":"raw SQL secret"}', { status: 500 })), error => !String(error).includes("raw SQL"));
+});
+test("retry keys survive reload for the same customer/cart and clear only on confirmed success", () => {
+  const records = new Map<string, string>(); const storage = { getItem: (key: string) => records.get(key) || null, setItem: (key: string, value: string) => { records.set(key, value); }, removeItem: (key: string) => { records.delete(key); } };
+  const key = checkoutAttemptKey("customer-a:cart", storage, () => "checkout-request-123456");
+  assert.equal(checkoutAttemptKey("customer-a:cart", storage, () => { throw Error("must reuse"); }), key);
+  assert.notEqual(checkoutAttemptKey("customer-b:cart", storage, () => "checkout-request-999999"), key);
+  clearCheckoutAttempt(storage); assert.equal(records.size, 0);
+});

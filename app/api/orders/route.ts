@@ -1,6 +1,9 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
+import { checkoutAddresses } from "@/lib/checkout-addresses";
+import { checkoutDiagnostic, checkoutFailure } from "@/lib/checkout-diagnostics";
 import { Prisma } from "@prisma/client";
 import { checkoutQuote } from "@/lib/offer-checkout-service";
 import { ApiError } from "@/lib/marketplace-api";
@@ -84,6 +87,20 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const requestId = randomUUID();
+  try {
+    const response = await createCheckoutOrder(req, requestId);
+    response.headers.set("X-Request-ID", requestId);
+    response.headers.set("Cache-Control", "private, no-store");
+    return response;
+  } catch (error) {
+    console.error("POST /api/orders", checkoutDiagnostic(error, requestId, "preflight-or-response"));
+    const failure = checkoutFailure(error);
+    return NextResponse.json({ error: failure.error }, { status: failure.status, headers: { "X-Request-ID": requestId, "Cache-Control": "private, no-store" } });
+  }
+}
+
+async function createCheckoutOrder(req: NextRequest, requestId: string) {
   const session = await getCustomerSession();
   if (session?.user?.role !== "customer" || !session.user.id) {
     return NextResponse.json(
@@ -172,6 +189,9 @@ export async function POST(req: NextRequest) {
   if (!customerName || !customerPhone || !customerAddress || !city) {
     return NextResponse.json({ error: "Missing customer fields" }, { status: 400 });
   }
+  let addresses: ReturnType<typeof checkoutAddresses>;
+  try { addresses = checkoutAddresses(body); }
+  catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Please check your addresses." }, { status: 400 }); }
   if (paymentMethod && paymentMethod !== "cod") {
     return NextResponse.json(
       { error: "Only Cash on Delivery (COD) is available" },
@@ -631,6 +651,7 @@ export async function POST(req: NextRequest) {
         details: {
           paymentMethod: effectivePaymentMethod,
           paymentStatus: "pending",
+          addresses,
         },
       },
     });
@@ -639,17 +660,19 @@ export async function POST(req: NextRequest) {
     return o;
   });
 
-  const orderForClient = await prisma.order.findUnique({
-    where: { id: order.id },
-    include: ORDER_INCLUDE_SERIALIZE,
-  });
-  if (!orderForClient) {
-    return NextResponse.json(
-      { error: "Order was created but could not be loaded. Please refresh." },
-      { status: 500 }
-    );
+  // The transaction has committed. A failed optional read must not turn it into failure.
+  let out: ReturnType<typeof serializeOrder> | {
+    _id: string; id: string; orderNumber: string; customerPhone: string;
+    customerName: string; customerEmail: string; totalAmount: number;
+  } = { _id: order.id, id: order.id, orderNumber: order.orderNumber,
+    customerPhone: order.customerPhone, customerName: order.customerName,
+    customerEmail: order.customerEmail, totalAmount: Number(order.totalAmount) };
+  try {
+    const orderForClient = await prisma.order.findUnique({ where: { id: order.id }, include: ORDER_INCLUDE_SERIALIZE });
+    if (orderForClient) out = serializeOrder(orderForClient);
+  } catch (error) {
+    console.error("POST /api/orders", checkoutDiagnostic(error, requestId, "committed-receipt-read"));
   }
-  const out = serializeOrder(orderForClient);
   try {
     await notifyAdminNewOrder({
       orderNumber: out.orderNumber,
@@ -658,7 +681,7 @@ export async function POST(req: NextRequest) {
       totalAmount: out.totalAmount,
     });
   } catch (e) {
-    console.error("notifyAdminNewOrder", e);
+    console.error("POST /api/orders", checkoutDiagnostic(e, requestId, "committed-admin-notification"));
   }
 
   try {
@@ -679,25 +702,20 @@ export async function POST(req: NextRequest) {
       });
     }
   } catch (e) {
-    console.error("vendor new-order notifications", e);
+    console.error("POST /api/orders", checkoutDiagnostic(e, requestId, "committed-vendor-notification"));
   }
 
   return NextResponse.json(out);
   } catch (e) {
     if (e instanceof ApiError) return NextResponse.json({ error: e.message }, { status: e.status });
-    console.error("POST /api/orders", e);
+    console.error("POST /api/orders", checkoutDiagnostic(e, requestId, "create-order"));
     if (e instanceof Error && e.message === "Insufficient stock") {
       return NextResponse.json(
         { error: "Stock changed during checkout. Please refresh your cart." },
         { status: 409 }
       );
     }
-    const message =
-      e instanceof Error ? e.message : "Could not place order";
-    const code =
-      e && typeof e === "object" && "code" in e
-        ? String((e as { code: unknown }).code)
-        : "";
+    const code = checkoutDiagnostic(e, requestId, "create-order").code;
     if (code === "P2002") {
       const replay = await prisma.order.findUnique({
         where: { checkoutKey },
@@ -709,20 +727,7 @@ export async function POST(req: NextRequest) {
         });
       }
     }
-    const hint =
-      code === "P2002"
-        ? "Duplicate conflict — try again."
-        : code === "P2025"
-          ? "Record not found — refresh and try again."
-          : "Please try again or contact support.";
-    return NextResponse.json(
-      {
-        error:
-          process.env.NODE_ENV === "development"
-            ? `${message} (${hint})`
-            : `Could not place order. ${hint}`,
-      },
-      { status: 500 }
-    );
+    const failure = checkoutFailure(e);
+    return NextResponse.json({ error: failure.error }, { status: failure.status });
   }
 }

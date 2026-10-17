@@ -15,6 +15,7 @@ import { PakistanCitySelect } from "@/components/ui/PakistanCitySelect";
 import { WhatsAppButton } from "@/components/user/WhatsAppButton";
 import type { ISettings } from "@/types/settings";
 import { Info } from "lucide-react";
+import { readCheckoutReceipt, checkoutAttemptKey, clearCheckoutAttempt } from "@/lib/checkout-response";
 type PaymentMethod = "cod";
 
 export default function CheckoutPage() {
@@ -26,7 +27,7 @@ export default function CheckoutPage() {
   const [settingsError, setSettingsError] = useState("");
   const [loading, setLoading] = useState(false);
   const orderInFlight = useRef(false);
-  const [checkoutKey, setCheckoutKey] = useState("");
+  const checkoutAttempt = useRef<{ signature: string; key: string } | null>(null);
   const [couponInput, setCouponInput] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number } | null>(null);
   const [couponMessage, setCouponMessage] = useState("");
@@ -64,9 +65,6 @@ export default function CheckoutPage() {
     customerPhone: string;
   } | null>(null);
 
-  useEffect(() => {
-    setCheckoutKey(crypto.randomUUID());
-  }, []);
 
   const loadSettings = useCallback(async (signal?: AbortSignal) => {
     setSettingsLoading(true);
@@ -212,8 +210,11 @@ export default function CheckoutPage() {
         return openAuthModal("signup");
       }
       setLoading(true);
-      const requestKey = checkoutKey || crypto.randomUUID();
-      if (!checkoutKey) setCheckoutKey(requestKey);
+      const signature = JSON.stringify([s.user.id, cartSignature]);
+      let storage: Storage | undefined;
+      try { storage = window.sessionStorage; } catch { /* Private browsing may disable storage. */ }
+      if (checkoutAttempt.current?.signature !== signature) checkoutAttempt.current = { signature, key: checkoutAttemptKey(signature, storage) };
+      const requestKey = checkoutAttempt.current.key;
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: {
@@ -226,6 +227,8 @@ export default function CheckoutPage() {
           customerEmail: email,
           customerAddress: [address, apartment].filter(Boolean).join(", "),
           city,
+          country, postalCode, sameBillingAddress,
+          billingAddress: sameBillingAddress ? undefined : { name: [billingFirstName, billingLastName].filter(Boolean).join(" "), address: [billingAddress, billingApartment].filter(Boolean).join(", "), city: billingCity, country: billingCountry, postalCode: billingPostalCode, phone: billingPhone },
           paymentMethod,
           couponCode: appliedCoupon?.code,
           expectedHandlingFee: handlingFee ?? undefined,
@@ -238,44 +241,15 @@ export default function CheckoutPage() {
           })),
         }),
       });
-      const raw = await res.text();
-      let data: {
-        error?: string;
-        orderNumber?: string;
-        _id?: string;
-        customerPhone?: string;
-      } = {};
-      if (raw.trim()) {
-        try {
-          data = JSON.parse(raw) as typeof data;
-        } catch {
-          toast.error(
-            res.ok
-              ? "Invalid response from server"
-              : `Order failed (${res.status}). Try again.`
-          );
-          return;
-        }
-      } else if (!res.ok) {
-        toast.error(
-          `Order failed (${res.status}). Empty response — check server logs.`
-        );
-        return;
-      }
-      if (!res.ok) {
-        toast.error(data.error || "Could not place order");
-        if (res.status === 409) setHandlingFeeVersion((v) => v + 1);
-        return;
-      }
+      let receipt;
+      try { receipt = await readCheckoutReceipt(res); }
+      catch (error) { if (res.status === 409) setHandlingFeeVersion(v => v + 1); throw error; }
       toast.success("Order placed successfully!");
-      setDoneOrder({
-        orderNumber: data.orderNumber ?? "",
-        _id: data._id ?? "",
-        customerPhone: data.customerPhone ?? "",
-      });
+      setDoneOrder(receipt);
+      clearCheckoutAttempt(storage);
       clear();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Network error");
+      toast.error(e instanceof TypeError ? "Connection interrupted. Your cart is saved. Please retry or check My Orders." : e instanceof Error ? e.message : "Checkout is temporarily unavailable. Please try again.");
     } finally {
       orderInFlight.current = false;
       setLoading(false);
@@ -294,6 +268,10 @@ export default function CheckoutPage() {
       return;
     }
 
+    if (!sameBillingAddress && (!billingFirstName.trim() || !billingAddress.trim() || !billingCity.trim())) {
+      toast.error("Please complete your billing name, address and city.");
+      return;
+    }
     if (!codAllowed) {
       toast.error("Please check your selected city");
       return;
