@@ -1051,7 +1051,7 @@ model VendorCoupon {
   approvals      Json?
   approvedBy     String?                  @db.VarChar(191)
   approvedAt     DateTime?
-  updatedAt      DateTime                 @updatedAt
+  updatedAt      DateTime                 @default(now()) @updatedAt
   maxUses        Int?
   usedCount      Int                      @default(0)
   expiryDate     DateTime?
@@ -1092,7 +1092,7 @@ model CouponCollection {
   productIds Json
   createdBy  String   @db.VarChar(191)
   createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  updatedAt  DateTime @default(now()) @updatedAt
 
   @@map("couponcollection")
 }

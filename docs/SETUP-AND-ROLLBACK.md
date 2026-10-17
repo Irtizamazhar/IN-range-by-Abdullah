@@ -21,6 +21,9 @@ npm run build
 
 ### Existing database after the marketplace merge
 
+> Superseded on 2026-10-17: the migration history was baselined. The `migrate resolve`
+> commands below refer to archived migrations; follow `docs/DATABASE_MIGRATIONS.md` instead.
+
 Databases that already applied `20260913030000_customer_stores_wants`
 contain the legacy `WantPost`/`WantOffer` shape. Back up the database and run
 the read-only preflight first. If it reports that legacy shape and lists the

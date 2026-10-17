@@ -69,6 +69,9 @@ non-local database anyway.
 
 ## 4. Database migration
 
+> Since 2026-10-17 the migration history starts at `0_baseline`. Existing databases need the
+> one-time baseline procedure in `docs/DATABASE_MIGRATIONS.md` before `migrate deploy`.
+
 Back up the database first (see "Backups"), then:
 
 ```bash

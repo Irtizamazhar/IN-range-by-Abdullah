@@ -10,6 +10,7 @@
     "preview": "npm run build && next start -p 3000",
     "preview:hash": "node scripts/preview-hash.mjs",
     "build": "prisma generate && next build",
+    "build:deploy": "prisma migrate deploy && npm run build",
     "start": "next start",
     "lint": "next lint",
     "test:auth:services": "tsx scripts/test-prestep10-services.ts",
@@ -27,7 +28,6 @@
     "test:reviews:e2e": "tsx scripts/test-reviews-ratings.ts",
     "postinstall": "node scripts/prisma-generate-try.mjs",
     "db:generate": "prisma generate",
-    "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed",
     "db:migrate-json-catalog": "tsx scripts/migrate-json-catalog.ts"

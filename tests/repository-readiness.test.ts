@@ -15,7 +15,7 @@ test("tracked and intended untracked source files contain no merge conflict mark
 });
 
 test("vendor notification migration preserves historical jobs and replaces only the notification uniqueness rule", () => {
-  const sql = readFileSync("prisma/migrations/20261016010000_vendor_order_notifications/migration.sql", "utf8").replace(/--[^\n]*/g, "");
+  const sql = readFileSync("prisma/migrations_archive/20261016010000_vendor_order_notifications/migration.sql", "utf8").replace(/--[^\n]*/g, "");
   const statements = sql.split(";").map(statement => statement.trim()).filter(Boolean);
   assert.equal(statements.length, 3);
   assert.match(statements[0], /^ALTER TABLE `OrderConfirmationEmail` ADD COLUMN `recipientKey` VARCHAR\(191\) NOT NULL DEFAULT 'customer'$/);
@@ -25,7 +25,16 @@ test("vendor notification migration preserves historical jobs and replaces only 
   assert.match(schema, /recipientKey\s+String\s+@default\("customer"\)\s+@db.VarChar\(191\)/);
   assert.match(schema, /@@unique\(\[orderId, recipientKey\]\)/);
   assert.doesNotMatch(schema, /orderId\s+String\s+@unique/);
-  const original = readFileSync("prisma/migrations/20261015020000_order_confirmation_outbox/migration.sql", "utf8");
+  const original = readFileSync("prisma/migrations_archive/20261015020000_order_confirmation_outbox/migration.sql", "utf8");
   assert.match(original, /CREATE TABLE `OrderConfirmationEmail`/);
   assert.match(original, /UNIQUE INDEX `OrderConfirmationEmail_orderId_key`\(`orderId`\)/);
+});
+
+test("active baseline creates the per-recipient notification outbox", () => {
+  const baseline = readFileSync("prisma/migrations/0_baseline/migration.sql", "utf8");
+  const table = baseline.match(/CREATE TABLE `OrderConfirmationEmail` \(([\s\S]*?)\n\) /)![1];
+  assert.match(table, /`recipientKey` VARCHAR\(191\) NOT NULL DEFAULT 'customer'/);
+  assert.match(table, /UNIQUE INDEX `OrderConfirmationEmail_orderId_recipientKey_key`\(`orderId`, `recipientKey`\)/);
+  assert.doesNotMatch(table, /OrderConfirmationEmail_orderId_key/);
+  assert.equal(existsSync("prisma/migrations/20261016010000_vendor_order_notifications"), false, "archived migrations must stay out of the active history");
 });
