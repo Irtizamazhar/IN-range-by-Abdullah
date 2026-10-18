@@ -4,6 +4,6 @@
 node scripts/db-migrations.mjs check --ref HEAD || {
   echo "" >&2
   echo "Push blocked: commit schema.prisma, its migration folder and prisma/migration-manifest.json together." >&2
-  echo "Run npm run db:migrate (or npm run dev), commit, then push again." >&2
+  echo "Run npm run db:migrate, commit, then push again." >&2
   exit 1
 }

@@ -25,24 +25,23 @@ Prisma does not read that folder. The active history is:
 
 ## Workflow for every schema change
 
-No Prisma command needs to be typed for routine work. `npm run dev` does it:
+`npm run dev` only starts Next.js (`next dev`); it does not check, generate or apply migrations. The migration
+cycle runs only when you start it:
 
 1. `git pull --rebase` first, so you start from your teammate's latest migrations.
-2. Run `npm run dev`. Before starting Next.js it applies any committed migrations you do not have yet.
-3. Edit `prisma/schema.prisma` while the dev server runs. Give new models a lowercase `@@map("tablename")`.
-   On every save the dev server pauses, and `scripts/db-migrations.mjs`:
+2. Edit `prisma/schema.prisma`. Give new models a lowercase `@@map("tablename")`.
+3. Run `npm run db:migrate` (`npm run db:migrate -- --name <name>` to choose the name). `scripts/db-migrations.mjs`:
+   - applies committed migrations you do not have yet;
    - generates a timestamped migration named after the change (for example `20261020101500_add_giftcard_table`);
    - applies it to your local development database if it is purely additive;
-   - regenerates Prisma Client, updates `prisma/migration-manifest.json`, stages the new migration folder and
-     the manifest with `git add`, and restarts the dev server.
-   Saves that need no database change (comments, formatting) create nothing. Rapid saves are queued, and only
-   one migration process runs at a time.
+   - regenerates Prisma Client, updates `prisma/migration-manifest.json`, and stages the new migration folder and
+     the manifest with `git add`. Stop the dev server first on Windows, where it locks Prisma Client.
 4. Read the generated `prisma/migrations/<timestamp>_<name>/migration.sql`.
 5. Commit `prisma/schema.prisma`, the migration folder, `prisma/migration-manifest.json` and the code together.
 6. `git pull --rebase`, then `git push`. Never force-push.
 
-Without the dev server, `npm run db:migrate` runs the same cycle once (`npm run db:migrate -- --name <name>` to
-choose the name). `SKIP_DB_MIGRATE=1 npm run dev` starts Next.js without touching the database.
+`node scripts/db-migrations.mjs dev-server` still offers the former automatic mode (migrate on start and on every
+`schema.prisma` save) for anyone who wants it; it is no longer part of `npm run dev`.
 
 ### Changes that need approval
 
@@ -85,8 +84,8 @@ the SHA-256 of every migration. `npm run db:check` fails when the schema changed
 migration is missing or unrecorded, a migration was edited, timestamps collide, or the lock file is wrong.
 It runs:
 
-- in the Git `pre-push` hook (`.githooks/pre-push`, enabled by `npm install` through the `prepare` script),
-  against the commit being pushed;
+- in the optional Git `pre-push` hook (`.githooks/pre-push`) against the commit being pushed. `npm install` no
+  longer enables it; to opt in, run `node scripts/install-git-hooks.mjs` once;
 - in `npm test` (`tests/migration-workflow.test.ts`);
 - in `npm run build:deploy` before any database change.
 
@@ -108,7 +107,7 @@ The same tests run locally against a disposable server, never a database you use
 
 ### Two developers on `main`
 
-- Pull before changing the schema and before pushing. `npm run dev` applies the other developer's migrations.
+- Pull before changing the schema and before pushing. `npm run db:migrate` applies the other developer's migrations.
 - If both of you changed the schema, `prisma/migration-manifest.json` conflicts on purpose. Resolve the
   conflicts in `schema.prisma`, keep both migration folders, take either side of the manifest, then run
   `npm run db:migrate`. It applies the other migration, generates a follow-up migration if the merged schema

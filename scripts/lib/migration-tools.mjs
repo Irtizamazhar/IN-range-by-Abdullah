@@ -57,7 +57,7 @@ export function checkManifest(manifest, schemaText, migrations) {
   if (!manifest) return ["prisma/migration-manifest.json is missing. Run npm run db:migrate."];
   const errors = [];
   if (manifest.schema !== schemaFingerprint(schemaText))
-    errors.push("prisma/schema.prisma changed, but no matching migration was generated and recorded. Run npm run db:migrate (or npm run dev), then commit the schema, the new migration folder and prisma/migration-manifest.json together.");
+    errors.push("prisma/schema.prisma changed, but no matching migration was generated and recorded. Run npm run db:migrate, then commit the schema, the new migration folder and prisma/migration-manifest.json together.");
   const recorded = manifest.migrations || {};
   const present = new Map(migrations.map((m) => [m.name, sha256(m.sql)]));
   for (const name of Object.keys(recorded))
