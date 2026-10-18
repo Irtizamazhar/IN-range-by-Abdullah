@@ -23,10 +23,10 @@ export default async function ProductDetailPage({ params }: PageProps) {
     if (!product || !product.isActive) notFound();
     const publication = await prisma.vendorProduct.findUnique({
       where: { publishedProductId: product.id },
-      select: { status: true, vendor: { select: { shopName: true, storeSlug: true, status: true } } },
+      select: { status: true, vendor: { select: { shopName: true, storeSlug: true, shopLogo: true, status: true } } },
     });
     const seller = publication?.status === "active" && publication.vendor.status === "approved"
-      ? { name: publication.vendor.shopName, storeSlug: publication.vendor.storeSlug }
+      ? { name: publication.vendor.shopName, storeSlug: publication.vendor.storeSlug, logo: publication.vendor.shopLogo }
       : null;
 
     const relatedRaw = await prisma.product.findMany({

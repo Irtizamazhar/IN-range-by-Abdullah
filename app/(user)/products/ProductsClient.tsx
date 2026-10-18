@@ -187,7 +187,7 @@ export function ProductsClient() {
       <div className={styles.container}>
         <nav aria-label="Breadcrumb" className={styles.breadcrumb}><Link href="/">Home</Link><ChevronRight aria-hidden="true" /><span aria-current="page">All Products</span></nav>
         <header className={styles.heading}>
-          <div><div className={styles.titleRow}><h1>All Products</h1>{!loading && !error && <span className={styles.count}>{total.toLocaleString("en-PK")} products</span>}</div><p>Everyday finds. A little more extraordinary.</p></div>
+          <div><div className={styles.titleRow}><h1>All Products</h1>{!loading && !error && <span className={styles.count}>{total.toLocaleString("en-PK")} products</span>}</div></div>
           <span className={styles.delivery}><Truck aria-hidden="true" /> Delivered across Pakistan</span>
         </header>
         <div className={styles.layout}>
