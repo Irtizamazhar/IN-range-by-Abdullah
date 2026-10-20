@@ -5,24 +5,27 @@ import { SaveProductButton } from "@/components/user/SaveProductButton";
 
 import Image from "next/image";
 import Link from "@/components/ui/LoadingLink";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLoadingRouter as useRouter } from "@/hooks/useLoadingRouter";
 import toast from "react-hot-toast";
 import {
+  Banknote,
   BadgeCheck,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  CreditCard,
   MapPin,
+  Maximize2,
   Truck,
   RotateCcw,
+  Share2,
   ShieldCheck,
   ShoppingCart,
   Star,
   Store,
   Minus,
   Plus,
+  X,
   Zap,
   type LucideIcon,
 } from "lucide-react";
@@ -38,6 +41,7 @@ import { useCart } from "@/context/CartContext";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
 import { formatPKR } from "@/lib/format";
 import { showCartSuccessToast } from "@/lib/cart-success-toast";
+import { lockPageScroll } from "@/lib/scroll-lock";
 
 function isLocalProductImageSrc(src: string) {
   return src.startsWith("/api/") || src.startsWith("/uploads/");
@@ -58,7 +62,52 @@ export type ProductDetailProduct = {
   warrantyMonths?: number | null;
 };
 
-function StarRating({ rating }: { rating: number }) {
+/** Shop-wide delivery settings (the same flat charge checkout applies). */
+export type ProductDeliveryInfo = { fee: number; codCities: string[] };
+
+type SellerInfo = {
+  name: string;
+  storeSlug: string | null;
+  logo?: string | null;
+  /** e.g. "Active 2 hours ago", from the seller's last sign-in. */
+  activity?: string | null;
+};
+
+const card =
+  "min-w-0 rounded-xl border border-[#E5E9E5] bg-white shadow-[0_1px_3px_rgba(16,24,16,0.05)]";
+
+/** Common colour names → swatch colours, so colour variants render as chips like the catalog. */
+const SWATCHES: Record<string, string> = {
+  black: "#1F2328", white: "#FFFFFF", grey: "#9CA3AF", gray: "#9CA3AF", silver: "#C9CDD2",
+  red: "#E53935", maroon: "#7B1E28", pink: "#F06BAA", "light pink": "#F5B8D2", rose: "#E8798F",
+  orange: "#F57C1F", yellow: "#F5D21F", gold: "#D4AF37", beige: "#E8D9B5", cream: "#F5EEDC",
+  brown: "#7A4E2D", green: "#2E9E4F", "dark green": "#1E5C3A", olive: "#7A7F2C", lime: "#A8E52E",
+  mint: "#9EE6C8", teal: "#139A8F", blue: "#1E88E5", "sky blue": "#7CC4F2", "light blue": "#9CCCF2",
+  navy: "#1F2F5C", "navy blue": "#1F2F5C", "dark blue": "#1D3A8A", purple: "#7E3FBF",
+  violet: "#8B5CF6", lavender: "#C7B5E8", magenta: "#D63AAF", multicolor: "", "multi-color": "",
+  "multi color": "", transparent: "",
+};
+
+function swatchFor(variant: string): string | undefined {
+  const key = variant.trim().toLowerCase();
+  return key in SWATCHES ? SWATCHES[key] : undefined;
+}
+
+const SPEC_LINE = /^\s*[-•*]?\s*([A-Za-z][A-Za-z /&()-]{1,28}?)\s*[:：]\s*(.{1,140})\s*$/;
+
+/** Pulls "Label: value" lines out of the description into spec rows; the rest stays as prose. */
+function splitDescription(text: string) {
+  const specs: { label: string; value: string }[] = [];
+  const prose: string[] = [];
+  for (const line of text.split(/\r?\n/)) {
+    const match = SPEC_LINE.exec(line);
+    if (match && specs.length < 12) specs.push({ label: match[1].trim(), value: match[2].trim() });
+    else prose.push(line);
+  }
+  return { specs, prose: prose.join("\n").replace(/\n{3,}/g, "\n\n").trim() };
+}
+
+function StarRating({ rating, className = "h-4 w-4" }: { rating: number; className?: string }) {
   const r = Math.min(5, Math.max(0, Math.round(rating)));
   return (
     <span className="inline-flex items-center gap-0.5" aria-label={`Rated ${rating.toFixed(1)} out of 5`}>
@@ -66,7 +115,7 @@ function StarRating({ rating }: { rating: number }) {
         <Star
           key={i}
           aria-hidden
-          className={`h-4 w-4 ${i < r ? "fill-[#F5B301] text-[#F5B301]" : "fill-[#E5E7EB] text-[#E5E7EB]"}`}
+          className={`${className} ${i < r ? "fill-[#F5B301] text-[#F5B301]" : "fill-none text-[#C3C8CF]"}`}
         />
       ))}
     </span>
@@ -81,46 +130,174 @@ function BreadcrumbChevron() {
   );
 }
 
-function SideCard({
+function InfoCard({
   icon: Icon,
   title,
-  className = "",
   children,
+  className = "",
 }: {
   icon: LucideIcon;
   title: string;
-  className?: string;
   children: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <section className={`min-w-0 rounded-2xl border border-[#EEF0EC] bg-white p-4 shadow-[0_1px_3px_rgba(16,24,16,0.04)] sm:p-5 ${className}`}>
-      <h2 className="mb-4 flex items-center gap-2 text-[17px] font-bold text-[#111827]">
-        <Icon className="h-5 w-5 shrink-0 text-[#0B3D20]" aria-hidden />
+    <section className={`${card} p-4 ${className}`}>
+      <h2 className="flex items-center gap-2.5 text-[16px] font-bold text-[#172033] sm:text-[17px]">
+        <Icon className="h-[22px] w-[22px] shrink-0 text-[#00543D]" strokeWidth={2} aria-hidden />
         {title}
       </h2>
-      <div className="space-y-4">{children}</div>
+      <div className="mt-2 divide-y divide-[#EEF1EC]">{children}</div>
     </section>
   );
 }
 
-function SideItem({
+function InfoRow({
   icon: Icon,
   title,
   subtitle,
+  aside,
+  href,
 }: {
   icon: LucideIcon;
-  title: string;
-  subtitle: string;
+  title: React.ReactNode;
+  subtitle?: React.ReactNode;
+  aside?: React.ReactNode;
+  href?: string;
 }) {
-  return (
-    <div className="flex min-w-0 items-start gap-3">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F3F4F1] text-[#0B3D20]">
-        <Icon className="h-4 w-4" aria-hidden />
+  const body = (
+    <>
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#F3F6F1] text-[#00543D]">
+        <Icon className="h-[17px] w-[17px]" aria-hidden />
       </span>
-      <div className="min-w-0">
-        <p className="text-[14px] font-semibold text-[#111827]">{title}</p>
-        <p className="text-[13px] leading-snug text-[#6B7280]">{subtitle}</p>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[13.5px] font-medium text-[#172033]">{title}</span>
+        {subtitle ? <span className="mt-0.5 block text-[12px] leading-snug text-[#6B7280]">{subtitle}</span> : null}
+      </span>
+      {aside ? <span className="shrink-0 text-[13.5px] font-bold text-[#172033]">{aside}</span> : null}
+      {href ? <ChevronRight className="h-4 w-4 shrink-0 text-[#374151]" aria-hidden /> : null}
+    </>
+  );
+  const rowClass = "flex min-w-0 items-center gap-3 py-2.5 first:pt-1 last:pb-0";
+  return href ? (
+    <Link href={href} className={`${rowClass} rounded-md transition-colors hover:text-[#00543D]`}>
+      {body}
+    </Link>
+  ) : (
+    <div className={rowClass}>{body}</div>
+  );
+}
+
+function ImageViewer({
+  images,
+  name,
+  index,
+  onIndex,
+  onClose,
+}: {
+  images: string[];
+  name: string;
+  index: number;
+  onIndex: (next: number) => void;
+  onClose: () => void;
+}) {
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const count = images.length;
+  const go = useCallback((next: number) => onIndex((next + count) % count), [count, onIndex]);
+
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    const unlock = lockPageScroll();
+    closeRef.current?.focus();
+    return () => {
+      unlock();
+      previous?.focus?.({ preventScroll: true });
+    };
+  }, []);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+      if (count > 1 && event.key === "ArrowRight") go(index + 1);
+      if (count > 1 && event.key === "ArrowLeft") go(index - 1);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [count, go, index, onClose]);
+
+  const src = images[index];
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${name} images`}
+      className="fixed inset-0 z-[120] flex flex-col bg-[#0B1410]/95 text-white"
+    >
+      <div className="flex items-center justify-between px-4 py-3 sm:px-6">
+        <p className="text-[13px] tabular-nums text-white/75">
+          {index + 1} / {count}
+        </p>
+        <button
+          ref={closeRef}
+          type="button"
+          onClick={onClose}
+          aria-label="Close image viewer"
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 focus-visible:outline-white"
+        >
+          <X className="h-5 w-5" />
+        </button>
       </div>
+      <div className="relative min-h-0 flex-1 px-2 sm:px-16" onClick={onClose}>
+        {src ? (
+          <Image
+            src={src}
+            alt={`${name} — image ${index + 1}`}
+            fill
+            unoptimized={isLocalProductImageSrc(src)}
+            className="object-contain"
+            sizes="100vw"
+            onClick={(event) => event.stopPropagation()}
+          />
+        ) : null}
+        {count > 1 ? (
+          <>
+            <button
+              type="button"
+              onClick={(event) => { event.stopPropagation(); go(index - 1); }}
+              aria-label="Previous image"
+              className="absolute left-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 focus-visible:outline-white sm:left-4"
+            >
+              <ChevronLeft className="h-6 w-6" />
+            </button>
+            <button
+              type="button"
+              onClick={(event) => { event.stopPropagation(); go(index + 1); }}
+              aria-label="Next image"
+              className="absolute right-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 focus-visible:outline-white sm:right-4"
+            >
+              <ChevronRight className="h-6 w-6" />
+            </button>
+          </>
+        ) : null}
+      </div>
+      {count > 1 ? (
+        <div className="flex justify-center gap-2 overflow-x-auto px-4 py-4">
+          {images.map((im, i) => (
+            <button
+              key={`${im}-${i}`}
+              type="button"
+              onClick={() => onIndex(i)}
+              aria-label={`Show image ${i + 1}`}
+              aria-current={i === index}
+              className={`relative h-14 w-14 shrink-0 overflow-hidden rounded-md border-2 bg-white/5 ${
+                i === index ? "border-[#A8E52E]" : "border-transparent opacity-70 hover:opacity-100"
+              }`}
+            >
+              <Image src={im} alt="" fill unoptimized={isLocalProductImageSrc(im)} className="object-cover" sizes="56px" />
+            </button>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -129,15 +306,22 @@ export function ProductDetailClient({
   product,
   related,
   seller,
+  delivery,
+  soldCount,
   reviewsPostField,
 }: {
   product: ProductDetailProduct;
   related: ProductCardData[];
-  seller?: { name: string; storeSlug: string | null; logo?: string | null } | null;
+  seller?: SellerInfo | null;
+  /** Shop delivery settings; omitted where the caller has none (charges then show at checkout). */
+  delivery?: ProductDeliveryInfo | null;
+  /** Units sold, when the listing tracks it (seller listings). */
+  soldCount?: number | null;
   /** Default: DB `productId`. Use `{ newArrivalId }` for JSON new-arrival detail. */
   reviewsPostField?: ReviewDisplayField;
 }) {
   const [idx, setIdx] = useState(0);
+  const [viewerOpen, setViewerOpen] = useState(false);
   const [variant, setVariant] = useState<string | undefined>(
     product.variants?.[0]
   );
@@ -291,11 +475,24 @@ export function ProductDetailClient({
     }, "signup");
   }
 
+  async function handleShare() {
+    const url = window.location.href;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: product.name, url });
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      toast.success("Product link copied");
+    } catch (error) {
+      if ((error as DOMException)?.name !== "AbortError") toast.error("Could not share this product");
+    }
+  }
+
   const reviewsCount = Number(product.reviewCount || 0);
   const ratingAvg = Number(product.ratingAvg || 0);
   const detailDescription = (product.description ?? "").trim();
-  const showDarazDetailBlock =
-    detailDescription.length > 0 && product.images.length > 0;
+  const { specs: descriptionSpecs, prose: descriptionProse } = splitDescription(detailDescription);
 
   const imageCount = product.images.length;
   const showImage = (next: number) => {
@@ -303,9 +500,7 @@ export function ProductDetailClient({
     setIdx((next + imageCount) % imageCount);
   };
   const touchStartX = useRef<number | null>(null);
-  const stockLabel = product.stock > 50 ? "50+" : String(product.stock);
-  const shortDescription = detailDescription.replace(/\s+/g, " ");
-  const buy1Discount = displayDiscount(basePrice, product.originalPrice);
+  const stockLabel = product.stock > 500 ? "500+" : String(product.stock);
   const actionsDisabled =
     product.stock < 1 || quantityClamped < 1 || quantityClamped > product.stock;
   const sellerName = seller?.name || "Marketplace listing";
@@ -313,25 +508,47 @@ export function ProductDetailClient({
     ? `/stores/${encodeURIComponent(seller.storeSlug)}`
     : null;
 
+  /** On tablet/desktop the thumbnail rail shows 4 images and a "+N" tile; phones scroll them all. */
+  const railOverflow = imageCount > 5;
+  const railShown = railOverflow ? 4 : imageCount;
+
+  const variantsAreColours =
+    needsVariant && product.variants.every((v) => swatchFor(v) !== undefined);
+  const variantLabel = variantsAreColours ? "Color Family" : "Options";
+
+  const knownLabels = new Set(["product name", "name", "category"]);
+  const specRows: { label: string; value: string }[] = [
+    { label: "Product Name", value: product.name },
+    ...(product.category ? [{ label: "Category", value: product.category }] : []),
+    ...descriptionSpecs.filter((row) => !knownLabels.has(row.label.toLowerCase())),
+    ...(needsVariant && !descriptionSpecs.some((row) => /colou?r|variant|option/i.test(row.label))
+      ? [{ label: variantLabel, value: product.variants.join(", ") }]
+      : []),
+    ...(product.warrantyMonths
+      ? [{ label: "Warranty", value: `${product.warrantyMonths} ${product.warrantyMonths === 1 ? "month" : "months"}` }]
+      : []),
+  ];
+  const supportingImage = product.images[1] || product.images[0];
+
   return (
     <div className="min-h-screen bg-[#F7F8F2]">
-      <div className="mx-auto max-w-[1280px] px-4 py-6 sm:px-6 sm:py-8">
-        <nav aria-label="Breadcrumb" className="mb-4 sm:mb-5">
-          <ol className="flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap text-[12px] text-[#6B7280] sm:text-[14px]">
+      <div className="mx-auto max-w-[1440px] px-4 pb-8 pt-4 sm:px-5 sm:pt-5">
+        <nav aria-label="Breadcrumb" className="mb-4">
+          <ol className="flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap text-[12px] text-[#6B7280] sm:gap-2 sm:text-[14px]">
             <li className="shrink-0">
-              <Link href="/" className="hover:text-[#0B3D20]">Home</Link>
+              <Link href="/" className="hover:text-[#00543D]">Home</Link>
             </li>
             <BreadcrumbChevron />
             <li className="shrink-0">
-              <Link href="/products" className="hover:text-[#0B3D20]">Shop Products</Link>
+              <Link href="/products" className="hover:text-[#00543D]">Products</Link>
             </li>
             {product.category ? (
               <>
                 <BreadcrumbChevron />
-                <li className="min-w-0 max-w-[45%] truncate sm:max-w-none">
+                <li className="min-w-0 max-w-[40%] truncate sm:max-w-none">
                   <Link
                     href={`/products?category=${encodeURIComponent(product.category)}`}
-                    className="hover:text-[#0B3D20]"
+                    className="hover:text-[#00543D]"
                   >
                     {product.category}
                   </Link>
@@ -339,140 +556,177 @@ export function ProductDetailClient({
               </>
             ) : null}
             <BreadcrumbChevron />
-            <li aria-current="page" className="min-w-0 truncate font-medium text-[#111827]">
+            <li aria-current="page" className="min-w-0 truncate font-medium text-[#172033]">
               {product.name}
             </li>
           </ol>
         </nav>
 
-        <div className="flex flex-col gap-4 md:grid md:grid-cols-2 md:items-start md:gap-5 xl:grid-cols-[minmax(0,38fr)_minmax(0,35fr)_minmax(0,27fr)] xl:gap-5 2xl:gap-6">
+        <div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2 md:items-start xl:grid-cols-[minmax(0,1.38fr)_minmax(0,1fr)_minmax(0,0.86fr)]">
           {/* LEFT — gallery */}
-          <div className="min-w-0 rounded-2xl border border-[#EEF0EC] bg-white p-3 shadow-[0_1px_3px_rgba(16,24,16,0.04)] sm:p-4">
-            <div
-              className="relative aspect-[8/7] w-full overflow-hidden rounded-lg bg-[#F3F4F1]"
-              onTouchStart={(e) => {
-                touchStartX.current = e.touches[0]?.clientX ?? null;
-              }}
-              onTouchEnd={(e) => {
-                const start = touchStartX.current;
-                touchStartX.current = null;
-                const end = e.changedTouches[0]?.clientX;
-                if (start == null || end == null || Math.abs(end - start) < 40) return;
-                showImage(end < start ? idx + 1 : idx - 1);
-              }}
-            >
-              {mainImg ? (
-                <Image
-                  src={mainImg}
-                  alt={product.name}
-                  fill
-                  unoptimized={!!mainLocal}
-                  className="object-cover object-center"
-                  priority
-                  sizes="(max-width:767px) 100vw, (max-width:1279px) 50vw, 520px"
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center text-sm text-[#6B7280]">
-                  No image
-                </div>
-              )}
-              <SaveProductButton
-                productId={product._id}
-                name={product.name}
-                variant="icon"
-                className="absolute right-3 top-3"
-              />
+          <section aria-label="Product images" className={`${card} p-3 sm:p-3.5`}>
+            <div className="flex min-w-0 flex-col-reverse gap-3 sm:flex-row">
               {imageCount > 1 ? (
+                <div className="flex shrink-0 gap-2 overflow-x-auto pb-1 [scrollbar-width:thin] sm:w-[68px] sm:flex-col sm:gap-3 sm:overflow-visible sm:pb-0 xl:w-[80px]">
+                  {product.images.map((im, i) => (
+                    <button
+                      key={`${im}-${i}`}
+                      type="button"
+                      onClick={() => setIdx(i)}
+                      aria-label={`Show image ${i + 1}`}
+                      aria-current={idx === i}
+                      className={`relative aspect-square w-16 shrink-0 overflow-hidden rounded-lg border-2 bg-[#F3F4F1] transition-colors sm:w-full ${
+                        i >= railShown ? "sm:hidden" : ""
+                      } ${idx === i ? "border-[#00543D]" : "border-[#E5E9E5] hover:border-[#9DB8A6]"}`}
+                    >
+                      <Image
+                        src={im}
+                        alt=""
+                        fill
+                        unoptimized={isLocalProductImageSrc(im)}
+                        className="object-cover"
+                        sizes="80px"
+                      />
+                    </button>
+                  ))}
+                  {railOverflow ? (
+                    <button
+                      type="button"
+                      onClick={() => { setIdx(railShown); setViewerOpen(true); }}
+                      aria-label={`View all ${imageCount} images`}
+                      className="relative hidden aspect-square w-full shrink-0 overflow-hidden rounded-lg border-2 border-[#E5E9E5] bg-[#172033] sm:block"
+                    >
+                      <Image
+                        src={product.images[railShown]}
+                        alt=""
+                        fill
+                        unoptimized={isLocalProductImageSrc(product.images[railShown])}
+                        className="object-cover opacity-45"
+                        sizes="80px"
+                      />
+                      <span className="absolute inset-0 flex items-center justify-center text-[20px] font-bold text-white">
+                        +{imageCount - railShown}
+                      </span>
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+
+              <div
+                className="relative aspect-square w-full min-w-0 overflow-hidden rounded-xl bg-[#F3F4F1] sm:aspect-[16/15]"
+                onTouchStart={(e) => {
+                  touchStartX.current = e.touches[0]?.clientX ?? null;
+                }}
+                onTouchEnd={(e) => {
+                  const start = touchStartX.current;
+                  touchStartX.current = null;
+                  const end = e.changedTouches[0]?.clientX;
+                  if (start == null || end == null || Math.abs(end - start) < 40) return;
+                  showImage(end < start ? idx + 1 : idx - 1);
+                }}
+              >
+                {mainImg ? (
+                  <Image
+                    src={mainImg}
+                    alt={product.name}
+                    fill
+                    unoptimized={!!mainLocal}
+                    className="cursor-zoom-in object-cover object-center"
+                    priority
+                    sizes="(max-width:767px) 100vw, (max-width:1279px) 50vw, 560px"
+                    onClick={() => setViewerOpen(true)}
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center text-sm text-[#6B7280]">
+                    No image
+                  </div>
+                )}
+                {imageCount > 1 ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => showImage(idx - 1)}
+                      aria-label="Previous image"
+                      className="absolute left-1 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center sm:hidden"
+                    >
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/95 text-[#00543D] shadow-md">
+                        <ChevronLeft className="h-4 w-4" />
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => showImage(idx + 1)}
+                      aria-label="Next image"
+                      className="absolute right-1 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center sm:hidden"
+                    >
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/95 text-[#00543D] shadow-md">
+                        <ChevronRight className="h-4 w-4" />
+                      </span>
+                    </button>
+                  </>
+                ) : null}
+                {mainImg ? (
+                  <button
+                    type="button"
+                    onClick={() => setViewerOpen(true)}
+                    aria-label="View images full screen"
+                    className="absolute bottom-3 right-3 flex h-10 w-10 items-center justify-center rounded-lg bg-[#172033]/55 text-white backdrop-blur-sm transition hover:bg-[#172033]/75"
+                  >
+                    <Maximize2 className="h-[18px] w-[18px]" />
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          </section>
+
+          {/* MIDDLE — purchase card */}
+          <section aria-label="Purchase options" className={`${card} p-4 sm:p-5 xl:p-6`}>
+            <div className="flex items-start justify-between gap-3">
+              <h1 className="min-w-0 break-words text-[22px] font-bold leading-tight text-[#172033] sm:text-[26px]">
+                {product.name}
+              </h1>
+              <div className="-mr-1.5 -mt-1 flex shrink-0 items-center">
+                <button
+                  type="button"
+                  onClick={() => void handleShare()}
+                  aria-label="Share this product"
+                  className="flex h-11 w-11 items-center justify-center rounded-full text-[#172033] transition hover:bg-[#F3F6F1]"
+                >
+                  <Share2 className="h-5 w-5" />
+                </button>
+                <SaveProductButton
+                  productId={product._id}
+                  name={product.name}
+                  variant="icon"
+                  className="bg-transparent text-[#172033] shadow-none hover:bg-[#F3F6F1]"
+                />
+              </div>
+            </div>
+
+            <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[13px] text-[#6B7280] sm:text-[14px]">
+              <StarRating rating={ratingAvg} />
+              {reviewsCount > 0 ? (
+                <span className="font-semibold text-[#172033]">
+                  {(Math.round(ratingAvg * 10) / 10).toFixed(1)}
+                </span>
+              ) : null}
+              <a href="#review" className="hover:text-[#00543D]">
+                ({reviewsCount} {reviewsCount === 1 ? "review" : "reviews"})
+              </a>
+              {soldCount != null ? (
                 <>
-                  <button
-                    type="button"
-                    onClick={() => showImage(idx - 1)}
-                    aria-label="Previous image"
-                    className="absolute left-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center sm:left-3"
-                  >
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#0B3D20] shadow-md sm:h-10 sm:w-10">
-                      <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => showImage(idx + 1)}
-                    aria-label="Next image"
-                    className="absolute right-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center sm:right-3"
-                  >
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#0B3D20] shadow-md sm:h-10 sm:w-10">
-                      <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
-                    </span>
-                  </button>
+                  <span aria-hidden className="h-4 w-px bg-[#D9DDD8]" />
+                  <span>{soldCount.toLocaleString("en-PK")} sold</span>
                 </>
               ) : null}
             </div>
-            {imageCount > 1 ? (
-              <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:thin]">
-                {product.images.map((im, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => setIdx(i)}
-                    aria-label={`Show image ${i + 1}`}
-                    aria-current={idx === i}
-                    className={`relative aspect-square min-w-[60px] shrink-0 basis-[calc((100%-2rem)/5)] overflow-hidden rounded-md border-2 bg-[#F3F4F1] transition-colors ${
-                      idx === i ? "border-[#0B3D20]" : "border-transparent hover:border-[#C9D3C4]"
-                    }`}
-                  >
-                    <Image
-                      src={im}
-                      alt=""
-                      fill
-                      unoptimized={isLocalProductImageSrc(im)}
-                      className="object-cover"
-                      sizes="96px"
-                    />
-                  </button>
-                ))}
-              </div>
-            ) : null}
-          </div>
-
-          {/* MIDDLE — product info */}
-          <div className="min-w-0 rounded-2xl border border-[#EEF0EC] bg-white p-4 shadow-[0_1px_3px_rgba(16,24,16,0.04)] sm:p-6">
-            {product.stock > 0 ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#E8F5E0] px-3 py-1 text-[12px] font-semibold text-[#2F7A12]">
-                <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
-                In Stock
-              </span>
-            ) : (
-              <span className="inline-flex items-center rounded-full bg-red-50 px-3 py-1 text-[12px] font-semibold text-red-700">
-                Out of Stock
-              </span>
-            )}
-
-            <h1 className="mt-3 break-words text-[22px] font-bold leading-tight text-[#0B3D20] sm:text-[26px] xl:text-[28px]">
-              {product.name}
-            </h1>
-
-            <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[14px]">
-              {reviewsCount > 0 ? (
-                <>
-                  <StarRating rating={ratingAvg} />
-                  <span className="font-semibold text-[#111827]">
-                    {(Math.round(ratingAvg * 10) / 10).toFixed(1)}
-                  </span>
-                  <a href="#review" className="text-[#6B7280] hover:text-[#0B3D20]">
-                    ({reviewsCount} {reviewsCount === 1 ? "review" : "reviews"})
-                  </a>
-                </>
-              ) : (
-                <span className="text-[#6B7280]">No ratings yet</span>
-              )}
-            </div>
 
             <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-              <span className="text-[26px] font-bold leading-none text-[#0B3D20] sm:text-[32px]">
+              <span className="text-[28px] font-bold leading-none text-[#00543D] sm:text-[32px]">
                 {formatPKR(displayPrice)}
               </span>
               {displayOriginal != null ? (
-                <span className="text-[15px] text-[#9CA3AF] line-through sm:text-[17px]">
+                <span className="text-[15px] text-[#9CA3AF] line-through sm:text-[16px]">
                   {formatPKR(displayOriginal)}
                 </span>
               ) : null}
@@ -482,46 +736,83 @@ export function ProductDetailClient({
                 </span>
               ) : null}
             </div>
-            <p className="mt-1.5 text-[12px] text-[#6B7280]">Inclusive of all taxes</p>
-
-            {shortDescription ? (
-              <p className="mt-3 line-clamp-2 text-[15px] leading-relaxed text-[#6B7280]">
-                {shortDescription}
-              </p>
-            ) : null}
 
             {product.variants?.length ? (
-              <div className="mt-5">
-                <p className="mb-2 text-[14px] font-semibold text-[#111827]">Color Family</p>
+              <fieldset className="mt-5">
+                <legend className="mb-2 text-[14px] font-medium text-[#172033]">
+                  {variantLabel}
+                  {variant && !variantsAreColours ? <span className="font-normal text-[#6B7280]">: {variant}</span> : null}
+                </legend>
                 <div className="flex flex-wrap gap-2">
-                  {product.variants.map((v) => (
-                    <button
-                      key={v}
-                      type="button"
-                      onClick={() => setVariant(v)}
-                      aria-pressed={variant === v}
-                      className={`min-h-11 rounded-md border px-3.5 text-[13px] font-medium transition-colors ${
-                        variant === v
-                          ? "border-[#A6D63A] bg-[#F3FADF] text-[#0B3D20]"
-                          : "border-[#E5E7EB] bg-white text-[#111827] hover:border-[#C9D3C4]"
-                      }`}
-                    >
-                      {v}
-                    </button>
-                  ))}
+                  {product.variants.map((v) => {
+                    const swatch = swatchFor(v);
+                    const selected = variant === v;
+                    if (variantsAreColours) {
+                      return (
+                        <button
+                          key={v}
+                          type="button"
+                          onClick={() => setVariant(v)}
+                          aria-pressed={selected}
+                          aria-label={v}
+                          title={v}
+                          className={`flex h-11 w-11 items-center justify-center rounded-lg border-2 bg-white p-[3px] transition-colors ${
+                            selected ? "border-[#00543D]" : "border-[#E5E9E5] hover:border-[#9DB8A6]"
+                          }`}
+                        >
+                          <span
+                            aria-hidden
+                            className="h-full w-full rounded-[5px] border border-black/10"
+                            style={{
+                              background:
+                                swatch ||
+                                "conic-gradient(#E53935, #F5D21F, #2E9E4F, #1E88E5, #7E3FBF, #E53935)",
+                            }}
+                          />
+                        </button>
+                      );
+                    }
+                    return (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setVariant(v)}
+                        aria-pressed={selected}
+                        title={v}
+                        className={`inline-flex min-h-11 items-center gap-2 rounded-lg border-2 px-3 text-[13px] font-medium transition-colors ${
+                          selected
+                            ? "border-[#00543D] bg-[#F4FAEA] text-[#003F2E]"
+                            : "border-[#E5E9E5] bg-white text-[#172033] hover:border-[#9DB8A6]"
+                        }`}
+                      >
+                        {swatch !== undefined ? (
+                          <span
+                            aria-hidden
+                            className="h-5 w-5 shrink-0 rounded-[5px] border border-black/10"
+                            style={{
+                              background:
+                                swatch ||
+                                "conic-gradient(#E53935, #F5D21F, #2E9E4F, #1E88E5, #7E3FBF, #E53935)",
+                            }}
+                          />
+                        ) : null}
+                        {v}
+                      </button>
+                    );
+                  })}
                 </div>
-              </div>
+              </fieldset>
             ) : null}
 
             <div className="mt-5">
-              <p className="mb-2 text-[14px] font-semibold text-[#111827]">Quantity</p>
+              <p id="quantity-label" className="mb-2 text-[14px] font-medium text-[#172033]">Quantity</p>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                <div className="inline-flex h-11 w-[140px] items-stretch overflow-hidden rounded-md border border-[#E5E7EB] bg-white">
+                <div className="inline-flex h-11 w-[140px] items-stretch overflow-hidden rounded-lg border border-[#D9DDD8] bg-white">
                   <button
                     type="button"
                     disabled={product.stock < 1 || quantityClamped <= 1}
                     onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                    className="flex w-11 shrink-0 items-center justify-center border-r border-[#E5E7EB] text-[#111827] hover:bg-[#F7F8F6] disabled:opacity-40"
+                    className="flex w-11 shrink-0 items-center justify-center border-r border-[#D9DDD8] text-[#172033] hover:bg-[#F7F8F6] disabled:opacity-40"
                     aria-label="Decrease quantity"
                   >
                     <Minus className="h-4 w-4" />
@@ -539,57 +830,47 @@ export function ProductDetailClient({
                       const cap = Math.max(1, product.stock);
                       setQuantity(Math.min(Math.max(1, v), cap));
                     }}
-                    className="w-0 min-w-0 flex-1 border-0 bg-transparent text-center text-[15px] font-semibold text-[#111827] tabular-nums outline-none focus:ring-0 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                    aria-label="Quantity"
+                    className="w-0 min-w-0 flex-1 border-0 bg-transparent text-center text-[15px] font-semibold text-[#172033] tabular-nums outline-none focus:ring-0 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                    aria-labelledby="quantity-label"
                   />
                   <button
                     type="button"
                     disabled={product.stock < 1 || quantityClamped >= product.stock}
                     onClick={() => setQuantity((q) => Math.min(product.stock, q + 1))}
-                    className="flex w-11 shrink-0 items-center justify-center border-l border-[#E5E7EB] text-[#111827] hover:bg-[#F7F8F6] disabled:opacity-40"
+                    className="flex w-11 shrink-0 items-center justify-center border-l border-[#D9DDD8] text-[#172033] hover:bg-[#F7F8F6] disabled:opacity-40"
                     aria-label="Increase quantity"
                   >
                     <Plus className="h-4 w-4" />
                   </button>
                 </div>
                 {product.stock > 0 ? (
-                  <span className="inline-flex items-center gap-1.5 text-[14px] font-medium text-[#2F7A12]">
-                    <CheckCircle2 className="h-4 w-4" aria-hidden />
-                    In stock ({stockLabel})
+                  <span className="inline-flex items-center gap-2 text-[13px] text-[#6B7280] sm:text-[14px]">
+                    <span aria-hidden className="h-2.5 w-2.5 rounded-full bg-[#3DB54A]" />
+                    In stock ({stockLabel} available)
                   </span>
                 ) : (
-                  <span className="text-[14px] font-medium text-red-700">Out of stock</span>
+                  <span className="inline-flex items-center gap-2 text-[14px] font-medium text-red-700">
+                    <span aria-hidden className="h-2.5 w-2.5 rounded-full bg-red-600" />
+                    Out of stock
+                  </span>
                 )}
               </div>
             </div>
 
-            <div className="mt-5">
-              <p className="mb-2 text-[14px] font-semibold text-[#111827]">
-                Bundle &amp; Save <span className="font-normal text-[#6B7280]">(Optional)</span>
-              </p>
-              <div className="overflow-hidden rounded-xl border border-[#E5E7EB]">
-                {([1, 3, 5] as const).map((t, i) => {
+            <fieldset className="mt-5">
+              <legend className="mb-2 text-[14px] font-medium text-[#172033]">Buy More &amp; Save</legend>
+              <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
+                {([1, 3, 5] as const).map((t) => {
                   const key: BuyTierKey = t === 1 ? "buy1" : t === 3 ? "buy3" : "buy5";
                   const disabled = !tierAvailable(t);
                   const selected = selectedTierKey === key;
-                  const price = t === 1 ? basePrice : lineTotal(t);
-                  const strike =
-                    t === 1
-                      ? buy1Discount ? product.originalPrice! : null
-                      : tierMeta[t].strikeTotal;
-                  const pill =
-                    t === 1
-                      ? buy1Discount ? `${buy1Discount.percent}% OFF` : null
-                      : tierMeta[t].badge;
                   return (
                     <label
                       key={t}
-                      className={`flex min-h-[56px] cursor-pointer items-center gap-3 px-3 py-3 transition-colors sm:px-4 ${
-                        i > 0 ? "border-t border-[#E5E7EB]" : ""
-                      } ${
+                      className={`relative flex min-h-[60px] min-w-0 cursor-pointer items-center gap-1.5 rounded-lg border-2 px-2 py-2 transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[#00543D] sm:px-2.5 xl:px-2 ${
                         selected
-                          ? "bg-[#F3FADF] shadow-[inset_0_0_0_1.5px_#A6D63A]"
-                          : "bg-white hover:bg-[#FAFBF8]"
+                          ? "border-[#7DBB2C] bg-[#F4FBE6]"
+                          : "border-[#E5E9E5] bg-white hover:border-[#9DB8A6]"
                       } ${disabled ? "cursor-not-allowed opacity-50" : ""}`}
                     >
                       <input
@@ -598,187 +879,194 @@ export function ProductDetailClient({
                         checked={selected}
                         disabled={disabled}
                         onChange={() => setQuantity(t)}
-                        className="h-[18px] w-[18px] shrink-0"
-                        style={{ accentColor: "#0B3D20" }}
+                        className="sr-only"
                       />
-                      <div className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                        <span className="text-[14px] font-semibold text-[#111827]">
-                          {t === 1 ? "Buy 1 (Standard)" : `Buy ${t}`}
+                      {selected ? (
+                        <CheckCircle2
+                          aria-hidden
+                          className="hidden h-4 w-4 shrink-0 fill-[#2F8F3A] text-white min-[400px]:block md:hidden lg:block"
+                        />
+                      ) : null}
+                      <span className="min-w-0">
+                        <span className="block text-[14px] font-semibold text-[#172033]">Buy {t}</span>
+                        <span className="block text-[12px] leading-tight text-[#374151] sm:text-[13px] xl:text-[12px]">
+                          <span className="whitespace-nowrap">{formatPKR(effectiveUnitPrice(t))}</span> each
                         </span>
-                        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                          <span className="text-[15px] font-bold text-[#0B3D20]">{formatPKR(price)}</span>
-                          {strike != null ? (
-                            <span className="text-[13px] text-[#9CA3AF] line-through">{formatPKR(strike)}</span>
-                          ) : null}
-                          {pill ? (
-                            <span
-                              className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
-                                selected ? "bg-[#3F7D14] text-white" : "bg-[#ECF7D4] text-[#2F7A12]"
-                              }`}
-                            >
-                              {pill}
-                            </span>
-                          ) : null}
-                        </span>
-                      </div>
+                      </span>
                     </label>
                   );
                 })}
               </div>
-            </div>
+            </fieldset>
 
-            <div className="mt-5 grid grid-cols-1 gap-3 min-[375px]:grid-cols-2">
+            <div className="mt-6 grid grid-cols-1 gap-3 min-[360px]:grid-cols-2">
               <LoadingButton
                 type="button"
                 onClick={handleBuyNow}
                 disabled={actionsDisabled}
-                className="inline-flex min-h-[52px] min-w-0 items-center justify-center gap-2 rounded-md bg-[#9BD832] px-3 text-[15px] font-bold text-[#0B3D20] transition hover:brightness-95 disabled:opacity-45"
+                className="inline-flex min-h-[50px] min-w-0 items-center justify-center gap-2 rounded-lg bg-[#A8E52E] px-3 text-[15px] font-bold text-[#003F2E] transition hover:bg-[#9AD62A] disabled:opacity-45"
               >
-                <Zap className="h-[18px] w-[18px] shrink-0" aria-hidden />
+                <Zap className="h-[18px] w-[18px] shrink-0 fill-current" aria-hidden />
                 Buy Now
               </LoadingButton>
               <LoadingButton
                 type="button"
                 onClick={handleAddCart}
                 disabled={actionsDisabled}
-                className="inline-flex min-h-[52px] min-w-0 items-center justify-center gap-2 rounded-md bg-[#0B3D20] px-3 text-[15px] font-bold text-white transition hover:bg-[#062A15] disabled:opacity-45"
+                className="inline-flex min-h-[50px] min-w-0 items-center justify-center gap-2 rounded-lg bg-[#00543D] px-3 text-[15px] font-bold text-white transition hover:bg-[#003F2E] disabled:opacity-45"
               >
                 <ShoppingCart className="h-[18px] w-[18px] shrink-0" aria-hidden />
                 {added ? "Added ✓" : "Add to Cart"}
               </LoadingButton>
             </div>
-          </div>
+          </section>
 
-          {/* RIGHT — sidebar cards */}
-          <div className="grid min-w-0 gap-4 md:col-span-2 md:grid-cols-2 md:gap-5 lg:grid-cols-3 xl:col-span-1 xl:grid-cols-1 xl:gap-4">
-            <SideCard icon={Truck} title="Delivery Options">
-              <SideItem
-                icon={MapPin}
-                title="Delivering across Pakistan"
-                subtitle="From local sellers to your doorstep"
-              />
-              <SideItem
+          {/* RIGHT — delivery, returns and seller */}
+          <div className="grid min-w-0 gap-4 md:col-span-2 md:grid-cols-2 lg:grid-cols-3 xl:col-span-1 xl:grid-cols-1">
+            <InfoCard icon={Truck} title="Delivery Options">
+              <InfoRow icon={MapPin} title="Delivering across Pakistan" />
+              <InfoRow
                 icon={Truck}
                 title="Standard Delivery"
-                subtitle="Fee and timing are calculated from your address at checkout"
+                subtitle={delivery ? "Flat delivery charge per order" : "Charges are confirmed at checkout"}
+                aside={delivery ? (delivery.fee > 0 ? formatPKR(delivery.fee) : "FREE") : undefined}
               />
-              <SideItem
-                icon={CreditCard}
-                title="Payment"
-                subtitle="Available payment methods are confirmed at checkout"
-              />
-            </SideCard>
+              {delivery?.codCities.length ? (
+                <InfoRow
+                  icon={Banknote}
+                  title="Cash on Delivery"
+                  subtitle={
+                    delivery.codCities.length > 2
+                      ? `${delivery.codCities.slice(0, 2).join(", ")} + ${delivery.codCities.length - 2} more cities`
+                      : `Available in ${delivery.codCities.join(", ")}`
+                  }
+                />
+              ) : null}
+            </InfoCard>
 
-            <SideCard icon={ShieldCheck} title="Returns & Warranty">
-              <SideItem
+            <InfoCard icon={ShieldCheck} title="Returns & Warranty">
+              <InfoRow
                 icon={RotateCcw}
-                title="Easy Returns"
-                subtitle="Return requests are reviewed after delivery in My Stuff"
+                title="7 Days Return"
+                subtitle="For wrong or damaged items"
+                href="/return-policy"
               />
-              <SideItem
+              <InfoRow
                 icon={ShieldCheck}
                 title="Seller Warranty"
                 subtitle={
                   product.warrantyMonths
                     ? `${product.warrantyMonths}-month seller warranty`
-                    : "No warranty specified for this listing"
+                    : "Not available"
                 }
               />
-            </SideCard>
+            </InfoCard>
 
-            <SideCard icon={Store} title="Sold by" className="md:col-span-2 lg:col-span-1">
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#EEF0EC] bg-[#F3F4F1] text-[22px] font-bold text-[#0B3D20]">
-                  {seller?.logo ? (
-                    <Image src={seller.logo} alt="" fill unoptimized className="object-cover" sizes="64px" />
-                  ) : (
-                    <span aria-hidden>{sellerName.charAt(0).toUpperCase()}</span>
-                  )}
-                </div>
-                <div className="min-w-0">
-                  <p className="truncate text-[15px] font-bold text-[#111827]">{sellerName}</p>
-                  {seller ? (
-                    <p className="mt-0.5 inline-flex items-center gap-1 text-[12px] font-medium text-[#2F7A12]">
-                      <BadgeCheck className="h-3.5 w-3.5" aria-hidden />
-                      Verified Seller
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-              {storeHref ? (
-                <div className="mt-3 flex justify-end">
+            <InfoCard icon={Store} title="Sold by" className="md:col-span-2 lg:col-span-1">
+              {(() => {
+                const body = (
+                  <>
+                    <span className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#F3F6F1] text-[#00543D]">
+                      {seller?.logo ? (
+                        <Image src={seller.logo} alt="" fill unoptimized className="object-cover" sizes="44px" />
+                      ) : (
+                        <Store className="h-5 w-5" aria-hidden />
+                      )}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[14px] font-bold text-[#172033]">{sellerName}</span>
+                      {seller?.activity ? (
+                        <span className="mt-0.5 block text-[12px] text-[#6B7280]">{seller.activity}</span>
+                      ) : seller ? (
+                        <span className="mt-0.5 inline-flex items-center gap-1 text-[12px] font-medium text-[#2F7A12]">
+                          <BadgeCheck className="h-3.5 w-3.5" aria-hidden />
+                          Verified Seller
+                        </span>
+                      ) : null}
+                    </span>
+                    {storeHref ? <ChevronRight className="h-5 w-5 shrink-0 text-[#374151]" aria-hidden /> : null}
+                  </>
+                );
+                return storeHref ? (
                   <Link
                     href={storeHref}
-                    className="inline-flex min-h-11 items-center rounded-md border border-[#0B3D20] px-4 text-[13px] font-semibold text-[#0B3D20] transition hover:bg-[#0B3D20] hover:text-white"
+                    aria-label={`Visit ${sellerName} store`}
+                    className="flex min-w-0 items-center gap-3 rounded-lg pt-1 transition-colors hover:text-[#00543D]"
                   >
-                    View Store
+                    {body}
                   </Link>
-                </div>
-              ) : null}
-            </SideCard>
+                ) : (
+                  <div className="flex min-w-0 items-center gap-3 pt-1">{body}</div>
+                );
+              })()}
+            </InfoCard>
           </div>
         </div>
 
         <ProductServices line={{ productId: product._id, name: product.name, price: unitPriceForCart, image: product.images[0] || "", quantity: totalUnits, maxStock: product.stock, variant }} />
 
-        {/* Description: text on top, full-width images below (when admin adds details) */}
-        <div className="mt-5 rounded-2xl border border-[#DFEDE5] bg-white p-4 shadow-sm sm:p-6">
-          {detailDescription.length > 0 ? (
-            <>
-              <h2 className="mb-3 border-b border-[#f0f0f0] pb-2 text-[16px] font-semibold leading-snug text-[#333]">
-                Product details of{" "}
-                <span className="font-semibold text-[#212121]">{product.name}</span>
-              </h2>
-              <div className="prose prose-sm max-w-none whitespace-pre-wrap text-[15px] leading-relaxed text-[#555]">
-                {detailDescription}
-              </div>
-              {showDarazDetailBlock ? (
-                <div className="mt-6 space-y-3 border-t border-[#f0f0f0] pt-6">
-                  {product.images.map((src, i) => {
-                    const local = isLocalProductImageSrc(src);
-                    return (
-                      <div
-                        key={`${src}-${i}`}
-                        className="mx-auto w-full max-w-[420px] bg-[#fafafa] sm:max-w-[480px] md:max-w-[560px]"
-                      >
-                        <Image
-                          src={src}
-                          alt={`${product.name} — detail ${i + 1}`}
-                          width={560}
-                          height={560}
-                          className="mx-auto h-auto w-full object-contain object-center"
-                          sizes="(max-width: 480px) 100vw, 560px"
-                          unoptimized={!!local}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
+        <div className="mt-5 grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)] lg:items-start">
+          {/* Product details: spec table + supporting image, then the full description */}
+          <section aria-labelledby="product-details-title" className={`${card} p-4 sm:p-5`}>
+            <h2 id="product-details-title" className="text-[18px] font-bold text-[#172033] sm:text-[20px]">
+              Product Details
+            </h2>
+            <div className={`mt-4 grid min-w-0 gap-4 ${supportingImage ? "sm:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]" : ""}`}>
+              <dl className="min-w-0 self-start overflow-hidden rounded-lg border border-[#EEF1EC]">
+                {specRows.map((row, i) => (
+                  <div
+                    key={`${row.label}-${i}`}
+                    className={`grid grid-cols-[minmax(96px,40%)_minmax(0,1fr)] gap-3 px-4 py-2.5 text-[13px] ${
+                      i > 0 ? "border-t border-[#EEF1EC]" : ""
+                    } ${i % 2 === 0 ? "bg-[#FAFBF8]" : "bg-white"}`}
+                  >
+                    <dt className="text-[#374151]">{row.label}</dt>
+                    <dd className="min-w-0 break-words text-[#4B5563]">{row.value}</dd>
+                  </div>
+                ))}
+              </dl>
+              {supportingImage ? (
+                <button
+                  type="button"
+                  onClick={() => { setIdx(product.images.indexOf(supportingImage)); setViewerOpen(true); }}
+                  aria-label="View product image full screen"
+                  className="relative aspect-[4/3] w-full min-w-0 overflow-hidden rounded-xl bg-[#F3F4F1] sm:aspect-auto sm:min-h-[200px] sm:self-stretch"
+                >
+                  <Image
+                    src={supportingImage}
+                    alt=""
+                    fill
+                    unoptimized={isLocalProductImageSrc(supportingImage)}
+                    className="object-cover"
+                    sizes="(max-width:639px) 100vw, (max-width:1023px) 50vw, 400px"
+                  />
+                </button>
               ) : null}
-            </>
-          ) : null}
+            </div>
+            {descriptionProse ? (
+              <div className="mt-5 border-t border-[#EEF1EC] pt-4">
+                <h3 className="text-[15px] font-semibold text-[#172033]">Description</h3>
+                <p className="mt-2 whitespace-pre-wrap break-words text-[14px] leading-relaxed text-[#4B5563]">
+                  {descriptionProse}
+                </p>
+              </div>
+            ) : null}
+          </section>
+
+          <div id="review" className="min-w-0 scroll-mt-40">
+            <ProductApprovedReviewsList
+              postField={reviewsPostField ?? { productId: product._id }}
+            />
+          </div>
         </div>
 
-        <div
-          id="review"
-          className={`scroll-mt-24 ${
-            detailDescription.length > 0
-              ? "mt-8 border-t border-[#f0f0f0] pt-6"
-              : "pt-1"
-          }`}
-        >
-          <h2 className="mb-4 text-[16px] font-semibold text-[#333]">
-            Ratings &amp; reviews
-          </h2>
-          <ProductApprovedReviewsList
-            postField={reviewsPostField ?? { productId: product._id }}
-          />
+        <div className="mt-4">
           <VerifiedOrderReviewSection productId={product._id} />
         </div>
 
         {related.length > 0 ? (
-          <section className="mt-6 rounded-2xl border border-[#DFEDE5] bg-white p-4 shadow-sm sm:p-6">
-            <h2 className="mb-4 text-[18px] font-semibold text-[#333]">
+          <section className={`${card} mt-1 p-4 sm:p-5`}>
+            <h2 className="mb-4 text-[18px] font-bold text-[#172033] sm:text-[20px]">
               Related Products
             </h2>
             <div className={gridStyles.grid}>
@@ -789,6 +1077,16 @@ export function ProductDetailClient({
           </section>
         ) : null}
       </div>
+
+      {viewerOpen && imageCount > 0 ? (
+        <ImageViewer
+          images={product.images}
+          name={product.name}
+          index={Math.min(idx, imageCount - 1)}
+          onIndex={setIdx}
+          onClose={() => setViewerOpen(false)}
+        />
+      ) : null}
     </div>
   );
 }

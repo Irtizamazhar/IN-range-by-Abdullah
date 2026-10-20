@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
+import { usePathname } from "next/navigation";
 import { AnnouncementBar } from "@/components/user/AnnouncementBar";
 import { Navbar } from "@/components/user/Navbar";
 import { Footer } from "@/components/user/Footer";
@@ -21,10 +22,15 @@ export function UserRouteShell({
   footerSettings: FooterSettings;
   children: React.ReactNode;
 }) {
+  // Order tracking is a standalone courier-style page without the shop chrome.
+  const standalone = usePathname() === "/track-order";
   return (
     <CartProvider>
       <CustomerAuthProvider>
         <PostWantProvider>
+        {standalone ? (
+          <main className="min-h-screen min-w-0 overflow-x-clip bg-white">{children}</main>
+        ) : (
         <div className="flex min-h-screen flex-col overflow-x-clip bg-white pb-16 md:pb-0">
           <AnnouncementBar />
           <Suspense
@@ -41,6 +47,7 @@ export function UserRouteShell({
           <Footer settings={footerSettings} />
           <WhatsAppFloat number={whatsappNumber} />
         </div>
+        )}
         </PostWantProvider>
       </CustomerAuthProvider>
     </CartProvider>

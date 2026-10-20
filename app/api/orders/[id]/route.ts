@@ -19,6 +19,7 @@ import { customerOwnsRecord } from "@/lib/order-ownership";
 import { requireAdminPermission } from "@/lib/admin-rbac";
 import { createCustomerNotification } from "@/lib/customer-notifications";
 import { queueOrderConfirmation } from "@/lib/order-confirmation-delivery";
+import { buildOrderTrackingTimeline, resolveTrackingNumber } from "@/lib/order-tracking-timeline";
 
 type Ctx = { params: { id: string } };
 
@@ -57,9 +58,36 @@ export async function GET(req: NextRequest, context: Ctx) {
   const ref = id.trim().toUpperCase();
   const vendorShopOrderRef =
     !forAdmin && ref.startsWith("IRV-") ? ref : undefined;
-  return NextResponse.json(
-    serializeOrder(order, { forAdmin, vendorShopOrderRef })
-  );
+  const serialized = serializeOrder(order, { forAdmin, vendorShopOrderRef });
+  if (forAdmin) return NextResponse.json(serialized);
+
+  const [events, allShops] = await Promise.all([
+    prisma.orderStatusEvent.findMany({
+      where: { orderId: order.id, eventType: { in: ["order_created", "fulfilment_status_changed", "order_cancelled"] } },
+      select: { eventType: true, toStatus: true, createdAt: true },
+      orderBy: { createdAt: "asc" },
+    }),
+    prisma.vendorShopOrder.findMany({
+      where: { orderId: order.id },
+      select: { shopOrderNumber: true, status: true, statusHistory: true, trackingNumber: true },
+    }),
+  ]);
+  // Same slice scoping as serializeOrder: an IRV- reference only tracks that seller's parcel.
+  const scoped = vendorShopOrderRef ? allShops.filter((shop) => shop.shopOrderNumber === vendorShopOrderRef) : [];
+  const shops = scoped.length ? scoped : allShops;
+  return NextResponse.json({
+    ...serialized,
+    tracking: {
+      timeline: buildOrderTrackingTimeline({
+        createdAt: order.createdAt,
+        cancelledAt: order.cancelledAt,
+        orderStatus: serialized.orderStatus,
+        events,
+        shops,
+      }),
+      trackingNumber: resolveTrackingNumber(order.trackingNumber, shops),
+    },
+  });
 }
 
 export async function PUT(req: NextRequest, context: Ctx) {
