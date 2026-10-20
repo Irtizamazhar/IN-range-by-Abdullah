@@ -42,7 +42,7 @@ async function run() {
   let browser;
   try {
     browser = await chromium.launch({ executablePath, headless: true });
-    for (const width of [320, 375, 1280]) {
+    for (const width of [320, 375, 768, 1280]) {
       const page = await browser.newPage({ viewport: { width, height: 900 } });
       const errors = [], posts = []; let mode = 'empty';
       page.on('pageerror', error => errors.push(error.message));
@@ -61,12 +61,12 @@ async function run() {
         return route.fulfill({ json: {} });
       });
       async function fill() {
-        await page.getByRole('heading', { name: 'Checkout', exact: true }).waitFor();
+        await page.getByRole('heading', { name: 'Secure Checkout', exact: true }).waitFor();
         await page.getByRole('textbox', { name: 'Street address', exact: true }).fill('12 Street');
         const city = page.getByRole('combobox', { name: 'Delivery city', exact: true });
         await city.fill('Lahore'); await city.press('Tab');
       }
-      const complete = page.getByRole('button', { name: 'Complete order', exact: true });
+      const complete = page.getByRole('button', { name: 'Place Order', exact: true });
       await page.goto(base + '/checkout'); await fill();
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
       await page.evaluate(() => window.__expired = true); await complete.click();
