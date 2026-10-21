@@ -5,6 +5,8 @@ const nextConfig = {
   // Isolate verification builds when a local development server is already running.
   distDir: process.env.JORO_NEXT_DIST_DIR || ".next",
   experimental: {
+    // Hostinger counts build workers against its process/thread allowance.
+    cpus: 1,
     serverComponentsExternalPackages: [
       "@prisma/client",
       "bcryptjs",
