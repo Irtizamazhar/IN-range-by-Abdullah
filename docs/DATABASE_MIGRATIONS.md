@@ -93,15 +93,10 @@ It runs:
 result with `schema.prisma` exactly. If Prisma Client cannot be regenerated (for example on Windows while a dev
 server holds it), `npm run db:check:full -- --update-manifest` records the manifest after that replay passes.
 
-### Continuous integration
+### Migration tests
 
-`.github/workflows/migration-safety.yml` runs on every push and pull request on a GitHub-hosted runner, in
-order: unit tests, `db:check`, `db:check:full`, the migration scenarios (`tests/migration-scenarios/run-scenarios.sh`),
-the schema watcher test, a production-shaped deployment rehearsal on MariaDB 11.8, and `npm run build`. It uses
-throwaway MySQL 8.0 and MariaDB 11.8 service containers with CI-only credentials, no repository secrets, and a
-first step that refuses any database URL that is not local. It does not deploy.
-
-The same tests run locally against a disposable server, never a database you use:
+There is no CI workflow. Before pushing a schema change, run `npm test`, `npm run db:check` and
+`npm run db:check:full`. The migration scenarios run locally against a disposable server, never a database you use:
 `MIGRATION_TEST_SERVER_URL=mysql://user:password@127.0.0.1:3306 npm run test:migrations:scenarios`
 (also `test:migrations:watch` and `test:migrations:deploy`). They only create and drop `joro_disposable_*` databases.
 
