@@ -23,13 +23,14 @@ const hoverLift = "[@media(hover:hover)]:hover:-translate-y-[3px] [@media(hover:
 
 const NEW_FOR_MS = 14 * 24 * 60 * 60 * 1000;
 const card = "relative isolate flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-[#E3EBDB] bg-white shadow-[0_2px_8px_rgba(17,17,17,.04)]";
+const featuredCard = "relative isolate flex h-full min-w-0 flex-col overflow-hidden rounded-[20px] border border-[#E3EBDB] bg-white shadow-[0_4px_16px_rgba(17,17,17,.05)]";
 
 /**
  * Compact product card shared by the home product rows (Featured Products, New Arrivals). Other pages keep
  * the original ProductCard; this one reuses the same cart and wishlist hooks so behaviour stays identical.
  * `showNewTag` adds a "New" tag for products created in the last 14 days.
  */
-export const HomeProductCard = memo(function HomeProductCard({ product, showNewTag = false }: { product: ProductCardData & { createdAt?: string | Date }; showNewTag?: boolean }) {
+export const HomeProductCard = memo(function HomeProductCard({ product, showNewTag = false, featured = false }: { product: ProductCardData & { createdAt?: string | Date }; showNewTag?: boolean; featured?: boolean }) {
   const { items, addItem } = useCart();
   const { ids, toggle, saving, loading: savedLoading } = useSavedProducts();
   const [imageFailed, setImageFailed] = useState(false);
@@ -66,41 +67,45 @@ export const HomeProductCard = memo(function HomeProductCard({ product, showNewT
     addedTimer.current = setTimeout(() => setAdded(false), 1400);
   }
 
-  const button = "flex h-10 w-full shrink-0 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-semibold transition active:scale-[0.97] sm:h-9 sm:text-[13px]";
-  return <article data-product-card={id} className={`group ${card} transition duration-200 active:scale-[0.99] ${hoverLift}`}>
-    <div className="relative p-2 pb-0">
-      <Link href={href} tabIndex={-1} aria-hidden="true" className={`relative block aspect-square overflow-hidden rounded-xl bg-neutral-50 ${canAdd ? "" : "opacity-60"}`}>
-        <span className="absolute inset-0 flex items-center justify-center p-1.5">
-          {/* Keep every product image within the same square frame. */}
+  const button = featured
+    ? "flex h-10 w-full shrink-0 items-center justify-center gap-1.5 rounded-xl px-2 text-xs font-bold transition active:scale-[0.97] sm:h-9 sm:text-[13px]"
+    : "flex h-10 w-full shrink-0 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-semibold transition active:scale-[0.97] sm:h-9 sm:text-[13px]";
+  const price = <div className={featured
+    ? "flex min-h-[1.5rem] min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0 leading-5"
+    : "flex min-h-10 min-w-0 flex-col justify-start leading-5"}>
+    <span className={featured ? "max-w-full break-words text-[13px] font-black text-emerald-800 sm:text-base" : "max-w-full break-words text-[13px] font-bold text-emerald-700 sm:text-base"} title={formatPKR(product.price)}>{formatPKR(product.price)}</span>
+    {discount && <del className={featured ? "max-w-full break-words text-[10.5px] text-neutral-400 sm:text-xs" : "max-w-full break-words text-[11px] text-neutral-400 sm:text-xs"}>{formatPKR(discount.original)}</del>}
+  </div>;
+  const reviewLine = <div className={featured ? "flex h-4 items-center gap-1 text-[10.5px] sm:text-[11px]" : "flex h-4 items-center gap-1 text-[11px]"}>
+    {reviews > 0
+      ? <span className="flex items-center gap-1 text-neutral-700" title={`${rating.toFixed(1)} out of 5 from ${reviews} reviews`}><Star className="h-3 w-3 fill-amber-400 text-amber-400" aria-hidden="true" />{rating.toFixed(1)}<span className="text-neutral-400">({reviews.toLocaleString("en-PK")})</span></span>
+      : <span className="text-neutral-400">No reviews yet</span>}
+  </div>;
+  return <article data-product-card={id} className={`group ${featured ? featuredCard : card} transition duration-200 active:scale-[0.99] ${hoverLift}`}>
+    <div className={featured ? "relative p-2.5 pb-0" : "relative p-2 pb-0"}>
+      <Link href={href} tabIndex={-1} aria-hidden="true" className={`relative block overflow-hidden bg-neutral-50 ${featured ? "aspect-[4/3] rounded-2xl" : "aspect-square rounded-xl"} ${canAdd ? "" : "opacity-60"}`}>
+        <span className={featured ? "absolute inset-0 flex items-center justify-center p-1" : "absolute inset-0 flex items-center justify-center p-1.5"}>
           {image
-            ? <Image src={image} alt="" fill sizes={SIZES} loading="lazy" unoptimized={shouldUnoptimizeImageSrc(image)} onError={() => setImageFailed(true)} className="object-contain p-2" />
+            ? <Image src={image} alt="" fill sizes={SIZES} loading="lazy" unoptimized={shouldUnoptimizeImageSrc(image)} onError={() => setImageFailed(true)} className={featured ? "object-cover" : "object-contain p-2"} />
             : <ImageOff className="h-8 w-8 text-neutral-300" aria-hidden="true" />}
         </span>
       </Link>
-      {(discount || isNew) && <span className="pointer-events-none absolute left-3.5 top-3.5 flex flex-col items-start gap-1">
-        {discount && <span className="rounded-full bg-red-50 px-1.5 py-0.5 text-[10.5px] font-bold text-red-600 sm:text-[11px]">-{discount.percent}%</span>}
+      {(discount || isNew) && <span className={`pointer-events-none absolute flex flex-col items-start gap-1 ${featured ? "left-4 top-4" : "left-3.5 top-3.5"}`}>
+        {discount && <span className={featured ? "rounded-full bg-red-50/95 px-2 py-0.5 text-[10.5px] font-bold text-red-600 shadow-sm sm:text-[11px]" : "rounded-full bg-red-50 px-1.5 py-0.5 text-[10.5px] font-bold text-red-600 sm:text-[11px]"}>-{discount.percent}%</span>}
         {isNew && <span className="rounded-full bg-lime-100 px-1.5 py-0.5 text-[10.5px] font-bold text-emerald-800 sm:text-[11px]">New</span>}
       </span>}
       <button type="button" onClick={() => void toggle(id)} disabled={savedLoading || saving} aria-pressed={saved} aria-label={saved ? `Remove ${product.name} from saved items` : `Save ${product.name} to saved items`} title={saved ? "Remove from saved items" : "Add to saved items"}
-        className="absolute right-3.5 top-3.5 z-20 flex h-11 w-11 items-center justify-center rounded-full bg-white/95 text-neutral-500 shadow-sm transition hover:text-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-700 disabled:opacity-60">
+        className={`absolute z-20 flex h-11 w-11 items-center justify-center rounded-full bg-white/95 text-neutral-500 shadow-sm transition hover:text-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-700 disabled:opacity-60 ${featured ? "right-4 top-4" : "right-3.5 top-3.5"}`}>
         <Heart className={`h-3.5 w-3.5 ${saved ? "fill-red-500 text-red-500" : ""}`} aria-hidden="true" />
       </button>
     </div>
 
-    <div className="flex min-w-0 flex-1 flex-col gap-1 p-2.5">
-      <p className="h-4 truncate text-[10.5px] text-neutral-500 sm:text-[11px]">{product.category || "\u00a0"}</p>
-      <Link href={href} title={product.name} className="line-clamp-2 min-h-[2.5em] break-words text-xs font-medium leading-[1.25] text-neutral-900 first-letter:uppercase hover:text-emerald-800 after:absolute after:inset-0 after:z-10 after:content-[''] focus-visible:outline-none focus-visible:after:outline focus-visible:after:outline-2 focus-visible:after:outline-emerald-700 sm:text-sm">{product.name}</Link>
-      <div className="flex min-h-10 min-w-0 flex-col justify-start leading-5">
-        <span className="max-w-full break-words text-[13px] font-bold text-emerald-700 sm:text-base" title={formatPKR(product.price)}>{formatPKR(product.price)}</span>
-        {discount && <del className="max-w-full break-words text-[11px] text-neutral-400 sm:text-xs">{formatPKR(discount.original)}</del>}
-      </div>
+    <div className={featured ? "flex min-w-0 flex-1 flex-col gap-1 px-2.5 pb-2.5 pt-2" : "flex min-w-0 flex-1 flex-col gap-1 p-2.5"}>
+      <p className={featured ? "truncate text-[10.5px] leading-4 text-neutral-500 sm:text-[11px]" : "h-4 truncate text-[10.5px] text-neutral-500 sm:text-[11px]"}>{product.category || "\u00a0"}</p>
+      <Link href={href} title={product.name} className={`line-clamp-2 min-h-[2.5em] break-words text-xs leading-[1.25] text-neutral-900 first-letter:uppercase hover:text-emerald-800 after:absolute after:inset-0 after:z-10 after:content-[''] focus-visible:outline-none focus-visible:after:outline focus-visible:after:outline-2 focus-visible:after:outline-emerald-700 sm:text-sm ${featured ? "font-semibold" : "font-medium"}`}>{product.name}</Link>
       {/* Same row height with or without reviews keeps every card in a row aligned. */}
-      <div className="flex h-4 items-center gap-1 text-[11px]">
-        {reviews > 0
-          ? <span className="flex items-center gap-1 text-neutral-700" title={`${rating.toFixed(1)} out of 5 from ${reviews} reviews`}><Star className="h-3 w-3 fill-amber-400 text-amber-400" aria-hidden="true" />{rating.toFixed(1)}<span className="text-neutral-400">({reviews.toLocaleString("en-PK")})</span></span>
-          : <span className="text-neutral-400">No reviews yet</span>}
-      </div>
-      <div className="mt-auto pt-1.5">
+      {featured ? <>{reviewLine}{price}</> : <>{price}{reviewLine}</>}
+      <div className={featured ? "mt-auto pt-1" : "mt-auto pt-1.5"}>
         {requiresVariant && canAdd
           ? <Link href={href} className={`${button} relative z-20 bg-brand-primary text-brand-dark hover:brightness-95`}>Select Options <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" /></Link>
           : <button type="button" onClick={addToCart} disabled={!canAdd} className={`${button} relative z-20 ${canAdd ? "bg-brand-primary text-brand-dark hover:brightness-95" : "cursor-not-allowed bg-neutral-100 text-neutral-500"}`}>

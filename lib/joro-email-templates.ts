@@ -1,5 +1,6 @@
 import { appOrigin } from "@/lib/app-url";
 import { sanitizeDescriptionHtml } from "@/lib/security/sanitize";
+import { storedOrderBreakdown } from "@/lib/stored-order-breakdown";
 
 export type JoroEmail = { subject: string; html: string; text: string };
 
@@ -34,15 +35,14 @@ const orderClosing = "Thank you for choosing JORO.\nJo Chahiye, Yahin Mile!\nJOR
 
 export function orderConfirmationEmail(order: ConfirmedEmailOrder): JoroEmail {
   const items = emailItems(order.orderItems);
-  const subtotal = order.orderItems.reduce((sum, item) => sum + Number(item.price) * item.quantity, 0);
-  const serviceTotal = (order.services || []).reduce((sum, item) => sum + Number(item.price) * item.quantity, 0);
-  const discount = Number(order.couponRedemption?.discount || 0);
-  const handlingFee = Number(order.handlingFee || 0);
-  // Checkout persists the final total, handling fee, item snapshots, service prices and redemption.
-  // Reconcile the remainder; never use today's mutable delivery settings.
-  const delivery = Math.round((Number(order.totalAmount) - subtotal - serviceTotal - handlingFee + discount) * 100) / 100;
-  const details = [`Order Number: ${order.orderNumber}`, `Order Date: ${emailDate(order.createdAt)}`, `Subtotal: ${emailMoney(subtotal)}`, ...(serviceTotal ? [`Booked services: ${emailMoney(serviceTotal)}`] : []), ...(delivery > 0 ? [`Delivery Charges: ${emailMoney(delivery)}`] : []), ...(handlingFee > 0 ? [`Handling Fee: ${emailMoney(handlingFee)}`] : []), ...(discount ? [`Discount: ${emailMoney(discount)}`] : []), `Final Order Total: ${emailMoney(order.totalAmount)}`, ...paymentDetails(order), `Delivery Address: ${[order.customerAddress, order.city].filter(Boolean).join(", ")}`];
+  const { productSubtotal, serviceSubtotal, discount, handlingFee, delivery, total } = storedOrderBreakdown(order);
+  const details = [`Order Number: ${order.orderNumber}`, `Order Date: ${emailDate(order.createdAt)}`, `Subtotal: ${emailMoney(productSubtotal)}`, ...(serviceSubtotal ? [`Booked services: ${emailMoney(serviceSubtotal)}`] : []), ...(discount ? [`Discount: ${emailMoney(discount)}`] : []), ...(handlingFee > 0 ? [`Handling Fee: ${emailMoney(handlingFee)}`] : []), ...(delivery > 0 ? [`Delivery Charges: ${emailMoney(delivery)}${handlingFee === 0 ? " (includes applicable fulfilment and handling)" : ""}`] : []), `Final Order Total: ${emailMoney(total)}`, ...paymentDetails(order), `Delivery Address: ${[order.customerAddress, order.city].filter(Boolean).join(", ")}`];
   return brand({ subject: `JORO | Order Confirmed - #${order.orderNumber}`, preview: "Thank you for shopping with JORO!", greeting: `Hello ${order.customerName},`, bodyHtml: `<p>Thank you for shopping with JORO!</p><p>Your order has been confirmed successfully.</p><h2 style="font-size:19px">Order details</h2>${items.html}${detailHtml(details)}`, bodyText: `Thank you for shopping with JORO!\nYour order has been confirmed successfully.\n${items.text}\n${details.join("\n")}`, action: { label: "Track Your Order", url: `${appOrigin()}/account/orders/${encodeURIComponent(order.id)}` }, footer: orderClosing });
+}
+
+export function sellerShippedEmail(input: { orderId: string; orderNumber: string; shopOrderNumber: string; customerName: string; trackingNumber: string }): JoroEmail {
+  const detail = `Seller order ${input.shopOrderNumber} has been handed to the courier. Tracking: ${input.trackingNumber}.`;
+  return brand({ subject: `JORO | Seller Order Shipped - #${input.shopOrderNumber}`, preview: detail, greeting: `Hello ${input.customerName},`, bodyHtml: detailHtml([detail]), bodyText: detail, action: { label: "Track Your Order", url: `${appOrigin()}/account/orders/${encodeURIComponent(input.orderId)}` }, footer: orderClosing });
 }
 
 export function vendorOrderEmail(order: Pick<ConfirmedEmailOrder, "orderNumber" | "paymentMethod" | "paymentStatus">, shop: {

@@ -3,14 +3,14 @@
  * parent `OrderStatusEvent` rows and marketplace `VendorShopOrder.statusHistory`.
  * Nothing is inferred beyond "a stage was reached at this time".
  */
-export type TrackingStatus = "placed" | "confirmed" | "processing" | "packed" | "shipped" | "delivered" | "cancelled";
+export type TrackingStatus = "placed" | "confirmed" | "processing" | "packed" | "pickup_scheduled" | "collected" | "shipped" | "delivered" | "cancelled";
 export type TrackingEvent = { status: TrackingStatus; at: string };
 
 type ParentEvent = { eventType: string; toStatus: string | null; createdAt: Date };
-type ShopSlice = { status: string; statusHistory: unknown; trackingNumber?: string | null };
+type ShopSlice = { status: string; statusHistory: unknown; trackingNumber?: string | null; shopOrderNumber?: string; pickupRequest?: { status: string; history: unknown } | null };
 
 const RANK: Record<Exclude<TrackingStatus, "cancelled">, number> = {
-  placed: 0, confirmed: 1, processing: 2, packed: 3, shipped: 4, delivered: 5,
+  placed: 0, confirmed: 1, processing: 2, packed: 3, pickup_scheduled: 4, collected: 5, shipped: 6, delivered: 7,
 };
 
 export function normalizeTrackingStatus(status: string | null | undefined): TrackingStatus | null {
@@ -52,17 +52,18 @@ export function buildOrderTrackingTimeline(input: {
   };
 
   record("placed", input.createdAt.getTime());
+  const active = input.shops.filter((shop) => shop.status !== "cancelled");
+  const sellerLimit = active.length ? Math.min(...active.map(shop => RANK[normalizeTrackingStatus(shop.status) as Exclude<TrackingStatus, "cancelled">] ?? 0)) : null;
   for (const event of input.events) {
     const at = event.createdAt.getTime();
     if (event.eventType === "order_cancelled") record("cancelled", at);
     if (event.eventType !== "order_created" && event.eventType !== "fulfilment_status_changed") continue;
     const status = normalizeTrackingStatus(event.toStatus);
-    if (status && status !== "placed") record(status, at);
+    if (status && status !== "placed" && (sellerLimit === null || status === "cancelled" || RANK[status] <= sellerLimit)) record(status, at);
   }
 
   // A seller stage counts for the customer once every active seller reached it (slowest slice wins),
   // matching resolveCustomerOrderTrackStatus.
-  const active = input.shops.filter((shop) => shop.status !== "cancelled");
   if (active.length) {
     for (const stage of ["confirmed", "packed", "shipped", "delivered"] as const) {
       let latest = -Infinity;
@@ -70,6 +71,21 @@ export function buildOrderTrackingTimeline(input: {
         const hits = historyEntries(shop.statusHistory)
           .filter((entry) => entry.status !== "cancelled" && RANK[entry.status] >= RANK[stage])
           .map((entry) => entry.at);
+        if (!hits.length) { latest = NaN; break; }
+        latest = Math.max(latest, Math.min(...hits));
+      }
+      if (Number.isFinite(latest)) record(stage, latest);
+    }
+    for (const [stage, pickupStatuses] of [["pickup_scheduled", ["scheduled", "assigned", "collected", "handed_over"]], ["collected", ["collected", "handed_over"]]] as const) {
+      let latest = -Infinity;
+      for (const shop of active) {
+        const entries = Array.isArray(shop.pickupRequest?.history) ? shop.pickupRequest.history : [];
+        const hits = entries.flatMap((entry: unknown) => {
+          if (!entry || typeof entry !== "object") return [];
+          const value = entry as { status?: unknown; at?: unknown };
+          const at = typeof value.at === "string" ? Date.parse(value.at) : NaN;
+          return typeof value.status === "string" && pickupStatuses.includes(value.status as never) && Number.isFinite(at) ? [at] : [];
+        });
         if (!hits.length) { latest = NaN; break; }
         latest = Math.max(latest, Math.min(...hits));
       }

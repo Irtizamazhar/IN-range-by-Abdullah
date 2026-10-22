@@ -15,6 +15,7 @@ import {
 } from "@/components/orders/OrderDetail";
 import { StatusBadge, type ShopOrderStatusPill } from "@/components/orders/StatusBadge";
 import { VendorStatusDropdown } from "@/components/orders/VendorStatusDropdown";
+import { VendorPickupRequest } from "@/components/orders/VendorPickupRequest";
 import { NeedHelpButton } from "@/components/support/NeedHelpButton";
 
 export default function VendorShopOrderDetailPage() {
@@ -203,6 +204,7 @@ export default function VendorShopOrderDetailPage() {
         <div className="mt-8">
           <OrderDetail order={data} />
         </div>
+        {data.orderStatus === "packed" ? <VendorPickupRequest orderId={id} shopOrderNumber={data.shopOrderNumber} /> : null}
 
         <div className="mt-8 rounded-xl border border-borderGray bg-white p-4">
           <div className="mb-3 flex items-center justify-between border-b border-borderGray pb-3">
@@ -291,7 +293,7 @@ export default function VendorShopOrderDetailPage() {
                     <p className="text-[11px] font-bold uppercase tracking-wide text-darkText/50">
                       Courier Label
                     </p>
-                    <p className="text-lg font-extrabold">In Range By Abdullah</p>
+                    <p className="text-lg font-extrabold">JORO</p>
                   </div>
                   <p className="text-xs font-semibold text-darkText/70">
                     Order ID: {data.parentOrderNumber}

@@ -118,6 +118,8 @@ export type ShopOrderJson = {
   statusHistory: ShopStatusHistoryEntry[];
   cancelReason: string | null;
   trackingNumber: string | null;
+  pickupStatus?: string | null;
+  pickupReference?: string | null;
   placedAt: string;
   updatedAt: string;
   vendor?: {
@@ -165,6 +167,7 @@ export function serializeVendorShopOrder(
       phone: string;
       city: string;
     };
+    pickupRequest?: { status: string; pickupReference: string } | null;
   }
 ): ShopOrderJson {
   return {
@@ -188,6 +191,8 @@ export function serializeVendorShopOrder(
     statusHistory: parseStatusHistory(row.statusHistory),
     cancelReason: row.cancelReason,
     trackingNumber: row.trackingNumber,
+    pickupStatus: row.pickupRequest?.status ?? null,
+    pickupReference: row.pickupRequest?.pickupReference ?? null,
     placedAt: row.placedAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     vendor: row.vendor,

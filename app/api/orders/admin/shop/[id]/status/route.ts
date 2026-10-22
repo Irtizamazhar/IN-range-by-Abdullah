@@ -8,6 +8,7 @@ import {
   updateShippedTrackingOnly,
 } from "@/lib/vendor-shop-order-service";
 import { runAfterVendorShopOrderStatusChange } from "@/lib/after-vendor-shop-order-status";
+import { ApiError, sameOrigin } from "@/lib/marketplace-api";
 
 const bodySchema = z.object({
   note: z.string().max(500).optional(),
@@ -17,9 +18,10 @@ const bodySchema = z.object({
 
 type Ctx = { params: Promise<{ id: string }> };
 
-/** Admin: packed→shipped (optional tracking) or shipped→delivered; or tracking-only while shipped. */
+/** Admin: shipped→delivered or tracking-only; pickup handover creates shipped status. */
 export async function PATCH(req: NextRequest, ctx: Ctx) {
   try {
+    sameOrigin(req);
     const auth = await requireAdminPermission("orders.manage");
     if ("response" in auth) return auth.response;
 
@@ -53,6 +55,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
         shopOrderId: id,
         actor: "admin",
         trackingNumber,
+        adminId: auth.admin.id,
       });
       if (!res.ok) {
         return NextResponse.json({ error: res.error }, { status: 400 });
@@ -77,6 +80,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
     return NextResponse.json({ ok: true, newStatus: res.newStatus });
   } catch (e) {
+    if (e instanceof ApiError) return NextResponse.json({ error: e.message }, { status: e.status });
     console.error("PATCH /api/orders/admin/shop/[id]/status", e);
     return NextResponse.json(
       {

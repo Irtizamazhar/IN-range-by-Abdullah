@@ -19,7 +19,7 @@ export const FOOTER_HELP = [
   { id: "faq", label: "Help & FAQ", href: "/faq" },
   { id: "contact", label: "Contact & Support", href: "/account/help" },
   { id: "terms", label: "Terms & Conditions", href: "/terms-and-conditions" },
-  { id: "privacy", label: "Privacy Policy", href: null },
+  { id: "privacy", label: "Privacy Policy", href: "/privacy-policy" },
   { id: "cart", label: "Cart", href: "/cart" },
 ] as const;
 

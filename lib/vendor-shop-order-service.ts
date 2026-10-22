@@ -7,12 +7,14 @@ import {
 } from "@/lib/vendor-shop-order-helpers";
 import { cancelSellerOrder } from "@/lib/order-cancellation-service";
 import { consumeReservedInventory } from "@/lib/order-inventory-service";
+import { writeAdminAudit } from "@/lib/admin-rbac";
+import { ApiError } from "@/lib/marketplace-api";
 
 export type AdvanceShopOrderActor = "vendor" | "admin";
 
 /**
- * Advance shop order one step. Vendors: only through `packed`. Admin: only
- * `packed`→`shipped` and `shipped`→`delivered`.
+ * Advance shop order one step. Vendors: only through `packed`. Admin can
+ * complete `shipped`→`delivered`; pickup handover performs `packed`→`shipped`.
  */
 export async function advanceVendorShopOrderStatus(params: {
   shopOrderId: string;
@@ -55,6 +57,9 @@ export async function advanceVendorShopOrderStatus(params: {
       };
     }
   } else {
+    if (row.status === "packed" && next === "shipped") {
+      return { ok: false, error: "Record courier handover in Pickup Management before marking this order shipped." };
+    }
     const okPackedToShipped = row.status === "packed" && next === "shipped";
     const okShippedToDelivered = row.status === "shipped" && next === "delivered";
     if (!okPackedToShipped && !okShippedToDelivered) {
@@ -118,8 +123,9 @@ export async function updateShippedTrackingOnly(params: {
   trackingNumber: string | null;
   actor: AdvanceShopOrderActor;
   vendorId?: string;
+  adminId?: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
-  const { shopOrderId, trackingNumber, actor, vendorId } = params;
+  const { shopOrderId, trackingNumber, actor, vendorId, adminId } = params;
   const row = await prisma.vendorShopOrder.findUnique({
     where: { id: shopOrderId },
   });
@@ -141,20 +147,37 @@ export async function updateShippedTrackingOnly(params: {
       error: "Tracking can only be edited while status is shipped",
     };
   }
+  if (!adminId) return { ok: false, error: "Admin identity is required" };
+  if (trackingNumber !== null && (!trackingNumber.trim() || trackingNumber.trim().length > 255)) {
+    return { ok: false, error: "Provide a tracking number of 1 to 255 characters" };
+  }
   const tn =
     trackingNumber === null || trackingNumber === ""
       ? null
       : trackingNumber.trim();
 
   await prisma.$transaction(async (tx) => {
-    await tx.vendorShopOrder.update({
-      where: { id: shopOrderId },
+    const pickup = await tx.pickupRequest.findUnique({ where: { shopOrderId } });
+    if (pickup && (pickup.status !== "handed_over" || !tn)) {
+      throw new ApiError(409, "A handed-over parcel must keep a valid tracking number");
+    }
+    const gate = await tx.vendorShopOrder.updateMany({
+      where: { id: shopOrderId, status: "shipped", updatedAt: row.updatedAt },
       data: { trackingNumber: tn },
     });
+    if (gate.count !== 1) throw new ApiError(409, "Order changed; refresh and try again");
+    if (pickup) {
+      const changed = await tx.pickupRequest.updateMany({
+        where: { id: pickup.id, status: "handed_over", updatedAt: pickup.updatedAt },
+        data: { trackingNumber: tn, history: [...(Array.isArray(pickup.history) ? pickup.history : []), { status: "handed_over", at: new Date().toISOString(), actor: adminId, note: `Tracking corrected from ${pickup.trackingNumber || "unset"} to ${tn}` }] as Prisma.InputJsonValue },
+      });
+      if (changed.count !== 1) throw new ApiError(409, "Pickup changed; refresh and try again");
+    }
     await tx.vendorOrder.updateMany({
       where: { vendorShopOrderId: shopOrderId },
       data: { trackingNumber: tn },
     });
+    await writeAdminAudit(tx, { adminId, action: "pickup.tracking.corrected", entityType: "VendorShopOrder", entityId: shopOrderId, details: { previous: row.trackingNumber, current: tn, pickupRequestId: pickup?.id ?? null } });
   });
 
   return { ok: true };

@@ -96,10 +96,22 @@ test("tokens of another type or expired tokens are rejected", async () => {
 });
 
 test("gated visitors get the Coming Soon page for page navigations", () => {
-  for (const pathname of ["/", "/products/abc", "/admin", "/admin/login", "/vendor/dashboard", "/checkout", "/login"]) {
+  for (const pathname of ["/products/abc", "/admin", "/admin/login", "/vendor/dashboard", "/checkout", "/login", "/public-home"]) {
     assert.equal(decideGatedRequest({ pathname, method: "GET" }), "gate", pathname);
   }
   assert.equal(decideGatedRequest({ pathname: "/private-launch", method: "GET" }), "gate");
+});
+
+test("public informational homepage and legal pages allow only read-only requests", () => {
+  assert.equal(decideGatedRequest({ pathname: "/", method: "GET" }), "home");
+  assert.equal(decideGatedRequest({ pathname: "/", method: "HEAD" }), "home");
+  assert.equal(decideGatedRequest({ pathname: "/privacy-policy", method: "GET" }), "allow");
+  assert.equal(decideGatedRequest({ pathname: "/privacy-policy", method: "HEAD" }), "allow");
+  assert.equal(decideGatedRequest({ pathname: "/privacy-policy", method: "POST" }), "block");
+  assert.equal(decideGatedRequest({ pathname: "/terms-and-conditions", method: "GET" }), "allow");
+  assert.equal(decideGatedRequest({ pathname: "/terms-and-conditions", method: "HEAD" }), "allow");
+  assert.equal(decideGatedRequest({ pathname: "/terms-and-conditions", method: "POST" }), "block");
+  assert.equal(decideGatedRequest({ pathname: "/", method: "GET", isServerAction: true }), "block");
 });
 
 test("gated visitors cannot reach APIs, server actions or mutations", () => {

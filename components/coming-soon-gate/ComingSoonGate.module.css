@@ -166,6 +166,10 @@
   line-height: 1.6;
 }
 
+.publicLinks { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 20px; margin-top: 18px; }
+.publicLinks a { color: #005235; font-size: 14px; font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
+.publicLinks a:focus-visible { outline: 3px solid #b7e33a; outline-offset: 3px; border-radius: 3px; }
+
 /* Progress */
 .progress {
   width: 100%;
@@ -495,6 +499,8 @@
 .reveal {
   animation: joroCsRise 800ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+
+.publicHome .reveal { animation: none; }
 
 .delay1 { animation-delay: 80ms; }
 .delay2 { animation-delay: 200ms; }

@@ -291,12 +291,12 @@
 
 @media (max-width: 639px) {
   .navigationInner {
-    height: 52px;
-    padding-inline: 12px;
+    height: 55px;
+    padding-inline: 12px 0;
   }
-  .trigger { gap: 6px; padding-inline: 8px; font-size: 12px; }
-  .stripWrap { margin-left: 8px; padding-left: 8px; }
-  .strip { padding-right: 32px; }
+  .trigger { min-height: 40px; gap: 6px; padding-inline: 11px; border-radius: 12px; font-size: 12px; }
+  .stripWrap { margin-left: 8px; border: 0; padding-left: 0; }
+  .strip { gap: 7px; padding-right: 16px; }
   .scrollControl {
     position: absolute;
     top: 50%;
@@ -315,7 +315,8 @@
   .scrollControl svg { width: 17px; height: 17px; }
   .scrollLeft { left: 8px; }
   .scrollRight { right: 0; }
-  .stripLink { padding-inline: 10px; font-size: 11px; gap: 5px; }
+  .stripLink { min-height: 40px; padding-inline: 12px; border: 1px solid #e1e9df; border-radius: 12px; background: #f9fbf8; font-size: 11px; gap: 5px; }
+  .stripLink[aria-current="page"] { border-color: #bddfc2; box-shadow: none; }
   .heading {
     gap: 6px;
     padding: 10px 16px;

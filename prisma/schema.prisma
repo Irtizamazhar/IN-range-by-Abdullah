@@ -190,7 +190,7 @@ model Order {
   customerAddress       String               @db.Text
   city                  String
   totalAmount           Decimal              @db.Decimal(12, 2)
-  /// Customer-facing platform fee (category/vendor commission %), included in totalAmount.
+  /// Historical customer-facing fee snapshot; zero for new combined-delivery orders. Never use for internal handling cost.
   handlingFee           Decimal              @default(0) @db.Decimal(12, 2)
   paymentMethod         String
   paymentStatus         String               @default("pending")
@@ -739,6 +739,8 @@ model Vendor {
   sessions         VendorSession[]
   auditLogs        VendorAuditLog[]
   vendorShopOrders VendorShopOrder[]
+  pickupRequests   PickupRequest[]
+  pickupVisits     PickupVisit[]
   ledgerEntries    VendorLedgerEntry[]
   followers        StoreFollow[]
   wantOffers       WantOffer[]
@@ -868,6 +870,7 @@ model VendorShopOrder {
   lineOrders     VendorOrder[]
   vendorEarning  VendorEarning?
   inventoryLines OrderInventoryLine[]
+  pickupRequest  PickupRequest?
 
   @@index([vendorId])
   @@index([orderId])
@@ -875,6 +878,76 @@ model VendorShopOrder {
   @@index([placedAt])
 
   @@map("vendorshoporder")
+}
+
+enum PickupStatus {
+  ready
+  scheduled
+  assigned
+  collected
+  failed
+  handed_over
+  cancelled
+}
+
+/// One visit may collect several packed orders from one vendor and one pickup address.
+model PickupVisit {
+  id                String        @id @default(cuid())
+  vendorId          String
+  vendor            Vendor        @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  pickupAddress     String        @db.Text
+  pickupCity        String        @db.VarChar(120)
+  contactName       String        @db.VarChar(200)
+  contactPhone      String        @db.VarChar(30)
+  courierName       String?       @db.VarChar(200)
+  agentName         String?       @db.VarChar(200)
+  scheduledAt       DateTime?     @db.DateTime(3)
+  status            PickupStatus  @default(scheduled)
+  failedReason      String?       @db.Text
+  collectedAt       DateTime?     @db.DateTime(3)
+  handoverAt        DateTime?     @db.DateTime(3)
+  handoverReference String?       @db.VarChar(191)
+  history           Json          @default("[]")
+  createdAt         DateTime      @default(now()) @db.DateTime(3)
+  updatedAt         DateTime      @updatedAt @db.DateTime(3)
+  requests          PickupRequest[]
+
+  @@index([vendorId, status])
+  @@index([scheduledAt])
+  @@map("pickupvisit")
+}
+
+model PickupRequest {
+  id                String          @id @default(cuid())
+  pickupReference   String          @unique @db.VarChar(32)
+  shopOrderId       String          @unique
+  shopOrder         VendorShopOrder @relation(fields: [shopOrderId], references: [id], onDelete: Cascade)
+  vendorId          String
+  vendor            Vendor          @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  visitId           String?
+  visit             PickupVisit?    @relation(fields: [visitId], references: [id], onDelete: SetNull)
+  pickupAddress     String          @db.Text
+  pickupCity        String          @db.VarChar(120)
+  contactName       String          @db.VarChar(200)
+  contactPhone      String          @db.VarChar(30)
+  parcelCount       Int             @default(1)
+  weightKg          Decimal?        @db.Decimal(8, 2)
+  preferredWindow   String?         @db.VarChar(255)
+  instructions      String?         @db.Text
+  packedConfirmed   Boolean         @default(false)
+  status            PickupStatus    @default(ready)
+  readyAt           DateTime        @default(now()) @db.DateTime(3)
+  collectedAt       DateTime?       @db.DateTime(3)
+  handoverAt        DateTime?       @db.DateTime(3)
+  handoverReference String?         @db.VarChar(191)
+  trackingNumber    String?         @db.VarChar(255)
+  failedReason      String?         @db.Text
+  history           Json            @default("[]")
+  updatedAt         DateTime        @updatedAt @db.DateTime(3)
+
+  @@index([vendorId, status, readyAt])
+  @@index([visitId])
+  @@map("pickuprequest")
 }
 
 model CommissionSetting {

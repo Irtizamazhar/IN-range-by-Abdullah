@@ -14,12 +14,12 @@ import { calculateHandlingFee } from "../lib/handling-fee";
 import { queueOrderConfirmation } from "../lib/order-confirmation-delivery";
 import * as couponService from "../lib/coupon-service";
 
-const payload = { customerName: "Ali Khan", customerPhone: "03001234567", customerAddress: "12 Street, Apartment 2", city: "Lahore", paymentMethod: "cod", products: [{ productId: "cream", quantity: 1 }], expectedHandlingFee: 200 };
+const payload = { customerName: "Ali Khan", customerPhone: "03001234567", customerAddress: "12 Street, Apartment 2", city: "Lahore", paymentMethod: "cod", products: [{ productId: "cream", quantity: 1 }], expectedHandlingFee: 0 };
 type Row = Record<string, any>;
 function fixture() {
-  const state = { orders: [] as Row[], items: [] as Row[], bundles: [] as Row[], events: [] as Row[], jobs: [] as Row[], stocks: { cream: 5, soap: 5 } as Record<string, number> };
+  const state = { orders: [] as Row[], items: [] as Row[], bundles: [] as Row[], vendorOrders: [] as Row[], events: [] as Row[], jobs: [] as Row[], stocks: { cream: 5, soap: 5 } as Record<string, number> };
   const logs: unknown[] = [];
-  const options = { signedIn: true, failAt: "", smtpFails: false, failReceipt: false, foreignOwner: false, coupon: false, outboxMissing: false, transactionStockRace: false };
+  const options = { signedIn: true, failAt: "", smtpFails: false, failReceipt: false, foreignOwner: false, coupon: false, vendorFundedCoupon: false, quote: false, outboxMissing: false, transactionStockRace: false, deliveryCharge: 100 };
   const products: Record<string, Row> = { cream: { id: "cream", name: "cream", price: new Prisma.Decimal(2000), stock: 5, isActive: true, variants: [], category: "Skin", categoryRecordId: null, originalPrice: null }, soap: { id: "soap", name: "soap", price: new Prisma.Decimal(500), stock: 5, isActive: true, variants: [], category: "Skin", categoryRecordId: null, originalPrice: null } };
   const owners = new Map<string, string>();
   const error = (code: string, column?: string) => Object.assign(new Error("PRIVATE SQL password=secret"), { code, meta: { modelName: "OrderConfirmationEmail", column } });
@@ -32,7 +32,8 @@ function fixture() {
     product: { findUnique: async ({ where }: Row) => products[where.id] || null, findFirst: async ({ where }: Row) => products[where.id] || null, updateMany: async ({ where, data }: Row) => { if (options.transactionStockRace || state.stocks[where.id] < where.stock.gte) return { count: 0 }; state.stocks[where.id] -= data.stock.decrement; return { count: 1 }; } },
     vendorProduct: { findFirst: async ({ where }: Row) => { const vendorId = owners.get(where.publishedProductId); return vendorId ? { id: "vp-" + where.publishedProductId, vendorId, stock: 5, category: "Skin", vendor: { id: vendorId, status: "approved", specialCommissionRate: null } } : null; }, updateMany: async () => ({ count: 1 }) },
     vendorShopOrder: { create: async ({ data }: Row) => { const row = { ...data, id: "bundle-" + data.vendorId }; state.bundles.push(row); return row; }, findMany: async ({ where }: Row) => state.bundles.filter(b => b.orderId === where.orderId) },
-    vendorOrder: { create: async () => ({}) }, vendor: { update: async () => ({}) },
+    vendorOrder: { create: async ({ data }: Row) => { state.vendorOrders.push(data); return data; } }, vendor: { update: async () => ({}) },
+    offerQuote: { updateMany: async () => ({ count: 1 }) }, want: { update: async () => ({}) },
     orderItem: { create: async ({ data }: Row) => { const row = { ...data, id: "item-" + state.items.length }; state.items.push(row); return row; } },
     orderInventoryLine: { create: async () => ({}) },
     orderStatusEvent: { create: async ({ data }: Row) => { state.events.push(data); return data; } },
@@ -41,7 +42,7 @@ function fixture() {
     couponRedemption: { count: async () => 0, create: async () => ({}) }, vendorCoupon: { updateMany: async () => ({ count: 1 }) },
   };
   db.$transaction = async (fn: (tx: Row) => Promise<unknown>) => {
-    const saved = { ...state, orders: [...state.orders], items: [...state.items], bundles: [...state.bundles], events: [...state.events], jobs: [...state.jobs], stocks: { ...state.stocks } };
+    const saved = { ...state, orders: [...state.orders], items: [...state.items], bundles: [...state.bundles], vendorOrders: [...state.vendorOrders], events: [...state.events], jobs: [...state.jobs], stocks: { ...state.stocks } };
     try { if (options.failAt === "transaction") throw error("P2034"); return await fn(db); }
     catch (e) { Object.assign(state, saved); throw e; }
   };
@@ -51,19 +52,19 @@ function fixture() {
     "@/lib/checkout-addresses": { checkoutAddresses }, "@/lib/checkout-diagnostics": { checkoutDiagnostic, checkoutFailure },
     "@/lib/sessions": { getCustomerSession: async () => options.signedIn ? { user: { id: "customer-a", email: "owner@example.invalid", role: "customer" } } : null },
     "@/lib/admin-rbac": {}, "@/lib/auto-cancel-orders": {},
-    "@/lib/settings-db": { getOrCreateSettings: async () => ({ codAvailableCities: ["Lahore"], codCharges: 100 }) },
+    "@/lib/settings-db": { getOrCreateSettings: async () => ({ codAvailableCities: ["Lahore"], codCharges: options.deliveryCharge }) },
     "@/lib/order-number": { generateOrderNumber: async () => "IRB-001" },
     "@/lib/catalog-product-select": { catalogProductSelect: () => ({ id: true }) },
     "@/lib/prisma-order-includes": { ORDER_INCLUDE_SERIALIZE: {} },
     "@/lib/order-emails": { notifyAdminNewOrder: async () => { if (options.smtpFails) throw Error("SMTP credentials secret"); } },
     "@/lib/order-confirmation-delivery": { queueOrderConfirmation },
     "@/lib/vendor-notifications": { createVendorNotification: async () => {} },
-    "@/lib/serialize": { primaryProductImageUrl: () => "", serializeOrder: (o: Row) => ({ _id: o.id, orderNumber: o.orderNumber, customerPhone: o.customerPhone, customerName: o.customerName, customerEmail: o.customerEmail, totalAmount: Number(o.totalAmount) }) },
-    "@/lib/vendor-commission": {}, "@/lib/handling-fee": { calculateHandlingFee },
-    "@/lib/coupon-service": { ...couponService, findCoupon: async () => { if (!options.coupon) throw new ApiError(400, "Coupon is inactive."); return { id: "coupon", couponCode: "SAVE", status: "active", ownerType: "ADMIN", approvedAt: new Date(), approvals: [], selectedVendorIds: [], productIds: ["cream"], categories: [], customerIds: [], fundingType: "PLATFORM_FUNDED", discountType: "fixed", discountValue: 100, minOrderAmount: 0, maxDiscount: null, maxUses: null, perCustomerLimit: null, budget: null, spent: 0 }; } },
+    "@/lib/serialize": { primaryProductImageUrl: () => "", serializeOrder: (o: Row) => ({ _id: o.id, orderNumber: o.orderNumber, customerPhone: o.customerPhone, customerName: o.customerName, customerEmail: o.customerEmail, totalAmount: Number(o.totalAmount), handlingFee: Number(o.handlingFee) }) },
+    "@/lib/vendor-commission": { resolveCommissionPercent: async () => 10 }, "@/lib/handling-fee": { calculateHandlingFee },
+    "@/lib/coupon-service": { ...couponService, findCoupon: async () => { if (!options.coupon) throw new ApiError(400, "Coupon is inactive."); return { id: "coupon", couponCode: "SAVE", status: "active", ownerType: options.vendorFundedCoupon ? "VENDOR" : "ADMIN", vendorId: options.vendorFundedCoupon ? "vendor-a" : null, approvedAt: new Date(), approvals: [], selectedVendorIds: [], productIds: ["cream"], categories: [], customerIds: [], fundingType: options.vendorFundedCoupon ? "VENDOR_FUNDED" : "PLATFORM_FUNDED", discountType: "fixed", discountValue: 100, minOrderAmount: 0, maxDiscount: null, maxUses: null, perCustomerLimit: null, budget: null, spent: 0 }; } },
     "@/lib/vendor-shop-order-number": { generateVendorShopOrderNumber: async () => "SHOP-" + state.bundles.length },
     "@/lib/marketplace-prisma": { getMarketplacePrisma: () => db, getMarketplaceTx: () => db },
-    "@/lib/offer-checkout-service": {}, "@/lib/service-checkout-service": {},
+    "@/lib/offer-checkout-service": { checkoutQuote: async () => options.quote ? { id: "quote-1", orderId: null, wantId: "want-1", revision: { productId: "cream", quantity: 1, price: new Prisma.Decimal(1800), shipping: new Prisma.Decimal(75) } } : null }, "@/lib/service-checkout-service": {},
   };
   const exported = {} as { POST: (request: Request) => Promise<Response> };
   const js = ts.transpileModule(readFileSync("app/api/orders/route.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
@@ -74,7 +75,7 @@ function fixture() {
 
 test("COD checkout records correct totals/status/addresses/outbox and replays the same order", async () => {
   const f = fixture(); const first = await f.post(); assert.equal(first.status, 200); assert.equal((await first.json()).orderNumber, "IRB-001");
-  assert.equal(Number(f.state.orders[0].totalAmount), 2300); assert.equal(Number(f.state.orders[0].handlingFee), 200);
+  assert.equal(Number(f.state.orders[0].totalAmount), 2100); assert.equal(Number(f.state.orders[0].handlingFee), 0);
   assert.equal(f.state.orders[0].paymentStatus, "pending"); assert.equal(f.state.orders[0].orderStatus, "confirmed");
   assert.equal(f.state.events[0].details.addresses.billing.address, payload.customerAddress);
   assert.equal(f.state.stocks.cream, 4); assert.equal(f.state.jobs.length, 1);
@@ -86,14 +87,73 @@ test("different billing address is preserved in the existing order-created event
 });
 test("multi-vendor products retain grouping, stock, fees, totals and separate notification keys", async () => {
   const f = fixture(); f.owners.set("cream", "vendor-a"); f.owners.set("soap", "vendor-b");
-  const response = await f.post({ ...payload, products: [...payload.products, { productId: "soap", quantity: 2 }], expectedHandlingFee: 300 });
-  assert.equal(response.status, 200); assert.equal(Number(f.state.orders[0].totalAmount), 3400); assert.equal(f.state.bundles.length, 2);
+  const response = await f.post({ ...payload, products: [...payload.products, { productId: "soap", quantity: 2 }] });
+  assert.equal(response.status, 200); assert.equal(Number(f.state.orders[0].totalAmount), 3100); assert.equal(Number(f.state.orders[0].handlingFee), 0); assert.equal(f.state.bundles.length, 2);
   assert.equal(f.state.bundles[0].items[0].productName, "cream"); assert.equal(f.state.bundles[1].items[0].productName, "soap");
+  assert.deepEqual(f.state.vendorOrders.map(o => Number(o.commissionAmount)), [0, 0]);
+  assert.deepEqual(f.state.vendorOrders.map(o => Number(o.vendorAmount)), [2000, 1000]);
   assert.deepEqual(f.state.jobs.map(j => j.recipientKey), ["customer", "vendor:bundle-vendor-a", "vendor:bundle-vendor-b"]);
+});
+test("three units use the configured delivery charge and the client-visible total matches the server", async () => {
+  const f = fixture();
+  const response = await f.post({ ...payload, products: [{ productId: "cream", quantity: 3 }] });
+  assert.equal(response.status, 200);
+  const clientTotal = 2000 * 3 + 100;
+  assert.equal(Number(f.state.orders[0].handlingFee), 0);
+  assert.equal(Number(f.state.orders[0].totalAmount), clientTotal);
+  const receipt = await readCheckoutReceipt(response);
+  assert.equal(receipt.handlingFee, 0);
+  assert.equal(receipt.totalAmount, clientTotal);
+});
+test("free delivery and delivery below Rs. 50 stay at the configured amount", async () => {
+  for (const charge of [0, 25]) {
+    const f = fixture(); f.options.deliveryCharge = charge;
+    const response = await f.post();
+    assert.equal(response.status, 200);
+    assert.equal(Number(f.state.orders[0].handlingFee), 0);
+    assert.equal(Number(f.state.orders[0].totalAmount), 2000 + charge);
+  }
+});
+test("a stale client fee is rejected before an order is stored", async () => {
+  const f = fixture();
+  const response = await f.post({ ...payload, expectedHandlingFee: 51 });
+  assert.equal(response.status, 409);
+  assert.equal(f.state.orders.length, 0);
+});
+test("negotiated quote keeps zero customer fee and its existing vendor-deducted commission", async () => {
+  const f = fixture(); f.options.quote = true; f.owners.set("cream", "vendor-a");
+  const response = await f.post({ ...payload, quoteId: "quote-1", expectedHandlingFee: 0 });
+  assert.equal(response.status, 200);
+  assert.equal(Number(f.state.orders[0].handlingFee), 0);
+  assert.equal(Number(f.state.orders[0].totalAmount), 1875);
+  assert.equal(Number(f.state.vendorOrders[0].commissionRate), 10);
+  assert.equal(Number(f.state.vendorOrders[0].commissionAmount), 180);
+  assert.equal(Number(f.state.vendorOrders[0].vendorAmount), 1620);
+});
+test("idempotent replay retains a historical order's original total and fee", async () => {
+  const f = fixture();
+  f.state.orders.push({ id: "historic-order", checkoutKey: "checkout-request-123456", customerId: "customer-a", orderNumber: "OLD-001", customerName: "Ali Khan", customerPhone: payload.customerPhone, customerEmail: "owner@example.invalid", totalAmount: new Prisma.Decimal(2300), handlingFee: new Prisma.Decimal(200) });
+  const response = await f.post();
+  assert.equal(response.headers.get("X-Idempotent-Replay"), "true");
+  const receipt = await readCheckoutReceipt(response);
+  assert.equal(receipt.totalAmount, 2300);
+  assert.equal(receipt.handlingFee, 200);
+  assert.equal(Number(f.state.orders[0].handlingFee), 200);
+  assert.equal(f.state.orders.length, 1);
 });
 test("coupon remains server-calculated and invalid codes do not create an order", async () => {
   const f = fixture(); assert.equal((await f.post({ ...payload, couponCode: "SAVE" })).status, 400); assert.equal(f.state.orders.length, 0);
-  f.options.coupon = true; const response = await f.post({ ...payload, couponCode: "SAVE" }); assert.equal(response.status, 200); assert.equal(Number(f.state.orders[0].totalAmount), 2200);
+  f.options.coupon = true; const response = await f.post({ ...payload, couponCode: "SAVE" }); assert.equal(response.status, 200); assert.equal(Number(f.state.orders[0].totalAmount), 2000); assert.equal(Number(f.state.orders[0].handlingFee), 0);
+});
+test("vendor-funded coupon reduces seller item payout without adding a fee", async () => {
+  const f = fixture(); f.options.coupon = true; f.options.vendorFundedCoupon = true; f.owners.set("cream", "vendor-a");
+  const response = await f.post({ ...payload, couponCode: "SAVE" });
+  assert.equal(response.status, 200);
+  assert.equal(Number(f.state.orders[0].totalAmount), 2000);
+  assert.equal(Number(f.state.orders[0].handlingFee), 0);
+  assert.equal(Number(f.state.vendorOrders[0].saleAmount), 1900);
+  assert.equal(Number(f.state.vendorOrders[0].commissionAmount), 0);
+  assert.equal(Number(f.state.vendorOrders[0].vendorAmount), 1900);
 });
 test("validation, session expiry, unimplemented payments and insufficient stock cannot create orders", async () => {
   for (const change of [{ customerAddress: " " }, { city: "Karachi" }, { paymentMethod: "card" }, { products: [{ productId: "cream", quantity: 99 }] }, { sameBillingAddress: false, billingAddress: {} }]) {

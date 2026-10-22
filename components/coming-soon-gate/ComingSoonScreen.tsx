@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { Lock } from "lucide-react";
 import { useState } from "react";
 
@@ -69,11 +70,11 @@ function GearsIllustration() {
   );
 }
 
-export function ComingSoonScreen() {
+export function ComingSoonScreen({ publicHomepage = false }: { publicHomepage?: boolean }) {
   const [modalOpen, setModalOpen] = useState(false);
 
   return (
-    <div className={styles.overlay}>
+    <div className={`${styles.overlay} ${publicHomepage ? styles.publicHome : ""}`}>
       <div className={styles.screen}>
         <div className={styles.glowA} aria-hidden="true" />
         <div className={styles.glowB} aria-hidden="true" />
@@ -103,10 +104,11 @@ export function ComingSoonScreen() {
           </h1>
 
           <p className={`${styles.message} ${styles.reveal} ${styles.delay3}`}>
-            We&apos;re working on something exciting. Stay tuned!
+            {publicHomepage ? "JORO is a Pakistan-focused marketplace for products, services and gifts. Customers can post Wants and connect with sellers. The marketplace is currently in private launch." : "We're working on something exciting. Stay tuned!"}
           </p>
+          {publicHomepage && <nav aria-label="Public information" className={styles.publicLinks}><Link href="/terms-and-conditions">Terms &amp; Conditions</Link><Link href="/privacy-policy">Privacy Policy</Link></nav>}
 
-          <div className={`${styles.progress} ${styles.reveal} ${styles.delay4}`}>
+          {!publicHomepage && <div className={`${styles.progress} ${styles.reveal} ${styles.delay4}`}>
             <div className={styles.progressMeta}>
               <span>Website is {READY_PERCENT}% ready</span>
               <span className={styles.progressValue}>{READY_PERCENT}%</span>
@@ -124,7 +126,7 @@ export function ComingSoonScreen() {
                 style={{ "--joro-cs-progress": `${READY_PERCENT}%` } as React.CSSProperties}
               />
             </div>
-          </div>
+          </div>}
         </main>
 
         <footer className={`${styles.footer} ${styles.reveal} ${styles.delay5}`}>

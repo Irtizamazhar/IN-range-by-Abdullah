@@ -389,24 +389,12 @@ async function createCheckoutOrder(req: NextRequest, requestId: string) {
       const current = await resolveServiceAddon(tx, service.productId, service.serviceId, service.quantity, String(city));
       if (!current.price.equals(service.price) || !current.commissionAmount.equals(service.commissionAmount)) throw new ApiError(409, "Service terms changed. Refresh checkout before ordering.");
     }
-    // Product commission is charged to the customer as a Handling Fee and the vendor keeps the
-    // full sale amount (vendor rate 0 below). Negotiated quotes keep vendor-deducted commission.
-    const chargeHandlingFee = !quote;
-    const handlingFee = chargeHandlingFee
-      ? await calculateHandlingFee(
-          mp,
-          resolvedProducts.map((line, index) => ({
-            category: line.vendorSlice ? line.vendorSlice.category : line.category,
-            vendorSpecialCommissionRate: line.vendorSlice?.vendorSpecialCommissionRate ?? null,
-            baseCents:
-              cents(line.price) * line.quantity -
-              (coupon?.fundingType === "VENDOR_FUNDED"
-                ? couponResult?.allocations.find((a) => a.index === index)?.discount ?? 0
-                : 0),
-          }))
-        )
-      : { totalCents: 0, lines: [] };
-    if (expectedHandlingFee != null && cents(expectedHandlingFee) !== handlingFee.totalCents) {
+    // Seller settlement remains unchanged: standard orders use zero vendor commission,
+    // while negotiated quotes retain vendor-deducted commission. Handling is included in
+    // the configured delivery charge and is not an extra customer line.
+    const standardProductOrder = !quote;
+    const handlingFeeCents = calculateHandlingFee();
+    if (expectedHandlingFee != null && cents(expectedHandlingFee) !== handlingFeeCents) {
       throw new ApiError(409, "Handling fee changed. Please review your order total and place the order again.");
     }
     const o = await tx.order.create({
@@ -421,8 +409,8 @@ async function createCheckoutOrder(req: NextRequest, requestId: string) {
         city: String(city).trim(),
         totalAmount: preCouponTotal
           .sub(couponResult ? money(couponResult.discount) : 0)
-          .add(money(handlingFee.totalCents)),
-        handlingFee: money(handlingFee.totalCents),
+          .add(money(handlingFeeCents)),
+        handlingFee: money(handlingFeeCents),
         paymentMethod: effectivePaymentMethod,
         bankAccount: null,
         paymentScreenshot: null,
@@ -491,7 +479,7 @@ async function createCheckoutOrder(req: NextRequest, requestId: string) {
         const vs = line.vendorSlice!;
         const vendorDiscount = coupon?.fundingType === "VENDOR_FUNDED" ? (couponResult?.allocations.find(a => a.index === resolvedProducts.indexOf(line))?.discount ?? 0) / 100 : 0;
         const saleAmount = line.price * line.quantity - vendorDiscount;
-        const rate = chargeHandlingFee
+        const rate = standardProductOrder
           ? 0
           : await resolveCommissionPercent(
               mp,
@@ -554,7 +542,7 @@ async function createCheckoutOrder(req: NextRequest, requestId: string) {
         const vs = line.vendorSlice!;
         const item = items[i]!;
         const saleAmount = item.subtotal;
-        const rate = chargeHandlingFee
+        const rate = standardProductOrder
           ? 0
           : await resolveCommissionPercent(
               mp,
@@ -663,10 +651,10 @@ async function createCheckoutOrder(req: NextRequest, requestId: string) {
   // The transaction has committed. A failed optional read must not turn it into failure.
   let out: ReturnType<typeof serializeOrder> | {
     _id: string; id: string; orderNumber: string; customerPhone: string;
-    customerName: string; customerEmail: string; totalAmount: number;
+    customerName: string; customerEmail: string; totalAmount: number; handlingFee: number;
   } = { _id: order.id, id: order.id, orderNumber: order.orderNumber,
     customerPhone: order.customerPhone, customerName: order.customerName,
-    customerEmail: order.customerEmail, totalAmount: Number(order.totalAmount) };
+    customerEmail: order.customerEmail, totalAmount: Number(order.totalAmount), handlingFee: Number(order.handlingFee ?? 0) };
   try {
     const orderForClient = await prisma.order.findUnique({ where: { id: order.id }, include: ORDER_INCLUDE_SERIALIZE });
     if (orderForClient) out = serializeOrder(orderForClient);

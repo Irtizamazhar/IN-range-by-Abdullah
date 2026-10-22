@@ -24,6 +24,7 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
           orderNumber: true,
         },
       },
+      pickupRequest: { select: { status: true, pickupReference: true } },
     },
   });
 

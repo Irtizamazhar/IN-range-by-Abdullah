@@ -72,6 +72,7 @@ export async function GET(req: NextRequest) {
     take: 500,
     include: {
       order: { select: { orderNumber: true } },
+      pickupRequest: { select: { status: true, pickupReference: true } },
       vendor: {
         select: {
           id: true,

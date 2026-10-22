@@ -68,6 +68,7 @@ export function OrderTable({
                 </td>
                 <td className="p-3">
                   <StatusBadge status={r.orderStatus as ShopOrderStatusPill} />
+                  {r.pickupStatus && r.orderStatus === "packed" ? <p className="mt-1 text-xs text-emerald-800">Pickup: {r.pickupStatus.replaceAll("_", " ")}</p> : null}
                 </td>
                 <td className="p-3 text-darkText/70">
                   {new Date(r.placedAt).toLocaleDateString()}

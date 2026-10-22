@@ -32,6 +32,8 @@ function toCsv(rows: ShopOrderListRow[]): string {
     "commissionAmount",
     "netAmount",
     "status",
+    "pickupStatus",
+    "pickupReference",
     "paymentMethod",
     "paymentStatus",
     "placedAt",
@@ -52,6 +54,8 @@ function toCsv(rows: ShopOrderListRow[]): string {
         r.commissionAmount,
         r.netAmount,
         esc(r.orderStatus),
+        esc(r.pickupStatus || ""),
+        esc(r.pickupReference || ""),
         esc(r.paymentMethod),
         esc(r.paymentStatus),
         esc(r.placedAt),
@@ -168,6 +172,7 @@ export default function AdminVendorOrdersPage() {
             All bundled vendor checkouts — filter, inspect, export CSV.
           </p>
         </div>
+        <Link href="/admin/vendor-orders/pickups" className="rounded-xl bg-emerald-800 px-4 py-2 text-sm font-bold text-white">Pickup Management</Link>
         <button
           type="button"
           onClick={exportCsv}

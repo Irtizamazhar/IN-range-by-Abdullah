@@ -64,20 +64,18 @@ async function main() {
       assert.equal(state.height,start.height);assert.equal(state.nextTop,start.nextTop);
       assert.equal(await page.locator("h2").innerText(),"Na mile? Want post karo.");
     }
-    await expectState(0);
-    for(let count=1;count<=5;count++) {
+    await expectState(5);
+    await page.clock.runFor(2499);await expectState(5);
+    await page.clock.runFor(1);await expectState(1);
+    for(let count=2;count<=5;count++) {
       await page.clock.runFor(249);await expectState(count-1);
       await page.clock.runFor(1);await expectState(count);
     }
-    await page.clock.runFor(2499);await expectState(5);
-    await page.clock.runFor(1);await expectState(0);
-    for(let count=1;count<=5;count++) {
-      await page.clock.runFor(250);await expectState(count);
-    }
-    await page.clock.runFor(2500);await expectState(0);
+    await page.clock.runFor(2500);await expectState(1);
     await page.evaluate(()=>window.unmountHeadline());
     await page.clock.runFor(5000);
-    await page.evaluate(()=>window.mountHeadline());await expectState(0);
+    await page.evaluate(()=>window.mountHeadline());await expectState(5);
+    await page.clock.runFor(2500);await expectState(1);
     const cursor = heading.locator('[data-active="true"]');
     const blink = await cursor.evaluate(element => {
       const animation=element.getAnimations()[0];
@@ -92,7 +90,7 @@ async function main() {
     await page.emulateMedia({reducedMotion:"reduce"});
     assert.equal(await cursor.evaluate(element=>getComputedStyle(element).animationName),"none");
     assert.deepEqual(errors,[]);
-    console.log("PASS exact word timing, hold/reset loops, stable layout, blinking lime cursor, reduced motion and StrictMode cleanup");
+    console.log("PASS complete first paint, word timing, stable layout, blinking lime cursor, reduced motion and StrictMode cleanup");
 
     const live = await browser.newPage({viewport:{width:1440,height:900}});
     live.on("pageerror",error=>errors.push(error.message));

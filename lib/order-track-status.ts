@@ -44,8 +44,8 @@ export function vendorShopStatusToTrackStep(status: string): CustomerTrackStep {
  * Public order status for tracking: merge parent `Order` with marketplace
  * `VendorShopOrder` rows so vendor fulfillment updates are visible to the customer.
  *
- * - One seller slice: max(parent, vendor) so vendor “delivered” wins over stale parent “pending”.
- * - Multiple sellers: max(parent, min(vendor)) so the slowest slice sets progress (no false “delivered”).
+ * Seller slices are authoritative for marketplace fulfilment. The slowest active seller
+ * controls aggregate progress; a stale parent status cannot claim delivery early.
  */
 export function resolveCustomerOrderTrackStatus(
   parentOrderStatus: string,
@@ -54,8 +54,6 @@ export function resolveCustomerOrderTrackStatus(
   if (parentOrderStatus.toLowerCase() === "cancelled") {
     return "cancelled";
   }
-
-  const parentIdx = customerTrackStepIndex(parentOrderStatus);
 
   if (!vendorShopOrders.length) {
     return parentOrderStatus.toLowerCase();
@@ -70,17 +68,5 @@ export function resolveCustomerOrderTrackStatus(
     customerTrackStepIndex(vendorShopStatusToTrackStep(v.status))
   );
 
-  if (vendorShopOrders.length === 1) {
-    const vMax = Math.max(...vendorIdxs);
-    const combined = Math.max(parentIdx, vMax);
-    return CUSTOMER_TRACK_STEPS[
-      Math.min(combined, CUSTOMER_TRACK_STEPS.length - 1)
-    ]!;
-  }
-
-  const vMin = Math.min(...vendorIdxs);
-  const combined = Math.max(parentIdx, vMin);
-  return CUSTOMER_TRACK_STEPS[
-    Math.min(combined, CUSTOMER_TRACK_STEPS.length - 1)
-  ]!;
+  return CUSTOMER_TRACK_STEPS[Math.min(...vendorIdxs)]!;
 }

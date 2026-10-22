@@ -69,7 +69,7 @@ export async function GET(req: NextRequest, context: Ctx) {
     }),
     prisma.vendorShopOrder.findMany({
       where: { orderId: order.id },
-      select: { shopOrderNumber: true, status: true, statusHistory: true, trackingNumber: true },
+      select: { shopOrderNumber: true, status: true, statusHistory: true, trackingNumber: true, pickupRequest: { select: { status: true, history: true } } },
     }),
   ]);
   // Same slice scoping as serializeOrder: an IRV- reference only tracks that seller's parcel.
@@ -86,6 +86,7 @@ export async function GET(req: NextRequest, context: Ctx) {
         shops,
       }),
       trackingNumber: resolveTrackingNumber(order.trackingNumber, shops),
+      sellers: shops.map(shop => ({ shopOrderNumber: shop.shopOrderNumber, orderStatus: shop.status, pickupStatus: shop.pickupRequest?.status ?? null, trackingNumber: shop.trackingNumber })),
     },
   });
 }
@@ -120,6 +121,14 @@ export async function PUT(req: NextRequest, context: Ctx) {
         { error: `Invalid order transition: ${prevStatus} to ${requestedStatus}` },
         { status: 409 }
       );
+    }
+    let hasSellerOrders = false;
+    if (["shipped", "delivered"].includes(requestedStatus) && requestedStatus !== prevStatus) {
+      const sellerOrders = await prisma.vendorShopOrder.findMany({ where: { orderId: order.id, status: { not: "cancelled" } }, select: { status: true } });
+      hasSellerOrders = sellerOrders.length > 0;
+      if (sellerOrders.length && sellerOrders.some(shop => requestedStatus === "shipped" ? !["shipped", "delivered"].includes(shop.status) : shop.status !== "delivered")) {
+        return NextResponse.json({ error: "Complete each seller order through verified pickup handover and delivery first." }, { status: 409 });
+      }
     }
     if (!canTransitionPaymentStatus(prevPayment, requestedPayment)) {
       return NextResponse.json(
@@ -236,7 +245,7 @@ export async function PUT(req: NextRequest, context: Ctx) {
       trackingNumber: updated.trackingNumber,
     };
 
-    if (prevStatus !== "shipped" && updated.orderStatus === "shipped") {
+    if (prevStatus !== "shipped" && updated.orderStatus === "shipped" && !hasSellerOrders) {
       await notifyCustomerShipped(payload);
     }
     if (

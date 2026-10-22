@@ -20,6 +20,7 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
     where: { id },
     include: {
       order: { select: { orderNumber: true } },
+      pickupRequest: { select: { status: true, pickupReference: true } },
       vendor: {
         select: {
           id: true,

@@ -264,3 +264,57 @@
     overflow: visible;
   }
 }
+
+/* Reference-inspired form treatment, scoped to the auth experience. */
+.page { background: #f5f8f4; }
+.page .card { background: #fbfcfa; }
+.backLink { min-height: 40px; color: #00553c; }
+.intro h1 { color: #083f32; letter-spacing: -.04em; }
+.intro p { color: #667d70; }
+.roleTabs { gap: 4px; border-radius: 16px; background: #eaf0e9; padding: 4px; }
+.roleTabs :global(.joro-auth-role) { border-radius: 12px; background: transparent; color: #748579; box-shadow: none; }
+.roleTabs :global(.joro-auth-role-active) { border-color: transparent; background: #fff; color: #00553c; box-shadow: 0 2px 8px rgb(4 60 37 / 8%); }
+.modeTabs { margin-top: 12px; border-color: #dce7dd; }
+.modeTabs :global(.joro-auth-tab) { min-height: 44px; border-bottom-width: 3px; color: #809085; font-size: 14px; }
+.modeTabs :global(.joro-auth-tab-active) { border-color: #00553c; color: #00553c; }
+.fields { gap: 14px; margin-top: 14px; }
+.field label { margin-bottom: 6px; color: #093f32; font-size: 12px; }
+.page :global(.joro-auth-input) { height: 50px; border-color: #d7e5d8; border-radius: 13px; background: #fff; color: #173f32; font-size: 14px; }
+.page :global(.joro-auth-input)::placeholder { color: #8a9b90; }
+.page :global(.joro-auth-input:focus) { border-color: #057050; box-shadow: 0 0 0 3px rgb(183 227 58 / 22%); }
+.page :global(.joro-auth-field-icon) { top: 16px; color: #71917e; }
+.page :global(.joro-auth-primary) { height: 52px; border-radius: 13px; background: #00553c; font-size: 15px; box-shadow: 0 8px 18px rgb(0 85 60 / 10%); }
+.page :global(.joro-auth-primary:hover) { background: #006f4c; }
+.page :global(.joro-auth-primary:disabled) { box-shadow: none; }
+.formBody :global(input[type="checkbox"]) { width: 17px; height: 17px; accent-color: #00553c; }
+.googleButton { min-height: 50px; border-color: #d7e5d8; border-radius: 13px; background: #fff; color: #123e31; font-size: 13px; transition: background-color 150ms ease, border-color 150ms ease; }
+.googleButton:hover { border-color: #a9c9af; background: #f5faf4; }
+
+@media (max-width: 1023px) {
+  .page .card { padding-top: 52px; padding-bottom: max(30px, env(safe-area-inset-bottom)); }
+  .formLogo > span { height: 82px; }
+  .logoRow { margin-bottom: 5px; }
+}
+
+@media (max-width: 639px) {
+  .page .card { padding: 53px 18px max(28px, env(safe-area-inset-bottom)); }
+  .backLink { left: 18px; top: 12px; font-size: 12px; }
+  .formLogo, .formLogo > span { width: 142px; }
+  .formLogo > span { height: 76px; }
+  .intro { margin-bottom: 18px; }
+  .intro h1 { font-size: 25px; line-height: 1.1; }
+  .intro p { margin-top: 5px; font-size: 12px; line-height: 1.4; }
+  .roleTabs :global(.joro-auth-role) { min-height: 52px; }
+  .modeTabs { margin-top: 12px; }
+  .modeTabs :global(.joro-auth-tab) { min-height: 46px; }
+  .fields { gap: 13px; }
+}
+
+@media (max-width: 359px) {
+  .page .card { padding-inline: 14px; }
+  .intro h1 { font-size: 23px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .googleButton { transition: none; }
+}

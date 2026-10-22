@@ -38,7 +38,7 @@ test("transactional enqueue uses the order's unique key and cannot reset deliver
 
 const shop = { id: "shop-a", orderId: order.id, placedAt: order.createdAt, status: "pending", totalAmount: 1900, customerName: "Ali", customerPhone: "03001234567", customerAddress: "12 Street", city: "Lahore", vendor: { email: "seller-a@example.invalid", shopName: "Store A", ownerName: "Owner A", status: "approved" }, items: [{ productName: "Shirt", quantity: 2, price: 1000, subtotal: 1900, image: "https://joro.pk/shirt.png" }] };
 
-function fixture(initialAttempts = 0, value: typeof order | null = order, bundle: typeof shop | null = shop) {
+function fixture(initialAttempts = 0, value: typeof order | null = order, bundle: (typeof shop & { pickupRequest?: { status: string; trackingNumber: string }; trackingNumber?: string; shopOrderNumber?: string }) | null = shop) {
   const job = { id: "job-1", orderId: order.id, recipientKey: "customer", status: "pending", attempts: initialAttempts, availableAt: new Date(0), claimedAt: null as Date | null, acceptedAt: null as Date | null, lastError: null as string | null };
   const db = { orderConfirmationEmail: {
     findFirst: async () => job.status === "pending" && job.attempts < 5 && job.availableAt <= new Date() ? { ...job } : null,
@@ -79,6 +79,26 @@ test("definite SMTP failures retry with backoff and never mark acceptance", asyn
   await deliverOrderConfirmation(exhausted.db, async () => "retry");
   assert.equal(exhausted.job.status, "failed");
   assert.equal(confirmationRetry(50, new Date(0)).getTime(), 60 * 60_000);
+});
+
+test("pickup shipment mail retries from the committed job and uses synchronized tracking", async () => {
+  const bundle = { ...shop, status: "shipped", trackingNumber: "TRACK-1", shopOrderNumber: "IRV-1", pickupRequest: { status: "handed_over", trackingNumber: "TRACK-1" } };
+  const { db, job } = fixture(0, order, bundle);
+  job.recipientKey = "shipped:shop-a";
+  await deliverOrderConfirmation(db, async () => "retry");
+  assert.equal(job.status, "pending");
+  job.availableAt = new Date(0);
+  const messages: string[] = [];
+  await deliverOrderConfirmation(db, async message => { messages.push(`${message.to} ${message.text}`); return "accepted"; });
+  assert.equal(job.status, "accepted");
+  assert.equal(messages.length, 1);
+  assert.match(messages[0], /owner@example.invalid[\s\S]*TRACK-1/);
+  assert.doesNotMatch(messages[0], /checkout-untrusted/);
+
+  const stale = fixture(0, order, { ...bundle, pickupRequest: { status: "handed_over", trackingNumber: "OLD" } });
+  stale.job.recipientKey = "shipped:shop-a";
+  await deliverOrderConfirmation(stale.db, async () => { assert.fail("Conflicting tracking must not be mailed"); });
+  assert.equal(stale.job.status, "skipped");
 });
 
 test("ambiguous SMTP errors and interrupted workers are held to prevent duplicate retries", async () => {
@@ -141,6 +161,9 @@ test("each vendor gets only its own snapshot and amount, never parent totals or 
 });
 
 test("customer receipt separates the committed handling fee from delivery charges", () => {
+  const current = orderConfirmationEmail({ ...order, totalAmount: 2450, handlingFee: 50, couponRedemption: { discount: 100 } });
+  for (const line of ["Subtotal: PKR 2,000.00", "Discount: PKR 100.00", "Handling Fee: PKR 50.00", "Delivery Charges: PKR 500.00", "Final Order Total: PKR 2,450.00"]) assert.ok(current.text.includes(line), line);
+  assert.ok(current.text.indexOf("Discount:") < current.text.indexOf("Handling Fee:"));
   const email = orderConfirmationEmail({ ...order, totalAmount: 2650, handlingFee: 150, couponRedemption: { discount: 100 }, services: [{ price: 200, quantity: 1 }] });
   assert.match(email.text, /Delivery Charges: PKR 400.00/);
   assert.match(email.text, /Handling Fee: PKR 150.00/);

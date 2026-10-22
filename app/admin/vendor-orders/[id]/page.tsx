@@ -13,6 +13,7 @@ import {
 } from "@/components/orders/OrderDetail";
 import { StatusBadge, type ShopOrderStatusPill } from "@/components/orders/StatusBadge";
 import { AdminShopStatusDropdown } from "@/components/orders/AdminShopStatusDropdown";
+import { AdminLegacyPickupRecovery } from "@/components/orders/AdminLegacyPickupRecovery";
 
 /** Admin detail: fulfillment (shipped / delivered) + force cancel. */
 export default function AdminVendorOrderDetailPage() {
@@ -113,9 +114,7 @@ export default function AdminVendorOrderDetailPage() {
   const canCancel =
     data.orderStatus !== "delivered" && data.orderStatus !== "cancelled";
 
-  const canAdminFulfill =
-    canCancel &&
-    (data.orderStatus === "packed" || data.orderStatus === "shipped");
+  const canAdminFulfill = canCancel && data.orderStatus === "shipped";
 
   return (
     <div className="mx-auto max-w-3xl p-6 md:p-8">
@@ -143,6 +142,9 @@ export default function AdminVendorOrderDetailPage() {
         <div className="mt-8">
           <OrderDetail order={data} showVendorBlock />
         </div>
+        {data.orderStatus === "packed" ? <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">This order is packed. {data.pickupStatus ? <>Pickup: <strong>{data.pickupStatus.replaceAll("_", " ")}</strong>{data.pickupReference ? ` · ${data.pickupReference}` : ""}. </> : "The vendor has not requested pickup yet. "}Record collection and courier handover in <Link className="font-bold underline" href="/admin/vendor-orders/pickups">Pickup Management</Link> before shipping.</div> : null}
+
+        {data.orderStatus === "packed" && !data.pickupStatus ? <AdminLegacyPickupRecovery shopOrderId={id} vendor={data.vendor} onSuccess={() => load(false)} /> : null}
 
         {canAdminFulfill ? (
           <div className="mt-8 space-y-6 border-t border-borderGray pt-6">

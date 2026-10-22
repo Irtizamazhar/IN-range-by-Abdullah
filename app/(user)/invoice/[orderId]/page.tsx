@@ -3,6 +3,7 @@ import { PrintInvoiceButton } from "@/components/user/PrintInvoiceButton";
 import { formatPKR } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { getCustomerSession } from "@/lib/sessions";
+import { storedOrderBreakdown } from "@/lib/stored-order-breakdown";
 
 export const dynamic = "force-dynamic";
 
@@ -11,16 +12,11 @@ export default async function InvoicePage({ params }: { params: { orderId: strin
   if (session?.user?.role !== "customer" || !session.user.id) redirect("/account");
   const order = await prisma.order.findFirst({
     where: { id: params.orderId, customerId: session.user.id },
-    include: { orderItems: true, refunds: { where: { status: "processed" } } },
+    include: { orderItems: true, services: true, couponRedemption: true, refunds: { where: { status: "processed" } } },
   });
   if (!order) notFound();
 
-  const itemsTotal = order.orderItems.reduce(
-    (sum, item) => sum + Number(item.price) * item.quantity,
-    0
-  );
-  const handlingFee = Number(order.handlingFee ?? 0);
-  const delivery = Math.max(0, Number(order.totalAmount) - itemsTotal - handlingFee);
+  const { productSubtotal, serviceSubtotal, discount, handlingFee, delivery, total } = storedOrderBreakdown(order);
   const refunded = order.refunds.reduce((sum, refund) => sum + Number(refund.amount), 0);
 
   return (
@@ -48,13 +44,15 @@ export default async function InvoicePage({ params }: { params: { orderId: strin
         </div>
 
         <dl className="ml-auto max-w-sm space-y-2 text-sm">
-          <div className="flex justify-between"><dt className="text-darkText/55">Items</dt><dd>{formatPKR(itemsTotal)}</dd></div>
-          {handlingFee > 0 && <div className="flex justify-between"><dt className="text-darkText/55">Handling fee</dt><dd>{formatPKR(handlingFee)}</dd></div>}
-          <div className="flex justify-between"><dt className="text-darkText/55">Delivery</dt><dd>{formatPKR(delivery)}</dd></div>
-          <div className="flex justify-between border-t border-borderGray pt-3 text-base font-black text-brand-dark"><dt>Order total</dt><dd>{formatPKR(Number(order.totalAmount))}</dd></div>
+          <div className="flex justify-between"><dt className="text-darkText/55">Product subtotal</dt><dd>{formatPKR(productSubtotal)}</dd></div>
+          {serviceSubtotal > 0 && <div className="flex justify-between"><dt className="text-darkText/55">Booked services</dt><dd>{formatPKR(serviceSubtotal)}</dd></div>}
+          {discount > 0 && <div className="flex justify-between"><dt className="text-darkText/55">Discount</dt><dd>-{formatPKR(discount)}</dd></div>}
+          {handlingFee > 0 && <div className="flex justify-between"><dt className="text-darkText/55">Handling Fee</dt><dd>{formatPKR(handlingFee)}</dd></div>}
+          <div className="flex justify-between"><dt className="text-darkText/55">Delivery Charges{handlingFee === 0 ? <span className="block text-xs">Includes applicable fulfilment and handling</span> : null}</dt><dd>{formatPKR(delivery)}</dd></div>
+          <div className="flex justify-between border-t border-borderGray pt-3 text-base font-black text-brand-dark"><dt>Order total</dt><dd>{formatPKR(total)}</dd></div>
           {refunded > 0 ? <div className="flex justify-between font-bold text-emerald-700"><dt>Refunded</dt><dd>-{formatPKR(refunded)}</dd></div> : null}
         </dl>
-        <p className="mt-8 rounded-xl bg-brand-soft/60 p-4 text-xs leading-5 text-darkText/60">This invoice is generated from the order stored in InRange. Refund references and updated payment status remain part of the order audit history.</p>
+        <p className="mt-8 rounded-xl bg-brand-soft/60 p-4 text-xs leading-5 text-darkText/60">This invoice is generated from the stored JORO order. Refund references and updated payment status remain part of the order audit history.</p>
       </section>
     </main>
   );

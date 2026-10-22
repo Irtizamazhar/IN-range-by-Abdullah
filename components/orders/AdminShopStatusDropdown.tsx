@@ -24,7 +24,7 @@ type Props = {
   onSuccess: () => void | Promise<void>;
 };
 
-/** Admin: advance packed→shipped (optional tracking) or shipped→delivered. */
+/** Admin: complete delivery after pickup handover has marked the order shipped. */
 export function AdminShopStatusDropdown({
   currentStatus,
   statusUrl,
@@ -46,10 +46,7 @@ export function AdminShopStatusDropdown({
     setTracking("");
   }, [currentStatus]);
 
-  if (
-    !allowedNext ||
-    (allowedNext !== "shipped" && allowedNext !== "delivered")
-  ) {
+  if (allowedNext !== "delivered") {
     return null;
   }
 
@@ -92,9 +89,7 @@ export function AdminShopStatusDropdown({
     <div className="rounded-xl border border-borderGray bg-brand-soft/40 p-4">
       <p className="text-sm font-bold text-darkText">Admin — fulfillment</p>
       <p className="mt-1 text-xs text-darkText/60">
-        After the seller marks <strong>packed</strong>, you mark{" "}
-        <strong>shipped</strong> (optional tracking), then{" "}
-        <strong>delivered</strong>.
+        Shipping is recorded after verified pickup handover. Confirm delivery only after the courier reports it complete.
       </p>
 
       <label className="mt-4 block text-xs font-bold uppercase text-darkText/50">

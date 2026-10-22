@@ -4,6 +4,7 @@ import { LoadingButton } from "@/components/ui/LoadingButton";
 import Image from "next/image";
 import { CategoryNavigation, useNavCategories } from "./CategoryNavigation";
 import { MarketplaceNav } from "./MarketplaceNav";
+import styles from "./Navbar.module.css";
 import { PostWantButton } from "./PostWantButton";
 import Link from "@/components/ui/LoadingLink";
 import { usePathname } from "next/navigation";
@@ -209,14 +210,14 @@ export function Navbar({
 
   return (
     <>
-      <header className="sticky top-10 z-40 w-full bg-white shadow-[0_4px_18px_rgba(11,46,31,0.06)]">
+      <header className={`${styles.header} sticky top-10 z-40 w-full bg-white shadow-[0_4px_18px_rgba(11,46,31,0.06)]`}>
         {/* =================================================
             MAIN ROW
         ================================================= */}
 
         <div className="border-b border-black/[0.08] bg-white">
-          <div className="mx-auto max-w-7xl px-4 py-2.5 sm:px-6">
-            <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3 lg:flex-nowrap lg:gap-3 xl:gap-5">
+          <div className="mx-auto max-w-7xl px-3 py-2 sm:px-6 lg:py-2.5">
+            <div className={`${styles.mainRow} flex min-w-0 flex-wrap items-center gap-1.5 sm:gap-3 lg:flex-nowrap lg:gap-3 xl:gap-5`}>
               {/* MOBILE MENU */}
 
               <LoadingButton
@@ -224,7 +225,7 @@ export function Navbar({
                 onClick={() =>
                   setMobileOpen(true)
                 }
-                className="order-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-black/[0.08] bg-white text-brand-link transition hover:bg-brand-soft focus-visible:bg-brand-soft focus-visible:outline-brand-link lg:hidden"
+                className={`${styles.menuButton} order-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-black/[0.08] bg-white text-brand-link transition hover:bg-brand-soft focus-visible:bg-brand-soft focus-visible:outline-brand-link lg:hidden`}
                 aria-label="Open menu"
               >
                 <Menu className="h-[18px] w-[18px]" />
@@ -234,7 +235,7 @@ export function Navbar({
                   LOGO
               ================================================= */}
 
-              <div className="order-2 flex shrink-0 items-center">
+              <div className={`${styles.logo} order-2 flex shrink-0 items-center`}>
                 <LogoMark href="/" className="rounded-md focus-visible:outline-brand-link" />
               </div>
 
@@ -242,7 +243,7 @@ export function Navbar({
                   SEARCH
               ================================================= */}
 
-              <div className="order-4 relative z-50 w-full min-w-0 lg:order-3 lg:flex-1">
+              <div className={`${styles.search} order-4 relative z-50 w-full min-w-0 lg:order-3 lg:flex-1`}>
                 <SearchBar />
               </div>
 
@@ -251,7 +252,7 @@ export function Navbar({
                   Pakistan location removed
               ================================================= */}
 
-              <div className="order-3 ml-auto flex shrink-0 items-center gap-0.5 lg:order-4 lg:ml-0">
+              <div className={`${styles.actions} order-3 ml-auto flex shrink-0 items-center gap-0.5 lg:order-4 lg:ml-0`}>
                 {/* WANTS */}
 
                 <Link

@@ -3,6 +3,7 @@ import Image from "next/image";
 import { PostWantButton } from "@/components/user/PostWantButton";
 import Link from "@/components/ui/LoadingLink";
 import { HeroHeadline } from "./HeroHeadline";
+import styles from "./HeroSection.module.css";
 import {
   ArrowRight,
   Megaphone,
@@ -16,15 +17,15 @@ export function HeroSection({
   sellNowHref: string;
 }) {
   return (
-    <section className="joro-v4-hero relative isolate overflow-hidden text-white">
-      {/* Existing hero background stays unchanged. */}
+    <section className={`${styles.section} relative isolate overflow-hidden`}>
+      <div className={`${styles.card} joro-v4-hero relative isolate mx-auto max-w-7xl overflow-hidden text-white`}>
       <div className="joro-v4-grid pointer-events-none absolute inset-0" />
       <div className="joro-v4-glow pointer-events-none absolute inset-0" />
 
-      <div className="relative mx-auto grid min-h-[400px] max-w-7xl items-center gap-4 px-4 pb-5 pt-3 sm:px-6 lg:grid-cols-[0.92fr_1.08fr]">
+      <div className={`${styles.layout} relative mx-auto grid min-h-[400px] items-center gap-4 px-4 pb-5 pt-5 sm:px-6 lg:grid-cols-[0.92fr_1.08fr]`}>
 
         {/* LEFT CONTENT — UNCHANGED */}
-        <div className="relative z-20 self-start">
+        <div className={`${styles.copy} relative z-20 self-start`}>
 
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-brand-primary/30 bg-brand-primary/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-brand-primary backdrop-blur-md sm:text-[12px]">
             <span className="h-1.5 w-1.5 rounded-full bg-brand-primary shadow-[0_0_12px_rgba(183,227,58,.9)]" />
@@ -33,21 +34,21 @@ export function HeroSection({
 
           <HeroHeadline />
 
-          <h2 className="mt-2 text-[24px] font-black leading-tight tracking-[-0.045em] text-white sm:text-[29px]">
+          <h2 className={`${styles.subheading} mt-2 text-[24px] font-black leading-tight tracking-[-0.045em] text-white sm:text-[29px]`}>
             Na Mile?{" "}
             <span className="text-brand-primary">
               Request a Want
             </span>
           </h2>
 
-          <p className="mt-3 max-w-[520px] text-[14px] font-medium leading-6 text-white/75 sm:text-[15px] sm:leading-6">
+          <p className={`${styles.description} mt-3 max-w-[520px] text-[14px] font-medium leading-6 text-white/75 sm:text-[15px] sm:leading-6`}>
             Products dekho, seller se connect ho aur asaani se order karo.
           </p>
 
-          <div className="mt-5 flex flex-wrap gap-2.5">
+          <div className={`${styles.actions} mt-5 flex flex-wrap gap-2.5`}>
             <Link
               href="/products"
-              className="group inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-white px-5 text-[13px] font-black text-brand-dark shadow-lg transition duration-300 hover:-translate-y-0.5 hover:shadow-xl"
+              className={`${styles.primaryAction} group inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-brand-primary px-5 text-[13px] font-black text-brand-dark shadow-lg transition duration-300 hover:-translate-y-0.5 hover:shadow-xl`}
             >
               <ShoppingBag className="h-4 w-4" />
               Shop Karo
@@ -55,7 +56,7 @@ export function HeroSection({
             </Link>
 
             <PostWantButton
-              className="group inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-brand-primary px-5 text-[13px] font-black text-brand-dark shadow-lime transition duration-300 hover:-translate-y-0.5 hover:bg-brand-hover"
+              className={`${styles.secondaryAction} group inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-white/40 bg-transparent px-5 text-[13px] font-black text-white transition duration-300 hover:-translate-y-0.5 hover:bg-white/10`}
             >
               <Megaphone className="h-4 w-4" />
               Request a Want
@@ -64,7 +65,7 @@ export function HeroSection({
 
             <Link
               href={sellNowHref}
-              className="group inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-white/25 bg-white/[0.06] px-5 text-[13px] font-black text-white backdrop-blur-md transition duration-300 hover:-translate-y-0.5 hover:border-brand-primary/50 hover:bg-white/[0.1]"
+              className={`${styles.tertiaryAction} group inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-white/25 bg-white/[0.06] px-5 text-[13px] font-black text-white backdrop-blur-md transition duration-300 hover:-translate-y-0.5 hover:border-brand-primary/50 hover:bg-white/[0.1]`}
             >
               <Store className="h-4 w-4" />
               Seller Bano
@@ -75,7 +76,7 @@ export function HeroSection({
         </div>
 
         {/* RIGHT VISUAL — JORO CONNECT IMAGE */}
-        <div className="relative mx-auto flex h-[220px] w-full max-w-[680px] items-center justify-center sm:h-[300px] lg:h-[350px]">
+        <div className={`${styles.visual} relative mx-auto flex h-[220px] w-full max-w-[680px] items-center justify-center sm:h-[300px] lg:h-[350px]`}>
 
           <div
             className="pointer-events-none absolute inset-x-[8%] top-[14%] h-[70%] rounded-full bg-emerald-400/10 blur-3xl"
@@ -94,6 +95,7 @@ export function HeroSection({
             />
           </div>
         </div>
+      </div>
       </div>
     </section>
   );

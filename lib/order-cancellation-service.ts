@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, type VendorShopOrderStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { appendStatusHistory, syncLineOrdersToShopStatus } from "@/lib/vendor-shop-order-helpers";
 import { releaseReservedInventory } from "@/lib/order-inventory-service";
@@ -42,6 +42,31 @@ async function cancelShopInsideTransaction(
     throw new Error("Shipped or delivered seller orders cannot be cancelled");
   }
 
+  // Lock the shop row before looking for a pickup. Request creation takes the
+  // same lock, so a just-created pickup cannot appear after this read.
+  const locked = await tx.vendorShopOrder.updateMany({
+    where: { id: shop.id, status: shop.status as VendorShopOrderStatus },
+    data: { status: shop.status as VendorShopOrderStatus },
+  });
+  if (locked.count !== 1) throw new Error("Order status changed; refresh and try again");
+
+  // The request CAS also serializes cancellation against courier collection.
+  // A collected parcel must go through the return/dispute process, not stock release.
+  const pickup = await tx.pickupRequest.findUnique({ where: { shopOrderId: shop.id } });
+  if (pickup) {
+    if (["collected", "handed_over"].includes(pickup.status)) {
+      throw new Error("Parcel already collected; contact support for a return or refund review");
+    }
+    if (pickup.status !== "cancelled") {
+      const at = new Date().toISOString();
+      const cancelled = await tx.pickupRequest.updateMany({
+        where: { id: pickup.id, status: pickup.status, updatedAt: pickup.updatedAt },
+        data: { status: "cancelled", history: [...(Array.isArray(pickup.history) ? pickup.history : []), { status: "cancelled", at, actor: "order-cancellation", note: reason }] as Prisma.InputJsonValue },
+      });
+      if (cancelled.count !== 1) throw new Error("Pickup changed; refresh and request a return or refund review");
+    }
+  }
+
   const history = appendStatusHistory(shop.statusHistory, {
     status: "cancelled",
     updatedAt: new Date().toISOString(),
@@ -61,6 +86,12 @@ async function cancelShopInsideTransaction(
   if (gate.count !== 1) throw new Error("Order status changed; refresh and try again");
 
   await syncLineOrdersToShopStatus(tx, shop.id, "cancelled", undefined);
+  if (pickup && pickup.status !== "cancelled") {
+    if (pickup.visitId) {
+      const remaining = await tx.pickupRequest.count({ where: { visitId: pickup.visitId, status: { not: "cancelled" } } });
+      if (remaining === 0) await tx.pickupVisit.update({ where: { id: pickup.visitId }, data: { status: "cancelled" } });
+    }
+  }
   await releaseReservedInventory(tx, { vendorShopOrderId: shop.id }, reason);
   await reverseVendorSalesMetrics(tx, shop.id, shop.vendorId);
   return true;

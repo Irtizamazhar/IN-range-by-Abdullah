@@ -99,8 +99,7 @@ function VendorOrdersPageInner() {
           Orders
         </h1>
         <p className="mt-1 text-sm text-darkText/70">
-          Confirm through packed on your side; admin marks shipped and
-          delivered. Commission is calculated per item at checkout.
+          Confirm and pack your order, then request pickup from the order detail. Admin records courier handover and delivery.
         </p>
       </div>
 

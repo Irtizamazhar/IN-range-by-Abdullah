@@ -8,7 +8,7 @@
  */
 export const PRIVATE_LAUNCH_PAGE_PATH = "/private-launch";
 
-export type GateDecision = "allow" | "gate" | "block";
+export type GateDecision = "allow" | "home" | "gate" | "block";
 
 /** Public files under /public (images, fonts, video, manifests). Never /api. */
 const STATIC_FILE_PATTERN =
@@ -58,5 +58,7 @@ export function decideGatedRequest(input: {
   if (method !== "GET" && method !== "HEAD") return "block";
 
   if (isPublicAssetPath(pathname)) return "allow";
+  if (pathname === "/") return "home";
+  if (pathname === "/privacy-policy" || pathname === "/terms-and-conditions") return "allow";
   return "gate";
 }

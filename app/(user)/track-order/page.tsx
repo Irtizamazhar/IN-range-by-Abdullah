@@ -38,7 +38,7 @@ type TrackedOrder = {
   canCancel?: boolean;
   trackingNumber?: string | null;
   products: TrackedProduct[];
-  tracking?: { timeline: TrackingEvent[]; trackingNumber: string | null };
+  tracking?: { timeline: TrackingEvent[]; trackingNumber: string | null; sellers?: Array<{ shopOrderNumber: string; orderStatus: string; pickupStatus: string | null; trackingNumber: string | null }> };
 };
 type LookupError = { kind: "invalid" | "notFound" | "signin" | "network"; message: string };
 
@@ -46,19 +46,22 @@ const STAGES: { key: string; label: string; icon: Icon }[] = [
   { key: "placed", label: "Order Placed", icon: ClipboardList },
   { key: "confirmed", label: "Confirmed", icon: PackageCheck },
   { key: "packed", label: "Packed", icon: Package },
+  { key: "pickup_scheduled", label: "Pickup Scheduled", icon: ClipboardList },
+  { key: "collected", label: "Collected by Courier", icon: Bike },
   { key: "shipped", label: "Shipped", icon: Truck },
-  { key: "out", label: "Out for Delivery", icon: Bike },
   { key: "delivered", label: "Delivered", icon: House },
 ];
 
 // There is no separate "out for delivery" status, so stage 5 is only complete once delivered.
-const STAGE_OF: Record<string, number> = { pending: 0, placed: 0, confirmed: 1, processing: 1, packing: 2, packed: 2, shipped: 3, delivered: 5 };
+const STAGE_OF: Record<string, number> = { pending: 0, placed: 0, confirmed: 1, processing: 1, packing: 2, packed: 2, shipped: 5, delivered: 6 };
 
 const EVENT_COPY: Record<TrackingStatus, { title: string; text: string; icon: Icon }> = {
   placed: { title: "Order Placed", text: "Your order has been received successfully.", icon: ClipboardList },
   confirmed: { title: "Order Confirmed", text: "Your order has been confirmed and is being prepared.", icon: PackageCheck },
   processing: { title: "Processing", text: "Your order is being processed.", icon: PackageCheck },
   packed: { title: "Packed", text: "Your items have been packed.", icon: Package },
+  pickup_scheduled: { title: "Pickup Scheduled", text: "A courier pickup has been scheduled.", icon: ClipboardList },
+  collected: { title: "Collected by Courier", text: "The parcel has been collected.", icon: Bike },
   shipped: { title: "Shipped", text: "Your order has been handed to the courier.", icon: Truck },
   delivered: { title: "Delivered", text: "Your order has been delivered.", icon: House },
   cancelled: { title: "Order Cancelled", text: "This order was cancelled.", icon: Ban },
@@ -66,8 +69,9 @@ const EVENT_COPY: Record<TrackingStatus, { title: string; text: string; icon: Ic
 const UPCOMING_COPY: Record<string, string> = {
   confirmed: "We'll confirm your order shortly.",
   packed: "Your items will be packed for dispatch.",
+  pickup_scheduled: "A pickup will be scheduled.",
+  collected: "A courier will collect your parcel.",
   shipped: "Your order will be handed to the courier.",
-  out: "The courier will bring your order to your door.",
   delivered: "Your order will be delivered to you.",
 };
 const STATUS_BADGE: Record<string, string> = {
@@ -275,8 +279,8 @@ export default function TrackOrderPage() {
 
   const status = order ? order.orderStatus.toLowerCase() : "";
   const cancelled = status === "cancelled";
-  const stageIndex = STAGE_OF[status] ?? 0;
   const timeline = order?.tracking?.timeline ?? [];
+  const stageIndex = Math.max(STAGE_OF[status] ?? 0, ...timeline.map(event => STAGES.findIndex(stage => stage.key === event.status)));
   const stageTime = (key: string) => timeline.find((event) => event.status === key || (key === "confirmed" && event.status === "processing"))?.at;
   const trackingNumber = order?.tracking?.trackingNumber ?? order?.trackingNumber ?? null;
   const firstProduct = order?.products[0];
@@ -468,16 +472,16 @@ export default function TrackOrderPage() {
                 </div>
               ) : (
                 <div className="mt-7">
-                  <ol aria-label="Delivery progress" className="grid grid-cols-6">
+                  <ol aria-label="Delivery progress" className="grid grid-cols-7">
                     {STAGES.map((stage, index) => {
-                      const done = index < stageIndex || (index === stageIndex && status === "delivered");
+                      const done = !!stageTime(stage.key) && (index < stageIndex || status === "delivered");
                       const current = index === stageIndex && status !== "delivered";
                       const at = stageTime(stage.key) ?? (stage.key === "placed" ? order.createdAt : undefined);
                       const StageIcon = stage.icon;
                       return (
                         <li key={stage.key} aria-current={current ? "step" : undefined} className="relative flex min-w-0 flex-col items-center text-center">
                           {index > 0 && (
-                            <span aria-hidden="true" className={`absolute right-1/2 top-4 h-1 w-full -translate-y-1/2 sm:top-[22px] ${index <= stageIndex ? "bg-[#00543D]" : "border-t-2 border-dashed border-[#D9DED9] bg-transparent"}`} />
+                            <span aria-hidden="true" className={`absolute right-1/2 top-4 h-1 w-full -translate-y-1/2 sm:top-[22px] ${done ? "bg-[#00543D]" : "border-t-2 border-dashed border-[#D9DED9] bg-transparent"}`} />
                           )}
                           <span
                             className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-full sm:h-11 sm:w-11 ${
@@ -546,6 +550,8 @@ export default function TrackOrderPage() {
                     );
                   })}
               </ol>
+
+              {order.tracking?.sellers && order.tracking.sellers.length > 1 ? <section className="mt-6 rounded-xl border border-[#D9E5D9] bg-white p-4"><h3 className="font-bold text-[#00543D]">Seller fulfilment</h3><div className="mt-3 grid gap-2 sm:grid-cols-2">{order.tracking.sellers.map(seller => <div key={seller.shopOrderNumber} className="rounded-lg bg-[#F5F8F2] p-3 text-sm"><p className="font-semibold">{seller.shopOrderNumber}</p><p>Order: {STATUS_BADGE[seller.orderStatus] || seller.orderStatus}</p>{seller.pickupStatus && seller.orderStatus === "packed" ? <p>Pickup: {seller.pickupStatus.replaceAll("_", " ")}</p> : null}{seller.trackingNumber ? <p>Tracking: {seller.trackingNumber}</p> : null}</div>)}</div></section> : null}
 
               {status === "delivered" ? (
                 <div className="mt-6">

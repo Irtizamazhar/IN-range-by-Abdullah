@@ -40,6 +40,7 @@ export function OrderCard({ rows, getDetailHref, showVendor }: Props) {
           </div>
             <StatusBadge status={r.orderStatus as ShopOrderStatusPill} />
           </div>
+          {r.pickupStatus && r.orderStatus === "packed" ? <p className="mt-2 text-xs font-semibold text-emerald-800">Pickup: {r.pickupStatus.replaceAll("_", " ")}</p> : null}
           <div className="mt-3 flex flex-wrap justify-between gap-2 text-sm">
             <span className="text-darkText/60">
               {r.itemCount} items ·{" "}

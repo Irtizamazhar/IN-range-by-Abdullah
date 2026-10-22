@@ -16,7 +16,7 @@ import { PakistanCitySelect } from "@/components/ui/PakistanCitySelect";
 import { WhatsAppButton } from "@/components/user/WhatsAppButton";
 import type { ISettings } from "@/types/settings";
 import {
-  ArrowRight, Banknote, Building2, Check, ChevronDown, CircleAlert, CreditCard, FileText, Info,
+  ArrowRight, Banknote, Building2, Check, ChevronDown, CircleAlert, CreditCard, FileText,
   Lock, Mail, Mailbox, MapPin, Phone, ShieldCheck, ShoppingCart, Tag, Truck, X,
 } from "lucide-react";
 import { readCheckoutReceipt, checkoutAttemptKey, clearCheckoutAttempt } from "@/lib/checkout-response";
@@ -147,6 +147,8 @@ export default function CheckoutPage() {
     orderNumber: string;
     _id: string;
     customerPhone: string;
+    totalAmount?: number;
+    handlingFee?: number;
   } | null>(null);
 
 
@@ -223,12 +225,13 @@ export default function CheckoutPage() {
       (c) => c.toLowerCase() === city.trim().toLowerCase()
     ) ?? false;
   const deliveryCharge = items.length === 1 && items[0].quoteId ? Number(items[0].quoteShipping || 0) : Number(settings?.codCharges ?? 0);
-  const totalAmount = subtotal + (handlingFee ?? 0) + deliveryCharge - (appliedCoupon?.discount || 0);
+  const productSubtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const serviceSubtotal = subtotal - productSubtotal;
+  const totalAmount = subtotal + deliveryCharge - (appliedCoupon?.discount || 0);
   const cartSignature = JSON.stringify(items.map(i => [i.productId, i.quantity, i.price, i.variant, i.serviceId, i.quoteId]));
   useEffect(() => { setAppliedCoupon(null); setCouponMessage(""); }, [cartSignature]);
 
   // Server-calculated preview; POST /api/orders recalculates and rejects a mismatch.
-  const appliedCouponCode = appliedCoupon?.code;
   useEffect(() => {
     if (!isCustomer || items.length === 0) return;
     const controller = new AbortController();
@@ -241,7 +244,6 @@ export default function CheckoutPage() {
           headers: { "Content-Type": "application/json" },
           signal: controller.signal,
           body: JSON.stringify({
-            couponCode: appliedCouponCode,
             quoteId: items.find(i => i.quoteId)?.quoteId,
             products: items.map(i => ({ productId: i.productId, quantity: i.quantity })),
           }),
@@ -255,7 +257,7 @@ export default function CheckoutPage() {
     }, 250);
     return () => { controller.abort(); clearTimeout(timer); };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- cartSignature captures the relevant item fields.
-  }, [cartSignature, appliedCouponCode, isCustomer, handlingFeeVersion]);
+  }, [cartSignature, isCustomer, handlingFeeVersion]);
 
   async function applyCoupon() {
     setCouponBusy(true);
@@ -426,6 +428,7 @@ export default function CheckoutPage() {
           <p className="mb-6 text-2xl font-bold text-primaryBlue">
             {doneOrder.orderNumber}
           </p>
+          {doneOrder.totalAmount != null && <div className="mb-6 rounded-xl bg-[#F3FAE6] px-4 py-3 text-sm text-[#00543D]"><p className="font-bold">Order total: {formatPKR(doneOrder.totalAmount)}</p>{doneOrder.handlingFee != null && doneOrder.handlingFee > 0 && <p className="mt-1">Includes Handling Fee: {formatPKR(doneOrder.handlingFee)}</p>}</div>}
           <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <LoadingButton
               type="button"
@@ -784,39 +787,23 @@ export default function CheckoutPage() {
 
               <dl className="mt-5 space-y-2.5 text-sm">
                 <div className="flex items-center justify-between gap-3">
-                  <dt className="text-[#4B5563]">Subtotal</dt>
-                  <dd className="font-semibold text-[#172033]">{formatPKR(subtotal)}</dd>
+                  <dt className="text-[#4B5563]">Product Subtotal</dt>
+                  <dd className="font-semibold text-[#172033]">{formatPKR(productSubtotal)}</dd>
                 </div>
+                {serviceSubtotal > 0 && <div className="flex items-center justify-between gap-3"><dt className="text-[#4B5563]">Booked Services</dt><dd className="font-semibold text-[#172033]">{formatPKR(serviceSubtotal)}</dd></div>}
+                {appliedCoupon && (
+                  <div className="flex items-center justify-between gap-3 text-[#00543D]">
+                    <dt>Discount ({appliedCoupon.code})</dt>
+                    <dd className="font-semibold">-{formatPKR(appliedCoupon.discount)}</dd>
+                  </div>
+                )}
                 <div className="flex items-center justify-between gap-3">
-                  <dt className="inline-flex items-center gap-1 text-[#4B5563]">
-                    Handling Fee
-                    <span title="Platform fee based on applicable product commission" className="inline-flex">
-                      <Info className="h-3.5 w-3.5 text-[#6B7280]" aria-label="Platform fee based on applicable product commission" />
-                    </span>
-                  </dt>
-                  <dd className="font-semibold text-[#172033]">
-                    {handlingFeeError ? (
-                      <button type="button" onClick={() => setHandlingFeeVersion((v) => v + 1)} className="text-xs font-semibold text-red-600 underline">Retry</button>
-                    ) : handlingFee === null ? (
-                      <span className="inline-block h-4 w-14 animate-pulse rounded bg-[#E5E9E5] align-middle" aria-label="Calculating handling fee" />
-                    ) : (
-                      formatPKR(handlingFee)
-                    )}
-                  </dd>
-                </div>
-                {handlingFeeError && <p role="alert" className="text-xs text-red-600">{handlingFeeError}</p>}
-                <div className="flex items-center justify-between gap-3">
-                  <dt className="text-[#4B5563]">Delivery Charges</dt>
+                  <dt className="text-[#4B5563]">Delivery Charges<span className="block text-xs text-[#6B7280]">Includes applicable fulfilment and handling</span></dt>
                   <dd className="font-semibold text-[#172033]">
                     {deliveryCharge === 0 ? "FREE" : formatPKR(deliveryCharge)}
                   </dd>
                 </div>
-                {appliedCoupon && (
-                  <div className="flex items-center justify-between gap-3 text-[#00543D]">
-                    <dt>Coupon ({appliedCoupon.code})</dt>
-                    <dd className="font-semibold">-{formatPKR(appliedCoupon.discount)}</dd>
-                  </div>
-                )}
+                {handlingFeeError && <p role="alert" className="text-xs text-red-600"><button type="button" onClick={() => setHandlingFeeVersion((v) => v + 1)} className="font-semibold underline">Retry checkout verification</button></p>}
               </dl>
               <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-[#D9EFB5] bg-[#F3FAE6] px-4 py-3.5">
                 <span className="text-lg font-bold text-[#00543D] sm:text-xl">Total</span>

@@ -31,7 +31,7 @@ export function UserRouteShell({
         {standalone ? (
           <main className="min-h-screen min-w-0 overflow-x-clip bg-white">{children}</main>
         ) : (
-        <div className="flex min-h-screen flex-col overflow-x-clip bg-white pb-16 md:pb-0">
+        <div className="flex min-h-screen flex-col overflow-x-clip bg-white pb-[calc(68px+env(safe-area-inset-bottom))] md:pb-0">
           <AnnouncementBar />
           <Suspense
             fallback={

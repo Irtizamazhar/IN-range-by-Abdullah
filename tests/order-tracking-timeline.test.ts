@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { buildOrderTrackingTimeline, resolveTrackingNumber } from "../lib/order-tracking-timeline";
+import { resolveCustomerOrderTrackStatus } from "../lib/order-track-status";
 
 const at = (h: number) => new Date(Date.UTC(2026, 9, 20, h));
 const iso = (h: number) => at(h).toISOString();
@@ -68,4 +69,24 @@ test("tracking number prefers the order's, then a single unambiguous seller numb
   assert.equal(resolveTrackingNumber(null, [{ status: "shipped", statusHistory: [], trackingNumber: "LEO9" }]), "LEO9");
   assert.equal(resolveTrackingNumber(null, [{ status: "shipped", statusHistory: [], trackingNumber: "A" }, { status: "shipped", statusHistory: [], trackingNumber: "B" }]), null);
   assert.equal(resolveTrackingNumber("", []), null);
+});
+
+test("pickup milestones appear only after recorded events for every active seller", () => {
+  const base = (hour: number) => [{ status: "pending", updatedAt: iso(1) }, { status: "confirmed", updatedAt: iso(2) }, { status: "packed", updatedAt: iso(hour) }];
+  const first = { status: "packed", statusHistory: base(3), pickupRequest: { status: "collected", history: [{ status: "ready", at: iso(4) }, { status: "scheduled", at: iso(5) }, { status: "collected", at: iso(7) }] } };
+  const second = { status: "packed", statusHistory: base(4), pickupRequest: { status: "scheduled", history: [{ status: "ready", at: iso(5) }, { status: "scheduled", at: iso(6) }] } };
+  const input = { createdAt: at(1), orderStatus: "packed", events: [], shops: [first, second] };
+  const scheduled = buildOrderTrackingTimeline(input);
+  assert.deepEqual(scheduled.find(e => e.status === "pickup_scheduled"), { status: "pickup_scheduled", at: iso(6) });
+  assert.equal(scheduled.some(e => e.status === "collected" || e.status === "shipped"), false);
+  second.pickupRequest.history.push({ status: "collected", at: iso(8) });
+  const collected = buildOrderTrackingTimeline(input);
+  assert.deepEqual(collected.find(e => e.status === "collected"), { status: "collected", at: iso(8) });
+});
+
+test("a stale parent shipment or delivery cannot outrun seller fulfilment", () => {
+  assert.equal(resolveCustomerOrderTrackStatus("delivered", [{ status: "packed" }]), "packing");
+  assert.equal(resolveCustomerOrderTrackStatus("shipped", [{ status: "shipped" }, { status: "packed" }]), "packing");
+  const timeline = buildOrderTrackingTimeline({ createdAt: at(1), orderStatus: "packed", events: [{ eventType: "fulfilment_status_changed", toStatus: "shipped", createdAt: at(5) }], shops: [{ status: "packed", statusHistory: [{ status: "packed", updatedAt: iso(3) }] }] });
+  assert.equal(timeline.some(event => event.status === "shipped"), false);
 });

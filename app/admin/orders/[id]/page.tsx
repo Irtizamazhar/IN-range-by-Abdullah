@@ -525,7 +525,7 @@ export default function AdminOrderDetailPage() {
                       <p className="text-[11px] font-bold uppercase tracking-wide text-gray-500">
                         Courier Label
                       </p>
-                      <p className="text-lg font-extrabold">In Range By Abdullah</p>
+                      <p className="text-lg font-extrabold">JORO</p>
                     </div>
                     <p className="text-xs font-semibold text-gray-600">
                       Order ID: {orderNumber}

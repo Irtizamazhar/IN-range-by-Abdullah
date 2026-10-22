@@ -68,6 +68,7 @@ export async function GET(req: NextRequest) {
       take: 300,
       include: {
         order: { select: { orderNumber: true } },
+        pickupRequest: { select: { status: true, pickupReference: true } },
       },
     }),
     shopOrderCountsForVendor(auth.vendor.id),

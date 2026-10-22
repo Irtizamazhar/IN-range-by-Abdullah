@@ -2,7 +2,6 @@ import { prisma } from "@/lib/prisma";
 import type { VendorShopOrderStatus } from "@prisma/client";
 import {
   notifyCustomerDelivered,
-  notifyCustomerShipped,
 } from "@/lib/order-emails";
 import { createVendorEarningForDeliveredShopOrder } from "@/lib/vendor-earning-service";
 import { createVendorNotification } from "@/lib/vendor-notifications";
@@ -36,15 +35,6 @@ export async function runAfterVendorShopOrderStatusChange(params: {
   });
   if (!row?.order) return;
 
-  const payload = {
-    orderNumber: row.order.orderNumber,
-    customerName: row.customerName,
-    customerEmail: row.customerEmail,
-    totalAmount: Number(row.order.totalAmount),
-    trackingNumber: row.trackingNumber,
-    shopOrderNumber: row.shopOrderNumber,
-  };
-
   if (row.customerId) {
     await createCustomerNotification({
       customerId: row.customerId,
@@ -57,7 +47,8 @@ export async function runAfterVendorShopOrderStatusChange(params: {
   }
 
   if (newStatus === "shipped") {
-    await notifyCustomerShipped(payload);
+    // Handover queued the customer email in the same transaction as shipping.
+    // The order-confirmations worker retries definite SMTP failures.
     return;
   }
 

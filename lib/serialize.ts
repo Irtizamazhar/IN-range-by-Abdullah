@@ -141,6 +141,7 @@ export function serializeOrder(
     customerAddress: order.customerAddress,
     city: order.city,
     totalAmount: Number(order.totalAmount),
+    handlingFee: Number(order.handlingFee ?? 0),
     coupon: order.couponRedemption ? { discount: Number(order.couponRedemption.discount), code: (order.couponRedemption.snapshot as { code?: string })?.code || "", fundingType: (order.couponRedemption.snapshot as { fundingType?: string })?.fundingType || "", status: order.couponRedemption.status, ...(opts?.forAdmin ? { platformFunded: Number(order.couponRedemption.platformFunded) } : {}) } : null,
     paymentMethod: order.paymentMethod,
     paymentStatus: order.paymentStatus,

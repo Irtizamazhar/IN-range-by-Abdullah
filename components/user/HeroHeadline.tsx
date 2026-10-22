@@ -8,11 +8,11 @@ const WORD_DELAY_MS = 250;
 const COMPLETE_PAUSE_MS = 2500;
 
 export function HeroHeadline() {
-  const [visibleWords, setVisibleWords] = useState(0);
+  const [visibleWords, setVisibleWords] = useState<number>(WORDS.length);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      setVisibleWords(count => count === WORDS.length ? 0 : count + 1);
+      setVisibleWords(count => count === WORDS.length ? 1 : count + 1);
     }, visibleWords === WORDS.length ? COMPLETE_PAUSE_MS : WORD_DELAY_MS);
 
     return () => window.clearTimeout(timer);

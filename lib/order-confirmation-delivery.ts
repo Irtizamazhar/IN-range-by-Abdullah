@@ -1,7 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { sendMailOutcome } from "@/lib/mailer";
-import { orderConfirmationEmail, vendorOrderEmail } from "@/lib/joro-email-templates";
+import { orderConfirmationEmail, sellerShippedEmail, vendorOrderEmail } from "@/lib/joro-email-templates";
 import { orderConfirmationEligible, confirmationRetry } from "@/lib/order-confirmation-policy";
 
 /** Called in the same transaction as the authoritative order/payment write. */
@@ -27,8 +27,14 @@ export async function deliverOrderConfirmation(db = prisma, send = sendMailOutco
   let recipient: string | undefined;
   try {
     order = await db.order.findUnique({ where: { id: job.orderId }, include: { customer: true, orderItems: true, couponRedemption: true, services: true } });
-    if (order && orderConfirmationEligible(order)) {
-      if (job.recipientKey.startsWith("vendor:")) {
+    if (order && (job.recipientKey.startsWith("shipped:") || orderConfirmationEligible(order))) {
+      if (job.recipientKey.startsWith("shipped:")) {
+        const shop = await db.vendorShopOrder.findFirst({ where: { id: job.recipientKey.slice(8), orderId: order.id }, include: { pickupRequest: { select: { status: true, trackingNumber: true } } } });
+        if (shop && ["shipped", "delivered"].includes(shop.status) && shop.pickupRequest?.status === "handed_over" && shop.trackingNumber && shop.trackingNumber === shop.pickupRequest.trackingNumber && order.customer?.isActive) {
+          recipient = order.customer.email;
+          email = sellerShippedEmail({ orderId: order.id, orderNumber: order.orderNumber, shopOrderNumber: shop.shopOrderNumber, customerName: order.customerName, trackingNumber: shop.trackingNumber });
+        }
+      } else if (job.recipientKey.startsWith("vendor:")) {
         const shop = await db.vendorShopOrder.findFirst({ where: { id: job.recipientKey.slice(7), orderId: order.id }, include: { vendor: { select: { email: true, shopName: true, ownerName: true, status: true } } } });
         if (shop && shop.status !== "cancelled" && shop.vendor.status === "approved") {
           recipient = shop.vendor.email;

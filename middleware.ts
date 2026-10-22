@@ -41,6 +41,9 @@ async function privateLaunchGate(req: NextRequest): Promise<NextResponse | null>
     isServerAction: req.headers.has("next-action"),
   });
   if (decision === "allow") return NextResponse.next();
+  if (decision === "home") {
+    return NextResponse.rewrite(new URL("/public-home", req.url));
+  }
   if (decision === "block") {
     return markPrivate(
       NextResponse.json(

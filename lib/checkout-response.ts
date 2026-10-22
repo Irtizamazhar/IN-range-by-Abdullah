@@ -1,4 +1,4 @@
-export type CheckoutReceipt = { _id: string; orderNumber: string; customerPhone: string };
+export type CheckoutReceipt = { _id: string; orderNumber: string; customerPhone: string; totalAmount?: number; handlingFee?: number };
 
 /** A successful HTTP status alone is not confirmation that an order exists. */
 export async function readCheckoutReceipt(response: Response): Promise<CheckoutReceipt> {
@@ -17,7 +17,13 @@ export async function readCheckoutReceipt(response: Response): Promise<CheckoutR
   if (typeof data._id !== "string" || !data._id.trim() || typeof data.orderNumber !== "string" || !data.orderNumber.trim()) {
     throw new Error("We could not confirm your order. Your cart is saved. Please retry or check My Orders.");
   }
-  return { _id: data._id, orderNumber: data.orderNumber, customerPhone: typeof data.customerPhone === "string" ? data.customerPhone : "" };
+  return {
+    _id: data._id,
+    orderNumber: data.orderNumber,
+    customerPhone: typeof data.customerPhone === "string" ? data.customerPhone : "",
+    totalAmount: typeof data.totalAmount === "number" && Number.isFinite(data.totalAmount) ? data.totalAmount : undefined,
+    handlingFee: typeof data.handlingFee === "number" && Number.isFinite(data.handlingFee) ? data.handlingFee : undefined,
+  };
 }
 
 const STORAGE_KEY = "joro:checkout-attempt";

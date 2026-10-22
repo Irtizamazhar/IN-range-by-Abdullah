@@ -86,13 +86,13 @@ export function LoginExperience({initialRole,initialMode,googleEnabled,developme
 
    <div className={`${styles.card} joro-auth-card relative flex w-full max-w-[720px] flex-col px-5 pb-5 pt-12 sm:px-8 sm:pb-6 sm:pt-12 lg:px-7 xl:px-11`}>
 
-    <Link className="absolute right-5 top-5 inline-flex items-center gap-2 text-sm font-bold text-[#065333] hover:underline sm:right-8" href="/"><ArrowLeft className="h-4 w-4"/>Back to home</Link>
+    <Link className={`${styles.backLink} absolute left-5 top-5 inline-flex items-center gap-2 text-sm font-bold text-[#065333] hover:underline sm:left-8`} href="/"><ArrowLeft className="h-4 w-4"/>Back to home</Link>
 
    <div className={`${styles.formInner} mx-auto w-full max-w-[520px]`}>
 
     <div className={styles.logoRow}><LogoMark href={null} className={styles.formLogo}/></div>
 
-    <div className="mb-3 text-center"><h1 className="text-[25px] font-black tracking-tight text-neutral-950 sm:text-[30px]">{mode==="signup"?(role==="vendor"?"Start Selling on JORO":"Join the JORO Family"):"Welcome Back"}</h1><p className="mt-1 text-[12px] leading-[1.4] text-neutral-600 sm:text-[13px]">{mode==="signup"?(role==="vendor"?"Create your seller account and grow your business on JORO.pk.":"Create your account to shop, post requests, and connect with sellers."):"Sign in to your JORO account and continue your journey."}</p></div>
+    <div className={`${styles.intro} mb-3 text-center`}><h1 className="text-[25px] font-black tracking-tight text-neutral-950 sm:text-[30px]">{mode==="signup"?(role==="vendor"?"Start Selling on JORO":"Join the JORO Family"):"Welcome Back"}</h1><p className="mt-1 text-[12px] leading-[1.4] text-neutral-600 sm:text-[13px]">{mode==="signup"?(role==="vendor"?"Create your seller account and grow your business on JORO.pk.":"Create your account to shop, post requests, and connect with sellers."):"Sign in to your JORO account and continue your journey."}</p></div>
 
     <Tabs label="Choose account type" values={["customer","vendor"]} current={role} onChange={r=>change(r,mode)} disabled={busy} roleSwitch/>
 
@@ -156,7 +156,7 @@ function AuthForm({role,mode,callback,google,development,setBusy}:{role:Role;mod
    {errors[name] && <p id={`error-${name}`} className="mt-1 text-xs text-red-700">{errors[name]}</p>}
   </div>;
  };
- return <div className="mt-2 sm:mt-3">{forgot&&<p className="mb-4 text-sm text-neutral-600">Enter your email to receive a password reset link.</p>}
+ return <div className={`${styles.formBody} mt-2 sm:mt-3`}>{forgot&&<p className="mb-4 text-sm text-neutral-600">Enter your email to receive a password reset link.</p>}
 
      {message&&<p role="alert" className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{message}{vendorCode==="suspended"&&<Link href="/vendor/login?appeal=1" className="ml-2 underline">Request reactivation</Link>}{vendorCode==="unverified"&&<Link href="/vendor/verify-email" className="ml-2 underline">Verify email</Link>}</p>}
 
@@ -166,7 +166,7 @@ function AuthForm({role,mode,callback,google,development,setBusy}:{role:Role;mod
 
  {signup&&vendor&&<p className="mt-2 text-xs leading-5 text-neutral-500">Next: business details and verification. Admin approval is required before selling.</p>}
 
- {!vendor&&!forgot&&(development||google)&&<><div className="my-5 flex items-center gap-3 text-xs text-neutral-500"><span className="h-px flex-1 bg-neutral-200"/>OR<span className="h-px flex-1 bg-neutral-200"/></div><div className="grid gap-2 min-[420px]:grid-cols-1">{(development||google)&&<LoadingButton type="button" disabled={pending} title={google?undefined:"Google configuration required in .env.local"} onClick={async()=>{if(!google){setMessage("Google login is not configured. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env.local, then restart the server.");return;}setPending(true);setBusy(true);try{setCustomerOAuthRememberChoice(!signup&&remember);await signIn("google",{callbackUrl:callback},{prompt:"select_account"});}catch{setMessage("Social sign-in could not start. Please try again.");}finally{setPending(false);setBusy(false);}}} className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-neutral-300 px-2 text-xs font-bold hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-700"><ProviderIcon provider="google"/>Continue with Google</LoadingButton>}</div></>}
+ {!vendor&&!forgot&&(development||google)&&<><div className="my-5 flex items-center gap-3 text-xs text-neutral-500"><span className="h-px flex-1 bg-neutral-200"/>OR<span className="h-px flex-1 bg-neutral-200"/></div><div className="grid gap-2 min-[420px]:grid-cols-1">{(development||google)&&<LoadingButton type="button" disabled={pending} title={google?undefined:"Google configuration required in .env.local"} onClick={async()=>{if(!google){setMessage("Google login is not configured. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env.local, then restart the server.");return;}setPending(true);setBusy(true);try{setCustomerOAuthRememberChoice(!signup&&remember);await signIn("google",{callbackUrl:callback},{prompt:"select_account"});}catch{setMessage("Social sign-in could not start. Please try again.");}finally{setPending(false);setBusy(false);}}} className={`${styles.googleButton} flex min-h-11 items-center justify-center gap-2 rounded-xl border border-neutral-300 px-2 text-xs font-bold hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-700`}><ProviderIcon provider="google"/>Continue with Google</LoadingButton>}</div></>}
 
  </div>;
 
