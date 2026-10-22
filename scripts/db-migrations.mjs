@@ -10,7 +10,8 @@
 //   check             Fail if schema.prisma or prisma/migrations differ from prisma/migration-manifest.json.
 //                     --ref <git-ref>  check a commit instead of the working tree (used by the pre-push hook)
 //                     --full           also replay every migration into a temporary local database
-//   deploy-preflight  Production build checks before `prisma migrate deploy` (used by npm run build:deploy).
+//   deploy-preflight  Production build checks before `prisma migrate deploy` (run by scripts/build.mjs when
+//                     JORO_DEPLOY_MIGRATIONS=true, or by npm run build:deploy).
 //
 // Development commands only ever touch a local database; they never reset, push or resolve anything.
 import { spawn, spawnSync } from "node:child_process";

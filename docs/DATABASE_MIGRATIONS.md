@@ -87,7 +87,7 @@ It runs:
 - in the optional Git `pre-push` hook (`.githooks/pre-push`) against the commit being pushed. `npm install` no
   longer enables it; to opt in, run `node scripts/install-git-hooks.mjs` once;
 - in `npm test` (`tests/migration-workflow.test.ts`);
-- in `npm run build:deploy` before any database change.
+- in the Hostinger build (`JORO_DEPLOY_MIGRATIONS=true`) and `npm run build:deploy`, before any database change.
 
 `npm run db:check:full` additionally replays every migration into a temporary local database and compares the
 result with `schema.prisma` exactly. If Prisma Client cannot be regenerated (for example on Windows while a dev
@@ -126,17 +126,24 @@ differences remain, run `npx prisma migrate resolve --applied 0_baseline` agains
 
 ## Hostinger deployment
 
-- Build command: `npm run build:deploy`, which runs in order:
-  1. `node scripts/db-migrations.mjs deploy-preflight`: requires `DATABASE_URL` (mysql://), verifies the
-     committed migrations against the manifest, checks the database connection, and stops if the database
-     already has tables but `0_baseline` is not recorded (read-only checks);
-  2. `prisma migrate deploy`: applies committed migrations only, under Prisma's database lock, so concurrent
-     deployments wait instead of running twice;
-  3. `prisma migrate status`: prints the migration state to the build log and fails unless it is up to date;
-  4. `npm run build`: `prisma generate`, then `next build`.
-  Each step runs only if the previous one succeeded. Hostinger's documentation says the live version is switched
-  only after a successful build; confirm this once on the first real deployment.
-  Switch to it only after the one-time baseline below has been completed; before that, step 1 stops the
+- Build command: `npm run build` (the only choice Hostinger's dropdown offers). `scripts/build.mjs` decides
+  what it does from the Hostinger environment variable `JORO_DEPLOY_MIGRATIONS`:
+  - unset or `false` (also every local build): `prisma generate`, then `next build`. No database is touched.
+  - `true`: in order
+    1. `node scripts/db-migrations.mjs deploy-preflight`: requires `DATABASE_URL` (mysql://), verifies the
+       committed migrations against the manifest, checks the database connection, and stops if the database
+       already has tables but `0_baseline` is not recorded (read-only checks);
+    2. `prisma migrate deploy`: applies committed migrations only, under Prisma's database lock, so concurrent
+       deployments wait instead of running twice;
+    3. `prisma migrate status`: prints the migration state to the build log and fails unless it is up to date;
+    4. `prisma generate`, then `next build`.
+  - any other value: the build stops before any step, so a typo can neither skip nor run migrations silently.
+  Each step runs only if the previous one succeeded; the build log starts with
+  `[build] Production migrations enabled` or `disabled`. Only the real process environment is read, never
+  `.env` or `.env.local`, so a local file cannot turn migrations on. `npm run build:deploy` runs the same
+  migration chain regardless of the variable. Hostinger's documentation says the live version is switched only
+  after a successful build; confirm this once on the first real deployment.
+  Set the variable only after the one-time baseline below has been completed; before that, step 1 stops the
   deployment without touching the database.
 - Start command: `npm start`.
 - `DATABASE_URL` must be set in Hostinger's environment variables. Hostinger injects environment variables
@@ -216,7 +223,7 @@ and add 104 foreign keys, and drop and recreate 131 indexes, so it must never be
 ## One-time production baseline (PENDING: not yet performed; requires separate approval)
 
 `0_baseline` is recorded as applied with one SQL statement in phpMyAdmin. The pending
-`20261018000000_add_want_report` migration then runs through the permanent `npm run build:deploy` build,
+`20261018000000_add_want_report` migration then runs through the permanent Hostinger build (`npm run build` with `JORO_DEPLOY_MIGRATIONS=true`),
 which uses Hostinger's production environment variables. No Prisma command is run by hand against production.
 
 The checksum in step 6 is the SHA-256 of the exact committed `prisma/migrations/0_baseline/migration.sql`.
@@ -247,7 +254,8 @@ were unchanged.
    ```
 
    Verify: `SELECT COUNT(*) FROM _prisma_migrations WHERE migration_name = '0_baseline';` returns `1`.
-7. In hPanel, set the build command to `npm run build:deploy` and redeploy. The build log must show
+7. In hPanel, keep the build command `npm run build`, add the environment variable
+   `JORO_DEPLOY_MIGRATIONS=true`, and redeploy. The build log must show
    ``Applying migration `20261018000000_add_want_report` `` and `All migrations have been successfully applied.`
 8. Verify in phpMyAdmin:
    - `SELECT COUNT(*) FROM _prisma_migrations;` returns `27`.
@@ -263,8 +271,8 @@ If step 6 must be undone before the build in step 7:
 DELETE FROM `_prisma_migrations` WHERE `migration_name` = '0_baseline';
 ```
 
-If the build in step 7 fails, set the build command back to `npm run build` first. A failed
-`20261018000000_add_want_report` leaves an unfinished history row, and every later `npm run build:deploy`
+If the build in step 7 fails, set `JORO_DEPLOY_MIGRATIONS=false` in hPanel first. A failed
+`20261018000000_add_want_report` leaves an unfinished history row, and every later migrating build
 stops with `P3009` until it is resolved. Before retrying, verify:
 
 1. The build log's `P3018` error and its database error code, which name the cause.
@@ -278,7 +286,7 @@ stops with `P3009` until it is resolved. Before retrying, verify:
    `SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND BINARY TABLE_NAME IN ('want', 'customer', 'vendor');`
    returns all three.
 
-After the cause is fixed, mark the failed attempt as rolled back and redeploy with `npm run build:deploy`:
+After the cause is fixed, mark the failed attempt as rolled back, set `JORO_DEPLOY_MIGRATIONS=true` again and redeploy:
 
 ```sql
 UPDATE `_prisma_migrations` SET `rolled_back_at` = NOW(3)
@@ -286,7 +294,7 @@ WHERE `migration_name` = '20261018000000_add_want_report' AND `finished_at` IS N
 ```
 
 To undo the whole change after a successful build, while `wantreport` is still empty
-(`SELECT COUNT(*) FROM wantreport;` returns `0`), set the build command back to `npm run build`, then:
+(`SELECT COUNT(*) FROM wantreport;` returns `0`), set `JORO_DEPLOY_MIGRATIONS=false` in hPanel, then:
 
 ```sql
 DELETE FROM `_prisma_migrations` WHERE `migration_name` IN ('0_baseline', '20261018000000_add_want_report');
