@@ -83,6 +83,13 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  /* Opt-in, set by pages that want the sticky navbar to stay pinned (e.g. /together). Unlike `hidden`,
+     `clip` does not turn html/body into scroll containers, which is what stops position: sticky. */
+  html.joro-sticky-chrome,
+  html.joro-sticky-chrome body {
+    overflow-x: clip;
+  }
+
   h1,
   h2,
   h3,

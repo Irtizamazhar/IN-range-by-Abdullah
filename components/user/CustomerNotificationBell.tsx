@@ -34,7 +34,9 @@ export function CustomerNotificationBell() {
     const timer = window.setInterval(() => void refresh(), POLL_MS);
     const onVisible = () => void refresh();
     document.addEventListener("visibilitychange", onVisible);
-    return () => { cancelled = true; window.clearInterval(timer); document.removeEventListener("visibilitychange", onVisible); };
+    // The notifications page announces read-state changes so the badge does not wait for the next poll.
+    window.addEventListener("joro:notifications-changed", onVisible);
+    return () => { cancelled = true; window.clearInterval(timer); document.removeEventListener("visibilitychange", onVisible); window.removeEventListener("joro:notifications-changed", onVisible); };
   }, [customerId, pathname]);
 
   if (!customerId) return null;

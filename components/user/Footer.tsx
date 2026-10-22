@@ -20,6 +20,7 @@ const socials = [
   { key: "instagram", label: "Instagram" },
   { key: "tiktok", label: "TikTok" },
   { key: "x", label: "X" },
+  { key: "linkedin", label: "LinkedIn" },
 ] as const;
 
 function FooterLinks({ items }: { items: readonly FooterDestination[] }) {
