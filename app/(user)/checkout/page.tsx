@@ -11,13 +11,13 @@ import { getSession, useSession } from "next-auth/react";
 import { useCart } from "@/context/CartContext";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
 import { formatPKR } from "@/lib/format";
-import { normalizePakistanMobile, PAKISTAN_MOBILE_ERROR } from "@/lib/pakistan-phone";
+import { normalizePakistanMobile, pakistanMobileLocalDigits } from "@/lib/pakistan-phone";
 import { PakistanCitySelect } from "@/components/ui/PakistanCitySelect";
 import { WhatsAppButton } from "@/components/user/WhatsAppButton";
 import type { ISettings } from "@/types/settings";
 import {
   ArrowRight, Banknote, Building2, Check, ChevronDown, CircleAlert, CreditCard, FileText,
-  Lock, Mail, Mailbox, MapPin, Phone, ShieldCheck, ShoppingCart, Tag, Truck, X,
+  Lock, Mail, Mailbox, MapPin, Phone, ShieldCheck, ShoppingCart, Tag, X,
 } from "lucide-react";
 import { readCheckoutReceipt, checkoutAttemptKey, clearCheckoutAttempt } from "@/lib/checkout-response";
 type PaymentMethod = "cod";
@@ -179,7 +179,7 @@ export default function CheckoutPage() {
           setLastName(parts.slice(1).join(" "));
         }
       }
-      setPhone((prev) => prev || s.user?.phone || "");
+      setPhone((prev) => prev || pakistanMobileLocalDigits(s.user?.phone || ""));
     })().catch(() => { if (!cancelled) toast.error("Could not load account details. Please try again."); });
     return () => {
       cancelled = true;
@@ -197,7 +197,7 @@ export default function CheckoutPage() {
         setLastName(parts.slice(1).join(" "));
       }
     }
-    setPhone((prev) => prev || session.user.phone || "");
+    setPhone((prev) => prev || pakistanMobileLocalDigits(session.user.phone || ""));
   }, [firstName, session]);
 
   useEffect(() => {
@@ -285,7 +285,7 @@ export default function CheckoutPage() {
     if (!city.trim()) errors.city = "Select your city or town.";
     else if (!codAllowed) errors.city = `Cash on Delivery isn't available in ${city.trim()} yet. Please choose another city.`;
     if (!phone.trim()) errors.phone = "Enter your phone number.";
-    else if (!normalizePakistanMobile(phone)) errors.phone = PAKISTAN_MOBILE_ERROR;
+    else if (!normalizePakistanMobile(`+92${phone}`)) errors.phone = "Enter 10 mobile digits starting with 3, e.g. 300 1234567.";
     if (!sameBillingAddress) {
       if (!billingFirstName.trim()) errors.billingFirstName = "Enter the billing first name.";
       if (!billingAddress.trim()) errors.billingAddress = "Enter the billing street address.";
@@ -323,7 +323,7 @@ export default function CheckoutPage() {
         },
         body: JSON.stringify({
           customerName: customerFullName,
-          customerPhone: phone,
+          customerPhone: normalizePakistanMobile(`+92${phone}`) ?? phone,
           customerEmail: email,
           customerAddress: [address, apartment].filter(Boolean).join(", "),
           city,
@@ -648,13 +648,13 @@ export default function CheckoutPage() {
                     <input
                       {...describe("phone")}
                       type="tel"
-                      inputMode="tel"
-                      autoComplete="tel"
+                      inputMode="numeric"
+                      autoComplete="tel-national"
                       aria-label="Phone number"
                       className="min-w-0 flex-1 rounded-r-lg border-0 bg-transparent px-3 text-base text-[#172033] placeholder:text-[#9CA3AF] focus:outline-none sm:text-sm"
-                      placeholder="300 1234567"
+                      placeholder="3001234567"
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
+                      onChange={(e) => setPhone(pakistanMobileLocalDigits(e.target.value))}
                     />
                   </div>
                 </Field>
@@ -670,20 +670,6 @@ export default function CheckoutPage() {
               </div>
             </section>
 
-            <section className={cardClass}>
-              <SectionHeader step={3} title="Shipping Method" subtitle="Choose how you want to receive your order." />
-              <label className="flex cursor-pointer items-center gap-3 rounded-xl border-2 border-[#7CC243] bg-[#F3FAE6] px-3 py-3.5 sm:gap-4 sm:px-4">
-                <input type="radio" name="shippingMethod" value="cod" defaultChecked className="h-5 w-5 shrink-0 accent-[#00543D]" />
-                <Truck aria-hidden="true" className="hidden h-7 w-7 shrink-0 text-[#00543D] min-[380px]:block" />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-semibold text-[#172033] sm:text-[15px]">Cash on Delivery (COD)</span>
-                  <span className="block text-xs text-[#6B7280] sm:text-sm">Pay when you receive your order at your doorstep</span>
-                </span>
-                <span className="shrink-0 text-sm font-bold text-[#172033] sm:text-base">
-                  {deliveryCharge === 0 ? "FREE" : formatPKR(deliveryCharge)}
-                </span>
-              </label>
-            </section>
           </div>
 
           <div className="min-w-0 space-y-5 sm:space-y-6">

@@ -39,6 +39,12 @@ export function pakistanMobileInputMaxLength(value: string): number {
   return 16;
 }
 
+/** Digits typed after a fixed +92 prefix; strips a pasted +92/0092/92/0 prefix and caps at 10 digits. */
+export function pakistanMobileLocalDigits(value: string): string {
+  const digits = value.replace(/\D/g, "");
+  return digits.replace(/^(?:0092|92|0)/, "").slice(0, 10);
+}
+
 /** Accept local/international input and keep the existing local storage format. */
 export function normalizePakistanMobile(value: string): string | null {
   const input = value.trim();
