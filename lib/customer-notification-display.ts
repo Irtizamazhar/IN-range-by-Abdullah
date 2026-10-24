@@ -12,6 +12,17 @@ export type NotificationVisual =
 
 export type NotificationLike = { type: string; title: string; link: string | null };
 
+export type NotificationUnreadCounts = Record<"all" | NotificationCategory, number>;
+export function notificationUnreadCounts(rows: readonly (NotificationLike & { isRead: boolean })[]): NotificationUnreadCounts {
+  const counts: NotificationUnreadCounts = { all: 0, wants: 0, offers: 0, orders: 0, messages: 0, system: 0 };
+  for (const row of rows) {
+    if (row.isRead) continue;
+    counts.all++;
+    counts[notificationCategory(row)]++;
+  }
+  return counts;
+}
+
 const ORDER_TYPES = new Set(["order_status", "payment_status", "seller_delivery_status", "order_cancelled", "seller_order_cancelled", "return_update", "refund_pending", "refund_processed", "dispute_update"]);
 
 const isOfferLink = (link: string | null) => !!link && link.startsWith("/account/offers");

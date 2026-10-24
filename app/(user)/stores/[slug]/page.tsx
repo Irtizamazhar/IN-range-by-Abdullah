@@ -1,9 +1,10 @@
 import {appOrigin} from "@/lib/app-url";
 import { notFound, redirect } from "next/navigation";
 import Image from "next/image";
-import { MapPin, PackageCheck, ShieldCheck, Star, FileText, Globe2 } from "lucide-react";
-import { ProductCard, type ProductCardData } from "@/components/user/ProductCard";
-import gridStyles from "@/components/user/ProductGrid.module.css";
+import { CalendarDays, MapPin, Package, PackageCheck, ShieldCheck, Star, FileText, Globe2, Info } from "lucide-react";
+import { type ProductCardData } from "@/components/user/ProductCard";
+import { StoreCatalog } from "@/components/user/StoreCatalog";
+import styles from "@/components/user/StoreProfile.module.css";
 import { StoreFollowButton } from "@/components/user/StoreFollowButton";
 import { CopyStoreLink } from "@/components/user/CopyStoreLink";
 import { catalogProductSelect } from "@/lib/catalog-product-select";
@@ -106,92 +107,57 @@ export default async function StorePage({ params }: { params: { slug: string } }
     reviewCount: 0,
   };
   const origin = canonicalOrigin();
-  const shareableUrl = `${origin ?? ""}/stores/${vendor.storeSlug}`;
+  const shareableUrl = `${origin ?? ""}/stores/${vendor.storeSlug || vendor.id}`;
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      <section className="overflow-hidden rounded-[24px] bg-brand-dark text-white shadow-panel">
-        {vendor.storeBanner ? (
-          <div className="relative h-36 w-full sm:h-48">
-            <Image src={vendor.storeBanner} alt="" fill unoptimized className="object-cover opacity-80" />
-          </div>
-        ) : null}
-        <div className="flex flex-col gap-5 p-6 sm:flex-row sm:items-end sm:justify-between sm:p-8">
-          <div className="flex min-w-0 gap-4">
-            {vendor.shopLogo ? (
-              <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl border border-white/15 bg-white/5">
-                <Image src={vendor.shopLogo} alt={`${vendor.shopName} logo`} fill unoptimized className="object-cover" />
-              </span>
-            ) : (
-              <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-primary text-lg font-black text-brand-dark">
-                {vendor.shopName.slice(0, 2).toUpperCase()}
-              </span>
-            )}
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 text-sm font-bold text-brand-primary">
-                <ShieldCheck className="h-5 w-5" /> Approved seller
-              </div>
-              <h1 className="mt-2 text-3xl font-black tracking-tight">{vendor.shopName}</h1>
-              <p className="mt-1 text-sm font-semibold text-white/65">{vendor.primaryCategory}</p>
-              <p className="mt-4 max-w-2xl text-sm leading-6 text-white/70">
-                {vendor.shopDescription || "This seller hasn't added a store description yet."}
-              </p>
-              <div className="mt-4">
-                <CopyStoreLink url={shareableUrl} />
-              </div>
+    <main className={styles.page}>
+      <section className={styles.profile} aria-label="Store profile">
+        {vendor.storeBanner && <div className={styles.banner}><Image src={vendor.storeBanner} alt="" fill unoptimized sizes="(max-width: 767px) 100vw, 1280px" className="object-cover" /></div>}
+        <div className={`${styles.identity} ${vendor.storeBanner ? styles.withBanner : ""}`}>
+          {vendor.shopLogo ? <span className={styles.avatar}><Image src={vendor.shopLogo} alt={`${vendor.shopName} logo`} fill unoptimized sizes="(max-width: 767px) 80px, 112px" className="object-cover" /></span> : <span className={`${styles.avatar} ${styles.initials}`}>{vendor.shopName.slice(0, 2).toUpperCase()}</span>}
+          <div className={styles.identityCopy}>
+            <span className={styles.approved}><ShieldCheck aria-hidden="true"/>Approved seller</span>
+            <h1>{vendor.shopName}</h1>
+            <p className={styles.category}>{vendor.primaryCategory}</p>
+            {vendor.shopDescription && <p className={styles.description}>{vendor.shopDescription}</p>}
+            <div className={styles.meta}>
+              {vendor.city && <span><MapPin aria-hidden="true"/>{vendor.city}</span>}
+              <span><CalendarDays aria-hidden="true"/>Selling since {vendor.createdAt.getFullYear()}</span>
             </div>
           </div>
-          <StoreFollowButton vendorId={vendor.id} initialFollowing={following} initialFollowers={vendor._count.followers} />
+          <div className={styles.actions}>
+            <CopyStoreLink url={shareableUrl} title={vendor.shopName}/>
+            <StoreFollowButton vendorId={vendor.id} initialFollowing={following} initialFollowers={vendor._count.followers} className={styles.follow}/>
+          </div>
         </div>
-        <div className="grid grid-cols-2 border-t border-white/10 bg-white/[0.04] sm:grid-cols-4">
-          <span className="flex items-center gap-2 p-4 text-sm"><MapPin className="h-4 w-4 text-brand-primary" />{vendor.city}</span>
-          <span className="flex items-center gap-2 p-4 text-sm"><PackageCheck className="h-4 w-4 text-brand-primary" />{vendor.vendorShopOrders.length} delivered</span>
-          <span className="flex items-center gap-2 p-4 text-sm">
-            <Star className="h-4 w-4 text-brand-primary" />
-            {storeRating.reviewCount
-              ? `${storeRating.ratingAvg.toFixed(1)} (${storeRating.reviewCount})`
-              : "No verified reviews yet"}
-          </span>
-          <span className="p-4 text-sm">Selling since {vendor.createdAt.getFullYear()}</span>
+        <div className={styles.stats}>
+          <div><Package aria-hidden="true"/><span><strong>{cards.length}</strong><small>Products</small></span></div>
+          <div><PackageCheck aria-hidden="true"/><span><strong>{vendor.vendorShopOrders.length}</strong><small>Delivered orders</small></span></div>
+          <div><Star aria-hidden="true"/><span><strong>{storeRating.reviewCount ? storeRating.ratingAvg.toFixed(1) : "?"}</strong><small>{storeRating.reviewCount ? `${storeRating.reviewCount} verified reviews` : "No verified reviews yet"}</small></span></div>
+          <div><CalendarDays aria-hidden="true"/><span><strong>{vendor.createdAt.getFullYear()}</strong><small>Selling since</small></span></div>
         </div>
       </section>
-
-      {serviceCities.length ? (
-        <section className="mt-6 rounded-2xl border border-borderGray bg-white p-5">
-          <p className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-brand-link"><Globe2 className="h-4 w-4" /> Service coverage</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {serviceCities.map((city) => (
-              <span key={city} className="rounded-full bg-brand-soft px-3 py-1 text-xs font-bold text-brand-link">{city}</span>
-            ))}
-          </div>
+      <nav className={styles.navigation} aria-label="Store sections">
+        <a href="#store-products" className={styles.productsLink}>Products</a>
+        <a href="#store-about">About</a>
+        {serviceCities.length > 0 && <a href="#store-coverage">Service coverage</a>}
+        {vendor.storePolicies && <a href="#store-policies">Store Policies</a>}
+      </nav>
+      <StoreCatalog key={vendor.id} products={cards}/>
+      <div className={styles.information}>
+        <section id="store-about" className={styles.infoCard}>
+          <h2><Info aria-hidden="true"/>About this store</h2>
+          <p>{vendor.shopDescription || "This seller hasn't added a store description yet."}</p>
+          {vendor.primaryCategory && <p className={styles.aboutCategory}>{vendor.primaryCategory}</p>}
         </section>
-      ) : null}
-
-      {vendor.storePolicies ? (
-        <section className="mt-6 rounded-2xl border border-borderGray bg-white p-5">
-          <p className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-brand-link"><FileText className="h-4 w-4" /> Store policies</p>
-          <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-darkText/70">{vendor.storePolicies}</p>
-        </section>
-      ) : null}
-
-      <section className="py-9">
-        <div className="mb-5 flex items-end justify-between">
-          <div>
-            <p className="text-sm font-black uppercase tracking-wider text-brand-link">Store catalog</p>
-            <h2 className="text-2xl font-black text-brand-dark">Available products</h2>
-          </div>
-          <span className="text-sm font-semibold text-darkText/50">{cards.length} items</span>
-        </div>
-        {cards.length ? (
-          <div className={gridStyles.grid}>
-            {cards.map((product) => <ProductCard key={product._id} product={product} />)}
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-borderGray bg-white p-10 text-center text-darkText/60">
-            This store has no active products right now.
-          </div>
-        )}
-      </section>
+        {serviceCities.length > 0 && <section id="store-coverage" className={styles.infoCard}>
+          <h2><Globe2 aria-hidden="true"/>Service coverage</h2>
+          <div className={styles.cities}>{serviceCities.map(city => <span key={city}>{city}</span>)}</div>
+        </section>}
+        {vendor.storePolicies && <section id="store-policies" className={styles.infoCard}>
+          <h2><FileText aria-hidden="true"/>Store policies</h2><p>{vendor.storePolicies}</p>
+        </section>}
+      </div>
     </main>
   );
 }

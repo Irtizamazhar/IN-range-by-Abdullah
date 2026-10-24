@@ -91,7 +91,7 @@ function FeedPost({ want, href, onDetails, mine }: { want: WantsFeedItem; href: 
   const shownBudget = budget(want);
   const longText = (want.description?.length || 0) > 280;
   return <article className={styles.card} data-want-post={want.id} aria-labelledby={`want-${want.id}`}>
-    <div className={styles.cardBody}><header className={styles.postHeader}>
+    <div className={styles.postContent}><div className={styles.cardBody}><header className={styles.postHeader}>
       <div className={styles.avatar}>{want.customer.image && !avatarFailed ? <Image src={want.customer.image} alt="" width={43} height={43} unoptimized onError={() => setAvatarFailed(true)} /> : <span aria-hidden="true">{initials || "J"}</span>}</div>
       <div className={styles.author}><strong>{want.customer.name}</strong><div className={styles.meta}>
         <MapPin aria-hidden="true" /><span>{want.city}</span><span aria-hidden="true">·</span>
@@ -105,6 +105,7 @@ function FeedPost({ want, href, onDetails, mine }: { want: WantsFeedItem; href: 
       {want.description && <><p className={`${styles.description} ${longText && !expanded ? styles.clamped : ""}`}>{want.description}</p>{longText && <button type="button" className={styles.seeMore} aria-expanded={expanded} onClick={() => setExpanded(value => !value)}>{expanded ? "See less" : "See more"}</button>}</>}
     </div>
     {photo && !photoFailed && <div className={styles.photo}><Image src={photo} alt={`Reference for ${want.title}`} fill sizes="(max-width: 800px) 100vw, 720px" unoptimized onError={() => setPhotoFailed(true)} /></div>}
+    </div>
     <footer className={styles.postFooter}>
       <dl className={styles.facts}>
         {shownBudget && <div><dt>Budget</dt><dd>{shownBudget}</dd></div>}
@@ -114,7 +115,7 @@ function FeedPost({ want, href, onDetails, mine }: { want: WantsFeedItem; href: 
       </dl>
       {status.tone === "pending"
         ? <p className={styles.cardHint}>Only visible to you until our team approves it.</p>
-        : <WantSocialBar want={want} ownerOffersHref={href} />}
+        : <div className={styles.social}><WantSocialBar want={want} ownerOffersHref={href} /></div>}
     </footer>
   </article>;
 }
@@ -219,17 +220,20 @@ export function WantsFeed({ categories }: { categories: string[] }) {
     : "Try another city, type or search, or let the community know what you're looking for.";
 
   return <div className={styles.page}><div className={styles.container}>
-    <header className={styles.heading}><div><p className={styles.eyebrow}><MessageSquareText aria-hidden="true" /> The JORO community</p><h1>Wants</h1><p className={styles.intro}>Real requests from real people. Join a request you share, or send a private offer as a seller.</p></div><PostWantButton className={styles.primary}><Plus aria-hidden="true" /> Post a Want</PostWantButton></header>
-    <section className={styles.filters} aria-label="Filter Wants">
-      <nav className={styles.tabs} aria-label="Wants feeds">{TABS.map(({ id, label, Icon }) => <LoadingButton key={id} type="button" className={styles.tab} aria-pressed={tab === id} loadingLabel="Loading…" onClick={() => changeFilters({ tab: id })}><Icon aria-hidden="true" />{label}</LoadingButton>)}</nav>
+    <header className={styles.heading}><div className={styles.heroCopy}><p className={styles.eyebrow}><MessageSquareText aria-hidden="true" /> The JORO community</p><h1>Wants</h1><p className={styles.intro}>Real requests from real people. Join a request you share, or send a private offer as a seller.</p><PostWantButton className={styles.primary}><Plus aria-hidden="true" /> Post a Want</PostWantButton></div><div className={styles.heroArt} aria-hidden="true"><Package/><Wrench/><Gift/><Handshake/></div></header>
       <div className={styles.typeRow} role="group" aria-label="Request type">{TYPES.map(({ id, label, Icon }) => <LoadingButton key={label} type="button" className={styles.chip} aria-pressed={filters.type === id} loadingLabel="Loading…" onClick={() => changeFilters({ type: id })}><Icon aria-hidden="true" />{label}</LoadingButton>)}</div>
-      <LoadingForm className={styles.filterForm} onSubmit={event => { event.preventDefault(); return changeFilters({ city: cityDraft, category: categoryDraft, q: qDraft }); }}>
+    <div className={styles.communityLayout}>
+    <section className={styles.filters} aria-label="Filter Wants"><h2 className={styles.filterTitle}><ListFilter aria-hidden="true"/> Filters</h2>
+      <input className={styles.filterToggle} type="checkbox" id="wants-filter-toggle" aria-controls="wants-filter-form"/><label className={styles.mobileFilterLabel} htmlFor="wants-filter-toggle"><Search aria-hidden="true"/> Search &amp; filters <ListFilter aria-hidden="true"/></label>
+      <LoadingForm id="wants-filter-form" className={styles.filterForm} onSubmit={event => { event.preventDefault(); return changeFilters({ city: cityDraft, category: categoryDraft, q: qDraft }); }}>
         <label className={`${styles.field} ${styles.searchField}`}><span>Search</span><div className={styles.inputIcon}><Search aria-hidden="true" /><input type="search" placeholder="Search requests" aria-label="Search Wants" value={qDraft} maxLength={100} onChange={event => setQDraft(event.target.value)} /></div></label>
         <label className={styles.field}><span>City</span><PakistanCitySelect placeholder="All cities" aria-label="Filter by city" value={cityDraft} maxLength={100} onValueChange={setCityDraft} /></label>
         <label className={styles.field}><span>Category</span><select value={categoryDraft} onChange={event => setCategoryDraft(event.target.value)}><option value="">All categories</option>{categories.map(name => <option key={name} value={name}>{name}</option>)}{filters.category && !categories.includes(filters.category) && <option value={filters.category}>{filters.category}</option>}</select></label>
         <LoadingButton type="submit" className={styles.secondary} loadingLabel="Filtering…"><ListFilter aria-hidden="true" /> Apply</LoadingButton>
       </LoadingForm>
     </section>
+    <div className={styles.feedColumn}>
+      <nav className={styles.tabs} aria-label="Wants feeds">{TABS.map(({ id, label, Icon }) => <LoadingButton key={id} type="button" className={styles.tab} aria-pressed={tab === id} loadingLabel="Loading…" onClick={() => changeFilters({ tab: id })}><Icon aria-hidden="true" />{label}</LoadingButton>)}</nav>
     <div className={styles.feedLabel}><span>{scopeLabel}</span><span>{tab === "trending" ? "Most demand first" : "Newest first"}</span></div>
     {needsSignIn ? <div className={styles.notice}><div className={styles.noticeIcon}><UserRound /></div><h2>{tab === "mine" ? "Your Wants, all in one place" : "Requests you've joined"}</h2><p>Sign in with your customer account to see {tab === "mine" ? "your posts and their review status" : "the requests you joined"}.</p><Link href={signInHref} className={styles.primary}>Sign in <ArrowRight aria-hidden="true" /></Link></div>
       : state.error && !selectionPending ? <div className={styles.notice}><p role="alert" className={styles.error}>{state.error}</p><LoadingButton className={styles.primary} loadingLabel="Retrying…" onClick={pager.retry}><RotateCcw aria-hidden="true" /> Try again</LoadingButton></div>
@@ -242,5 +246,8 @@ export function WantsFeed({ categories }: { categories: string[] }) {
         {state.hasMore && !state.moreError && <><div ref={sentinel} className={styles.sentinel} aria-hidden="true" /><div className={styles.more}><LoadingButton type="button" className={styles.secondary} loading={state.loadingMore} loadingLabel="Loading…" onClick={pager.loadMore}>Load more Wants</LoadingButton></div></>}
         {!state.hasMore && state.items.length > 0 && <p className={styles.end} role="status"><CheckCircle2 aria-hidden="true" /> You’re all caught up</p>}
       </>}
+    </div>
+    <aside className={styles.guide} aria-label="How Wants works"><h2><MessageSquareText aria-hidden="true"/> How it works</h2><ol><li><span>1</span><div><h3>Post a Want</h3><p>Tell the community what you need.</p></div></li><li><span>2</span><div><h3>Join a request</h3><p>Need the same thing? Join to show your interest.</p></div></li><li><span>3</span><div><h3>Connect privately</h3><p>Sellers can send private offers for customers to review.</p></div></li></ol></aside>
+    </div>
   </div></div>;
 }

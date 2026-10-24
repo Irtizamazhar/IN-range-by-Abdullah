@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import { Bell } from "lucide-react";
 import Link from "@/components/ui/LoadingLink";
+import { NOTIFICATIONS_CHANGED, type NotificationsChanged } from "@/lib/customer-notification-events";
 
 const POLL_MS = 60_000;
 
@@ -16,27 +17,37 @@ export function CustomerNotificationBell() {
   const { data: session } = useSession();
   const pathname = usePathname();
   const customerId = session?.user?.role === "customer" ? session.user.id : "";
-  const [unread, setUnread] = useState(0);
+  const [count, setCount] = useState({ customerId: "", unread: 0 });
+  const unread = count.customerId === customerId ? count.unread : 0;
 
   useEffect(() => {
-    if (!customerId) { setUnread(0); return; }
+    if (!customerId) { setCount({ customerId: "", unread: 0 }); return; }
     let cancelled = false;
+    let version = 0;
     const refresh = async () => {
       if (document.visibilityState !== "visible") return;
+      const request = ++version;
       try {
         const response = await fetch("/api/customer/notifications/unread", { cache: "no-store", credentials: "same-origin" });
         if (!response.ok) return;
         const data = await response.json() as { unread?: number };
-        if (!cancelled) setUnread(Math.max(0, Number(data.unread) || 0));
+        if (!cancelled && request === version) setCount({ customerId, unread: Math.max(0, Number(data.unread) || 0) });
       } catch { /* keep the last known count */ }
     };
     void refresh();
     const timer = window.setInterval(() => void refresh(), POLL_MS);
     const onVisible = () => void refresh();
+    const onChanged = (event: Event) => {
+      const detail = (event as CustomEvent<NotificationsChanged>).detail;
+      if (detail && detail.customerId !== customerId) return;
+      if (detail && Number.isFinite(detail.unread)) { ++version; setCount({ customerId, unread: Math.max(0, detail.unread) }); }
+      void refresh();
+    };
     document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
     // The notifications page announces read-state changes so the badge does not wait for the next poll.
-    window.addEventListener("joro:notifications-changed", onVisible);
-    return () => { cancelled = true; window.clearInterval(timer); document.removeEventListener("visibilitychange", onVisible); window.removeEventListener("joro:notifications-changed", onVisible); };
+    window.addEventListener(NOTIFICATIONS_CHANGED, onChanged);
+    return () => { cancelled = true; window.clearInterval(timer); document.removeEventListener("visibilitychange", onVisible); window.removeEventListener("focus", onVisible); window.removeEventListener(NOTIFICATIONS_CHANGED, onChanged); };
   }, [customerId, pathname]);
 
   if (!customerId) return null;

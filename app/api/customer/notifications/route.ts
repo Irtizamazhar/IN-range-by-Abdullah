@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { api, customerActor, sameOrigin } from "@/lib/marketplace-api";
 import { safeAccountLink } from "@/lib/customer-account-policy";
+import { notificationUnreadCounts } from "@/lib/customer-notification-display";
 export const dynamic = "force-dynamic";
 
 /** Thumbnail for each notification, resolved from the entity its link points to — only entities this customer owns. */
@@ -37,13 +38,14 @@ async function notificationImages(customerId: string, links: (string | null)[]) 
 }
 
 export async function GET() { return api(async () => {
-  const c = await customerActor(); const [notifications, unread] = await Promise.all([
+  const c = await customerActor(); const [notifications, unreadRows] = await Promise.all([
     prisma.customerNotification.findMany({ where: { customerId: c.id }, select: { id: true, type: true, title: true, message: true, link: true, isRead: true, createdAt: true }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 150 }),
-    prisma.customerNotification.count({ where: { customerId: c.id, isRead: false } }),
+    prisma.customerNotification.findMany({ where: { customerId: c.id, isRead: false }, select: { type: true, title: true, link: true, isRead: true } }),
   ]);
   const rows = notifications.map(n => ({ ...n, link: safeAccountLink(n.link) }));
   // Thumbnails are decorative; a lookup failure must never hide the notifications themselves.
   const imageFor = await notificationImages(c.id, rows.map(n => n.link)).catch(() => () => null);
-  return { unread, notifications: rows.map(n => ({ ...n, image: imageFor(n.link) })) };
+  const unreadCounts = notificationUnreadCounts(unreadRows);
+  return { unread: unreadCounts.all, unreadCounts, notifications: rows.map(n => ({ ...n, image: imageFor(n.link) })) };
 }); }
 export async function PATCH(request: Request) { return api(async () => { sameOrigin(request); const c = await customerActor(); await prisma.customerNotification.updateMany({ where: { customerId: c.id, isRead: false }, data: { isRead: true } }); return { ok: true }; }); }

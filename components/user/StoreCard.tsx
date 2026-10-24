@@ -1,55 +1,45 @@
 import Link from "@/components/ui/LoadingLink";
 import Image from "next/image";
-import { MapPin, PackageCheck, Store as StoreIcon, Star } from "lucide-react";
+import { MapPin, PackageCheck, Package, Star, ShieldCheck } from "lucide-react";
 import { StoreFollowButton } from "./StoreFollowButton";
+import styles from "./StoreDirectory.module.css";
 
 export type PublicStore = {
   id: string;
   shopName: string;
   storeSlug: string | null;
   shopLogo?: string | null;
+  storeBanner?: string | null;
   primaryCategory: string;
   shopDescription: string | null;
   city?: string;
   rating?: number | null;
   ratingCount?: number;
   deliveredCount?: number;
+  initialFollowing?: boolean;
   _count: { followers: number; products?: number };
 };
 
+// The directory selects approved vendors only.
 export function StoreCard({ store }: { store: PublicStore }) {
   const href = `/stores/${encodeURIComponent(store.storeSlug || store.id)}`;
-  return (
-    <article className="rounded-[22px] border border-black/[0.06] bg-white p-5 shadow-card transition hover:-translate-y-0.5 hover:border-brand-primary/40">
-      <Link href={href} className="flex min-w-0 items-start gap-3">
-        {store.shopLogo ? (
-          <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl border border-black/[0.06]">
-            <Image src={store.shopLogo} alt="" fill unoptimized className="object-cover" />
-          </span>
-        ) : (
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-primary text-lg font-black text-brand-dark">
-            {store.shopName.slice(0, 2).toUpperCase()}
-          </span>
-        )}
-        <div className="min-w-0">
-          <h2 className="truncate text-lg font-black text-brand-dark">{store.shopName}</h2>
-          <p className="text-sm font-semibold text-brand-link">{store.primaryCategory}</p>
-        </div>
+  return <article className={styles.card}>
+    <Link href={href} className={styles.cover} aria-label={`Visit ${store.shopName}`}>
+      {store.storeBanner || store.shopLogo ? <Image src={(store.storeBanner || store.shopLogo)!} alt="" fill unoptimized sizes="(max-width: 767px) 64px, 320px" className="object-cover"/> : <span className={styles.coverInitials}>{store.shopName.slice(0, 2).toUpperCase()}</span>}
+    </Link>
+    <div className={styles.cardBody}>
+      <Link href={href} className={styles.identity}>
+        <span className={styles.avatar}>{store.shopLogo ? <Image src={store.shopLogo} alt="" fill unoptimized sizes="40px" className="object-cover"/> : store.shopName.slice(0, 2).toUpperCase()}</span>
+        <span className={styles.identityText}><span className={styles.approved}><ShieldCheck size={12}/> Approved seller</span><h2>{store.shopName}</h2><span className={styles.category}>{store.primaryCategory}</span></span>
       </Link>
-      <Link href={href}>
-        <p className="mt-4 line-clamp-2 min-h-10 text-sm leading-5 text-darkText/60">
-          {store.shopDescription || "Approved marketplace seller"}
-        </p>
-      </Link>
-      <div className="mt-4 grid grid-cols-2 gap-2 text-xs font-semibold text-darkText/65">
-        {store.city ? <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{store.city}</span> : null}
-        {typeof store.deliveredCount === "number" ? <span className="inline-flex items-center gap-1"><PackageCheck className="h-3.5 w-3.5" />{store.deliveredCount} delivered</span> : null}
-        {typeof store._count.products === "number" ? <span className="inline-flex items-center gap-1"><StoreIcon className="h-3.5 w-3.5" />{store._count.products} products</span> : null}
-        <span className="inline-flex items-center gap-1"><Star className="h-3.5 w-3.5" />{store.rating ? `${store.rating.toFixed(1)} (${store.ratingCount ?? 0})` : "No verified ratings"} · {store._count.followers} followers</span>
+      {store.shopDescription && <Link href={href} className={styles.description}>{store.shopDescription}</Link>}
+      <div className={styles.stats}>
+        {store.city && <span className={styles.fullStat}><MapPin size={13}/>{store.city}</span>}
+        {typeof store._count.products === "number" && <span><Package size={13}/>{store._count.products} products</span>}
+        {typeof store.deliveredCount === "number" && <span><PackageCheck size={13}/>{store.deliveredCount} delivered</span>}
+        <span className={styles.fullStat}><Star size={13}/>{store.ratingCount && store.rating != null ? `${store.rating.toFixed(1)} (${store.ratingCount} verified reviews)` : "No verified reviews yet"}</span>
       </div>
-      <div className="mt-4">
-        <StoreFollowButton vendorId={store.id} initialFollowers={store._count.followers} />
-      </div>
-    </article>
-  );
+      <div className={styles.follow}><StoreFollowButton vendorId={store.id} initialFollowing={store.initialFollowing} initialFollowers={store._count.followers} className={styles.followButton}/></div>
+    </div>
+  </article>;
 }

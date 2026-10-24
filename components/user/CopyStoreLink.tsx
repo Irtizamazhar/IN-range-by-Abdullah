@@ -2,18 +2,33 @@
 import toast from "react-hot-toast";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 
-import { useState } from "react";
-import { Copy, Check, Share2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Check, Share2 } from "lucide-react";
+import styles from "./StoreProfile.module.css";
 
-export function CopyStoreLink({ url }: { url: string }) {
+export function CopyStoreLink({ url, title }: { url: string; title?: string }) {
   const [copied, setCopied] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
   async function copy() {
+    const storeUrl = new URL(url, window.location.origin).href;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: title || "JORO Store", url: storeUrl });
+        toast.success("Store link shared.");
+        return;
+      } catch (error) {
+        if ((error as DOMException)?.name === "AbortError") return;
+        // Some desktop browsers expose share but cannot open a share sheet.
+      }
+    }
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(storeUrl);
       setCopied(true);
       toast.success("Store link copied.");
-      setTimeout(() => setCopied(false), 2000);
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = setTimeout(() => setCopied(false), 2000);
     } catch {
       toast.error("Could not copy the link. Select and copy the store address manually.");
     }
@@ -22,14 +37,13 @@ export function CopyStoreLink({ url }: { url: string }) {
   return (
     <LoadingButton
       type="button"
-      loadingLabel="Copying…"
+      loadingLabel="Sharing..."
       onClick={() => copy()}
-      className="inline-flex max-w-full items-center gap-2 rounded-xl border border-white/15 bg-white/[0.06] px-3 py-2 text-xs font-bold text-white/80 transition hover:bg-white/[0.1]"
-      title="Copy shareable store link"
+      className={styles.share}
+      title="Share or copy store link"
     >
-      {copied ? <Check className="h-3.5 w-3.5 shrink-0" /> : <Share2 className="h-3.5 w-3.5 shrink-0" />}
-      <span className="truncate">{url}</span>
-      {!copied && <Copy className="h-3 w-3 shrink-0 opacity-60" />}
+      {copied ? <Check aria-hidden="true" /> : <Share2 aria-hidden="true" />}
+      {copied ? "Link copied" : "Share"}
     </LoadingButton>
   );
 }

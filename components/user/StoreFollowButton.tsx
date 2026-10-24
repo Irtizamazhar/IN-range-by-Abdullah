@@ -10,10 +10,12 @@ export function StoreFollowButton({
   vendorId,
   initialFollowing = false,
   initialFollowers,
+  className = "",
 }: {
   vendorId: string;
   initialFollowing?: boolean;
   initialFollowers: number;
+  className?: string;
 }) {
   const { isCustomer, openAuthModal, authLoading } = useCustomerAuth();
   const [following, setFollowing] = useState(initialFollowing);
@@ -47,7 +49,7 @@ export function StoreFollowButton({
         following
           ? "border border-brand-primary bg-brand-soft text-brand-dark"
           : "bg-brand-primary text-brand-dark hover:bg-brand-hover"
-      }`}
+      } ${className}`}
     >
       <Heart className={`h-4 w-4 ${following ? "fill-current" : ""}`} />
       {following ? "Following" : "Follow"} · {followers}
