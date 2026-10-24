@@ -340,7 +340,7 @@ export function Navbar({
                             !value
                         )
                       }
-                      className="group flex h-11 items-center gap-1.5 rounded-xl px-2 text-brand-link focus-visible:outline-brand-link sm:px-2.5"
+                      className={`${styles.profileButton} group flex h-11 items-center gap-1.5 rounded-xl px-2 text-brand-link focus-visible:outline-brand-link sm:px-2.5`}
                       aria-label="Account menu"
                     >
                       {session.user
@@ -358,7 +358,7 @@ export function Navbar({
                           }
                           width={28}
                           height={28}
-                          className="h-7 w-7 rounded-full object-cover ring-2 ring-brand-primary/30"
+                          className={`${styles.profileAvatar} h-7 w-7 rounded-full object-cover ring-2 ring-brand-primary/30`}
                         />
                       ) : (
                         <User className="h-[19px] w-[19px]" />
