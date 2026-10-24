@@ -11,14 +11,13 @@ import { getSession, useSession } from "next-auth/react";
 import { useCart } from "@/context/CartContext";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
 import { formatPKR } from "@/lib/format";
-import confirmationStyles from "./Confirmation.module.css";
+import { OrderConfirmedModal } from "./OrderConfirmedModal";
 import { normalizePakistanMobile, pakistanMobileLocalDigits } from "@/lib/pakistan-phone";
 import { PakistanCitySelect } from "@/components/ui/PakistanCitySelect";
-import { WhatsAppButton } from "@/components/user/WhatsAppButton";
 import type { ISettings } from "@/types/settings";
 import {
-  ArrowRight, Banknote, Building2, Check, ChevronDown, CircleAlert, Copy, CreditCard, FileText,
-  Lock, Mail, Mailbox, MapPin, Phone, ShieldCheck, ShoppingCart, Tag, Truck, X,
+  ArrowRight, Banknote, Building2, Check, ChevronDown, CircleAlert, CreditCard, FileText,
+  Lock, Mail, Mailbox, MapPin, Phone, ShieldCheck, ShoppingCart, Tag, X,
 } from "lucide-react";
 import { readCheckoutReceipt, checkoutAttemptKey, clearCheckoutAttempt } from "@/lib/checkout-response";
 type PaymentMethod = "cod";
@@ -345,7 +344,6 @@ export default function CheckoutPage() {
       let receipt;
       try { receipt = await readCheckoutReceipt(res); }
       catch (error) { if (res.status === 409) setHandlingFeeVersion(v => v + 1); throw error; }
-      toast.success("Order placed successfully!");
       setDoneOrder(receipt);
       clearCheckoutAttempt(storage);
       clear();
@@ -420,65 +418,7 @@ export default function CheckoutPage() {
     );
   }
 
-  if (doneOrder) {
-    return (
-      <main className={confirmationStyles.page}>
-        <section className={confirmationStyles.card} aria-labelledby="order-confirmation-heading">
-          <div className={confirmationStyles.celebration} aria-hidden="true">
-            <div className={confirmationStyles.confetti}>{Array.from({ length: 18 }, (_, index) => <i key={index} />)}</div>
-            <span className={confirmationStyles.check}><Check strokeWidth={3.5} /></span>
-          </div>
-          <h1 id="order-confirmation-heading" className={confirmationStyles.heading}>Thank you!</h1>
-          <p className={confirmationStyles.subheading}>Your order has been placed successfully.</p>
-          <div className={confirmationStyles.orderPanel}>
-            <p className={confirmationStyles.label}>Your order number:</p>
-            <p className={confirmationStyles.orderNumber}>
-              {doneOrder.orderNumber}
-            </p>
-          </div>
-          {doneOrder.totalAmount != null && <div className={confirmationStyles.totalPanel}><p><span>Order total:</span> <strong>{formatPKR(doneOrder.totalAmount)}</strong></p>{doneOrder.handlingFee != null && doneOrder.handlingFee > 0 && <p className={confirmationStyles.fee}>Includes Handling Fee: {formatPKR(doneOrder.handlingFee)}</p>}</div>}
-          <div className={confirmationStyles.actionRow}>
-            <LoadingButton
-              type="button"
-              onClick={async () => {
-                try {
-                  await navigator.clipboard.writeText(doneOrder.orderNumber);
-                  toast.success("Tracking ID copied");
-                } catch {
-                  toast.error("Could not copy");
-                }
-              }}
-              className={`${confirmationStyles.action} ${confirmationStyles.copy}`}
-            >
-              <Copy aria-hidden="true" />
-              Copy tracking ID
-            </LoadingButton>
-            <Link
-              href={`/track-order?order=${encodeURIComponent(doneOrder.orderNumber)}`}
-              className={`${confirmationStyles.action} ${confirmationStyles.track}`}
-            >
-              <Truck aria-hidden="true" />
-              Track this order
-            </Link>
-          </div>
-          <WhatsAppButton
-            number={settings?.whatsappNumber || "923001234567"}
-            label="Contact us on WhatsApp"
-            className={`${confirmationStyles.action} ${confirmationStyles.whatsapp}`}
-          />
-          <Link
-            href="/products"
-            className={`${confirmationStyles.action} ${confirmationStyles.continue}`}
-          >
-            Continue shopping
-          </Link>
-          <Link href="/" className={confirmationStyles.home}>
-            Back to home
-          </Link>
-        </section>
-      </main>
-    );
-  }
+  if (doneOrder) return <OrderConfirmedModal order={doneOrder} />;
 
   const itemCountLabel = `${items.length} item${items.length === 1 ? "" : "s"} in your cart`;
   const formattedTotal = handlingFee === null ? null : formatPKR(totalAmount);

@@ -16,7 +16,7 @@ const modules = {
   'next-auth/react': `const session={user:{id:'customer-a',role:'customer',name:'Ali Khan',email:'owner@example.invalid',phone:'03001234567'}};export const useSession=()=>({data:session,status:'authenticated'});export const getSession=async()=>window.__expired?null:session;`,
   '@/context/CustomerAuthContext': `export const useCustomerAuth=()=>({isCustomer:true,authLoading:false,openAuthModal:()=>{window.__authOpens=(window.__authOpens||0)+1}});`,
   '@/context/CartContext': `import {useState} from 'react';const initial=[{productId:'cream',name:'cream',price:2000,quantity:1,image:'/logo.png'}];export function useCart(){const [items,setItems]=useState(initial);return{items,subtotal:items.length?2000:0,clear:()=>{window.__clears=(window.__clears||0)+1;setItems([])}}}`,
-  '@/hooks/useLoadingRouter': `export const useLoadingRouter=()=>({push:()=>{},replace:()=>{}});`,
+  '@/hooks/useLoadingRouter': `const router={push:()=>{},replace:async href=>{window.__navigation=href;window.__navigationCount=(window.__navigationCount||0)+1;}};export const useLoadingRouter=()=>router;`,
   '@/components/ui/LoadingLink': `import React from 'react';export default function Link(props){return <a {...props}/>}`,
   'next/image': `import React from 'react';export default function Image({fill,priority,unoptimized,...props}){return <img {...props}/>}`,
 };
@@ -91,9 +91,12 @@ async function run() {
       assert.equal(posts.length, before + 1); assert.equal(posts.at(-1).key, retryKey);
       assert.equal(posts.at(-1).body.sameBillingAddress, false); assert.equal(posts.at(-1).body.billingAddress.address, '20 Billing Street');
       assert.equal(await page.evaluate(() => window.__clears), 1);
-      assert.equal(await page.getByRole('link', { name: 'Track this order' }).getAttribute('href'), '/track-order?order=IRB-001');
+      await page.getByRole('dialog', { name: 'Order confirmed!', exact: true }).waitFor();
+      await page.getByRole('button', { name: 'Done', exact: true }).click();
+      assert.equal(await page.evaluate(() => window.__navigation), '/account/orders/order-1');
+      assert.equal(await page.evaluate(() => window.__navigationCount), 1);
       assert.deepEqual(errors, []);
-      console.log(`PASS ${width}px: session expiry, empty/server/network failures retain cart, persistent retry key, distinct billing, double-submit lock, confirmed receipt/tracking and one cart clear`);
+      console.log(`PASS ${width}px: session expiry, failure handling, retry key, billing, double-submit lock, confirmation popup, order-details redirect and one cart clear`);
       await page.close();
     }
   } finally { if (browser) await browser.close(); await new Promise(resolve => server.close(resolve)); }
