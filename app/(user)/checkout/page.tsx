@@ -11,13 +11,14 @@ import { getSession, useSession } from "next-auth/react";
 import { useCart } from "@/context/CartContext";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
 import { formatPKR } from "@/lib/format";
+import confirmationStyles from "./Confirmation.module.css";
 import { normalizePakistanMobile, pakistanMobileLocalDigits } from "@/lib/pakistan-phone";
 import { PakistanCitySelect } from "@/components/ui/PakistanCitySelect";
 import { WhatsAppButton } from "@/components/user/WhatsAppButton";
 import type { ISettings } from "@/types/settings";
 import {
-  ArrowRight, Banknote, Building2, Check, ChevronDown, CircleAlert, CreditCard, FileText,
-  Lock, Mail, Mailbox, MapPin, Phone, ShieldCheck, ShoppingCart, Tag, X,
+  ArrowRight, Banknote, Building2, Check, ChevronDown, CircleAlert, Copy, CreditCard, FileText,
+  Lock, Mail, Mailbox, MapPin, Phone, ShieldCheck, ShoppingCart, Tag, Truck, X,
 } from "lucide-react";
 import { readCheckoutReceipt, checkoutAttemptKey, clearCheckoutAttempt } from "@/lib/checkout-response";
 type PaymentMethod = "cod";
@@ -421,15 +422,22 @@ export default function CheckoutPage() {
 
   if (doneOrder) {
     return (
-      <div className="mx-auto max-w-lg px-4 py-16 text-center">
-        <div className="rounded-card border border-borderGray bg-white p-8 shadow-card">
-          <p className="mb-2 text-lg font-semibold text-green-600">Thank you!</p>
-          <p className="mb-1 text-darkText">Your order number:</p>
-          <p className="mb-6 text-2xl font-bold text-primaryBlue">
-            {doneOrder.orderNumber}
-          </p>
-          {doneOrder.totalAmount != null && <div className="mb-6 rounded-xl bg-[#F3FAE6] px-4 py-3 text-sm text-[#00543D]"><p className="font-bold">Order total: {formatPKR(doneOrder.totalAmount)}</p>{doneOrder.handlingFee != null && doneOrder.handlingFee > 0 && <p className="mt-1">Includes Handling Fee: {formatPKR(doneOrder.handlingFee)}</p>}</div>}
-          <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <main className={confirmationStyles.page}>
+        <section className={confirmationStyles.card} aria-labelledby="order-confirmation-heading">
+          <div className={confirmationStyles.celebration} aria-hidden="true">
+            <div className={confirmationStyles.confetti}>{Array.from({ length: 18 }, (_, index) => <i key={index} />)}</div>
+            <span className={confirmationStyles.check}><Check strokeWidth={3.5} /></span>
+          </div>
+          <h1 id="order-confirmation-heading" className={confirmationStyles.heading}>Thank you!</h1>
+          <p className={confirmationStyles.subheading}>Your order has been placed successfully.</p>
+          <div className={confirmationStyles.orderPanel}>
+            <p className={confirmationStyles.label}>Your order number:</p>
+            <p className={confirmationStyles.orderNumber}>
+              {doneOrder.orderNumber}
+            </p>
+          </div>
+          {doneOrder.totalAmount != null && <div className={confirmationStyles.totalPanel}><p><span>Order total:</span> <strong>{formatPKR(doneOrder.totalAmount)}</strong></p>{doneOrder.handlingFee != null && doneOrder.handlingFee > 0 && <p className={confirmationStyles.fee}>Includes Handling Fee: {formatPKR(doneOrder.handlingFee)}</p>}</div>}
+          <div className={confirmationStyles.actionRow}>
             <LoadingButton
               type="button"
               onClick={async () => {
@@ -440,33 +448,35 @@ export default function CheckoutPage() {
                   toast.error("Could not copy");
                 }
               }}
-              className="rounded-xl border border-borderGray py-2.5 text-sm font-semibold hover:bg-lightGray"
+              className={`${confirmationStyles.action} ${confirmationStyles.copy}`}
             >
+              <Copy aria-hidden="true" />
               Copy tracking ID
             </LoadingButton>
             <Link
               href={`/track-order?order=${encodeURIComponent(doneOrder.orderNumber)}`}
-              className="rounded-xl bg-brand-primary py-2.5 text-sm font-semibold text-brand-dark hover:bg-brand-hover"
+              className={`${confirmationStyles.action} ${confirmationStyles.track}`}
             >
+              <Truck aria-hidden="true" />
               Track this order
             </Link>
           </div>
           <WhatsAppButton
             number={settings?.whatsappNumber || "923001234567"}
             label="Contact us on WhatsApp"
-            className="mb-4 w-full justify-center"
+            className={`${confirmationStyles.action} ${confirmationStyles.whatsapp}`}
           />
           <Link
             href="/products"
-            className="mb-4 block w-full rounded-xl bg-brand-primary py-3 text-center text-sm font-bold text-brand-dark hover:bg-brand-hover"
+            className={`${confirmationStyles.action} ${confirmationStyles.continue}`}
           >
             Continue shopping
           </Link>
-          <Link href="/" className="inline-block font-medium text-primaryBlue">
+          <Link href="/" className={confirmationStyles.home}>
             Back to home
           </Link>
-        </div>
-      </div>
+        </section>
+      </main>
     );
   }
 
