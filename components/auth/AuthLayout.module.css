@@ -318,3 +318,6 @@
 @media (prefers-reduced-motion: reduce) {
   .googleButton { transition: none; }
 }
+
+/* Reduce just the space above the existing remember/password recovery row. */
+.fields > .rememberRow { margin-top: -10px; }

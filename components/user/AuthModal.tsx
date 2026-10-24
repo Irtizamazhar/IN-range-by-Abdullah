@@ -24,6 +24,8 @@ import {
 } from "react";
 import toast from "react-hot-toast";
 import { LogoMark } from "@/components/user/LogoMark";
+import recoveryStyles from "@/components/auth/PasswordRecoveryModal.module.css";
+import { PasswordRecoveryModal } from "@/components/auth/PasswordRecoveryModal";
 import { PasswordStrength } from "@/components/auth/PasswordStrength";
 import { setCustomerOAuthRememberChoice } from "@/lib/customer-remember-policy";
 import { PakistanMobileInput } from "@/components/ui/PakistanMobileInput";
@@ -115,6 +117,7 @@ function GoogleIcon({ className }: { className?: string }) {
 export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalProps) {
   const router = useRouter();
   const titleId = useId();
+  const [recovering, setRecovering] = useState(false);
   const [view, setView] = useState<AuthModalView>(initialTab);
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
@@ -126,7 +129,6 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
   const [suPhone, setSuPhone] = useState("");
   const [suEmail, setSuEmail] = useState("");
   const [suPass, setSuPass] = useState("");
-  const [forgotEmail, setForgotEmail] = useState("");
 
   const clearErrors = useCallback(() => setErrors({}), []);
 
@@ -135,6 +137,7 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
     setView(initialTab === "signup" ? "signup" : "login");
     clearErrors();
     setShowPassword(false);
+    setRecovering(false);
   }, [isOpen, initialTab, clearErrors]);
 
   useEffect(() => {
@@ -147,13 +150,13 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
   }, [isOpen]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || recovering) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, recovering]);
 
   const headerCopy = useMemo(() => {
     switch (view) {
@@ -257,40 +260,14 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
     } catch (error) { toast.error(error instanceof Error ? error.message : "Could not reach the server. Please try again."); }
   }
 
-  async function onForgot(e: React.FormEvent) {
-    e.preventDefault();
-    clearErrors();
-    const em = forgotEmail.trim();
-    const next: Errors = {};
-    if (!em) next.forgotEmail = "Email is required";
-    else if (!EMAIL_RE.test(em)) next.forgotEmail = "Enter a valid email";
-    if (Object.keys(next).length) {
-      setErrors(next);
-      return;
-    }
-    try {
-      const res = await fetch("/api/customer/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: em }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data.error || "Something went wrong");
-        return;
-      }
-      toast.success(data.message || "Check your inbox for next steps.");
-      setView("login");
-      setLoginEmail(em);
-    } catch (error) { toast.error(error instanceof Error ? error.message : "Could not reach the server. Please try again."); }
-  }
-
   const primaryBtnClass =
     "flex h-11 w-full items-center justify-center gap-2 rounded-full bg-brand-primary text-sm font-semibold text-brand-dark shadow-sm transition duration-200 hover:bg-brand-hover disabled:pointer-events-none disabled:opacity-55";
   const socialBtnClass =
     "mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-full border border-primaryBlue/25 bg-white text-sm font-semibold text-primaryBlue shadow-sm transition duration-200 hover:bg-primaryBlue/5 disabled:pointer-events-none disabled:opacity-55";
 
   return (
+    <>
+    {isOpen && recovering && <PasswordRecoveryModal initialEmail={loginEmail} onClose={() => setRecovering(false)} />}
     <AnimatePresence>
       {isOpen ? (
         <div
@@ -413,7 +390,7 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
                         </p>
                       ) : null}
 
-                      <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className={`${recoveryStyles.loginOptions} flex flex-wrap items-center justify-between gap-3`}>
                         <label className="flex items-center gap-2 text-xs font-medium text-gray-700">
                           <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} />
                           Remember me
@@ -422,7 +399,7 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
                           type="button"
                           className="text-xs font-medium text-primaryBlue transition-opacity hover:opacity-80"
                           onClick={() => {
-                            setView("forgot");
+                            setRecovering(true);
                             clearErrors();
                           }}
                         >
@@ -616,58 +593,12 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
                   </motion.div>
                 ) : null}
 
-                {view === "forgot" ? (
-                  <motion.div
-                    key="forgot"
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
-                    transition={transition}
-                  >
-                    <LoadingForm onSubmit={(e) => onForgot(e)} className="space-y-5">
-                      <AuthField icon={Mail}>
-                        <input
-                          type="email"
-                          autoComplete="email"
-                          placeholder="Email"
-                          value={forgotEmail}
-                          onChange={(e) => {
-                            setForgotEmail(e.target.value);
-                            if (errors.forgotEmail)
-                              setErrors((o) => ({ ...o, forgotEmail: undefined }));
-                          }}
-                          className={inputClass}
-                        />
-                      </AuthField>
-                      {errors.forgotEmail ? (
-                        <p className="-mt-2 text-xs text-red-600">
-                          {errors.forgotEmail}
-                        </p>
-                      ) : null}
-
-                      <LoadingButton type="submit" className={primaryBtnClass}>
-
-                        Send reset link
-                      </LoadingButton>
-
-                      <LoadingButton
-                        type="button"
-                        className="w-full pt-1 text-center text-sm font-medium text-gray-500 transition-colors hover:text-primaryBlue"
-                        onClick={() => {
-                          setView("login");
-                          clearErrors();
-                        }}
-                      >
-                        ← Back to log in
-                      </LoadingButton>
-                    </LoadingForm>
-                  </motion.div>
-                ) : null}
               </AnimatePresence>
             </div>
           </motion.div>
         </div>
       ) : null}
     </AnimatePresence>
+    </>
   );
 }

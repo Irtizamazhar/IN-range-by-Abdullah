@@ -325,6 +325,8 @@ model CustomerPasswordResetToken {
   customerId String
   customer   Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
   tokenHash  String    @unique @db.VarChar(64)
+  otpHash    String?   @db.VarChar(64)
+  attempts   Int       @default(0)
   expiresAt  DateTime
   usedAt     DateTime?
   createdAt  DateTime  @default(now())

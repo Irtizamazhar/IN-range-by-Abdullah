@@ -91,6 +91,18 @@ export function customerPasswordResetEmail(name: string, url: string): JoroEmail
   return brand({ subject: "Reset your JORO password", preview: "Your password reset link", greeting: `Hello ${name},`, bodyHtml: "<p>Use the link below within 30 minutes to set or reset your password.</p>", bodyText: "Use the link below within 30 minutes to set or reset your password.\n", action: { label: "Reset Password", url } });
 }
 
+export function customerPasswordOtpEmail(code: string): JoroEmail {
+  if (!/^\d{6}$/.test(code)) throw new Error("Invalid password verification code");
+  return brand({
+    subject: "JORO | Password Reset Verification Code",
+    preview: "Your password reset verification code expires in 10 minutes.",
+    greeting: "Hello,",
+    bodyHtml: `<h2 style="font-size:20px;color:#005055">Password Reset Request</h2><p>We received a request to reset your JORO account password.</p><p>Use the verification code below to continue:</p><p style="text-align:center;font-size:34px;font-weight:700;letter-spacing:8px;background:#edf8ea;color:#005055;padding:20px 8px;border-radius:12px">${escapeEmailHtml(code)}</p><p>This code expires in 10 minutes.</p><p>If you didn't request this password reset, you can safely ignore this email.</p><p>For your security, never share this code.</p>`,
+    bodyText: `Password Reset Request\n\nWe received a request to reset your JORO account password.\nUse the verification code below to continue:\n\n${code}\n\nThis code expires in 10 minutes.\nIf you didn't request this password reset, you can safely ignore this email.\nFor your security, never share this code.\n`,
+    footer: "Regards,\nTeam JORO\nPakistan ka Apna Marketplace",
+  });
+}
+
 export function passwordChangedEmail(name: string): JoroEmail {
   return brand({ subject: "Your JORO password was changed", preview: "Account security update", greeting: `Hello ${name},`, bodyHtml: "<p>Your account password was changed. If this was not you, contact JORO support immediately.</p>", bodyText: "Your account password was changed. If this was not you, contact JORO support immediately.\n" });
 }

@@ -19,6 +19,15 @@ function createTransport() {
 
 export const JORO_SENDER = "JORO <admin@joro.pk>";
 
+/** Check provider availability without sending a message or looking up an account. */
+export async function verifyMailTransport(): Promise<boolean> {
+  if (!isMailConfigured()) return false;
+  const transport = createTransport();
+  try { await transport.verify(); return true; }
+  catch { return false; }
+  finally { transport.close(); }
+}
+
 export async function sendMail(opts: {
   to: string;
   subject: string;

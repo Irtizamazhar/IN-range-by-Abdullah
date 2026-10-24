@@ -8,10 +8,11 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { sendMail } from "@/lib/mailer";
 import { passwordChangedEmail } from "@/lib/joro-email-templates";
+import { recoveryPassword } from "@/lib/password-recovery";
 
 const schema = z.object({
   token: z.string().min(32).max(256),
-  password: z.string().min(8).max(128),
+  password: recoveryPassword,
 });
 
 export async function POST(req: NextRequest) {
@@ -24,7 +25,7 @@ export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Use a password with at least 8 characters." },
+      { error: "Use 6–72 characters and at most 72 UTF-8 bytes." },
       { status: 400 }
     );
   }
@@ -36,11 +37,11 @@ export async function POST(req: NextRequest) {
     const changedCustomer = await prisma.$transaction(
       async (tx) => {
         const token = await tx.customerPasswordResetToken.findFirst({
-          where: { tokenHash, usedAt: null, expiresAt: { gt: new Date() } },
+          where: { tokenHash, otpHash: null, usedAt: null, expiresAt: { gt: new Date() }, customer: { isActive: true } },
         });
         if (!token) throw new Error("RESET_TOKEN_INVALID");
         const gate = await tx.customerPasswordResetToken.updateMany({
-          where: { id: token.id, usedAt: null },
+          where: { id: token.id, otpHash: null, usedAt: null, expiresAt: { gt: new Date() } },
           data: { usedAt: new Date() },
         });
         if (gate.count !== 1) throw new Error("RESET_TOKEN_INVALID");
