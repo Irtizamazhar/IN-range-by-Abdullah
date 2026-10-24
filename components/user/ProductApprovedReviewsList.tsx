@@ -3,9 +3,9 @@ import { LoadingButton } from "@/components/ui/LoadingButton";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
 
 import Image from "next/image";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { MessageCircleMore, Star } from "lucide-react";
-import { PRODUCT_REVIEWS_UPDATED_EVENT } from "@/lib/product-reviews-events";
+import { useReviewRefresh } from "@/hooks/useReviewRefresh";
 
 export type ReviewDisplayField =
   | { productId: string }
@@ -96,39 +96,46 @@ function Card({ children }: { children: React.ReactNode }) {
 
 export function ProductApprovedReviewsList({
   postField,
+  onStats,
 }: {
   postField: ReviewDisplayField;
+  onStats?: (stats: { averageRating: number; totalCount: number }) => void;
 }) {
   const queryString = reviewsQuery(postField);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [data, setData] = useState<ReviewsPayload | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const requestVersion = useRef(0);
 
   const load = useCallback(() => {
+    const version = ++requestVersion.current;
     setLoading(true);
-    return fetch(`/api/reviews?${queryString}`)
+    return fetch(`/api/reviews?${queryString}`, { cache: "no-store" })
       .then((r) => { if (!r.ok) throw new Error("Could not load reviews. Please try again."); return r.json(); })
       .then((d) => {
+        if (version !== requestVersion.current) return;
         if (!d || typeof d !== "object") {
           setData(null);
           return;
         }
         setData(d as ReviewsPayload); setError("");
+        onStats?.({ averageRating: d.averageRating, totalCount: d.totalCount });
       })
-      .catch(() => setError("Could not load reviews. Please try again."))
-      .finally(() => setLoading(false));
-  }, [queryString]);
+      .catch(() => { if (version === requestVersion.current) setError("Could not load reviews. Please try again."); })
+      .finally(() => { if (version === requestVersion.current) setLoading(false); });
+  }, [queryString, onStats]);
 
   useEffect(() => {
+    const requests = requestVersion;
+    setData(null);
+    setError("");
+    setShowAll(false);
     load();
+    return () => { requests.current++; };
   }, [load]);
 
-  useEffect(() => {
-    const onUpdate = () => load();
-    window.addEventListener(PRODUCT_REVIEWS_UPDATED_EVENT, onUpdate);
-    return () => window.removeEventListener(PRODUCT_REVIEWS_UPDATED_EVENT, onUpdate);
-  }, [load]);
+  useReviewRefresh(load);
 
   const heading = (
     <h2 id="customer-reviews-title" className="text-[18px] font-bold text-[#172033] sm:text-[20px]">
@@ -221,9 +228,9 @@ export function ProductApprovedReviewsList({
             <MessageCircleMore className="h-7 w-7" aria-hidden />
           </span>
           <div className="min-w-0">
-            <p className="text-[15px] font-semibold text-[#172033]">No reviews yet</p>
+            <p className="text-[15px] font-semibold text-[#172033]">No approved reviews yet</p>
             <p className="mt-0.5 text-[13px] text-[#6B7280]">
-              Be the first to review this product!
+              Reviews appear here after admin approval.
             </p>
           </div>
         </div>

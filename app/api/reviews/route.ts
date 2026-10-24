@@ -9,7 +9,7 @@ import {
 } from "@/lib/review-policy";
 import {
   getApprovedReviewsForProduct,
-  getProductReviewDashboard,
+  summarizeProductReviews,
 } from "@/lib/review-stats";
 
 export const dynamic = "force-dynamic";
@@ -33,11 +33,8 @@ export async function GET(request: Request) {
       throw new ApiError(400, "productId is required.");
     }
 
-    const [reviews, stats] = await Promise.all([
-      getApprovedReviewsForProduct(productId),
-      getProductReviewDashboard(productId),
-    ]);
-    return { reviews, ...stats };
+    const reviews = await getApprovedReviewsForProduct(productId);
+    return { reviews, ...summarizeProductReviews(reviews) };
   });
 }
 

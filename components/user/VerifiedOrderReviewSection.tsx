@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
 import { PRODUCT_REVIEWS_UPDATED_EVENT } from "@/lib/product-reviews-events";
+import { useReviewRefresh } from "@/hooks/useReviewRefresh";
 
 const MAX_REVIEW_PHOTO_BYTES = 5 * 1024 * 1024;
 
@@ -26,6 +27,7 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [refreshVersion, setRefreshVersion] = useState(0);
   const [alreadyReviewed, setAlreadyReviewed] = useState(false);
   const [reviewApproved, setReviewApproved] = useState(false);
   const [eligible, setEligible] = useState<boolean | null>(null);
@@ -36,6 +38,7 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   const isCustomer = session?.user?.role === "customer";
+  useReviewRefresh(() => setRefreshVersion(value => value + 1), Boolean(orderId && isCustomer && !editing && !submitting));
 
   useEffect(() => {
     return () => {
@@ -44,6 +47,7 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
   }, [photoPreview]);
 
   useEffect(() => {
+    if (editing || submitting) return;
     if (!orderId || status !== "authenticated" || !isCustomer) {
       setAlreadyReviewed(false);
       setEligible(null);
@@ -55,7 +59,7 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
       try {
         const r = await fetch(
           `/api/reviews/check/${encodeURIComponent(orderId)}/${encodeURIComponent(productId)}`,
-          { credentials: "include" }
+          { credentials: "include", cache: "no-store" }
         );
         if (cancelled) return;
         if (r.ok) {
@@ -69,12 +73,14 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
               approved?: boolean;
             };
           };
+          if (cancelled) return;
           setAlreadyReviewed(!!d.reviewed);
+          setDone(false);
+          setReviewApproved(!!d.review?.approved);
           if (d.review) {
             setRating(d.review.rating);
             setComment(d.review.comment);
             setExistingPhotoUrl(d.review.imageUrl || null);
-            setReviewApproved(!!d.review.approved);
           }
           setEligible(d.eligible === true);
         } else {
@@ -89,7 +95,7 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
     return () => {
       cancelled = true;
     };
-  }, [orderId, productId, status, isCustomer]);
+  }, [orderId, productId, status, isCustomer, refreshVersion, editing, submitting]);
 
   if (!orderId) return null;
 
@@ -142,9 +148,9 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
     return (
       <section className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50/60 p-5 text-center shadow-sm">
         <p className="text-[16px] font-semibold text-emerald-900">
-          {reviewApproved && !done
+          {reviewApproved
             ? "Your verified review is published."
-            : "Your review has been saved and is awaiting moderation."}
+            : "Pending approval — your review is saved. It will appear in public ratings after admin approval."}
         </p>
         <LoadingButton
           type="button"
@@ -250,7 +256,8 @@ export function VerifiedOrderReviewSection({ productId }: { productId: string })
       setAlreadyReviewed(true);
       setDone(true);
       setEditing(false);
-      await router.refresh();
+      // A refresh failure must not turn a successful save into a submission error.
+      void router.refresh().catch(() => {});
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event(PRODUCT_REVIEWS_UPDATED_EVENT));
       }

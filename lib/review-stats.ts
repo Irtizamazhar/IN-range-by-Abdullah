@@ -26,7 +26,11 @@ export async function reviewStatsForProductIds(ids: string[]): Promise<Map<strin
 export function pickReviewStat(map: Map<string, ReviewStat>, id: string): ReviewStat { return map.get(id) ?? { reviewCount: 0, ratingAvg: 0 }; }
 export async function getApprovedReviewsForProduct(productId: string) { return productReviewStatsService([productId]); }
 export async function getProductReviewDashboard(productId: string) {
-  const rows = await getApprovedReviewsForProduct(productId); const totalCount = rows.length;
+  return summarizeProductReviews(await getApprovedReviewsForProduct(productId));
+}
+/** Build the list and its ratings from the same approved-review snapshot. */
+export function summarizeProductReviews(rows: Pick<ApprovedReviewRow, "rating">[]) {
+  const totalCount = rows.length;
   return { totalCount, averageRating: totalCount ? Math.round(rows.reduce((s, r) => s + r.rating, 0) / totalCount * 10) / 10 : 0,
     breakdown: [5,4,3,2,1].map(star => { const count = rows.filter(r => r.rating === star).length; return { star, count, percent: totalCount ? Math.round(count / totalCount * 100) : 0 }; }) };
 }

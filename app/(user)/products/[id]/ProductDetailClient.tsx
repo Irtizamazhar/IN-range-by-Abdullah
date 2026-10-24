@@ -321,6 +321,10 @@ export function ProductDetailClient({
   reviewsPostField?: ReviewDisplayField;
 }) {
   const [idx, setIdx] = useState(0);
+  const [liveReviewStats, setLiveReviewStats] = useState<{ productId: string; averageRating: number; totalCount: number } | null>(null);
+  const updateReviewStats = useCallback((stats: { averageRating: number; totalCount: number }) => {
+    setLiveReviewStats({ productId: product._id, ...stats });
+  }, [product._id]);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [variant, setVariant] = useState<string | undefined>(
     product.variants?.[0]
@@ -489,8 +493,9 @@ export function ProductDetailClient({
     }
   }
 
-  const reviewsCount = Number(product.reviewCount || 0);
-  const ratingAvg = Number(product.ratingAvg || 0);
+  const currentReviewStats = liveReviewStats?.productId === product._id ? liveReviewStats : null;
+  const reviewsCount = currentReviewStats?.totalCount ?? Number(product.reviewCount || 0);
+  const ratingAvg = currentReviewStats?.averageRating ?? Number(product.ratingAvg || 0);
   const detailDescription = (product.description ?? "").trim();
   const { specs: descriptionSpecs, prose: descriptionProse } = splitDescription(detailDescription);
 
@@ -1055,6 +1060,7 @@ export function ProductDetailClient({
 
           <div id="review" className="min-w-0 scroll-mt-40">
             <ProductApprovedReviewsList
+              onStats={updateReviewStats}
               postField={reviewsPostField ?? { productId: product._id }}
             />
           </div>

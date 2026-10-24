@@ -71,5 +71,5 @@ export async function GET(_request: Request, context: Ctx) {
       : null,
     reviewed: Boolean(review),
     eligible,
-  });
+  }, { headers: { "Cache-Control": "no-store" } });
 }

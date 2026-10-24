@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import {
   getApprovedReviewsForProduct,
-  getProductReviewDashboard,
+  summarizeProductReviews,
   type ApprovedReviewRow,
 } from "@/lib/review-stats";
 
@@ -17,10 +17,8 @@ export async function GET(_req: NextRequest, context: Ctx) {
   }
 
   try {
-    const [reviewsRaw, dash] = await Promise.all([
-      getApprovedReviewsForProduct(id),
-      getProductReviewDashboard(id),
-    ]);
+    const reviewsRaw = await getApprovedReviewsForProduct(id);
+    const dash = summarizeProductReviews(reviewsRaw);
     const reviews = reviewsRaw.map((r: ApprovedReviewRow) => ({
       id: String(r.id),
       name: r.name,
@@ -35,7 +33,7 @@ export async function GET(_req: NextRequest, context: Ctx) {
       averageRating: dash.averageRating,
       totalCount: dash.totalCount,
       breakdown: dash.breakdown,
-    });
+    }, { headers: { "Cache-Control": "no-store" } });
   } catch (e) {
     console.error(e);
     return NextResponse.json(

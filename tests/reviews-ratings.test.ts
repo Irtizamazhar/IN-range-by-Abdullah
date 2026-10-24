@@ -7,7 +7,9 @@ import {
   isOrderProductDeliveredForReview,
   isReviewOrderEligible,
 } from "../lib/order-review-eligibility";
-import { isPurchaseBackedReview } from "../lib/product-review-stats-service";
+import { isPurchaseBackedReview, productReviewStatsService } from "../lib/product-review-stats-service";
+import { summarizeProductReviews, getProductReviewDashboard } from "../lib/review-stats";
+import { prisma } from "../lib/prisma";
 import {
   detectReviewPhotoExtension,
   hasDangerousReviewContent,
@@ -195,4 +197,43 @@ test("review write path reuses a canonical row and public stores use verified pr
   assert.match(storeStats, /productReviewStatsService/);
   assert.doesNotMatch(storeStats, /vendorReview\.aggregate/);
   assert.match(schema, /@@unique\(\[customerId, productId\]\)/);
+});
+
+test("review list snapshot produces matching count, mean and star distribution", () => {
+  const empty = summarizeProductReviews([]);
+  assert.equal(empty.totalCount, 0);
+  assert.equal(empty.averageRating, 0);
+  assert.ok(empty.breakdown.every(row => row.count === 0 && row.percent === 0));
+  const stats = summarizeProductReviews([{ rating: 5 }, { rating: 4 }, { rating: 5 }]);
+  assert.equal(stats.totalCount, 3);
+  assert.equal(stats.averageRating, 4.7);
+  assert.deepEqual(stats.breakdown.map(row => [row.star, row.count, row.percent]), [[5, 2, 67], [4, 1, 33], [3, 0, 0], [2, 0, 0], [1, 0, 0]]);
+});
+
+test("public review service keeps pending/hidden rows private and updates the correct product after moderation", async () => {
+  const original = prisma.review.findMany;
+  const review = { id: 1, customerId: "customer-a", productId: "product-a", orderId: "order-a", approved: false, withdrawn: false, rating: 5, name: "Customer", comment: "Great product", imageUrl: null, createdAt: new Date(), updatedAt: new Date(), order: orderFixture() };
+  const other = { ...review, id: 2, productId: "product-b", approved: true, order: orderFixture({ productId: "product-b" }) };
+  const rows = [review, other];
+  // Replace only the read delegate: this regression never connects to a database.
+  prisma.review.findMany = (async (args: { where: { productId: { in: string[] }; approved: boolean; withdrawn: boolean } }) => {
+    assert.equal(args.where.approved, true);
+    assert.equal(args.where.withdrawn, false);
+    return rows.filter(row => args.where.productId.in.includes(row.productId) && row.approved && !row.withdrawn);
+  }) as unknown as typeof prisma.review.findMany;
+  try {
+    assert.deepEqual(await productReviewStatsService(["product-a"]), []);
+    review.approved = true; // Fixture-only admin approval.
+    assert.equal((await productReviewStatsService(["product-a"]))[0].id, 1);
+    assert.equal((await getProductReviewDashboard("product-a")).averageRating, 5);
+    rows.push({ ...review, id: 3, customerId: "customer-c", rating: 3, order: orderFixture({ customerId: "customer-c" }) });
+    const stats = await getProductReviewDashboard("product-a");
+    assert.equal(stats.totalCount, 2); assert.equal(stats.averageRating, 4);
+    assert.deepEqual(stats.breakdown.filter(row => row.count).map(row => [row.star, row.count, row.percent]), [[5, 1, 50], [3, 1, 50]]);
+    review.approved = false; // Edits/unapproval return content to moderation.
+    assert.equal((await getProductReviewDashboard("product-a")).averageRating, 3);
+    rows[2].withdrawn = true;
+    assert.equal((await getProductReviewDashboard("product-a")).totalCount, 0);
+    assert.equal((await getProductReviewDashboard("product-b")).totalCount, 1);
+  } finally { prisma.review.findMany = original; }
 });
