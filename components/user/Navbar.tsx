@@ -2,7 +2,8 @@
 import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import Image from "next/image";
-import { CategoryNavigation, useNavCategories } from "./CategoryNavigation";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { CategoryImage, CategoryNavigation, useNavCategories } from "./CategoryNavigation";
 import { MarketplaceNav } from "./MarketplaceNav";
 import styles from "./Navbar.module.css";
 import { PostWantButton } from "./PostWantButton";
@@ -15,6 +16,10 @@ import {
   useState,
 } from "react";
 import {
+  ChevronRight,
+  Flame,
+  ShoppingBag,
+  UsersRound,
   Heart,
   Menu,
   ShoppingCart,
@@ -58,7 +63,7 @@ export function Navbar({
   whatsappNumber: string;
 }) {
   const { data: categoryRows = [] } = useNavCategories();
-  const navCategories = categoryRows.map(category => category.name);
+  const reduceMotion = useReducedMotion();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -436,125 +441,38 @@ export function Navbar({
           MOBILE MENU
       =================================================== */}
 
+      <AnimatePresence>
       {mobileOpen ? (
-        <div className="fixed inset-0 z-[90] bg-white text-brand-dark lg:hidden">
-          {/* HEADER */}
-
-          <div className="flex items-center justify-between border-b border-black/[0.08] px-5 py-4">
-            <div className="flex items-center">
-              <LogoMark compact />
+        <motion.div initial={{ opacity: 0, x: reduceMotion ? 0 : -18 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: reduceMotion ? 0 : -18 }} transition={{ duration: reduceMotion ? 0 : 0.2 }} className={`${styles.mobileMenu} fixed inset-0 z-[90] lg:hidden`} aria-label="Mobile navigation">
+          <div className={styles.mobileHero}>
+            <div className={styles.mobileTop}>
+              <LogoMark compact className={styles.mobileLogo} />
+              <LoadingButton type="button" onClick={() => setMobileOpen(false)} className={styles.mobileClose} aria-label="Close menu"><X className="h-[18px] w-[18px]" /></LoadingButton>
             </div>
-
-            <LoadingButton
-              type="button"
-              onClick={() =>
-                setMobileOpen(false)
-              }
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-black/[0.04] text-brand-dark"
-              aria-label="Close menu"
-            >
-              <X className="h-[18px] w-[18px]" />
-            </LoadingButton>
+            <p className={styles.tagline}>Pakistan ka Apna Marketplace</p>
+            <div className={styles.welcome}><strong>Hello!</strong><p>Explore, Shop &amp; Grow with JORO</p></div>
+            <div className={styles.mobileSearch}><SearchBar /></div>
           </div>
-
-          {/* MENU BODY */}
-
-          <div className="h-[calc(100vh-78px)] overflow-y-auto p-5">
-            <p className="mb-3 text-[12px] font-black uppercase tracking-[0.15em] text-brand-link">
-              JORO Marketplace
-            </p>
-
-            <div className="space-y-2">
-              <Link
-                href="/products"
-                onNavigateComplete={() =>
-                  setMobileOpen(
-                    false
-                  )
-                }
-                className="flex items-center gap-3 rounded-xl bg-brand-background px-4 py-3.5 text-[14px] font-black"
-              >
-                <ShoppingCart className="h-4 w-4 text-brand-link" />
-
-                Shop Products
-              </Link>
-
-              <PostWantButton
-                onClick={() =>
-                  setMobileOpen(
-                    false
-                  )
-                }
-                className="flex w-full items-center justify-between rounded-xl bg-brand-primary px-4 py-3.5 text-[14px] font-black text-brand-dark"
-              >
-                <span className="flex items-center gap-3">
-                  <Heart className="h-4 w-4" />
-
-                  Request a Want
-                </span>
-              </PostWantButton>
-
-              <Link
-                href="/wants/trending"
-                onNavigateComplete={() =>
-                  setMobileOpen(
-                    false
-                  )
-                }
-                className="block rounded-xl bg-brand-soft px-4 py-3.5 text-[14px] font-black text-brand-link"
-              >
-                Trending Wants
-              </Link>
-
-              <Link
-                href="/sell"
-                onNavigateComplete={() =>
-                  setMobileOpen(
-                    false
-                  )
-                }
-                className="flex items-center gap-3 rounded-xl bg-brand-dark px-4 py-3.5 text-[14px] font-black text-white !no-underline hover:!no-underline focus-visible:!no-underline"
-              >
-                <Store className="h-4 w-4 text-brand-primary" />
-
-                Sell on JORO
-              </Link>
+          <div className={styles.mobileBody}>
+            <div className={styles.primaryGrid}>
+              <Link href="/products" onNavigateComplete={() => setMobileOpen(false)} className={`${styles.actionCard} ${styles.shopCard}`}><ShoppingCart aria-hidden="true" /><span>Shop<br />Products</span></Link>
+              <PostWantButton onClick={() => setMobileOpen(false)} className={`${styles.actionCard} ${styles.wantCard}`}><Heart aria-hidden="true" /><span>Request<br />a Want</span></PostWantButton>
+              <Link href="/wants/trending" onNavigateComplete={() => setMobileOpen(false)} className={`${styles.actionCard} ${styles.trendingCard}`}><Flame aria-hidden="true" /><span>Trending<br />Wants</span></Link>
             </div>
-
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              <Link href="/together" onNavigateComplete={() => setMobileOpen(false)} className="rounded-xl bg-brand-soft px-4 py-3 text-sm font-bold text-brand-link">Together</Link>
-              <Link href="/stores" onNavigateComplete={() => setMobileOpen(false)} className="rounded-xl bg-brand-soft px-4 py-3 text-sm font-bold text-brand-link">Stores</Link>
+            <div className={styles.secondaryGrid}>
+              <Link href="/sell" onNavigateComplete={() => setMobileOpen(false)} className={`${styles.rowCard} ${styles.sellCard}`}><Store aria-hidden="true" /><span>Sell on JORO</span><ChevronRight aria-hidden="true" /></Link>
+              <Link href="/together" onNavigateComplete={() => setMobileOpen(false)} className={`${styles.rowCard} ${styles.togetherCard}`}><UsersRound aria-hidden="true" /><span>Together</span><ChevronRight aria-hidden="true" /></Link>
             </div>
-            {/* CATEGORIES */}
-
-            <div className="my-5 h-px bg-black/[0.07]" />
-
-            <p className="mb-3 text-[12px] font-black uppercase tracking-[0.15em] text-black/35">
-              Categories
-            </p>
-
-            <div className="grid grid-cols-2 gap-2">
-              {navCategories.map(
-                (category) => (
-                  <Link
-                    key={
-                      category
-                    }
-                    href={`/products?category=${encodeURIComponent(
-                      category
-                    )}`}
-                    onNavigateComplete={() =>
-                      setMobileOpen(
-                        false
-                      )
-                    }
-                    className="rounded-xl border border-black/[0.06] bg-white px-3 py-3 text-[12px] font-bold shadow-sm transition hover:bg-brand-soft"
-                  >
-                    {category}
-                  </Link>
-                )
-              )}
-            </div>
+            <Link href="/stores" onNavigateComplete={() => setMobileOpen(false)} className={`${styles.rowCard} ${styles.storesCard}`}><Store aria-hidden="true" /><span>Stores</span><ChevronRight aria-hidden="true" /></Link>
+            <div className={styles.categoryHeading}><h2>Categories</h2><Link href="/products" onNavigateComplete={() => setMobileOpen(false)} className={styles.viewAll}>View All <ChevronRight aria-hidden="true" className="h-3 w-3" /></Link></div>
+            <nav aria-label="Product categories" className={styles.categoryGrid}>
+              {categoryRows.map(category => (
+                <Link key={category.id} href={`/products?category=${encodeURIComponent(category.name)}`} onNavigateComplete={() => setMobileOpen(false)} className={styles.categoryCard}>
+                  <CategoryImage category={category} /><span>{category.name}</span>
+                </Link>
+              ))}
+            </nav>
+            <Link href="/products" onNavigateComplete={() => setMobileOpen(false)} className={styles.discoveryCard}><ShoppingBag aria-hidden="true" /><span><strong>Discover more categories</strong><small>Everything you need in one place</small></span><ChevronRight aria-hidden="true" /></Link>
 
             {/* HELP */}
 
@@ -663,8 +581,9 @@ export function Navbar({
               </div>
             )}
           </div>
-        </div>
+        </motion.div>
       ) : null}
+      </AnimatePresence>
 
       {/* ===================================================
           CART SIDEBAR

@@ -18,3 +18,60 @@
   .actions > :global(button),
   .actions > :global(div > button) { width: 33px; padding-inline: 6px; }
 }
+
+/* The full-screen hamburger menu owns its scroll area and visual treatment. */
+.mobileMenu { height: 100vh; height: 100dvh; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; background: #fff; color: #162b24; }
+.mobileHero { position: relative; isolation: isolate; padding: calc(22px + env(safe-area-inset-top)) 20px 12px; border-radius: 0 0 26px 26px; background: radial-gradient(ellipse at 85% 0%, #087249 0%, transparent 60%), linear-gradient(125deg,#003a2a,#005538 65%,#003c2b); color: white; }
+.mobileHero::before, .mobileHero::after { content: ''; position: absolute; z-index: -1; pointer-events: none; border-radius: 55% 45% 0 65%; background: linear-gradient(140deg, #8acb6430, #39a56c08); transform: rotate(-30deg); }
+.mobileHero::before { width: 120px; height: 150px; right: -15px; top: 42px; }
+.mobileHero::after { width: 90px; height: 130px; right: 0; bottom: 0; transform: rotate(42deg); }
+.mobileTop { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.mobileLogo > span { width: 106px; height: 49px; margin: 0; }
+.mobileClose { display: flex; flex: none; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: #fff; color: #06452e; }
+.tagline { font-size: 11px; margin-top: -2px; }
+.welcome { margin: 14px 0 17px; font-size: 12px; line-height: 1.45; }
+.welcome strong { font-size: 15px; font-weight: 650; }
+.mobileSearch { position: relative; z-index: 2; color: #162b24; }
+.mobileSearch :global(form) { height: 42px; border-radius: 15px; }
+.mobileSearch :global(input) { padding-inline: 10px 2px; font-size: 11px; }
+.mobileSearch :global(button[type='submit']) { order: -1; width: 30px; margin-right: 0; background: transparent; }
+.mobileSearch :global(button[type='submit'] svg) { display: block; width: 18px; }
+.mobileSearch :global(button[type='submit'] span) { display: none; }
+.mobileBody { max-width: 520px; margin-inline: auto; padding: 13px 16px calc(22px + env(safe-area-inset-bottom)); }
+.primaryGrid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 9px; }
+.actionCard { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; min-width: 0; min-height: 84px; padding: 10px 4px; border-radius: 13px; font-size: 12px; font-weight: 550; line-height: 1.2; text-align: center; }
+.actionCard > svg { width: 24px; height: 24px; }
+.shopCard { background: linear-gradient(125deg,#dff4e9,#d6f0e5); color: #07543a; }
+.wantCard { background: linear-gradient(125deg,#eaf8d8,#e4f6cc); color: #21552b; }
+.wantCard > svg { fill: #b8e971; }
+.trendingCard { background: linear-gradient(125deg,#fff0df,#fff2e5); color: #253a2d; }
+.trendingCard > svg { color: #e96322; fill: #e96322; }
+.secondaryGrid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px; margin-block: 10px; }
+.rowCard { display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 47px; padding: 10px 14px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+.rowCard > svg { width: 21px; height: 21px; flex: none; }
+.rowCard > span { flex: 1; min-width: 0; }
+.rowCard > svg:last-child { width: 14px; height: 14px; }
+.sellCard { background: #eeebff; color: #262335; }
+.sellCard > svg { color: #6750dd; }
+.togetherCard { background: #e1f3ff; }
+.togetherCard > svg { color: #0785ca; }
+.storesCard { background: linear-gradient(110deg,#e9f7dc,#effbe5); color: #22592c; }
+.categoryHeading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 17px 0 11px; }
+.categoryHeading h2 { font-size: 15px; font-weight: 700; }
+.viewAll { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 650; color: #19653c; }
+.categoryGrid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; }
+.categoryCard { display: flex; align-items: center; gap: 8px; min-width: 0; min-height: 43px; padding: 4px 8px; border: 1px solid #e9edeb; border-radius: 10px; background: linear-gradient(#fff,#fdfefd); font-size: 10px; font-weight: 500; line-height: 1.35; }
+.categoryCard > :global([data-category-image]) { position: relative; flex: 0 0 31px; width: 31px; height: 31px; min-width: 0; border-radius: 5px; background: transparent; }
+.categoryCard > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.discoveryCard { display: flex; align-items: center; gap: 14px; margin-top: 11px; padding: 12px 14px; min-height: 65px; border-radius: 17px; background: linear-gradient(110deg,#e0f3de,#eff8ed); }
+.discoveryCard > svg:first-child { width: 43px; height: 43px; flex: none; color: #227953; fill: #b8dc9d; transform: rotate(-10deg); }
+.discoveryCard > span { flex: 1; min-width: 0; }
+.discoveryCard strong { display: block; font-size: 12px; font-weight: 650; }
+.discoveryCard small { display: block; margin-top: 3px; font-size: 10px; color: #456052; }
+.discoveryCard > svg:last-child { width: 16px; flex: none; color: #387553; }
+.actionCard, .rowCard, .categoryCard, .discoveryCard { text-decoration: none !important; transition: filter 150ms, transform 150ms; }
+.actionCard:hover, .rowCard:hover, .categoryCard:hover, .discoveryCard:hover { filter: brightness(.97); }
+.actionCard:active, .rowCard:active, .categoryCard:active, .discoveryCard:active { transform: scale(.98); }
+.mobileMenu :is(a,button):focus-visible { outline: 2px solid #6cae38; outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .mobileMenu { animation: none; } .mobileMenu :is(a,button) { transition: none; } }
+@media (max-width: 359px) { .mobileBody { padding-inline: 12px; } .mobileHero { padding-inline: 16px; } .rowCard { gap: 6px; padding-inline: 10px; font-size: 11px; } .categoryCard { gap: 5px; padding-inline: 5px; } .discoveryCard { gap: 9px; } }

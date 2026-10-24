@@ -50,7 +50,7 @@ export function useNavCategories() {
   });
 }
 
-function CategoryImage({ category }: { category: NavCategory }) {
+export function CategoryImage({ category }: { category: NavCategory }) {
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const src = category.image?.trim();
 
