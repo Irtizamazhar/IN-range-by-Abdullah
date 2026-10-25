@@ -17,8 +17,8 @@ import { useCustomerAuth } from "@/context/CustomerAuthContext";
 import { formatPKR } from "@/lib/format";
 import type { TrackingEvent, TrackingStatus } from "@/lib/order-tracking-timeline";
 import {
-  ArrowLeft, Ban, Bike, Box, Check, CircleAlert, ClipboardList, CreditCard, Headset, House, LogIn,
-  MapPin, MessageCircle, Package, PackageCheck, Phone, Search, Tag, Truck, User, type LucideIcon,
+  ArrowLeft, ArrowRight, Ban, Bike, Box, Check, CircleAlert, ClipboardList, CreditCard, FileText, Headset, House, LogIn,
+  MapPin, MessageCircle, Package, PackageCheck, Phone, Search, ShieldCheck, Tag, Truck, User, Zap, type LucideIcon,
 } from "lucide-react";
 
 type Icon = LucideIcon;
@@ -109,58 +109,15 @@ function paymentLabel(method: string) {
   return method.replaceAll("_", " ");
 }
 
-function HeroBoxes() {
-  return (
-    <svg viewBox="0 0 260 190" aria-hidden="true" className="h-full w-full">
-      <path d="M150 28c40 0 70 22 92 60" fill="none" stroke="#7CC243" strokeWidth="2.5" strokeDasharray="6 7" strokeLinecap="round" />
-      <ellipse cx="120" cy="178" rx="118" ry="10" fill="#CFE8BC" opacity=".6" />
-      <path d="M20 120l56-14 50 14v52l-50 12-56-12z" fill="#D9A866" />
-      <path d="M20 120l56 12v52l-56-12z" fill="#C48E4C" />
-      <path d="M76 132l50-12v52l-50 12z" fill="#E3B677" />
-      <path d="M20 120l56-14 50 14-50 12z" fill="#EBC58D" />
-      <path d="M86 70l52-12 46 12v58l-46 12-52-12z" fill="#D9A866" />
-      <path d="M86 70l52 12v58l-52-12z" fill="#C48E4C" />
-      <path d="M138 82l46-12v58l-46 12z" fill="#E3B677" />
-      <path d="M86 70l52-12 46 12-46 12z" fill="#EBC58D" />
-      <text x="96" y="110" fill="#00543D" fontSize="15" fontWeight="800" fontFamily="system-ui, sans-serif" transform="rotate(12 96 110)">JORO</text>
-      <path d="M38 160c-10-18-2-34 10-40 4 14 2 28-10 40zM180 170c4-20 18-30 32-30-4 14-14 26-32 30zM10 172c2-14 10-22 22-24-2 12-10 20-22 24z" fill="#5FAE3A" />
-      <path d="M150 6c-11 0-20 9-20 20 0 15 20 34 20 34s20-19 20-34c0-11-9-20-20-20z" fill="#2E9E4A" />
-      <circle cx="150" cy="26" r="7" fill="#fff" />
-    </svg>
-  );
-}
+const BENEFITS: { icon: Icon; label: string }[] = [
+  { icon: Zap, label: "Real-time Tracking" },
+  { icon: ShieldCheck, label: "Safe & Secure Delivery" },
+  { icon: MapPin, label: "From Our Store to Your Door" },
+];
 
-function HeroTruck() {
-  return (
-    <svg viewBox="0 0 280 190" aria-hidden="true" className="h-full w-full">
-      <path d="M0 176c70-24 170-30 280-22v36H0z" fill="#9AA5A0" opacity=".35" />
-      <path d="M10 180c80-18 170-22 260-16" stroke="#fff" strokeWidth="3" strokeDasharray="14 12" fill="none" />
-      <rect x="70" y="78" width="120" height="70" rx="6" fill="#1F8A3B" />
-      <rect x="70" y="78" width="120" height="12" rx="4" fill="#26A047" />
-      <text x="96" y="122" fill="#fff" fontSize="20" fontWeight="800" fontFamily="system-ui, sans-serif">JORO</text>
-      <path d="M190 96h34l22 28v24h-56z" fill="#26A047" />
-      <path d="M198 102h22l15 20h-37z" fill="#DFF3F9" />
-      <rect x="62" y="146" width="186" height="8" rx="3" fill="#145F2A" />
-      <circle cx="100" cy="156" r="13" fill="#263238" /><circle cx="100" cy="156" r="5" fill="#B0BEC5" />
-      <circle cx="218" cy="156" r="13" fill="#263238" /><circle cx="218" cy="156" r="5" fill="#B0BEC5" />
-      <path d="M232 20c-11 0-20 9-20 20 0 15 20 34 20 34s20-19 20-34c0-11-9-20-20-20z" fill="#2E9E4A" />
-      <circle cx="232" cy="40" r="7" fill="#fff" />
-      <path d="M40 92c-8 0-14 6-14 14 0 10 14 24 14 24s14-14 14-24c0-8-6-14-14-14z" fill="#E5484D" />
-      <circle cx="40" cy="106" r="5" fill="#fff" />
-    </svg>
-  );
-}
-
-function Skyline() {
-  return (
-    <svg viewBox="0 0 1200 120" preserveAspectRatio="none" aria-hidden="true" className="h-full w-full">
-      <path
-        fill="#CFE8BC"
-        d="M0 120V78h40V52h28v26h22V40h34v38h26V60h30v18h40V30h24v48h30V56h36v22h26V46h28v32h44V64h26v14h36V36h30v42h24V58h34v20h40V44h22v34h30V62h28v16h44V28h26v50h34V54h32v24h28V48h36v30h40V66h30v12h34V40h28v38h36V58h30v20h24V36h32v42h40V60h34v18h30V46h28v32h40v42z"
-      />
-    </svg>
-  );
-}
+// Illustrations are small WebP files served as-is (the production image optimizer cannot read new public files).
+const PARCEL = { src: "/images/order-tracking/tracking-parcel-map.webp", width: 720, height: 635 };
+const VAN = { src: "/images/order-tracking/tracking-delivery-van.webp", width: 900, height: 551 };
 
 function DetailRow({ icon: IconCmp, label, children }: { icon: Icon; label: string; children: React.ReactNode }) {
   return (
@@ -293,57 +250,82 @@ export default function TrackOrderPage() {
   if (order?.fulfillmentType === "SERVICE") return <main className="mx-auto max-w-3xl space-y-4 px-4 py-10"><h1 className="text-2xl font-bold">Service order {order.orderNumber}</h1><p>Service: {order.serviceStatus || order.orderStatus}</p><p>Payment: {order.paymentStatus || "pending"}</p><p>{order.customerAddress}, {order.city}</p><p className="font-bold">Total: {formatPKR(order.totalAmount)}</p><Link href="/account/services" className="inline-block rounded-xl bg-brand-primary px-5 py-3 font-bold">Scheduling &amp; service history</Link><Link href={`/account/orders/${order.id}`} className="block font-bold text-brand-link underline">Order details and support</Link></main>;
 
   return (
-    <div className="min-h-screen bg-[#F7F8F2] text-[#172033]">
-      <section className="relative overflow-hidden bg-gradient-to-b from-[#E6F4DC] via-[#F1F8EA] to-[#F7F8F2]">
-        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 hidden h-32 opacity-70 sm:block">
-          <Skyline />
-        </div>
-        <div aria-hidden="true" className="pointer-events-none absolute left-4 bottom-6 hidden h-[220px] w-[300px] min-[1360px]:block">
-          <HeroBoxes />
-        </div>
-        <div aria-hidden="true" className="pointer-events-none absolute right-4 bottom-4 hidden h-[220px] w-[320px] min-[1360px]:block">
-          <HeroTruck />
+    <div className="min-h-screen bg-[#F5F9EF] text-[#102D25]">
+      <section className="relative overflow-hidden">
+        {/* The hero background stops part-way down the tracking card, so the card overlaps it. */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 bottom-24 overflow-hidden rounded-b-[32px] bg-gradient-to-b from-[#FBFDF6] via-[#F1F8E7] to-[#E4F1D5] sm:bottom-28 sm:rounded-b-[48px]">
+          <div className="absolute -left-24 top-28 h-72 w-72 rounded-full bg-[#D8EEC0]/60 blur-3xl" />
+          <div className="absolute -right-24 top-6 h-80 w-80 rounded-full bg-[#E2F3CC]/80 blur-3xl" />
+          <div className="absolute left-1/2 top-40 h-64 w-[38rem] -translate-x-1/2 rounded-full bg-white/70 blur-3xl" />
+          <div className="absolute inset-x-0 bottom-0 mx-auto hidden h-full max-w-[1440px] xl:block">
+            <Image src={PARCEL.src} alt="" width={PARCEL.width} height={PARCEL.height} unoptimized priority className="absolute bottom-2 left-0 h-auto w-[290px] drop-shadow-[0_18px_24px_rgba(0,75,59,0.16)] 2xl:left-2 2xl:w-[320px]" />
+            <Image src={VAN.src} alt="" width={VAN.width} height={VAN.height} unoptimized priority className="absolute bottom-0 right-0 h-auto w-[380px] drop-shadow-[0_18px_24px_rgba(0,75,59,0.14)] 2xl:w-[420px]" />
+          </div>
         </div>
 
-        <div className="relative mx-auto max-w-[1200px] px-4 pb-10 pt-4 sm:px-6 sm:pb-12 sm:pt-5 lg:px-8">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-semibold text-[#00543D] hover:bg-white/60">
+        <div className="relative mx-auto max-w-[1200px] px-4 pb-2 pt-4 sm:px-6 sm:pt-6 lg:px-8">
+          <nav aria-label="Order tracking" className="grid grid-cols-[1fr_auto] items-center gap-y-3 sm:grid-cols-[1fr_auto_1fr]">
+            <Link href="/" className="inline-flex items-center gap-1.5 justify-self-start rounded-lg px-2 py-1.5 text-sm font-semibold text-[#005B46] transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#76C900]">
               <ArrowLeft aria-hidden="true" className="h-4 w-4" />
               <span>Back to shop</span>
             </Link>
-            {isCustomer ? (
-              <Link href="/account?tab=orders" className="rounded-lg px-2 py-1.5 text-sm font-semibold text-[#00543D] hover:bg-white/60">My orders</Link>
-            ) : !authLoading ? (
-              <button type="button" onClick={() => void openAuthModal("login")} className="rounded-lg px-2 py-1.5 text-sm font-semibold text-[#00543D] hover:bg-white/60">Sign in</button>
-            ) : null}
-          </div>
-
-          <header className="mt-3 flex flex-col items-center text-center">
-            <div className="flex items-center gap-3 sm:gap-4">
+            <div className="col-span-2 row-start-2 flex items-center justify-center gap-3 sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:gap-4">
               <LogoMark />
-              <span aria-hidden="true" className="h-9 w-px bg-[#00543D]/20" />
-              <span className="flex items-center gap-1.5 text-[11px] font-bold tracking-[0.18em] text-[#00543D] sm:text-xs">
+              <span aria-hidden="true" className="h-9 w-px bg-[#005B46]/20" />
+              <span className="flex items-center gap-1.5 whitespace-nowrap text-[11px] font-bold tracking-[0.2em] text-[#005B46] sm:text-xs">
                 <Truck aria-hidden="true" className="h-4 w-4 sm:h-5 sm:w-5" />
                 ORDER TRACKING
               </span>
             </div>
-            <h1 className="mt-4 text-[32px] font-extrabold leading-tight tracking-tight text-[#0F2A1F] sm:text-5xl lg:text-[56px]">
-              Track Your <span className="text-[#6DBE1F]">Order</span>
+            <div className="col-start-2 row-start-1 justify-self-end sm:col-start-3">
+              {isCustomer ? (
+                <Link href="/account?tab=orders" className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-semibold text-[#005B46] transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#76C900]">
+                  <FileText aria-hidden="true" className="h-4 w-4" />
+                  My orders
+                </Link>
+              ) : !authLoading ? (
+                <button type="button" onClick={() => void openAuthModal("login")} className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-semibold text-[#005B46] transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#76C900]">
+                  <LogIn aria-hidden="true" className="h-4 w-4" />
+                  Sign in
+                </button>
+              ) : null}
+            </div>
+          </nav>
+
+          <header className="mx-auto mt-6 flex max-w-[640px] flex-col items-center text-center sm:mt-8">
+            <h1 className="text-[34px] font-extrabold leading-[1.08] tracking-tight text-[#102D25] min-[380px]:text-[38px] sm:text-[52px] lg:text-[60px]">
+              Track Your <span className="text-[#6CBF00]">Order</span>
             </h1>
-            <p className="mt-2 text-sm text-[#4B5563] sm:text-lg">Get real-time updates on your delivery journey.</p>
+            <p className="mt-2.5 text-[15px] text-[#4E5D57] sm:mt-3 sm:text-lg">Get real-time updates on your delivery journey.</p>
+            <ul className="mt-5 grid w-full grid-cols-3 gap-2 sm:mt-7 sm:flex sm:justify-center sm:gap-0 sm:divide-x sm:divide-[#D6E5CB]">
+              {BENEFITS.map(({ icon: BenefitIcon, label }) => (
+                <li key={label} className="flex flex-col items-center gap-1.5 text-center sm:flex-row sm:gap-3 sm:px-5 sm:text-left">
+                  <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#4FAE0E] shadow-[0_4px_12px_-4px_rgba(0,75,59,0.18)] ring-1 ring-[#E4EDE1] sm:h-11 sm:w-11">
+                    <BenefitIcon className="h-5 w-5" strokeWidth={2} />
+                  </span>
+                  <span className="max-w-[112px] text-[12px] font-medium leading-snug text-[#102D25] sm:text-sm">{label}</span>
+                </li>
+              ))}
+            </ul>
           </header>
+
+          {/* Below 1280px the illustrations sit side by side above the form instead of beside the heading. */}
+          <div aria-hidden="true" className="mx-auto mt-4 flex max-w-[560px] items-end justify-center gap-1 sm:mt-6 xl:hidden">
+            <Image src={PARCEL.src} alt="" width={PARCEL.width} height={PARCEL.height} unoptimized className="h-auto w-[40%] drop-shadow-[0_12px_16px_rgba(0,75,59,0.14)]" />
+            <Image src={VAN.src} alt="" width={VAN.width} height={VAN.height} unoptimized className="h-auto w-[58%] drop-shadow-[0_12px_16px_rgba(0,75,59,0.12)]" />
+          </div>
 
           <LoadingForm
             noValidate
             onSubmit={lookup}
-            className="relative mx-auto mt-6 max-w-[820px] rounded-2xl border border-white bg-white p-4 shadow-[0_10px_30px_-12px_rgba(0,84,61,0.25)] sm:mt-8 sm:p-5"
+            className="relative mx-auto mt-3 max-w-[880px] rounded-[24px] border border-[#EEF3EA] bg-white p-4 shadow-[0_24px_60px_-28px_rgba(0,75,59,0.38)] sm:mt-4 sm:p-7 xl:mt-12"
           >
-            <div className="flex items-start gap-4">
-              <span aria-hidden="true" className="mt-6 hidden h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#F3F6F3] text-[#172033] sm:flex">
-                <Box className="h-7 w-7" strokeWidth={1.5} />
+            <div className="flex items-start gap-5">
+              <span aria-hidden="true" className="mt-7 hidden h-16 w-16 shrink-0 items-center justify-center rounded-full bg-[#EAF5DF] text-[#005B46] sm:flex">
+                <Box className="h-7 w-7" strokeWidth={1.6} />
               </span>
               <div className="min-w-0 flex-1">
-                <label htmlFor="track-order-number" className="mb-1.5 block text-sm font-medium text-[#374151]">Enter Order Number</label>
+                <label htmlFor="track-order-number" className="mb-2 block text-sm font-semibold text-[#102D25] sm:text-[15px]">Enter Order Number</label>
                 <div className="flex flex-col gap-3 sm:flex-row">
                   <input
                     id="track-order-number"
@@ -356,35 +338,37 @@ export default function TrackOrderPage() {
                     maxLength={48}
                     aria-invalid={error?.kind === "invalid" || undefined}
                     aria-describedby="track-order-help"
-                    className={`h-12 w-full min-w-0 rounded-xl border bg-white px-4 sm:flex-1 text-base text-[#172033] placeholder:text-[#9CA3AF] focus:outline-none focus:ring-2 ${
-                      error?.kind === "invalid" ? "border-red-500 focus:ring-red-100" : "border-[#E5E9E5] focus:border-[#00543D] focus:ring-[#A8E52E]/40"
+                    className={`h-12 w-full min-w-0 rounded-xl border bg-white px-4 text-base text-[#102D25] transition placeholder:text-[#94A3B8] focus:outline-none focus:ring-4 sm:h-14 sm:flex-1 ${
+                      error?.kind === "invalid" ? "border-red-500 focus:ring-red-100" : "border-[#DCE6D8] hover:border-[#C3D8B8] focus:border-[#005B46] focus:ring-[#76C900]/20"
                     }`}
                   />
                   <LoadingButton
                     type="submit"
                     loading={loading}
                     loadingLabel="Tracking…"
-                    className="h-12 shrink-0 rounded-xl bg-[#00543D] px-7 text-base font-semibold text-white transition hover:bg-[#003F2E] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#A8E52E]/50 disabled:opacity-60 sm:min-w-[190px]"
+                    className="group h-12 shrink-0 rounded-xl bg-[#005B46] px-6 text-base font-semibold text-white shadow-[0_10px_20px_-10px_rgba(0,91,70,0.7)] transition hover:bg-[#004B3B] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#76C900]/50 disabled:opacity-60 sm:h-14 sm:min-w-[220px]"
                   >
                     <span className="inline-flex items-center justify-center gap-2.5">
                       <Search aria-hidden="true" className="h-5 w-5" />
                       Track Order
+                      <ArrowRight aria-hidden="true" className="h-5 w-5 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none" />
                     </span>
                   </LoadingButton>
                 </div>
-                <p id="track-order-help" aria-live="polite" className={`mt-2 text-[13px] ${error?.kind === "invalid" ? "text-red-600" : "text-[#6B7280]"}`}>
+                <p id="track-order-help" aria-live="polite" className={`mt-2 text-[13px] ${error?.kind === "invalid" ? "text-red-600" : "text-[#64748B]"}`}>
                   {error?.kind === "invalid" ? error.message : "Enter your order number (e.g. IRB-045) to view live tracking details."}
                 </p>
                 {myOrders.length > 0 && (
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-medium text-[#6B7280]">Your recent orders:</span>
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    <span className="mr-1 text-[13px] text-[#64748B]">Your recent orders:</span>
                     {myOrders.slice(0, 5).map((o) => (
                       <button
                         key={o.orderNumber}
                         type="button"
                         onClick={() => { setNum(o.orderNumber); void lookupByNumber(o.orderNumber); }}
-                        className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
-                          order?.orderNumber === o.orderNumber ? "border-[#00543D] bg-[#00543D] text-white" : "border-[#D9EFB5] bg-[#F3FAE6] text-[#00543D] hover:border-[#7CC243]"
+                        aria-pressed={order?.orderNumber === o.orderNumber}
+                        className={`min-h-8 rounded-full border px-3.5 text-[13px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#76C900] focus-visible:ring-offset-1 ${
+                          order?.orderNumber === o.orderNumber ? "border-[#005B46] bg-[#005B46] text-white" : "border-[#D3EBB8] bg-[#EAF5DF] text-[#005B46] hover:border-[#76C900] hover:bg-[#E1F1D0]"
                         }`}
                       >
                         {o.orderNumber}
@@ -400,7 +384,7 @@ export default function TrackOrderPage() {
 
       <div ref={resultRef} className="mx-auto max-w-[1200px] scroll-mt-4 px-4 pb-14 pt-6 sm:px-6 lg:px-8">
         {error && error.kind !== "invalid" && (
-          <div role="alert" className={`mx-auto mb-6 flex max-w-[820px] flex-col gap-4 rounded-2xl border bg-white p-5 shadow-sm sm:flex-row sm:items-center ${error.kind === "signin" ? "border-[#D9EFB5]" : "border-[#F3D9D9]"}`}>
+          <div role="alert" className={`mx-auto mb-6 flex max-w-[880px] flex-col gap-4 rounded-2xl border bg-white p-5 shadow-sm sm:flex-row sm:items-center ${error.kind === "signin" ? "border-[#D9EFB5]" : "border-[#F3D9D9]"}`}>
             <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${error.kind === "signin" ? "bg-[#F3FAE6] text-[#00543D]" : "bg-red-50 text-red-600"}`}>
               {error.kind === "signin" ? <LogIn aria-hidden="true" className="h-5 w-5" /> : <CircleAlert aria-hidden="true" className="h-5 w-5" />}
             </span>
@@ -424,12 +408,12 @@ export default function TrackOrderPage() {
         )}
 
         {!order && !loading && !error && (
-          <div className="mx-auto flex max-w-[820px] flex-col items-center gap-2 rounded-2xl border border-dashed border-[#D9E5D9] bg-white/70 px-5 py-8 text-center">
-            <Truck aria-hidden="true" className="h-8 w-8 text-[#7CC243]" strokeWidth={1.5} />
-            <p className="font-semibold">Your tracking details will appear here</p>
-            <p className="max-w-md text-sm text-[#6B7280]">
+          <div className="mx-auto flex max-w-[880px] flex-col items-center rounded-[24px] border-2 border-dashed border-[#D7EAC6] bg-white/85 px-5 pb-8 pt-6 text-center sm:px-10 sm:pb-10 sm:pt-8">
+            <Image src="/images/order-tracking/tracking-empty-state.webp" alt="" width={1000} height={309} unoptimized className="h-auto w-full max-w-[460px]" />
+            <h2 className="mt-4 text-lg font-bold text-[#102D25] sm:mt-5 sm:text-[22px]">Your tracking details will appear here</h2>
+            <p className="mt-1.5 max-w-md text-sm leading-relaxed text-[#64748B] sm:text-[15px]">
               You&apos;ll find your order number in your confirmation email or under{" "}
-              <Link href="/account?tab=orders" className="font-semibold text-[#00543D] underline underline-offset-2">My orders</Link>.
+              <Link href="/account?tab=orders" className="rounded font-semibold text-[#005B46] underline underline-offset-2 hover:text-[#004B3B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#76C900]">My orders</Link>.
             </p>
           </div>
         )}
