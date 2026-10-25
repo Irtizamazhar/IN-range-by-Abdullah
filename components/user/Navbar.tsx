@@ -69,6 +69,7 @@ export function Navbar({
 
   const profileRef =
     useRef<HTMLDivElement | null>(null);
+  const mobileMenuRef = useRef<HTMLDivElement | null>(null);
 
   /* =======================================================
      STATE
@@ -165,6 +166,39 @@ export function Navbar({
     };
   }, []);
 
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    mobileMenuRef.current?.querySelector<HTMLButtonElement>('button[aria-label="Close menu"]')?.focus();
+
+    function trapFocus(event: KeyboardEvent) {
+      if (event.key !== "Tab") return;
+      const items = mobileMenuRef.current?.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [tabindex="0"]');
+      if (!items?.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && (document.activeElement === first || !mobileMenuRef.current?.contains(document.activeElement))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (document.activeElement === last || !mobileMenuRef.current?.contains(document.activeElement))) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    const closeOnDesktop = () => { if (desktop.matches) setMobileOpen(false); };
+    desktop.addEventListener("change", closeOnDesktop);
+    document.addEventListener("keydown", trapFocus);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", trapFocus);
+      desktop.removeEventListener("change", closeOnDesktop);
+      previousFocus?.focus({ preventScroll: true });
+    };
+  }, [mobileOpen]);
+
   /* =======================================================
      CHECKOUT NAV
   ======================================================= */
@@ -232,6 +266,8 @@ export function Navbar({
                 }
                 className={`${styles.menuButton} order-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-black/[0.08] bg-white text-brand-link transition hover:bg-brand-soft focus-visible:bg-brand-soft focus-visible:outline-brand-link lg:hidden`}
                 aria-label="Open menu"
+                aria-expanded={mobileOpen}
+                aria-controls="mobile-navigation"
               >
                 <Menu className="h-[18px] w-[18px]" />
               </LoadingButton>
@@ -443,7 +479,10 @@ export function Navbar({
 
       <AnimatePresence>
       {mobileOpen ? (
-        <motion.div initial={{ opacity: 0, x: reduceMotion ? 0 : -18 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: reduceMotion ? 0 : -18 }} transition={{ duration: reduceMotion ? 0 : 0.2 }} className={`${styles.mobileMenu} fixed inset-0 z-[90] lg:hidden`} aria-label="Mobile navigation">
+        <motion.div key="mobile-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: reduceMotion ? 0 : 0.2 }} className={`${styles.mobileBackdrop} lg:hidden`} onClick={() => setMobileOpen(false)} aria-hidden="true" />
+      ) : null}
+      {mobileOpen ? (
+        <motion.div key="mobile-drawer" ref={mobileMenuRef} id="mobile-navigation" role="dialog" aria-modal="true" initial={{ x: reduceMotion ? 0 : "-100%" }} animate={{ x: 0 }} exit={{ x: reduceMotion ? 0 : "-100%" }} transition={{ duration: reduceMotion ? 0 : 0.24, ease: "easeOut" }} className={`${styles.mobileMenu} lg:hidden`} aria-label="Mobile navigation">
           <div className={styles.mobileHero}>
             <div className={styles.mobileTop}>
               <LogoMark compact className={styles.mobileLogo} />
@@ -451,7 +490,6 @@ export function Navbar({
             </div>
             <p className={styles.tagline}>Pakistan ka Apna Marketplace</p>
             <div className={styles.welcome}><strong>Hello!</strong><p>Explore, Shop &amp; Grow with JORO</p></div>
-            <div className={styles.mobileSearch}><SearchBar /></div>
           </div>
           <div className={styles.mobileBody}>
             <div className={styles.primaryGrid}>

@@ -22,27 +22,22 @@
   .actions > :global(div > button) { width: 33px; padding-inline: 6px; }
 }
 
-/* The full-screen hamburger menu owns its scroll area and visual treatment. */
-.mobileMenu { height: 100vh; height: 100dvh; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; background: #fff; color: #162b24; }
-.mobileHero { position: relative; isolation: isolate; padding: calc(22px + env(safe-area-inset-top)) 20px 12px; border-radius: 0 0 26px 26px; background: radial-gradient(ellipse at 85% 0%, #087249 0%, transparent 60%), linear-gradient(125deg,#003a2a,#005538 65%,#003c2b); color: white; }
+/* Only the hamburger drawer owns these dimensions and scroll area. */
+.mobileBackdrop { position: fixed; inset: 0; z-index: 90; background: rgb(5 15 20 / 62%); backdrop-filter: blur(3px); }
+.mobileMenu { position: fixed; top: 0; left: 0; z-index: 91; width: 84vw; max-width: 420px; height: 100vh; height: 100dvh; box-sizing: border-box; border-radius: 0 20px 20px 0; box-shadow: 12px 0 40px rgb(0 0 0 / 18%); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; background: #fff; color: #162b24; }
+.mobileHero { position: relative; isolation: isolate; overflow: hidden; padding: calc(22px + env(safe-area-inset-top)) 20px 12px; border-radius: 0 0 26px 26px; background: radial-gradient(ellipse at 85% 0%, #087249 0%, transparent 60%), linear-gradient(125deg,#003a2a,#005538 65%,#003c2b); color: white; }
 .mobileHero::before, .mobileHero::after { content: ''; position: absolute; z-index: -1; pointer-events: none; border-radius: 55% 45% 0 65%; background: linear-gradient(140deg, #8acb6430, #39a56c08); transform: rotate(-30deg); }
 .mobileHero::before { width: 120px; height: 150px; right: -15px; top: 42px; }
 .mobileHero::after { width: 90px; height: 130px; right: 0; bottom: 0; transform: rotate(42deg); }
 .mobileTop { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
-.mobileLogo > span { width: 106px; height: 49px; margin: 0; }
-.mobileClose { display: flex; flex: none; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: #fff; color: #06452e; }
-.tagline { font-size: 11px; margin-top: -2px; }
-.welcome { margin: 14px 0 17px; font-size: 12px; line-height: 1.45; }
-.welcome strong { font-size: 15px; font-weight: 650; }
-.mobileSearch { position: relative; z-index: 2; color: #162b24; }
-.mobileSearch :global(form) { height: 42px; border-radius: 15px; }
-.mobileSearch :global(input) { padding-inline: 10px 2px; font-size: 11px; }
-.mobileSearch :global(button[type='submit']) { order: -1; width: 30px; margin-right: 0; background: transparent; }
-.mobileSearch :global(button[type='submit'] svg) { display: block; width: 18px; }
-.mobileSearch :global(button[type='submit'] span) { display: none; }
+.mobileLogo > span { width: 116px; height: 60px; margin: 0; }
+.mobileClose { display: flex; flex: none; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: #fff; color: #06452e; }
+.tagline { font-size: clamp(11px, 3.2vw, 14px); margin-top: -2px; }
+.welcome { margin: 14px 0 4px; font-size: clamp(11px, 3.2vw, 14px); line-height: 1.45; }
+.welcome strong { font-size: 23px; font-weight: 650; }
 .mobileBody { max-width: 520px; margin-inline: auto; padding: 13px 16px calc(22px + env(safe-area-inset-bottom)); }
 .primaryGrid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 9px; }
-.actionCard { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; min-width: 0; min-height: 84px; padding: 10px 4px; border-radius: 13px; font-size: 12px; font-weight: 550; line-height: 1.2; text-align: center; }
+.actionCard { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; min-width: 0; min-height: 98px; padding: 10px 4px; border-radius: 13px; font-size: clamp(11px, 3.3vw, 14px); font-weight: 550; line-height: 1.2; text-align: center; }
 .actionCard > svg { width: 24px; height: 24px; }
 .shopCard { background: linear-gradient(125deg,#dff4e9,#d6f0e5); color: #07543a; }
 .wantCard { background: linear-gradient(125deg,#eaf8d8,#e4f6cc); color: #21552b; }
@@ -60,7 +55,7 @@
 .togetherCard > svg { color: #0785ca; }
 .storesCard { background: linear-gradient(110deg,#e9f7dc,#effbe5); color: #22592c; }
 .categoryHeading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 17px 0 11px; }
-.categoryHeading h2 { font-size: 15px; font-weight: 700; }
+.categoryHeading h2 { font-size: 20px; font-weight: 700; }
 .viewAll { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 650; color: #19653c; }
 .categoryGrid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; }
 .categoryCard { display: flex; align-items: center; gap: 8px; min-width: 0; min-height: 43px; padding: 4px 8px; border: 1px solid #e9edeb; border-radius: 10px; background: linear-gradient(#fff,#fdfefd); font-size: 10px; font-weight: 500; line-height: 1.35; }
