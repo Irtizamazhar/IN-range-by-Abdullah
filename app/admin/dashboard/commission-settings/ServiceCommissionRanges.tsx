@@ -1,4 +1,5 @@
 "use client";
+import { blockNonDigitKeys, wholeNumber } from "@/lib/whole-number-input";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 
@@ -205,12 +206,12 @@ export function ServiceCommissionRanges() {
                     <td className="p-3">
                       <div className="flex items-start gap-2">
                         <div>
-                          <input type="number" min={0} step={0.01} inputMode="decimal" aria-label={`Range ${i + 1} minimum amount`} aria-invalid={Boolean(e.minAmount)} value={r.minAmount} onChange={(ev) => update(r.key, { minAmount: ev.target.value })} className={`${inputClass} ${e.minAmount ? "border-red-400" : "border-borderGray"}`} />
+                          <input type="number" min={0} step={1} inputMode="numeric" aria-label={`Range ${i + 1} minimum amount`} aria-invalid={Boolean(e.minAmount)} value={r.minAmount} onKeyDown={blockNonDigitKeys} onChange={(ev) => update(r.key, { minAmount: wholeNumber(ev.target.value) })} className={`${inputClass} ${e.minAmount ? "border-red-400" : "border-borderGray"}`} />
                           <FieldError message={e.minAmount} />
                         </div>
                         <span className="pt-1 text-darkText/50">–</span>
                         <div>
-                          <input type="number" min={0} step={0.01} inputMode="decimal" aria-label={`Range ${i + 1} maximum amount`} aria-invalid={Boolean(e.maxAmount)} value={r.maxAmount} onChange={(ev) => update(r.key, { maxAmount: ev.target.value })} className={`${inputClass} ${e.maxAmount ? "border-red-400" : "border-borderGray"}`} />
+                          <input type="number" min={0} step={1} inputMode="numeric" aria-label={`Range ${i + 1} maximum amount`} aria-invalid={Boolean(e.maxAmount)} value={r.maxAmount} onKeyDown={blockNonDigitKeys} onChange={(ev) => update(r.key, { maxAmount: wholeNumber(ev.target.value) })} className={`${inputClass} ${e.maxAmount ? "border-red-400" : "border-borderGray"}`} />
                           <FieldError message={e.maxAmount} />
                         </div>
                       </div>

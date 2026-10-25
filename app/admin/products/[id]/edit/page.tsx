@@ -1,4 +1,5 @@
 "use client";
+import { blockNonDigitKeys, wholeNumber } from "@/lib/whole-number-input";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { LoadingForm } from "@/components/ui/LoadingForm";
 
@@ -308,19 +309,23 @@ export default function EditProductPage() {
           <input
             type="number"
             min={0}
-            step="0.01"
+            step={1}
+            inputMode="numeric"
             className="rounded-xl border border-borderGray px-4 py-2"
             value={price}
-            onChange={(e) => setPrice(e.target.value)}
+            onKeyDown={blockNonDigitKeys}
+            onChange={(e) => setPrice(wholeNumber(e.target.value))}
           />
           <input
             type="number"
             min={0}
-            step="0.01"
+            step={1}
+            inputMode="numeric"
             className="rounded-xl border border-borderGray px-4 py-2"
             placeholder="Original"
             value={originalPrice}
-            onChange={(e) => setOriginalPrice(e.target.value)}
+            onKeyDown={blockNonDigitKeys}
+            onChange={(e) => setOriginalPrice(wholeNumber(e.target.value))}
           />
         </div>
         <div className="space-y-2">

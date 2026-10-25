@@ -1,4 +1,5 @@
 "use client";
+import { blockNonDigitKeys, wholeNumber } from "@/lib/whole-number-input";
 
 import { useEffect, useId, useLayoutEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { ImagePlus, X } from "lucide-react";
@@ -162,7 +163,7 @@ export function WantForm({ categories, initialTitle, initialType = "PRODUCT", fo
       </div>
       <div className="rounded-2xl border border-emerald-100 bg-[#f8fbf1] p-4">
         <label className="!flex cursor-pointer items-center gap-2.5 font-semibold text-brand-dark"><input name="budgetFlexible" type="checkbox" checked={values.flexible} onChange={event => change("flexible", event.target.checked)} className="!h-4 !w-4 accent-emerald-800" /> My budget is flexible</label>
-        {!values.flexible && <div className="mt-4 grid gap-4 sm:grid-cols-2"><label className="font-medium">Minimum budget (PKR)<input name="min" type="number" min={0} max={9999999999} step="0.01" value={values.min} onChange={event => change("min", event.target.value)} placeholder="Optional" /></label><label className="font-medium">Maximum budget (PKR) <span aria-hidden="true">*</span><input name="max" type="number" min="0.01" max={9999999999} step="0.01" required value={values.max} onChange={event => change("max", event.target.value)} placeholder="Your budget" /></label></div>}
+        {!values.flexible && <div className="mt-4 grid gap-4 sm:grid-cols-2"><label className="font-medium">Minimum budget (PKR)<input name="min" type="number" min={0} max={9999999999} step={1} inputMode="numeric" value={values.min} onKeyDown={blockNonDigitKeys} onChange={event => change("min", wholeNumber(event.target.value))} placeholder="Optional" /></label><label className="font-medium">Maximum budget (PKR) <span aria-hidden="true">*</span><input name="max" type="number" min={1} max={9999999999} step={1} inputMode="numeric" required value={values.max} onKeyDown={blockNonDigitKeys} onChange={event => change("max", wholeNumber(event.target.value))} placeholder="Your budget" /></label></div>}
       </div>
       <details ref={moreDetails} className="rounded-2xl border border-emerald-100 p-4" onInvalidCapture={() => { if (moreDetails.current) moreDetails.current.open = true; }}>
         <summary className="cursor-pointer rounded-md font-bold text-emerald-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-700">Add More Details</summary>

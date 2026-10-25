@@ -1,4 +1,5 @@
 "use client";
+import { blockNonDigitKeys, wholeNumber } from "@/lib/whole-number-input";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 
@@ -488,10 +489,12 @@ export function CommissionClient() {
                           <input
                             type="number"
                             min={0}
-                            step={0.01}
+                            step={1}
+                            inputMode="numeric"
                             aria-label="Delivery fee charged to customer (PKR)"
                             value={deliveryFeeEdit}
-                            onChange={(e) => setDeliveryFeeEdit(e.target.value)}
+                            onKeyDown={blockNonDigitKeys}
+                            onChange={(e) => setDeliveryFeeEdit(wholeNumber(e.target.value))}
                             className={inputClass}
                           />
                         </div>

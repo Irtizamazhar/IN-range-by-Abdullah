@@ -1,4 +1,5 @@
 "use client";
+import { blockNonDigitKeys, wholeNumber } from "@/lib/whole-number-input";
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { ChevronDown } from "lucide-react";
@@ -95,9 +96,9 @@ export function ProductFilters({ filters, categories, priceRange, onApply, id, r
       <summary><span>Price range <small>PKR</small></span><ChevronDown aria-hidden="true" /></summary>
       <div className={styles.filterSectionBody}>
         <div className={styles.priceFields}>
-          <label htmlFor={`min-price-${id}`}><span>Min price</span><div><span>Rs.</span><input id={`min-price-${id}`} type="number" min="0" max={ceiling} step="any" inputMode="decimal" disabled={!priceRange} value={draft.minimum} onChange={(event) => changeDraft({ minimum: event.target.value }, true)} /></div></label>
+          <label htmlFor={`min-price-${id}`}><span>Min price</span><div><span>Rs.</span><input id={`min-price-${id}`} type="number" min="0" max={ceiling} step={1} inputMode="numeric" disabled={!priceRange} value={draft.minimum} onKeyDown={blockNonDigitKeys} onChange={(event) => changeDraft({ minimum: wholeNumber(event.target.value) }, true)} /></div></label>
           <span aria-hidden="true">–</span>
-          <label htmlFor={`max-price-${id}`}><span>Max price</span><div><span>Rs.</span><input id={`max-price-${id}`} type="number" min={lower} max={ceiling} step="any" inputMode="decimal" disabled={!priceRange} value={draft.maximum ?? String(ceiling)} onChange={(event) => changeDraft({ maximum: event.target.value }, true)} /></div></label>
+          <label htmlFor={`max-price-${id}`}><span>Max price</span><div><span>Rs.</span><input id={`max-price-${id}`} type="number" min={lower} max={ceiling} step={1} inputMode="numeric" disabled={!priceRange} value={draft.maximum ?? String(ceiling)} onKeyDown={blockNonDigitKeys} onChange={(event) => changeDraft({ maximum: wholeNumber(event.target.value) }, true)} /></div></label>
         </div>
         <div className={styles.range} style={{ "--range-min": `${position(lower)}%`, "--range-max": `${position(upper)}%` } as CSSProperties}>
           <div className={styles.rangeTrack} />

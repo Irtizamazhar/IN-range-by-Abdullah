@@ -56,7 +56,7 @@ export function matchOfferProduct<T extends { name: string; category: string; pr
 
 /**
  * Checkout builds the order from a catalog product, so every new offer is linked to one. The vendor's matching
- * product is chosen automatically; only when nothing matches does the vendor pick one of their own products.
+ * product is chosen automatically (falling back to the one priced closest to the quote), unless the client sends one.
  */
 export async function pickOfferProduct(tx: Prisma.TransactionClient, vendorId: string, want: OfferWant, unitPrice: number, chosenId?: string) {
   const products = await offerableProducts(tx, vendorId, want.quantity);
@@ -67,7 +67,8 @@ export async function pickOfferProduct(tx: Prisma.TransactionClient, vendorId: s
     return chosen;
   }
   const match = matchOfferProduct(products, want, unitPrice);
-  if (!match) throw new ApiError(409, "Choose which of your products you are offering for this request.");
-  return match;
+  if (match) return match;
+  // Nothing relates by category or title: link the product priced closest to the quote.
+  return products.reduce((best, p) => (Math.abs(Number(p.price) - unitPrice) < Math.abs(Number(best.price) - unitPrice) ? p : best));
 }
 export function validateOfferExpiry(expiresAt: Date) { if (expiresAt <= new Date() || expiresAt.getTime() > Date.now() + 30 * 86400000) throw new ApiError(400, "Offer expiry must be within 30 days."); }

@@ -1,4 +1,5 @@
 "use client";
+import { blockNonDigitKeys, wholeNumber } from "@/lib/whole-number-input";
 import { useState, type FormEvent, type ReactNode } from "react";
 import toast from "react-hot-toast";
 import { LoadingButton } from "@/components/ui/LoadingButton";
@@ -6,7 +7,7 @@ import { LoadingForm } from "@/components/ui/LoadingForm";
 import Link from "@/components/ui/LoadingLink";
 
 type Budget = { min: number | null; max: number | null; flexible: boolean; label: string };
-type Errors = Partial<Record<"productId" | "unitPrice" | "expiresAt" | "message" | "delivery", string>>;
+type Errors = Partial<Record<"unitPrice" | "expiresAt" | "message" | "delivery", string>>;
 const MESSAGE_MAX = 500;
 const DELIVERY_MAX = 300;
 const input = "block h-11 w-full min-w-0 rounded-lg border border-neutral-300 bg-white px-3 text-[15px] focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20";
@@ -30,11 +31,10 @@ function Field({ label, hint, htmlFor, error, help, children }: { label: string;
  * the vendor's matching catalog product, so the vendor only sets a unit price and optional warranty/expiry/message.
  */
 /**
- * `chooseFrom` is only set when none of the vendor's products matches the Want automatically: the vendor then
- * picks which of their products they are offering (an empty list means they have nothing in stock to offer).
+ * `chooseFrom` is only set when none of the vendor's products matches the Want automatically; the server then
+ * links the product priced closest to the quote. An empty list means they have nothing in stock to offer.
  */
 export function SubmitWantOffer({ wantId, budget, quantity, wantExpiresAt, chooseFrom }: { wantId: string; budget: Budget; quantity: number; wantExpiresAt: string; chooseFrom?: { id: string; name: string }[] }) {
-  const [productId, setProductId] = useState(chooseFrom?.length === 1 ? chooseFrom[0].id : "");
   const nothingToOffer = !!chooseFrom && chooseFrom.length === 0;
   const [price, setPrice] = useState(""); const [warranty, setWarranty] = useState("");
   const [expiry, setExpiry] = useState(""); const [message, setMessage] = useState(""); const [delivery, setDelivery] = useState("");
@@ -50,7 +50,6 @@ export function SubmitWantOffer({ wantId, budget, quantity, wantExpiresAt, choos
 
   function validate(): Errors {
     const next: Errors = {};
-    if (chooseFrom && !productId) next.productId = "Choose which of your products you are offering.";
     if (!price || !Number.isFinite(unit) || unit < 1) next.unitPrice = "Enter a unit price of at least PKR 1.";
     if (expiry) { const at = new Date(expiry); if (!(at > new Date())) next.expiresAt = "Choose a time in the future."; else if (at > latest) next.expiresAt = `Choose a time before ${latest.toLocaleString("en-PK", { dateStyle: "medium", timeStyle: "short" })}.`; }
     if (message.length > MESSAGE_MAX) next.message = `Keep the message under ${MESSAGE_MAX} characters.`;
@@ -64,7 +63,7 @@ export function SubmitWantOffer({ wantId, budget, quantity, wantExpiresAt, choos
     setBusy(true);
     try {
       const response = await fetch("/api/vendor/offers", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
-        wantId, ...(chooseFrom && productId ? { productId } : {}), unitPrice: unit, warranty: warranty.trim(), message: message.trim(), delivery: delivery.trim(), ...(expiry ? { expiresAt: new Date(expiry).toISOString() } : {}),
+        wantId, unitPrice: unit, warranty: warranty.trim(), message: message.trim(), delivery: delivery.trim(), ...(expiry ? { expiresAt: new Date(expiry).toISOString() } : {}),
       }) });
       const result = await response.json().catch(() => null);
       if (!response.ok) throw new Error(result?.error || "Could not submit your offer. Please try again.");
@@ -78,16 +77,12 @@ export function SubmitWantOffer({ wantId, budget, quantity, wantExpiresAt, choos
   return <LoadingForm onSubmit={submit} noValidate className="flex flex-col gap-4 rounded-2xl border border-[#D9E6D0] bg-white p-4 sm:p-5">
     <div><h2 className="text-lg font-bold text-emerald-950">Submit an offer</h2><p className="mt-0.5 text-xs text-neutral-500">For {quantity.toLocaleString("en-PK")} {quantity === 1 ? "unit" : "units"}, as requested by the customer.</p></div>
     <fieldset disabled={busy || done || nothingToOffer} className="flex min-w-0 flex-col gap-4">
-      {chooseFrom && (nothingToOffer
-        ? <p role="alert" className="rounded-lg bg-amber-50 px-3 py-2.5 text-sm text-amber-900">You have no active product with at least {quantity.toLocaleString("en-PK")} in stock. Publish one in My Products, then come back to send an offer.</p>
-        : <Field label="Product you are offering" hint="Required" htmlFor="offer-product" error={errors.productId} help="None of your products matched this request automatically. The customer checks out with the one you pick.">
-            <select id="offer-product" value={productId} onChange={e => setProductId(e.target.value)} aria-invalid={!!errors.productId} aria-describedby={describe("offer-product", "productId")} className={input}><option value="">Choose a product</option>{chooseFrom.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
-          </Field>)}
+      {nothingToOffer && <p role="alert" className="rounded-lg bg-amber-50 px-3 py-2.5 text-sm text-amber-900">You have no active product with at least {quantity.toLocaleString("en-PK")} in stock. Publish one in My Products, then come back to send an offer.</p>}
       <Field label="Unit price PKR" hint="Required" htmlFor="offer-price" error={errors.unitPrice} help={<>
         <span>Customer budget: {budget.label}</span>
         {budgetWarning && <span className="mt-1 block rounded-md bg-amber-50 px-2 py-1 text-amber-800">{budgetWarning}</span>}
       </>}>
-        <input id="offer-price" type="number" inputMode="decimal" min={1} step="0.01" placeholder="e.g. 800" value={price} onChange={e => setPrice(e.target.value)} aria-invalid={!!errors.unitPrice} aria-describedby={describe("offer-price", "unitPrice")} className={input} />
+        <input id="offer-price" type="number" inputMode="numeric" min={1} step={1} placeholder="e.g. 800" value={price} onKeyDown={blockNonDigitKeys} onChange={e => setPrice(wholeNumber(e.target.value))} aria-invalid={!!errors.unitPrice} aria-describedby={describe("offer-price", "unitPrice")} className={input} />
       </Field>
       {/* Side by side from sm, but stacked again in the narrow desktop side column. */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">

@@ -1,4 +1,5 @@
 "use client";
+import { wholeNumberInputProps } from "@/lib/whole-number-input";
 
 import { useCallback, useEffect, useState } from "react";
 import { LoadingButton } from "@/components/ui/LoadingButton";
@@ -113,7 +114,7 @@ export default function VendorServices() {
       }}>
         <label className="text-sm font-bold">Service name<input className={field} name="name" defaultValue={editing?.name} required maxLength={160} /></label>
         <label className="text-sm font-bold">Service category<select className={field} name="type" defaultValue={editing?.type || ""} required><option value="">Select service type</option>{editing?.type && !serviceTypes.includes(editing.type) && <option value={editing.type}>{editing.type} (legacy)</option>}{serviceTypes.map(type => <option key={type} value={type}>{type}</option>)}</select></label>
-        <label className="text-sm font-bold">Starting price (PKR)<input className={field} name="price" type="number" min={1} step="0.01" defaultValue={editing?.price} required /></label>
+        <label className="text-sm font-bold">Starting price (PKR)<input className={field} name="price" type="number" min={1} defaultValue={editing?.price == null ? undefined : Math.round(Number(editing.price))} required {...wholeNumberInputProps} /></label>
         <label className="text-sm font-bold">Coverage cities (comma-separated)<input className={field} name="cities" defaultValue={editing?.cities.join(", ")} required /></label>
         <label className="text-sm font-bold">Duration in minutes<input className={field} name="duration" type="number" min={1} defaultValue={editing?.durationMinutes || 60} required /></label>
         <label className="text-sm font-bold">Lead time in days<input className={field} name="lead" type="number" min={0} defaultValue={editing?.leadDays ?? 1} required /></label>

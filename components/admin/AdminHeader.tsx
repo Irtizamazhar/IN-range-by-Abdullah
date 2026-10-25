@@ -42,21 +42,27 @@ export function AdminHeader({
   const name = session?.user?.name || "Admin";
   const email = session?.user?.email || "";
 
-  // Same source as the Notifications page: unresolved vendor appeals.
+  // Same source as the Notifications page: items still waiting on an admin.
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/admin/notifications", { credentials: "same-origin" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data: { unresolvedCount?: number } | null) => {
-        if (cancelled) return;
-        const n = Number(data?.unresolvedCount);
-        setUnresolved(data && Number.isFinite(n) ? n : null);
-      })
-      .catch(() => {
-        if (!cancelled) setUnresolved(null);
-      });
+    const refresh = () => {
+      fetch("/api/admin/notifications", { credentials: "same-origin" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data: { unresolvedCount?: number } | null) => {
+          if (cancelled) return;
+          const n = Number(data?.unresolvedCount);
+          setUnresolved(data && Number.isFinite(n) ? n : null);
+        })
+        .catch(() => {
+          if (!cancelled) setUnresolved(null);
+        });
+    };
+    refresh();
+    // The Notifications page fires this after "Mark all read".
+    window.addEventListener("admin-notifications-updated", refresh);
     return () => {
       cancelled = true;
+      window.removeEventListener("admin-notifications-updated", refresh);
     };
   }, [pathname]);
 

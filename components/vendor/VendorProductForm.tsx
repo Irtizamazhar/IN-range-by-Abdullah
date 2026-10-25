@@ -1,4 +1,5 @@
 "use client";
+import { blockNonDigitKeys, wholeNumber } from "@/lib/whole-number-input";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { LoadingForm } from "@/components/ui/LoadingForm";
 
@@ -339,11 +340,12 @@ export function VendorProductForm({
           </label>
           <input
             type="number"
-            inputMode="decimal"
+            inputMode="numeric"
             min={0}
-            step="0.01"
+            step={1}
             value={price}
-            onChange={(e) => setPrice(e.target.value)}
+            onKeyDown={blockNonDigitKeys}
+            onChange={(e) => setPrice(wholeNumber(e.target.value))}
             className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2"
             required
           />
@@ -354,11 +356,12 @@ export function VendorProductForm({
           </label>
           <input
             type="number"
-            inputMode="decimal"
+            inputMode="numeric"
             min={0}
-            step="0.01"
+            step={1}
             value={originalPrice}
-            onChange={(e) => setOriginalPrice(e.target.value)}
+            onKeyDown={blockNonDigitKeys}
+            onChange={(e) => setOriginalPrice(wholeNumber(e.target.value))}
             placeholder="Higher “was” price for discount"
             className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2"
           />
