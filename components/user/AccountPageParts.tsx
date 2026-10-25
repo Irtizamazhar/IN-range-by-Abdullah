@@ -23,7 +23,7 @@ export function AccountPageHero({ id, eyebrow, caps = false, title, children, im
         {action && <div className="mt-4">{action}</div>}
       </div>
       <div className="relative hidden h-full min-h-[6.5rem] min-[360px]:block sm:min-h-[8rem]">
-        <Image src={image.src} alt={image.alt} width={image.width} height={image.height} priority sizes="(min-width: 1024px) 304px, (min-width: 640px) 240px, 136px" className="absolute inset-0 h-full w-full object-contain object-right-bottom pt-2 mix-blend-multiply" />
+        <Image src={image.src} alt={image.alt} width={image.width} height={image.height} unoptimized priority sizes="(min-width: 1024px) 304px, (min-width: 640px) 240px, 136px" className="absolute inset-0 h-full w-full object-contain object-right-bottom pt-2 mix-blend-multiply" />
       </div>
     </div>
   </section>;

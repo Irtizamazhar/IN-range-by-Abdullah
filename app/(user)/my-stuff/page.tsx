@@ -141,7 +141,7 @@ export default function MyStuffPage() {
 function Empty({ title, text, action }: { title: string; text: string; action?: { href: string; label: string } }) {
   return <div className="flex flex-col items-center rounded-2xl border border-dashed border-[#CFE3D4] bg-gradient-to-b from-white to-[#FAFDF7] px-5 py-6 text-center sm:py-8 md:col-span-2">
     {/* White-background illustration; multiply keeps it free of a visible white box. */}
-    <Image src="/images/my-stuff/empty-box.webp" alt="" width={480} height={480} priority sizes="(min-width: 640px) 144px, 120px" className="h-[120px] w-[120px] object-contain mix-blend-multiply sm:h-36 sm:w-36" />
+    <Image src="/images/my-stuff/empty-box.webp" alt="" width={480} height={480} unoptimized priority sizes="(min-width: 640px) 144px, 120px" className="h-[120px] w-[120px] object-contain mix-blend-multiply sm:h-36 sm:w-36" />
     <h2 className="mt-1 text-base font-semibold text-[#005235] sm:text-[17px]">{title}</h2>
     <p className="mt-1 max-w-sm text-[13px] leading-relaxed text-darkText/60 sm:text-sm">{text}</p>
     {action && <Link href={action.href} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl border-2 border-brand-primary bg-white px-4 text-sm font-semibold text-brand-dark transition hover:bg-brand-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-link"><ShoppingBag className="h-4 w-4" aria-hidden="true" />{action.label}</Link>}

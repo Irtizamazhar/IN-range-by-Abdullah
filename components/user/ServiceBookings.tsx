@@ -23,7 +23,7 @@ export function ServiceBookings({ role = "customer" }: { role?: "customer" | "ve
 function CustomerServicesEmpty() {
   return <div role="status" className="mt-4 flex flex-col items-center rounded-2xl border border-[#DFEDE5] bg-gradient-to-b from-[#F4FAEF] to-[#FAFDF7] px-5 pb-7 pt-4 text-center sm:mt-5 sm:px-8 sm:pb-9 sm:pt-6 lg:rounded-3xl">
     {/* White-background illustration; multiply blends it into the mint panel and the mask fades its edges. */}
-    <Image src="/images/account/services-empty.webp" alt="" width={620} height={392} priority sizes="(min-width: 640px) 360px, 260px" className="h-auto w-[260px] max-w-full mix-blend-multiply [mask-image:radial-gradient(ellipse_at_center,#000_62%,transparent_100%)] sm:w-[360px]" />
+    <Image src="/images/account/services-empty.webp" alt="" width={620} height={392} unoptimized priority sizes="(min-width: 640px) 360px, 260px" className="h-auto w-[260px] max-w-full mix-blend-multiply [mask-image:radial-gradient(ellipse_at_center,#000_62%,transparent_100%)] sm:w-[360px]" />
     <h2 className="mt-1 text-lg font-semibold text-brand-dark sm:text-xl">No service bookings yet</h2>
     <p className="mt-1.5 max-w-md text-[13px] leading-relaxed text-darkText/60 sm:text-[15px]">Book services, installations, repairs and more, and manage them all in one place.</p>
     <Link href="/services" className="mt-5 inline-flex min-h-11 w-full max-w-[280px] items-center justify-center gap-2 rounded-xl bg-brand-primary px-6 text-sm font-semibold text-brand-dark transition hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-link sm:w-auto"><CalendarDays className="h-4 w-4" aria-hidden="true" />Explore services</Link>

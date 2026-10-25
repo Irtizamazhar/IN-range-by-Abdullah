@@ -85,7 +85,7 @@ export default function AccountPage() {
     {tab === "wants" && <><WantToolbar status={wantStatus} sort={wantSort} /><div className="mt-4">{current.wants.length ? <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">{current.wants.map(w => <AccountWantCard key={w.id} want={w} />)}</div> : <WantsEmpty status={wantStatus} sort={wantSort} />}</div></>}
     {tab === "saved" && (current.savedProducts.length ? <div className={gridStyles.grid}>{current.savedProducts.map(p => <ProductCard key={p._id} product={p} />)}</div> : <div className="flex flex-col items-center rounded-2xl border border-[#DFEDE5] bg-gradient-to-b from-[#F7FBF4] to-white px-5 pb-7 pt-4 text-center sm:px-8 sm:pb-9 sm:pt-6 lg:rounded-3xl">
       {/* White-background illustration; multiply blends it into the mint panel and the mask fades its edges. */}
-      <Image src="/images/account/saved-empty.webp" alt="" width={720} height={427} priority sizes="(min-width: 640px) 360px, 260px" className="h-auto w-[260px] max-w-full mix-blend-multiply [mask-image:radial-gradient(ellipse_at_center,#000_62%,transparent_100%)] sm:w-[360px]" />
+      <Image src="/images/account/saved-empty.webp" alt="" width={720} height={427} unoptimized priority sizes="(min-width: 640px) 360px, 260px" className="h-auto w-[260px] max-w-full mix-blend-multiply [mask-image:radial-gradient(ellipse_at_center,#000_62%,transparent_100%)] sm:w-[360px]" />
       <h2 className="mt-1 text-lg font-semibold text-brand-dark sm:text-xl">Nothing saved yet</h2>
       <p className="mt-1.5 max-w-sm text-[13px] leading-relaxed text-darkText/60 sm:text-[15px]">Use the heart on a product to save it to your account.</p>
       <Link href="/products" className="mt-5 inline-flex min-h-11 w-full max-w-[260px] items-center justify-center gap-2 rounded-xl bg-brand-primary px-6 text-sm font-semibold text-brand-dark transition hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-link sm:w-auto"><Search className="h-4 w-4" aria-hidden="true" />Browse products</Link>
@@ -105,7 +105,7 @@ function ExploreBanner() {
   return <section aria-labelledby="explore-heading" className="mt-5 lg:mt-6">
     <h2 id="explore-heading" className="sr-only">Explore more on JORO</h2>
     <div className="relative hidden overflow-hidden rounded-2xl shadow-[0_6px_22px_rgba(0,61,43,0.10)] md:block lg:rounded-3xl">
-      <Image src="/images/account/explore-more-joro.webp" alt="Explore more on JORO. Discover amazing products, services and local businesses." width={1600} height={380} priority sizes="(min-width: 1280px) 1232px, 100vw" className="block h-auto w-full" />
+      <Image src="/images/account/explore-more-joro.webp" alt="Explore more on JORO. Discover amazing products, services and local businesses." width={1600} height={380} unoptimized priority sizes="(min-width: 1280px) 1232px, 100vw" className="block h-auto w-full" />
       <Link href="/products" aria-label="Browse products" className="absolute left-[3.75%] top-[71%] h-[19.7%] w-[20.6%] rounded-full focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-brand-primary" />
     </div>
     <div className="overflow-hidden rounded-2xl bg-gradient-to-br from-[#0B5A35] via-[#11683C] to-[#2E9B45] text-white shadow-[0_8px_28px_rgba(0,61,43,0.14)] md:hidden">
@@ -114,7 +114,7 @@ function ExploreBanner() {
         <p className="mt-1.5 text-[13px] leading-relaxed text-white/85">Discover amazing products, services and local businesses.</p>
         <Link href="/products" className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full bg-white px-5 text-sm font-semibold text-[#005235] transition hover:bg-brand-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary">Browse products <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
       </div>
-      <Image src="/images/account/explore-more-joro-products.webp" alt="" width={900} height={315} priority sizes="100vw" className="block h-auto w-full" />
+      <Image src="/images/account/explore-more-joro-products.webp" alt="" width={900} height={315} unoptimized priority sizes="100vw" className="block h-auto w-full" />
     </div>
   </section>;
 }

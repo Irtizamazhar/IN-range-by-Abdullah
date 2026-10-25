@@ -69,7 +69,7 @@ export function AccountWantCard({ want }: { want: AccountWant }) {
 export function WantsEmpty({ status, sort }: { status: string | null; sort: string }) {
   const filter = WANT_FILTERS.find(f => f.value === status)?.label.toLowerCase();
   return <div className="flex flex-col items-center rounded-2xl border border-dashed border-[#CFE3D4] bg-gradient-to-b from-white to-[#FAFDF7] px-5 py-6 text-center sm:py-8">
-    <Image src="/images/my-stuff/empty-box.webp" alt="" width={480} height={480} priority sizes="(min-width: 640px) 144px, 120px" className="h-[120px] w-[120px] object-contain mix-blend-multiply sm:h-36 sm:w-36" />
+    <Image src="/images/my-stuff/empty-box.webp" alt="" width={480} height={480} unoptimized priority sizes="(min-width: 640px) 144px, 120px" className="h-[120px] w-[120px] object-contain mix-blend-multiply sm:h-36 sm:w-36" />
     <h2 className="mt-1 text-base font-semibold text-[#005235] sm:text-[17px]">{status ? `No ${filter} wants` : "No Wants yet"}</h2>
     <p className="mt-1 max-w-sm text-[13px] leading-relaxed text-darkText/60 sm:text-sm">{status ? "None of your Wants have this status right now." : "Post what you need and sellers will send you offers."}</p>
     <div className="mt-4">{status ? <Link href={wantsHref(null, sort)} className="text-sm font-semibold text-brand-link underline">Show all wants</Link> : <PostWantAction />}</div>

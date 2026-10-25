@@ -71,7 +71,7 @@ function FollowedStoreCard({ store: s, onUnfollow }: { store: FollowedStore; onU
 function FollowingEmpty() {
   return <div className="flex flex-col items-center gap-4 rounded-2xl border border-[#DFEDE5] bg-gradient-to-b from-[#F4FAEF] to-[#FAFDF7] px-5 py-6 text-center sm:flex-row sm:gap-8 sm:px-8 sm:py-7 sm:text-left lg:rounded-3xl lg:px-12">
     {/* White-background illustration; multiply blends it into the mint panel and the mask fades its edges. */}
-    <Image src="/images/account/following-empty.webp" alt="" width={660} height={432} priority sizes="(min-width: 640px) 300px, 220px" className="h-auto w-[220px] shrink-0 mix-blend-multiply [mask-image:radial-gradient(ellipse_at_center,#000_62%,transparent_100%)] sm:w-[260px] lg:w-[300px]" />
+    <Image src="/images/account/following-empty.webp" alt="" width={660} height={432} unoptimized priority sizes="(min-width: 640px) 300px, 220px" className="h-auto w-[220px] shrink-0 mix-blend-multiply [mask-image:radial-gradient(ellipse_at_center,#000_62%,transparent_100%)] sm:w-[260px] lg:w-[300px]" />
     <div className="flex min-w-0 flex-1 flex-col items-center sm:items-start">
       <h2 className="text-lg font-semibold text-brand-dark sm:text-xl">You&apos;re not following any stores yet</h2>
       <p className="mt-1.5 max-w-md text-[13px] leading-relaxed text-darkText/60 sm:text-[15px]">Follow your favourite stores and sellers to stay updated on their latest products and offers.</p>
