@@ -14,7 +14,7 @@ const parse = (search = "") => parseWantsFeedQuery(new URLSearchParams(search));
 function row(id: string, createdAt = now): WantsFeedRow {
   return {
     id, createdAt, customerId: "customer-owner", requestType: "PRODUCT", occasion: null, title: "Office chair", description: "Looking for a comfortable chair.",
-    photo: null, budgetMin: new Prisma.Decimal("1200.50"), budgetMax: null,
+    photo: null, photos: null, budgetMin: new Prisma.Decimal("1200.50"), budgetMax: null,
     budgetFlexible: true, quantity: 2, category: "Furniture", city: "Lahore", status: "OPEN",
     expiresAt: new Date("2026-11-08T09:00:00.000Z"), customer: { name: "Ayesha", image: null }, _count: { offers: 0 },
   };

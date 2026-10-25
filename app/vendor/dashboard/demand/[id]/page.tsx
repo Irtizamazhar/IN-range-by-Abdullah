@@ -15,7 +15,7 @@ export default async function DemandDetail({ params }: { params: { id: string } 
   const session = await getVendorFromSession({ allowUnapproved: true }); if (!session) redirect("/vendor/login");
   if (session.vendor.status !== "approved") return <main className="mx-auto w-full max-w-5xl p-4 sm:p-6"><h1 className="text-3xl font-bold">Customer Demand</h1><p className="my-4">Your store must be approved before you can view demand details.</p></main>;
   // No customer fields are selected: vendors never see the customer's contact details.
-  const want = await prisma.want.findFirst({ where: { id: params.id, status: "OPEN", expiresAt: { gt: new Date() } }, select: { id: true, title: true, photo: true, requestType: true, description: true, category: true, city: true, quantity: true, condition: true, budgetMin: true, budgetMax: true, budgetFlexible: true, expiresAt: true, _count: { select: { interests: true } } } });
+  const want = await prisma.want.findFirst({ where: { id: params.id, status: "OPEN", expiresAt: { gt: new Date() } }, select: { id: true, title: true, photo: true, photos: true, requestType: true, description: true, category: true, city: true, quantity: true, condition: true, budgetMin: true, budgetMax: true, budgetFlexible: true, expiresAt: true, _count: { select: { interests: true } } } });
   if (!want) notFound();
   const [matches, existingOffer, offerable] = await Promise.all([
     vendorWantMatchService(session.vendor.id),

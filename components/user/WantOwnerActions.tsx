@@ -8,16 +8,11 @@ import { useLoadingRouter } from "@/hooks/useLoadingRouter";
 
 const LOCKED = ["FULFILLED", "EXPIRED", "CLOSED"];
 
-/**
- * Edit/Delete icon buttons for the customer who posted the Want. Callers render it only for the owner;
- * the API enforces ownership again. Deleting announces `want-deleted` so lists drop the card in place.
- */
-export function WantOwnerActions({ wantId, status, offerCount = 0, afterDelete, className = "" }: { wantId: string; status: string; offerCount?: number; afterDelete?: string; className?: string }) {
+/** Shared owner logic: which actions apply to the Want's status, and the confirmed delete (or close) request. */
+function useWantOwnerActions(wantId: string, status: string, offerCount: number, afterDelete?: string) {
   const { openEditWant } = usePostWant();
   const router = useLoadingRouter();
   const [busy, setBusy] = useState(false);
-  const editable = !LOCKED.includes(status);
-  const deletable = status !== "FULFILLED";
 
   async function remove() {
     const warning = offerCount > 0 ? `\n\nSellers have already sent ${offerCount} offer${offerCount === 1 ? "" : "s"} on this want. It will be closed and hidden from the feed instead, and pending offers will be declined.` : "";
@@ -34,10 +29,19 @@ export function WantOwnerActions({ wantId, status, offerCount = 0, afterDelete, 
     finally { setBusy(false); }
   }
 
+  return { editable: !LOCKED.includes(status), deletable: status !== "FULFILLED", busy, edit: () => openEditWant(wantId), remove };
+}
+
+/**
+ * Edit/Delete icon buttons for the customer who posted the Want. Callers render it only for the owner;
+ * the API enforces ownership again. Deleting announces `want-deleted` so lists drop the card in place.
+ */
+export function WantOwnerActions({ wantId, status, offerCount = 0, afterDelete, className = "" }: { wantId: string; status: string; offerCount?: number; afterDelete?: string; className?: string }) {
+  const { editable, deletable, busy, edit, remove } = useWantOwnerActions(wantId, status, offerCount, afterDelete);
   if (!editable && !deletable) return null;
   const button = "inline-flex h-8 w-8 items-center justify-center rounded-full border bg-white transition disabled:opacity-50";
   return <div className={`flex shrink-0 items-center gap-1.5 ${className}`}>
-    {editable && <button type="button" title="Edit want" aria-label="Edit want" disabled={busy} onClick={() => openEditWant(wantId)} className={`${button} border-emerald-200 text-emerald-900 hover:bg-lime-50`}><Pencil className="h-3.5 w-3.5" aria-hidden="true" /></button>}
+    {editable && <button type="button" title="Edit want" aria-label="Edit want" disabled={busy} onClick={edit} className={`${button} border-emerald-200 text-emerald-900 hover:bg-lime-50`}><Pencil className="h-3.5 w-3.5" aria-hidden="true" /></button>}
     {deletable && <button type="button" title="Delete want" aria-label="Delete want" aria-busy={busy} disabled={busy} onClick={() => void remove()} className={`${button} border-red-200 text-red-700 hover:bg-red-50`}>{busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />}</button>}
   </div>;
 }

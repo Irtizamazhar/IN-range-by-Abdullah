@@ -126,6 +126,15 @@ test("gated visitors cannot reach APIs, server actions or mutations", () => {
   assert.equal(decideGatedRequest({ pathname: "/", method: "GET", isServerAction: true }), "block");
 });
 
+test("gated visitors cannot start or complete Google sign-in", () => {
+  // Team members carry a preview session and bypass this policy in middleware;
+  // public visitors must not be able to create customer accounts while gated.
+  assert.equal(decideGatedRequest({ pathname: "/api/auth/signin/google", method: "POST" }), "block");
+  assert.equal(decideGatedRequest({ pathname: "/api/auth/callback/google", method: "GET" }), "block");
+  assert.equal(decideGatedRequest({ pathname: "/api/auth/callback/google", method: "POST" }), "block");
+  assert.equal(decideGatedRequest({ pathname: "/api/auth/csrf", method: "GET" }), "block");
+});
+
 test("only the team login endpoints and session probe are public APIs", () => {
   assert.equal(decideGatedRequest({ pathname: "/api/preview-access/login", method: "POST" }), "allow");
   assert.equal(decideGatedRequest({ pathname: "/api/preview-access/login", method: "GET" }), "block");

@@ -1,10 +1,11 @@
 import type { EditableWant, WantValues } from "@/components/user/WantForm";
+import { wantImages } from "@/lib/want-images";
 
 /** The Want fields the edit form needs, as returned (JSON-serialised) by GET /api/wants/[id]. */
 export type WantEditSource = {
   id: string; requestType: string; occasion: string | null; title: string; category: string; city: string; quantity: number;
   budgetMin: unknown; budgetMax: unknown; budgetFlexible: boolean; description: string | null; condition: string | null;
-  needBy: string | Date | null; photo: string | null;
+  needBy: string | Date | null; photo: string | null; photos?: unknown;
 };
 
 const CONDITIONS = ["Any", "New", "Used", "Refurbished"] as const;
@@ -18,5 +19,5 @@ export function wantToEditable(want: WantEditSource): EditableWant {
     description: want.description || "", condition: CONDITIONS.find(c => c === want.condition) || "Any",
     needBy: want.needBy ? new Date(want.needBy).toISOString().slice(0, 10) : "", flexible: want.budgetFlexible,
   };
-  return { id: want.id, values, photo: want.photo };
+  return { id: want.id, values, photos: wantImages(want) };
 }

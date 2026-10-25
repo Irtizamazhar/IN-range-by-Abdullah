@@ -1248,6 +1248,8 @@ model Want {
   quantity         Int            @default(1)
   description      String?        @db.Text
   photo            String?        @db.Text
+  /// All reference photos in order (max 5); `photo` mirrors the first one for single-image readers.
+  photos           Json?
   condition        String?
   needBy           DateTime?
   expiresAt        DateTime

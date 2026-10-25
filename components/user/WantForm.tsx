@@ -2,7 +2,8 @@
 import { blockNonDigitKeys, wholeNumber } from "@/lib/whole-number-input";
 
 import { useEffect, useId, useLayoutEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
-import { ImagePlus, X } from "lucide-react";
+import { MAX_WANT_PHOTOS } from "@/lib/want-images";
+import { Image as ImageIcon, Plus, ShieldCheck, X } from "lucide-react";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { LoadingForm } from "@/components/ui/LoadingForm";
 import { LoadingLink } from "@/components/ui/LoadingLink";
@@ -13,7 +14,11 @@ import { PakistanCitySelect } from "@/components/ui/PakistanCitySelect";
 
 export type SubmittedWant = { id: string; status: string };
 /** Existing Want loaded for editing; saving sends it back through moderation. */
-export type EditableWant = { id: string; values: Partial<WantValues>; photo: string | null };
+export type EditableWant = { id: string; values: Partial<WantValues>; photos: string[] };
+/** A reference image in the form: an already-saved one (`url`) or a newly chosen/pasted file with a local preview. */
+type PhotoItem = { key: string; file: File | null; url: string; preview: string };
+const PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const savedPhoto = (url: string): PhotoItem => ({ key: url, file: null, url, preview: url });
 type WantFormProps = {
   categories: string[]; initialTitle?: string; initialType?: "PRODUCT" | "SERVICE" | "GIFT"; formId?: string; hideFooter?: boolean; embedded?: boolean; editWant?: EditableWant; lockKeyFields?: boolean;
   onSuccess?: (want: SubmittedWant) => void; onDirtyChange?: (dirty: boolean) => void; onBusyChange?: (busy: boolean) => void;
@@ -37,17 +42,21 @@ export function WantForm({ categories, initialTitle, initialType = "PRODUCT", fo
   const initial = useRef(editWant ? { ...emptyValues("", initialType), ...editWant.values } : emptyValues(initialTitle, initialType));
   const [values, setValues] = useState<WantValues>(initial.current);
   const [busy, setBusy] = useState(false); const [error, setError] = useState(""); const [photoError, setPhotoError] = useState("");
-  const [photoFile, setPhotoFile] = useState<File | null>(null); const [preview, setPreview] = useState("");
-  const [existingPhoto, setExistingPhoto] = useState(editWant?.photo || "");
+  const initialPhotos = useRef(editWant?.photos || []);
+  const [photos, setPhotos] = useState<PhotoItem[]>(() => initialPhotos.current.map(savedPhoto));
+  const [dragging, setDragging] = useState(false);
   const [submitted, setSubmitted] = useState<SubmittedWant | null>(null);
   const fileInput = useRef<HTMLInputElement>(null); const lock = useRef(false); const completed = useRef(false);
   const moreDetails = useRef<HTMLDetailsElement>(null);
   const errorMessage = useRef<HTMLDivElement>(null);
-  const uploadedPhoto = useRef<{ file: File; url: string } | null>(null);
+  /** Upload results by item key, so a retried submit does not upload the same file twice. */
+  const uploadedPhotos = useRef(new Map<string, string>());
+  const photoCounter = useRef(0);
   /** Scroll position of the enclosing scroll body while the native file picker is open. */
   const pickerScroll = useRef<{ body: HTMLElement; top: number } | null>(null);
   const hadCustomer = useRef(isCustomer); if (isCustomer) hadCustomer.current = true;
-  const photoChanged = photoFile !== null || existingPhoto !== (editWant?.photo || "");
+  const photosDiffer = (list: PhotoItem[]) => list.map(p => p.file ? p.key : p.url).join("\n") !== initialPhotos.current.join("\n");
+  const photoChanged = photosDiffer(photos);
   const dirty = !submitted && (photoChanged || JSON.stringify(values) !== JSON.stringify(initial.current));
 
   useEffect(() => {
@@ -65,16 +74,14 @@ export function WantForm({ categories, initialTitle, initialType = "PRODUCT", fo
     window.addEventListener("beforeunload", protectUnsavedWant);
     return () => window.removeEventListener("beforeunload", protectUnsavedWant);
   }, [dirty]);
-  useEffect(() => {
-    if (!photoFile) { setPreview(""); return; }
-    const url = URL.createObjectURL(photoFile); setPreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [photoFile]);
+  // Free local previews when the form goes away; removed items are revoked as they are removed.
+  const latestPhotos = useRef(photos); latestPhotos.current = photos;
+  useEffect(() => () => { for (const p of latestPhotos.current) if (p.file) URL.revokeObjectURL(p.preview); }, []);
   // Choosing (or cancelling) an image must never move the form; put the scroll body back where the user left it.
   useLayoutEffect(() => {
     const saved = pickerScroll.current; if (!saved) return;
     saved.body.scrollTop = saved.top; pickerScroll.current = null;
-  }, [photoFile, existingPhoto, photoError]);
+  }, [photos, photoError]);
   useEffect(() => {
     const input = fileInput.current; if (!input) return;
     const restore = () => { const saved = pickerScroll.current; if (saved) { saved.body.scrollTop = saved.top; pickerScroll.current = null; } };
@@ -91,24 +98,52 @@ export function WantForm({ categories, initialTitle, initialType = "PRODUCT", fo
     onDirtyChange?.(photoChanged || JSON.stringify(next) !== JSON.stringify(initial.current));
     setValues(next);
   }
-  function choosePhoto(file: File | null) {
-    setPhotoError("");
-    if (file && (!new Set(["image/jpeg", "image/png", "image/webp"]).has(file.type.toLowerCase()) || file.size > 5 * 1024 * 1024)) {
-      setPhotoError("Choose a JPG, PNG, or WebP image up to 5 MB.");
-      if (fileInput.current) fileInput.current.value = "";
-      return;
-    }
-    onDirtyChange?.(file !== null || !!editWant?.photo || JSON.stringify(values) !== JSON.stringify(initial.current));
-    uploadedPhoto.current = null; setPhotoFile(file); setExistingPhoto("");
-    if (!file && fileInput.current) fileInput.current.value = "";
+  function updatePhotos(next: PhotoItem[]) {
+    onDirtyChange?.(photosDiffer(next) || JSON.stringify(values) !== JSON.stringify(initial.current));
+    setPhotos(next);
   }
+  function addPhotos(files: File[]) {
+    if (!files.length) return;
+    const valid = files.filter(file => PHOTO_TYPES.has(file.type.toLowerCase()) && file.size <= 5 * 1024 * 1024);
+    const room = MAX_WANT_PHOTOS - photos.length;
+    const added = valid.slice(0, Math.max(room, 0)).map(file => {
+      photoCounter.current += 1;
+      return { key: `new-${photoCounter.current}`, file, url: "", preview: URL.createObjectURL(file) };
+    });
+    setPhotoError(
+      valid.length < files.length ? "Only JPG, PNG, or WebP images up to 5 MB can be added."
+      : valid.length > added.length ? `You can add up to ${MAX_WANT_PHOTOS} images.`
+      : "",
+    );
+    if (added.length) updatePhotos([...photos, ...added]);
+  }
+  function removePhoto(key: string) {
+    const item = photos.find(p => p.key === key); if (!item) return;
+    if (item.file) URL.revokeObjectURL(item.preview);
+    uploadedPhotos.current.delete(key); setPhotoError("");
+    updatePhotos(photos.filter(p => p.key !== key));
+  }
+  /** Ctrl+V / Cmd+V while this form is open adds copied images; pasting text into a field works as usual. */
+  const pasteRef = useRef<(event: ClipboardEvent) => void>(() => undefined);
+  pasteRef.current = (event: ClipboardEvent) => {
+    if (busy || submitted || event.defaultPrevented) return;
+    const target = event.target instanceof Element ? event.target.closest("form") : null;
+    if (target && target.id !== id) return; // pasted into some other form on the page
+    const files = Array.from(event.clipboardData?.files || []).filter(file => file.type.startsWith("image/"));
+    if (!files.length) return;
+    event.preventDefault(); addPhotos(files);
+  };
+  useEffect(() => {
+    const onPaste = (event: ClipboardEvent) => pasteRef.current(event);
+    document.addEventListener("paste", onPaste); return () => document.removeEventListener("paste", onPaste);
+  }, []);
   function openPhotoPicker() {
     const body = fileInput.current?.closest<HTMLElement>("[data-want-scroll-body]");
     pickerScroll.current = body ? { body, top: body.scrollTop } : null;
     fileInput.current?.click();
   }
   function photoSelected(event: ChangeEvent<HTMLInputElement>) {
-    choosePhoto(event.target.files?.[0] || null);
+    addPhotos(Array.from(event.target.files || []));
     event.target.value = ""; // lets the same file be picked again
   }
 
@@ -126,15 +161,20 @@ export function WantForm({ categories, initialTitle, initialType = "PRODUCT", fo
     if (!input.success) { setError(input.error.issues[0]?.message || "Please check the supplied fields."); return; }
     lock.current = true; setBusy(true); onBusyChange?.(true);
     try {
-      let photo = uploadedPhoto.current?.file === photoFile ? uploadedPhoto.current.url : photoFile ? null : existingPhoto || null;
-      if (photoFile && !photo) {
-        const uploadData = new FormData(); uploadData.set("file", photoFile); uploadData.set("folder", "inrange-wants");
-        const response = await fetch("/api/upload", { method: "POST", body: uploadData });
-        const result = await response.json().catch(() => null);
-        if (!response.ok || typeof result?.url !== "string") throw new Error(result?.error || "Could not upload the photo. Please try again.");
-        photo = result.url; uploadedPhoto.current = { file: photoFile, url: result.url };
+      const photoUrls: string[] = [];
+      for (const item of photos) {
+        if (!item.file) { photoUrls.push(item.url); continue; }
+        let url = uploadedPhotos.current.get(item.key);
+        if (!url) {
+          const uploadData = new FormData(); uploadData.set("file", item.file); uploadData.set("folder", "inrange-wants");
+          const response = await fetch("/api/upload", { method: "POST", body: uploadData });
+          const result = await response.json().catch(() => null);
+          if (!response.ok || typeof result?.url !== "string") throw new Error(result?.error || "Could not upload the photo. Please try again.");
+          url = result.url as string; uploadedPhotos.current.set(item.key, url);
+        }
+        photoUrls.push(url);
       }
-      const response = await fetch(editWant ? `/api/wants/${editWant.id}` : "/api/wants", { method: editWant ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...input.data, photo }) });
+      const response = await fetch(editWant ? `/api/wants/${editWant.id}` : "/api/wants", { method: editWant ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...input.data, photos: photoUrls }) });
       const result = await response.json().catch(() => null);
       if (!response.ok || typeof result?.want?.id !== "string") throw new Error(result?.error || (editWant ? "Could not save your changes. Please try again." : "Could not submit your Want. Please try again."));
       const want: SubmittedWant = { id: result.want.id, status: result.want.status };
@@ -176,19 +216,48 @@ export function WantForm({ categories, initialTitle, initialType = "PRODUCT", fo
         </div>
       </details>
       <div>
-        <p className="font-semibold text-brand-dark">Reference image <span className="font-normal text-neutral-500">(optional)</span></p><p className="mt-1 text-sm text-neutral-500">JPG, PNG, or WebP. Maximum 5 MB.</p>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-2"><p className="font-bold text-brand-dark">Reference images</p><span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">Optional</span></div>
+          <span className="shrink-0 text-sm tabular-nums text-neutral-500" aria-label={`${photos.length} of ${MAX_WANT_PHOTOS} images added`}>{photos.length} / {MAX_WANT_PHOTOS}</span>
+        </div>
+        <p className="mt-1 text-sm leading-relaxed text-neutral-500">Upload up to {MAX_WANT_PHOTOS} JPG, PNG, or WebP images (5 MB each), or paste an image with Ctrl+V.</p>
         {/* display:none input opened by ref: a focusable sr-only input made the browser scroll the dialog to reach it. */}
-        <input id={`${id}-photo`} ref={fileInput} name="photo" type="file" accept="image/jpeg,image/png,image/webp" hidden tabIndex={-1} onChange={photoSelected} />
-        <button type="button" onClick={openPhotoPicker} aria-controls={`${id}-photo`} className="mt-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-emerald-200 bg-emerald-50/40 px-4 py-4 font-semibold text-emerald-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700"><ImagePlus size={20} aria-hidden="true" />{photoFile || existingPhoto ? "Change image" : "Add an image"}</button>
-        {(preview || existingPhoto) && <div className="relative mt-3 overflow-hidden rounded-xl border border-neutral-200 bg-neutral-50">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={preview || existingPhoto} alt="Your selected reference" className="block h-[140px] w-full max-w-full object-contain sm:h-[180px]" />
-          <button type="button" onClick={() => choosePhoto(null)} className="absolute right-2 top-2 flex items-center gap-1 rounded-lg bg-white px-3 py-2 text-sm font-bold text-brand-dark shadow-sm hover:bg-neutral-100" aria-label="Remove reference image"><X size={16} aria-hidden="true" />Remove</button><p className="truncate border-t border-neutral-200 bg-white px-3 py-2 text-xs text-neutral-500">{photoFile?.name || "Current image"}</p>
-        </div>}
+        <input id={`${id}-photo`} ref={fileInput} type="file" multiple accept="image/jpeg,image/png,image/webp" hidden tabIndex={-1} onChange={photoSelected} />
+        {photos.length > 0 && <ul className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5">
+          {photos.map((photo, index) => <li key={photo.key} className="relative aspect-square overflow-hidden rounded-xl border border-neutral-200 bg-neutral-50">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={photo.preview} alt={`Reference image ${index + 1}`} className="h-full w-full object-cover" />
+            {index === 0 && <span className="absolute bottom-1 left-1 rounded-md bg-white/90 px-1.5 py-0.5 text-[11px] font-bold text-emerald-900">Cover</span>}
+            <button type="button" onClick={() => removePhoto(photo.key)} className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-white text-brand-dark shadow-sm hover:bg-neutral-100" aria-label={`Remove reference image ${index + 1}`}><X size={15} aria-hidden="true" /></button>
+          </li>)}
+        </ul>}
+        {photos.length < MAX_WANT_PHOTOS && <button
+          type="button" onClick={openPhotoPicker} aria-controls={`${id}-photo`}
+          onDragEnter={event => { event.preventDefault(); setDragging(true); }}
+          onDragOver={event => { event.preventDefault(); event.dataTransfer.dropEffect = "copy"; }}
+          onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false); }}
+          onDrop={event => { event.preventDefault(); setDragging(false); addPhotos(Array.from(event.dataTransfer.files)); }}
+          className={`mt-3 flex w-full min-w-0 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-4 py-6 text-center transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 sm:py-7 ${dragging ? "border-emerald-500 bg-emerald-50" : "border-emerald-200 bg-emerald-50/40 hover:border-emerald-400 hover:bg-emerald-50/80"}`}
+        >
+          <span className="relative mb-2 inline-flex text-brand-dark" aria-hidden="true">
+            <ImageIcon size={34} strokeWidth={1.75} />
+            <span className="absolute -right-2 -top-2 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-emerald-700 text-white ring-2 ring-white"><Plus size={12} strokeWidth={3} /></span>
+          </span>
+          <span className="block text-base font-bold text-brand-dark">{photos.length ? "Add more images" : "Add images"}</span>
+          <span className="mt-0.5 block text-sm text-neutral-600">Drag files here or <span className="font-semibold text-emerald-700 underline decoration-dashed underline-offset-4">browse</span></span>
+          <span className="mt-2 block text-xs text-neutral-500">Supports JPG, PNG, WebP · Max 5 MB each · Up to {MAX_WANT_PHOTOS} images</span>
+        </button>}
         {photoError && <p role="alert" className="mt-2 text-sm text-red-700">{photoError}</p>}
       </div>
     </fieldset>
-    <p className="rounded-xl bg-neutral-50 px-4 py-3 text-sm leading-relaxed text-neutral-600">{editWant ? "Your changes will be reviewed again before the post is public." : "Your Want will be reviewed before it becomes public and expires after 30 days."} Keep your phone number, email, and private address out of the post.</p>
+    <div className="flex items-center gap-3 rounded-2xl bg-emerald-50/70 px-3 py-3 sm:gap-4 sm:px-4">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700" aria-hidden="true"><ShieldCheck size={22} strokeWidth={2} /></span>
+      <span className="h-9 w-px shrink-0 bg-emerald-200" aria-hidden="true" />
+      <div className="min-w-0 text-sm leading-snug">
+        <p className="font-semibold text-brand-dark">{editWant ? "Your changes are reviewed again before the post goes public." : "Your Want is reviewed before it goes public and expires after 30 days."}</p>
+        <p className="mt-0.5 text-neutral-500">Don&apos;t include your phone number, email, or private address.</p>
+      </div>
+    </div>
     {error && <div ref={errorMessage} tabIndex={-1} role="alert" className="rounded-xl border border-red-100 bg-red-50 p-3 text-sm text-red-800 outline-none">{error}{!isCustomer && <LoadingLink href="/login?role=customer&mode=signin&callbackUrl=%2Fwants" target="_blank" rel="noopener noreferrer" className="mt-2 block font-bold underline">Sign in in a new tab, then retry here</LoadingLink>}</div>}
     {submitted && !onSuccess && <div role="status" className="rounded-xl bg-lime-50 p-4 text-emerald-900">{editWant ? "Your changes have been saved and sent for review." : "Your Want has been submitted for review."} <LoadingLink href={`/wants/${submitted.id}`} className="font-bold underline">View your Want</LoadingLink></div>}
     {!hideFooter && <LoadingButton type="submit" loading={busy} disabled={!!submitted} loadingLabel="Saving…" className="rounded-xl bg-brand-primary px-5 py-3 font-bold text-brand-dark disabled:opacity-50">{editWant ? "Save changes" : "Submit Want for review"}</LoadingButton>}

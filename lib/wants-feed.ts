@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import type { Prisma } from "@prisma/client";
 import { demandScore } from "./want-ranking";
+import { wantImages } from "./want-images";
 import { emptyReactionSummary, publicDisplayName } from "./want-social";
 import type { WantEngagement } from "./want-engagement";
 import type { WantRequestType, WantsFeedItem, WantsFeedPage, WantsFeedTab, WantsFeedViewer } from "./wants-feed-types";
@@ -109,6 +110,7 @@ export const wantsFeedSelect = {
   title: true,
   description: true,
   photo: true,
+  photos: true,
   requestType: true,
   occasion: true,
   budgetMin: true,
@@ -208,7 +210,7 @@ function toFeedItem(row: WantsFeedRow, mine: boolean, engagement?: WantEngagemen
     id: row.id,
     title: row.title,
     description: row.description,
-    images: row.photo ? [row.photo] : [],
+    images: wantImages(row),
     photo: row.photo,
     requestType,
     occasion: row.occasion,

@@ -434,11 +434,11 @@ export function Navbar({
                         </Link>
 
                         <Link
-                          href="/my-stuff"
+                          href="/account/orders"
                           onNavigateComplete={() => setProfileOpen(false)}
                           className="block rounded-lg px-3 py-2.5 text-left text-[12px] font-bold transition hover:bg-brand-soft"
                         >
-                          My Stuff
+                          My Orders
                         </Link>
 
                         <Link
@@ -593,11 +593,11 @@ export function Navbar({
                       My Account
                     </Link>
                     <Link
-                      href="/my-stuff"
+                      href="/account/orders"
                       onNavigateComplete={() => setMobileOpen(false)}
                       className="block w-full rounded-xl bg-brand-soft px-4 py-3 text-left text-[13px] font-black text-brand-dark"
                     >
-                      My Stuff
+                      My Orders
                     </Link>
                     <Link
                       href="/account/notifications"

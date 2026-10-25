@@ -16,8 +16,14 @@ export async function removeWantPhotoFile(url: string | null | undefined) {
   await fs.unlink(path.join(process.cwd(), "public", "uploads", "wants", name)).catch(() => undefined);
 }
 
+/** The photo list to save from validated input: `photos` when sent, else the single legacy `photo`. Deduplicated. */
+export function wantPhotoList(input: { photo?: string | null; photos?: string[] }) {
+  const list = input.photos ?? (input.photo ? [input.photo] : []);
+  return Array.from(new Set(list));
+}
+
 /**
- * A Want stores at most ONE image (`Want.photo`). The upload endpoint only accepts customer sessions and
+ * Each Want image (`Want.photos`, first mirrored in `Want.photo`) must be checked here. The upload endpoint only accepts customer sessions and
  * verifies image bytes; here we make sure the saved reference points at a real uploaded Want photo.
  */
 export async function assertWantPhotoStored(url: string | null | undefined) {

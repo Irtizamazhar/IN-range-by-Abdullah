@@ -44,9 +44,6 @@ export function SubmitWantOffer({ wantId, budget, quantity, wantExpiresAt, choos
   const now = new Date(); now.setSeconds(0, 0);
   const latest = new Date(Math.min(Date.now() + 30 * 86400000, new Date(wantExpiresAt).getTime()));
   const unit = Number(price);
-  const budgetWarning = unit > 0 && !budget.flexible
-    ? budget.max != null && unit > budget.max ? "Your price is above the customer's budget." : budget.min != null && unit < budget.min ? "Your price is below the customer's budget." : ""
-    : "";
 
   function validate(): Errors {
     const next: Errors = {};
@@ -78,10 +75,7 @@ export function SubmitWantOffer({ wantId, budget, quantity, wantExpiresAt, choos
     <div><h2 className="text-lg font-bold text-emerald-950">Submit an offer</h2><p className="mt-0.5 text-xs text-neutral-500">For {quantity.toLocaleString("en-PK")} {quantity === 1 ? "unit" : "units"}, as requested by the customer.</p></div>
     <fieldset disabled={busy || done || nothingToOffer} className="flex min-w-0 flex-col gap-4">
       {nothingToOffer && <p role="alert" className="rounded-lg bg-amber-50 px-3 py-2.5 text-sm text-amber-900">You have no active product with at least {quantity.toLocaleString("en-PK")} in stock. Publish one in My Products, then come back to send an offer.</p>}
-      <Field label="Unit price PKR" hint="Required" htmlFor="offer-price" error={errors.unitPrice} help={<>
-        <span>Customer budget: {budget.label}</span>
-        {budgetWarning && <span className="mt-1 block rounded-md bg-amber-50 px-2 py-1 text-amber-800">{budgetWarning}</span>}
-      </>}>
+      <Field label="Unit price PKR" hint="Required" htmlFor="offer-price" error={errors.unitPrice} help={<span>Customer budget: {budget.label}</span>}>
         <input id="offer-price" type="number" inputMode="numeric" min={1} step={1} placeholder="e.g. 800" value={price} onKeyDown={blockNonDigitKeys} onChange={e => setPrice(wholeNumber(e.target.value))} aria-invalid={!!errors.unitPrice} aria-describedby={describe("offer-price", "unitPrice")} className={input} />
       </Field>
       {/* Side by side from sm, but stacked again in the narrow desktop side column. */}

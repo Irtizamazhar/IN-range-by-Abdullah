@@ -413,12 +413,13 @@ export default function AdminDashboardPage() {
             <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#EAF4EC] text-admin-primary">
               <Icon className="h-5 w-5" strokeWidth={1.9} aria-hidden />
             </span>
-            <div className="min-w-0">
+            {/* Size container: the value scales with the card width (1rem–1.5rem) so long PKR amounts stay whole. */}
+            <div className="min-w-0 flex-1 [container-type:inline-size]">
               <p className="text-sm font-medium text-admin-muted">{label}</p>
-              <p className="mt-1 truncate text-2xl font-bold tracking-tight text-admin-ink tabular-nums" title={value}>
+              <p className="mt-1 text-[clamp(1rem,10cqi,1.5rem)] font-bold leading-tight tracking-tight text-admin-ink tabular-nums [overflow-wrap:anywhere]">
                 {value}
               </p>
-              <p className="mt-1 truncate text-xs text-admin-muted" title={hint}>{hint}</p>
+              <p className="mt-1.5 break-words text-xs leading-snug text-admin-muted">{hint}</p>
             </div>
           </div>
         ))}

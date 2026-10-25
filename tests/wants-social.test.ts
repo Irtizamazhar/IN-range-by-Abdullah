@@ -29,7 +29,7 @@ const parse = (search = "") => parseWantsFeedQuery(new URLSearchParams(search));
 function row(id: string, overrides: Partial<WantsFeedRow> = {}): WantsFeedRow {
   return {
     id, customerId: `owner-${id}`, createdAt: now, title: "Sofa set", description: "Need a 5 seater sofa.",
-    photo: null, requestType: "PRODUCT", occasion: null, budgetMin: new Prisma.Decimal("40000"), budgetMax: new Prisma.Decimal("60000"),
+    photo: null, photos: null, requestType: "PRODUCT", occasion: null, budgetMin: new Prisma.Decimal("40000"), budgetMax: new Prisma.Decimal("60000"),
     budgetFlexible: false, quantity: 1, category: "Furniture", city: "Lahore", status: "OPEN",
     expiresAt: new Date("2026-11-14T09:00:00.000Z"), customer: { name: "Ayesha Khan", image: null }, _count: { offers: 3 },
     ...overrides,

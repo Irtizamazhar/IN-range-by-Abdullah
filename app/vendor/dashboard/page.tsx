@@ -321,20 +321,21 @@ export default async function VendorDashboardPage({
             <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#EAF4EC] text-admin-primary">
               <Icon className="h-5 w-5" strokeWidth={1.9} aria-hidden />
             </span>
-            <div className="min-w-0 flex-1">
-              <p className="flex items-center justify-between gap-2 text-sm font-medium text-admin-muted">
-                <span className="truncate">{label}</span>
-                <ChevronRight className="h-4 w-4 shrink-0 text-admin-muted/50 transition-colors group-hover:text-admin-primary" aria-hidden />
+            {/* Size container: the value scales with the card width (1rem-1.5rem) so long PKR amounts stay whole. */}
+            <div className="min-w-0 flex-1 [container-type:inline-size]">
+              <p className="flex items-start justify-between gap-2 text-sm font-medium text-admin-muted">
+                <span className="min-w-0 break-words">{label}</span>
+                <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-admin-muted/50 transition-colors group-hover:text-admin-primary" aria-hidden />
               </p>
-              <p className="mt-1 truncate text-2xl font-bold tracking-tight tabular-nums text-admin-ink" title={value}>{value}</p>
-              <p className="mt-1 flex min-w-0 items-center gap-x-1.5 text-xs text-admin-muted">
+              <p className="mt-1 text-[clamp(1rem,10cqi,1.5rem)] font-bold leading-tight tracking-tight tabular-nums text-admin-ink [overflow-wrap:anywhere]">{value}</p>
+              <p className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs leading-snug text-admin-muted">
                 {trend != null ? (
                   <span className={`inline-flex shrink-0 items-center gap-0.5 font-semibold ${trend >= 0 ? "text-emerald-700" : "text-red-600"}`}>
                     {trend >= 0 ? <ArrowUp className="h-3 w-3" aria-hidden /> : <ArrowDown className="h-3 w-3" aria-hidden />}
                     {Math.abs(trend)}%
                   </span>
                 ) : null}
-                <span className="truncate">{trend != null ? "vs. previous 7 days" : hint}</span>
+                <span className="min-w-0 break-words">{trend != null ? "vs. previous 7 days" : hint}</span>
               </p>
             </div>
           </Link>
@@ -362,7 +363,7 @@ export default async function VendorDashboardPage({
                   href={h.href}
                   className={`min-w-0 px-4 py-3 transition-colors hover:bg-admin-bg sm:px-5 ${i % 2 ? "border-l border-admin-border" : ""} ${i > 1 ? "border-t border-admin-border sm:border-t-0" : ""} ${i === 2 ? "sm:border-l sm:border-admin-border" : ""}`}
                 >
-                  <p className="truncate text-xs font-medium text-admin-muted">{h.label}</p>
+                  <p className="break-words text-xs font-medium leading-snug text-admin-muted">{h.label}</p>
                   <p className="mt-0.5 text-lg font-bold tabular-nums text-admin-ink">{h.value}</p>
                 </Link>
               ))}
@@ -521,7 +522,7 @@ export default async function VendorDashboardPage({
                         )}
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium text-admin-ink" title={p.name}>{p.name}</span>
+                        <span className="line-clamp-2 break-words text-sm font-medium text-admin-ink" title={p.name}>{p.name}</span>
                         <span className="block text-xs text-admin-muted">{formatPKR(p.price)}</span>
                       </span>
                       <span className="shrink-0 rounded-lg bg-[#EAF4EC] px-2.5 py-1 text-right">
