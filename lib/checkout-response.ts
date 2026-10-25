@@ -1,4 +1,4 @@
-export type CheckoutReceipt = { _id: string; orderNumber: string; customerPhone: string; totalAmount?: number; handlingFee?: number };
+export type CheckoutReceipt = { _id: string; orderNumber: string; customerPhone: string; totalAmount?: number; handlingFee?: number; addressSaveWarning?: string };
 
 /** A successful HTTP status alone is not confirmation that an order exists. */
 export async function readCheckoutReceipt(response: Response): Promise<CheckoutReceipt> {

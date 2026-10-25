@@ -1,3 +1,4 @@
+import { ApiError } from "@/lib/marketplace-api";
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
@@ -164,6 +165,7 @@ export async function PATCH(
     });
     return NextResponse.json({ return: serializeReturn(row) });
   } catch (error) {
+    if (error instanceof ApiError) return NextResponse.json({ error: error.message }, { status: error.status });
     const code = error instanceof Error ? error.message : "";
     const messages: Record<string, string> = {
       NOT_FOUND: "Return request not found",

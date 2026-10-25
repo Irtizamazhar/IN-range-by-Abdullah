@@ -1,7 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { sendMailOutcome } from "@/lib/mailer";
-import { orderConfirmationEmail, sellerShippedEmail, vendorOrderEmail } from "@/lib/joro-email-templates";
+import { orderConfirmationEmail, sellerShippedEmail, vendorOrderEmail, vendorServiceBookingEmail } from "@/lib/joro-email-templates";
 import { orderConfirmationEligible, confirmationRetry } from "@/lib/order-confirmation-policy";
 
 /** Called in the same transaction as the authoritative order/payment write. */
@@ -40,6 +40,9 @@ export async function deliverOrderConfirmation(db = prisma, send = sendMailOutco
           recipient = shop.vendor.email;
           email = vendorOrderEmail(order, shop);
         }
+      } else if (job.recipientKey.startsWith("service:")) {
+        const booking = await db.orderService.findFirst({ where: { id: job.recipientKey.slice(8), orderId: order.id, serviceId: null, productId: null, status: { notIn: ["CANCELLED", "FAILED"] } }, include: { vendor: { select: { email: true, shopName: true, status: true } } } });
+        if (booking?.vendor.status === "approved") { recipient = booking.vendor.email; email = vendorServiceBookingEmail(order, booking); }
       } else if (job.recipientKey === "customer" && order.customer?.isActive) {
         recipient = order.customer.email;
         email = orderConfirmationEmail(order);

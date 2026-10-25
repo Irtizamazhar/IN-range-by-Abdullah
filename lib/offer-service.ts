@@ -14,6 +14,15 @@ export async function validateOfferProduct(tx: Prisma.TransactionClient, vendorI
   if (Array.isArray(product.variants) && product.variants.length) throw new ApiError(409, "Negotiated checkout for variant products is not available yet. Use normal product checkout.");
   return product;
 }
+
+/** Service requirements and bespoke gifts may be quoted without a stock item. */
+export async function validateOfferItem(tx: Prisma.TransactionClient, vendorId: string, productId: string | null, quantity: number, requestType: string) {
+  if (requestType !== "SERVICE" && (productId || requestType !== "GIFT")) return validateOfferProduct(tx, vendorId, productId, quantity);
+  if (!Number.isSafeInteger(quantity) || quantity < 1) throw new ApiError(400, "Invalid agreed quantity.");
+  const vendor = await tx.vendor.findFirst({ where: { id: vendorId, status: "approved" }, select: { id: true } });
+  if (!vendor) throw new ApiError(409, "This provider is no longer available. Please contact support.");
+  return null;
+}
 /**
  * What a vendor may send when first quoting on a Want. The customer already chose quantity and condition,
  * so those (plus the delivery charge) are set on the server; unknown keys are dropped by zod.

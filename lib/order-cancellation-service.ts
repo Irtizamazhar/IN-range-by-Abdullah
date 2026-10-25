@@ -115,7 +115,7 @@ export async function cancelParentOrder(params: {
       id: params.orderId,
       ...(params.customerId ? { customerId: params.customerId } : {}),
     },
-    include: { vendorShopOrders: true },
+    include: { vendorShopOrders: true, services: { where: { serviceId: null, productId: null }, select: { id: true, status: true } } },
   });
   if (!order) return { ok: false, error: "Not found" };
   if (order.orderStatus === "cancelled") {
@@ -157,6 +157,11 @@ export async function cancelParentOrder(params: {
 
         for (const shop of order.vendorShopOrders) {
           await cancelShopInsideTransaction(tx, shop, reason);
+        }
+        for (const service of order.services ?? []) {
+          if (["COMPLETED", "CANCELLED", "FAILED"].includes(service.status)) continue;
+          await tx.orderService.update({ where: { id: service.id }, data: { status: "CANCELLED", refundStatus: "REVIEW_REQUIRED" } });
+          await tx.serviceEvent.create({ data: { orderServiceId: service.id, actor: params.actorId || params.actorType, status: "CANCELLED", note: reason } });
         }
         // Releases internal inventory and safely skips seller lines already released above.
         await releaseReservedInventory(tx, { orderId: order.id }, reason);

@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { api, ApiError, sameOrigin } from "@/lib/marketplace-api";
 import { getVendorFromSession } from "@/lib/vendor-auth-server";
-import { DEFAULT_OFFER_DAYS, newOfferInput, pickOfferProduct, sanitizeOfferTerms, validateOfferExpiry, validateOfferProduct } from "@/lib/offer-service";
+import { DEFAULT_OFFER_DAYS, matchOfferProduct, newOfferInput, offerableProducts, pickOfferProduct, sanitizeOfferTerms, validateOfferExpiry, validateOfferItem } from "@/lib/offer-service";
 import { notifyCustomer } from "@/lib/marketplace-notifications";
 export const dynamic = "force-dynamic";
 export async function GET() { return api(async () => {
@@ -18,18 +18,21 @@ export async function POST(request: Request) { return api(async () => {
   if (input.expiresAt) validateOfferExpiry(new Date(input.expiresAt));
   try {
     return await prisma.$transaction(async tx => {
-      const want = await tx.want.findFirst({ where: { id: wantId, status: "OPEN", expiresAt: { gt: new Date() } }, select: { id: true, title: true, category: true, customerId: true, quantity: true, condition: true, expiresAt: true } }); if (!want) throw new ApiError(409, "This Want is no longer open for offers.");
+      const want = await tx.want.findFirst({ where: { id: wantId, status: "OPEN", expiresAt: { gt: new Date() } }, select: { id: true, title: true, category: true, customerId: true, quantity: true, condition: true, expiresAt: true, requestType: true } }); if (!want) throw new ApiError(409, "This Want is no longer open for offers.");
       const existing = await tx.wantOffer.findUnique({ where: { wantId_vendorId: { wantId, vendorId: session.vendor.id } }, select: { id: true } });
       if (existing) throw new ApiError(409, "You already have an offer thread on this Want. Manage it from My Offers instead of submitting a new one.");
-      // Server-owned terms: the customer's quantity and condition, no delivery charge, and the catalog product.
-      const product = await pickOfferProduct(tx, session.vendor.id, want, input.unitPrice, input.productId);
+      // Keep catalog stock for matching gifts; bespoke gifts must not consume an unrelated product.
+      const product = want.requestType === "SERVICE" ? null
+        : want.requestType === "GIFT" && !input.productId
+          ? matchOfferProduct(await offerableProducts(tx, session.vendor.id, want.quantity), want, input.unitPrice)
+          : await pickOfferProduct(tx, session.vendor.id, want, input.unitPrice, input.productId);
       const defaultExpiry = new Date(Math.min(Date.now() + DEFAULT_OFFER_DAYS * 86400000, want.expiresAt.getTime()));
       const terms = sanitizeOfferTerms({
-        productId: product.id, price: input.unitPrice, quantity: want.quantity, shipping: 0, delivery: input.delivery,
+        productId: product?.id ?? null, price: input.unitPrice, quantity: want.quantity, shipping: 0, delivery: input.delivery,
         condition: want.condition || "Any", warranty: input.warranty, message: input.message,
         expiresAt: (input.expiresAt ? new Date(input.expiresAt) : defaultExpiry).toISOString(),
       });
-      await validateOfferProduct(tx, session.vendor.id, terms.productId, terms.quantity);
+      await validateOfferItem(tx, session.vendor.id, terms.productId, terms.quantity, want.requestType);
       const offer = await tx.wantOffer.create({ data: { wantId, vendorId: session.vendor.id, revisions: { create: { ...terms, expiresAt: new Date(terms.expiresAt), revisionNumber: 1, initiator: "VENDOR" } } } });
       // Only the Want owner is notified; the link opens their private offer, which only they can load.
       await notifyCustomer(tx, want.customerId, `offer-submitted:${offer.id}`, "New offer received", `/account/offers#${offer.id}`, `New offer received for your "${want.title}" request.`);

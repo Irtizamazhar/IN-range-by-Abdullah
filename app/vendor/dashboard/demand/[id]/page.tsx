@@ -20,10 +20,10 @@ export default async function DemandDetail({ params }: { params: { id: string } 
   const [matches, existingOffer, offerable] = await Promise.all([
     vendorWantMatchService(session.vendor.id),
     prisma.wantOffer.findUnique({ where: { wantId_vendorId: { wantId: want.id, vendorId: session.vendor.id } }, select: { id: true, status: true } }),
-    offerableProducts(prisma, session.vendor.id, want.quantity),
+    want.requestType === "PRODUCT" ? offerableProducts(prisma, session.vendor.id, want.quantity) : Promise.resolve([]),
   ]);
   // Usually the server links the matching product itself; only ask the vendor when nothing matches.
-  const chooseFrom = matchOfferProduct(offerable, want, 0) ? undefined : offerable.map(p => ({ id: p.id, name: p.name }));
+  const chooseFrom = want.requestType !== "PRODUCT" || matchOfferProduct(offerable, want, 0) ? undefined : offerable.map(p => ({ id: p.id, name: p.name }));
   const match = matches.find(m => m.want.id === want.id);
   const budget = { min: want.budgetMin == null ? null : Number(want.budgetMin), max: want.budgetMax == null ? null : Number(want.budgetMax), flexible: want.budgetFlexible, label: demandBudget(want) };
 

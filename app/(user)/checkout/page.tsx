@@ -100,6 +100,11 @@ function IconBox({ icon, children }: { icon: ReactNode; children: ReactNode }) {
 }
 
 export default function CheckoutPage() {
+  const { data: session } = useSession();
+  return <CheckoutForm key={session?.user?.role === "customer" ? session.user.id : "guest"} />;
+}
+
+function CheckoutForm() {
   const { items, subtotal, clear } = useCart();
   const { isCustomer, authLoading, openAuthModal } = useCustomerAuth();
   const { data: session } = useSession();
@@ -115,6 +120,7 @@ export default function CheckoutPage() {
   const [couponTone, setCouponTone] = useState<"success" | "error" | "info">("info");
   const [couponBusy, setCouponBusy] = useState(false);
   const [handlingFee, setHandlingFee] = useState<number | null>(null);
+  const [quotePricing, setQuotePricing] = useState<{ subtotal: number; shipping: number; requestType: string; city: string } | null>(null);
   const [handlingFeeError, setHandlingFeeError] = useState("");
   const [handlingFeeVersion, setHandlingFeeVersion] = useState(0);
 
@@ -140,6 +146,10 @@ export default function CheckoutPage() {
   const [billingPhone, setBillingPhone] = useState("");
   const [touched, setTouched] = useState<Partial<Record<FieldKey, boolean>>>({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
+  const editedAddressFields = useRef(new Set<string>());
+  const [addressLoading, setAddressLoading] = useState(false);
+  const [addressError, setAddressError] = useState("");
+  const [addressVersion, setAddressVersion] = useState(0);
 
   const paymentMethod: PaymentMethod = "cod";
 
@@ -149,6 +159,7 @@ export default function CheckoutPage() {
     customerPhone: string;
     totalAmount?: number;
     handlingFee?: number;
+    addressSaveWarning?: string;
   } | null>(null);
 
 
@@ -166,39 +177,41 @@ export default function CheckoutPage() {
   useEffect(() => { const controller = new AbortController(); void loadSettings(controller.signal); return () => controller.abort(); }, [loadSettings]);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const s = await getSession();
-      if (cancelled || s?.user?.role !== "customer") return;
-      setEmail((prev) => prev || s.user?.email || "");
-      if (!firstName.trim()) {
-        const raw = (s.user?.name || "").trim();
-        const parts = raw.split(/\s+/).filter(Boolean);
-        if (parts.length > 0) {
-          setFirstName(parts[0] || "");
-          setLastName(parts.slice(1).join(" "));
-        }
-      }
-      setPhone((prev) => prev || pakistanMobileLocalDigits(s.user?.phone || ""));
-    })().catch(() => { if (!cancelled) toast.error("Could not load account details. Please try again."); });
-    return () => {
-      cancelled = true;
-    };
-  }, [authLoading, firstName, isCustomer]);
-
-  useEffect(() => {
     if (session?.user?.role !== "customer") return;
-    setEmail((prev) => prev || session.user.email || "");
-    if (!firstName.trim()) {
-      const raw = (session.user.name || "").trim();
-      const parts = raw.split(/\s+/).filter(Boolean);
-      if (parts.length > 0) {
-        setFirstName(parts[0] || "");
-        setLastName(parts.slice(1).join(" "));
+    const controller = new AbortController();
+    const fill = (id: string, set: (value: string) => void, value: string) => {
+      if (!editedAddressFields.current.has(id)) set(value);
+    };
+    const fillContact = (name: string, email: string, phone: string) => {
+      const parts = name.trim().split(/\s+/);
+      fill("checkout-firstName", setFirstName, parts[0] || "");
+      fill("checkout-lastName", setLastName, parts.slice(1).join(" "));
+      fill("checkout-email", setEmail, email);
+      fill("checkout-phone", setPhone, pakistanMobileLocalDigits(phone));
+    };
+    fillContact(session.user.name || "", session.user.email || "", session.user.phone || "");
+    setAddressLoading(true); setAddressError("");
+    void (async () => {
+      const [profileResponse, addressResponse] = await Promise.all([
+        fetch("/api/customer/profile", { signal: controller.signal, cache: "no-store" }),
+        fetch("/api/customer/addresses", { signal: controller.signal, cache: "no-store" }),
+      ]);
+      if (!profileResponse.ok || !addressResponse.ok) throw new Error("Your saved information could not be loaded. You can enter it manually or retry.");
+      const [profile, data] = await Promise.all([profileResponse.json(), addressResponse.json()]);
+      if (controller.signal.aborted) return;
+      const saved = data.addresses?.find((row: { isDefault: boolean }) => row.isDefault);
+      fillContact(saved?.recipientName || profile.name || session.user.name || "", profile.email || session.user.email || "", saved?.phone || profile.phone || session.user.phone || "");
+      if (saved) {
+        fill("checkout-address", setAddress, saved.address || "");
+        fill("checkout-city", setCity, saved.city || "");
+        fill("checkout-postalCode", setPostalCode, saved.postalCode || "");
       }
-    }
-    setPhone((prev) => prev || pakistanMobileLocalDigits(session.user.phone || ""));
-  }, [firstName, session]);
+    })().catch(error => { if (!controller.signal.aborted) setAddressError(error instanceof Error ? error.message : "Your saved information could not be loaded."); })
+      .finally(() => { if (!controller.signal.aborted) setAddressLoading(false); });
+    return () => controller.abort();
+    // Account changes remount this form; typing must never trigger another prefill.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.id, addressVersion]);
 
   useEffect(() => {
     if (!doneOrder?.orderNumber) return;
@@ -220,14 +233,14 @@ export default function CheckoutPage() {
     [firstName, lastName]
   );
 
-  const codAllowed =
+  const codAllowed = quotePricing?.requestType === "SERVICE" ? city.trim().toLowerCase() === quotePricing.city.trim().toLowerCase() :
     settings?.codAvailableCities?.some(
       (c) => c.toLowerCase() === city.trim().toLowerCase()
     ) ?? false;
-  const deliveryCharge = items.length === 1 && items[0].quoteId ? Number(items[0].quoteShipping || 0) : Number(settings?.codCharges ?? 0);
+  const deliveryCharge = quotePricing ? quotePricing.shipping : items.length === 1 && items[0].quoteId ? Number(items[0].quoteShipping || 0) : Number(settings?.codCharges ?? 0);
   const productSubtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const serviceSubtotal = subtotal - productSubtotal;
-  const totalAmount = subtotal + deliveryCharge - (appliedCoupon?.discount || 0);
+  const totalAmount = (quotePricing?.subtotal ?? subtotal) + deliveryCharge - (appliedCoupon?.discount || 0);
   const cartSignature = JSON.stringify(items.map(i => [i.productId, i.quantity, i.price, i.variant, i.serviceId, i.quoteId]));
   useEffect(() => { setAppliedCoupon(null); setCouponMessage(""); }, [cartSignature]);
 
@@ -236,6 +249,7 @@ export default function CheckoutPage() {
     if (!isCustomer || items.length === 0) return;
     const controller = new AbortController();
     setHandlingFee(null);
+    setQuotePricing(null);
     setHandlingFeeError("");
     const timer = setTimeout(async () => {
       try {
@@ -245,11 +259,12 @@ export default function CheckoutPage() {
           signal: controller.signal,
           body: JSON.stringify({
             quoteId: items.find(i => i.quoteId)?.quoteId,
-            products: items.map(i => ({ productId: i.productId, quantity: i.quantity })),
+            products: items.map(i => ({ productId: i.productId, quantity: i.quantity, serviceId: i.serviceId, variant: i.variant })),
           }),
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok || typeof data.handlingFee !== "number") throw new Error(data.error || "Could not calculate the handling fee.");
+        setQuotePricing(data.quotePricing ?? null);
         setHandlingFee(data.handlingFee);
       } catch (error) {
         if (!controller.signal.aborted) setHandlingFeeError(error instanceof Error ? error.message : "Could not calculate the handling fee.");
@@ -309,6 +324,7 @@ export default function CheckoutPage() {
         toast.error("Please sign in or create an account first");
         return openAuthModal("signup");
       }
+      if (s.user.id !== session?.user?.id) throw new Error("Your account changed. Please reload checkout before placing your order.");
       setLoading(true);
       const signature = JSON.stringify([s.user.id, cartSignature]);
       let storage: Storage | undefined;
@@ -332,6 +348,8 @@ export default function CheckoutPage() {
           paymentMethod,
           couponCode: appliedCoupon?.code,
           expectedHandlingFee: handlingFee ?? undefined,
+          expectedSubtotal: quotePricing?.subtotal ?? subtotal,
+          expectedDeliveryCharge: deliveryCharge,
           quoteId: items.find(i => i.quoteId)?.quoteId,
           products: items.map((i) => ({
             serviceId: i.serviceId,
@@ -344,6 +362,15 @@ export default function CheckoutPage() {
       let receipt;
       try { receipt = await readCheckoutReceipt(res); }
       catch (error) { if (res.status === 409) setHandlingFeeVersion(v => v + 1); throw error; }
+      if (saveInfoNextTime) {
+        try {
+          const saved = await fetch("/api/customer/addresses", { method: "POST", headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(10000), body: JSON.stringify({ orderId: receipt._id }) });
+          const data = await saved.json();
+          if (!saved.ok || data.saved !== true) throw new Error("Address preference was not saved.");
+        } catch {
+          receipt.addressSaveWarning = "Your order is confirmed, but your address could not be saved. Please save it from My Account for your next checkout.";
+        }
+      }
       setDoneOrder(receipt);
       clearCheckoutAttempt(storage);
       clear();
@@ -437,6 +464,7 @@ export default function CheckoutPage() {
         </header>
 
         <LoadingForm
+          onChangeCapture={(event) => { const target = event.target as HTMLElement; if (target.id) editedAddressFields.current.add(target.id); }}
           noValidate
           onSubmit={handleCheckoutSubmit}
           className="grid items-start gap-5 sm:gap-6 lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[minmax(0,1fr)_440px]"
@@ -483,6 +511,8 @@ export default function CheckoutPage() {
             </section>
 
             <section className={cardClass}>
+              {addressLoading && <p role="status" className="mb-3 text-sm text-gray-600">Loading your saved information...</p>}
+              {addressError && <p role="alert" className="mb-3 text-sm text-amber-800">{addressError} <LoadingButton type="button" onClick={() => setAddressVersion(v => v + 1)} className="underline">Retry</LoadingButton></p>}
               <SectionHeader step={2} title="Delivery Address" subtitle="Enter your delivery address for this order." />
               <div className="space-y-4">
                 <Field id="checkout-country" label="Country">
@@ -562,7 +592,7 @@ export default function CheckoutPage() {
                         placeholder="Select city"
                         className={cityClass(errorFor("city"))}
                         value={city}
-                        onValueChange={setCity}
+                        onValueChange={value => { editedAddressFields.current.add("checkout-city"); setCity(value); }}
                         maxLength={120}
                       />
                     </IconBox>
@@ -655,13 +685,13 @@ export default function CheckoutPage() {
                       {item.variant && <p className="truncate text-xs text-[#6B7280]">{item.variant}</p>}
                       <p className="text-xs text-[#6B7280] sm:text-sm">Qty: {item.quantity}</p>
                       <p className="text-sm font-bold text-[#172033]">
-                        {formatPKR(item.price)}
+                        {formatPKR(quotePricing ? quotePricing.subtotal / item.quantity : item.price)}
                         {item.quantity > 1 && <span className="font-normal text-[#6B7280]"> each</span>}
                       </p>
                       {item.serviceId && <p className="mt-1 text-xs text-[#00543D]">{item.serviceName || "Service add-on"}: {formatPKR((item.servicePrice || 0) * item.quantity)}</p>}
                     </div>
                     <p className="shrink-0 self-center text-sm font-bold text-[#172033] sm:text-base">
-                      {formatPKR(item.price * item.quantity)}
+                      {formatPKR(quotePricing?.subtotal ?? item.price * item.quantity)}
                     </p>
                   </li>
                 ))}
@@ -723,8 +753,8 @@ export default function CheckoutPage() {
 
               <dl className="mt-5 space-y-2.5 text-sm">
                 <div className="flex items-center justify-between gap-3">
-                  <dt className="text-[#4B5563]">Product Subtotal</dt>
-                  <dd className="font-semibold text-[#172033]">{formatPKR(productSubtotal)}</dd>
+                  <dt className="text-[#4B5563]">{quotePricing ? "Agreed Offer Amount" : "Product Subtotal"}</dt>
+                  <dd className="font-semibold text-[#172033]">{formatPKR(quotePricing?.subtotal ?? productSubtotal)}</dd>
                 </div>
                 {serviceSubtotal > 0 && <div className="flex items-center justify-between gap-3"><dt className="text-[#4B5563]">Booked Services</dt><dd className="font-semibold text-[#172033]">{formatPKR(serviceSubtotal)}</dd></div>}
                 {appliedCoupon && (
@@ -734,7 +764,7 @@ export default function CheckoutPage() {
                   </div>
                 )}
                 <div className="flex items-center justify-between gap-3">
-                  <dt className="text-[#4B5563]">Delivery Charges<span className="block text-xs text-[#6B7280]">Includes applicable fulfilment and handling</span></dt>
+                  <dt className="text-[#4B5563]">{quotePricing?.requestType === "SERVICE" ? "Agreed Offer Charges" : "Delivery Charges"}{quotePricing?.requestType !== "SERVICE" && <span className="block text-xs text-[#6B7280]">Includes applicable fulfilment and handling</span>}</dt>
                   <dd className="font-semibold text-[#172033]">
                     {deliveryCharge === 0 ? "FREE" : formatPKR(deliveryCharge)}
                   </dd>

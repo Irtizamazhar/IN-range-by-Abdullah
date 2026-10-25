@@ -1,3 +1,5 @@
+import { settleCompletedQuoteServices } from "@/lib/service-quote-fulfillment";
+import { ApiError } from "@/lib/marketplace-api";
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
@@ -116,6 +118,9 @@ export async function PUT(req: NextRequest, context: Ctx) {
       body.paymentStatus != null && body.paymentStatus !== ""
         ? String(body.paymentStatus)
         : prevPayment;
+    const quoteServices = await prisma.orderService.findMany({ where: { orderId: order.id, serviceId: null, productId: null }, select: { id: true, status: true } });
+    if (quoteServices.length && (requestedStatus === "shipped" || (requestedStatus === "delivered" && quoteServices.some(job => job.status !== "COMPLETED")))) return NextResponse.json({ error: "Complete the service through Services. Courier shipment does not apply." }, { status: 409 });
+    if (quoteServices.length && requestedPayment === "received" && prevPayment !== "received" && String(body.notes || "").trim().length < 3) return NextResponse.json({ error: "Record payment receipt evidence in Notes before confirming service payment." }, { status: 400 });
     if (!canTransitionOrderStatus(prevStatus, requestedStatus)) {
       return NextResponse.json(
         { error: `Invalid order transition: ${prevStatus} to ${requestedStatus}` },
@@ -177,6 +182,10 @@ export async function PUT(req: NextRequest, context: Ctx) {
     }
 
     const updated = await prisma.$transaction(async (tx) => {
+      if (quoteServices.length) {
+        const lock = await tx.order.updateMany({ where: { id: order.id, updatedAt: order.updatedAt, orderStatus: prevStatus, paymentStatus: prevPayment }, data: { updatedAt: new Date() } });
+        if (lock.count !== 1) throw new ApiError(409, "Service order changed. Refresh before recording payment or status.");
+      }
       const row = await tx.order.update({
         where: { id: order.id },
         data,
@@ -233,9 +242,11 @@ export async function PUT(req: NextRequest, context: Ctx) {
       if (row.orderStatus === "delivered") {
         await consumeReservedInventory(tx, { orderId: order.id });
       }
+      if (quoteServices.length && row.paymentStatus === "received") await settleCompletedQuoteServices(tx, row.id);
       await queueOrderConfirmation(tx, row);
       return row;
-    });
+    }).catch(error => { if (error instanceof ApiError) return NextResponse.json({ error: error.message }, { status: error.status }); throw error; });
+    if (updated instanceof NextResponse) return updated;
 
     const payload = {
       orderNumber: updated.orderNumber,

@@ -199,32 +199,33 @@ async function createCheckoutOrder(req: NextRequest, requestId: string) {
     );
   }
 
+  try {
+  const quoteId = typeof body.quoteId === "string" && body.quoteId ? body.quoteId : null;
+  const quote = quoteId ? await checkoutQuote(prisma, quoteId, session.user.id, String(city)) : null;
   const settings = await getOrCreateSettings();
   const effectivePaymentMethod = "cod";
   const allowed = settings.codAvailableCities.some(
     (cityName: string) =>
       cityName.toLowerCase() === String(city).trim().toLowerCase()
   );
-  if (!allowed) {
+  if (!allowed && quote?.want.requestType !== "SERVICE") {
     return NextResponse.json(
       { error: "COD is not available in this city" },
       { status: 400 }
     );
   }
 
-  try {
-  const quoteId = typeof body.quoteId === "string" ? body.quoteId : null;
-  const quote = quoteId ? await checkoutQuote(prisma, quoteId, session.user.id, String(city)) : null;
   if (quote?.orderId) {
     const previous = await prisma.order.findUnique({ where: { id: quote.orderId }, include: ORDER_INCLUDE_SERIALIZE });
-    if (!previous) throw new ApiError(409, "Please refresh your order history.");
+    if (!previous || previous.customerId !== customer.id) throw new ApiError(409, "Please refresh your order history.");
     return NextResponse.json(serializeOrder(previous));
   }
-  if (quote && (lineItems.length !== 1 || String(lineItems[0].productId) !== quote.revision.productId || Number(lineItems[0].quantity) !== quote.revision.quantity)) throw new ApiError(400, "Checkout the accepted quote on its own, with the agreed quantity. Remove other cart items first.");
+  if (quote && (lineItems.length !== 1 || ![quote.revision.productId, `quote:${quote.id}`].includes(String(lineItems[0]?.productId)) || Number(lineItems[0]?.quantity) !== quote.revision.quantity)) throw new ApiError(400, "Checkout the accepted quote on its own, with the agreed quantity. Remove other cart items first.");
+  if (quote && (lineItems[0]?.serviceId != null || lineItems[0]?.variant)) throw new ApiError(400, "Checkout the agreed quote without extra services or variants.");
   let subtotal = 0;
   type VendorSlice = {
     vendorId: string;
-    vendorProductId: string;
+    vendorProductId: string | null;
     category: string;
     vendorSpecialCommissionRate: Prisma.Decimal | null;
   };
@@ -250,6 +251,14 @@ async function createCheckoutOrder(req: NextRequest, requestId: string) {
       !Number.isSafeInteger(Number(line.quantity)) || Number(line.quantity) < 1
     ) {
       return NextResponse.json({ error: "Invalid product quantity" }, { status: 400 });
+    }
+    if (quote && (quote.want.requestType === "SERVICE" || !quote.revision.productId)) {
+      const quantity = quote.revision.quantity;
+      const price = Number(quote.revision.price);
+      subtotal += price * quantity;
+      resolvedProducts.push({ productId: `quote:${quote.id}`, orderItemProductId: null, name: quote.want.title, price, quantity, image: "", decrementFromPrisma: false, category: quote.want.category, categoryRecordId: null, originalPrice: null,
+        vendorSlice: { vendorId: quote.revision.offer.vendorId, vendorProductId: null, category: quote.want.category, vendorSpecialCommissionRate: quote.revision.offer.vendor.specialCommissionRate } });
+      continue;
     }
     const lineProductId = String(line.productId || "");
     const p = await prisma.product.findUnique({
@@ -320,6 +329,7 @@ async function createCheckoutOrder(req: NextRequest, requestId: string) {
       };
     }
 
+    if (quote && vendorSlice?.vendorId !== quote.revision.offer.vendorId) throw new ApiError(409, "The quoted seller has changed. Please contact support.");
     const unit = quote ? Number(quote.revision.price) : Number(p.price);
     subtotal += unit * qty;
     const imgUrl = primaryProductImageUrl(p);
@@ -347,6 +357,9 @@ async function createCheckoutOrder(req: NextRequest, requestId: string) {
   const services = await Promise.all(serviceInputs.map(s => resolveServiceAddon(prisma, s.productId, s.serviceId, s.quantity, String(city))));
   const serviceTotal = services.reduce((sum, s) => sum.add(s.price.mul(s.quantity)), new Prisma.Decimal(0));
   const preCouponTotal = new Prisma.Decimal(subtotal).add(deliveryCharge).add(serviceTotal).toDecimalPlaces(2);
+  for (const [expected, actual] of [[body.expectedSubtotal, new Prisma.Decimal(subtotal).add(serviceTotal)], [body.expectedDeliveryCharge, new Prisma.Decimal(deliveryCharge)]] as const) {
+    if (expected != null && (typeof expected !== "number" || !Number.isFinite(expected) || expected < 0 || !actual.equals(new Prisma.Decimal(expected).toDecimalPlaces(2)))) throw new ApiError(409, "Prices or charges changed. Refresh your cart and review checkout before ordering.");
+  }
 
   const orderNumber = await generateOrderNumber();
 
@@ -425,6 +438,7 @@ async function createCheckoutOrder(req: NextRequest, requestId: string) {
     });
     const createdOrderItems: Array<{ id: string }> = [];
     for (const line of resolvedProducts) {
+      if (quote?.want.requestType === "SERVICE") continue;
       createdOrderItems.push(
         await tx.orderItem.create({
           data: {
@@ -449,14 +463,17 @@ async function createCheckoutOrder(req: NextRequest, requestId: string) {
 
     // One VendorShopOrder per vendor on this checkout (bundled lines) + linked VendorOrder rows.
     const vendorLines = resolvedProducts.filter((r) => r.vendorSlice);
+    const standaloneService = quote?.want.requestType === "SERVICE" ? resolvedProducts[0] : null;
     const groups = new Map<string, typeof resolvedProducts>();
     for (const line of vendorLines) {
+      if (standaloneService) continue;
       const vid = line.vendorSlice!.vendorId;
       if (!groups.has(vid)) groups.set(vid, []);
       groups.get(vid)!.push(line);
     }
 
     const shopOrderByVendor = new Map<string, string>();
+    const vendorOrderByLine = new Map<typeof resolvedProducts[number], string>();
 
     for (const [, lines] of Array.from(groups.entries())) {
       type ItemSnap = {
@@ -466,7 +483,7 @@ async function createCheckoutOrder(req: NextRequest, requestId: string) {
         quantity: number;
         price: number;
         subtotal: number;
-        vendorProductId: string;
+        vendorProductId: string | null;
         variant: string | null;
       };
       const items: ItemSnap[] = [];
@@ -494,7 +511,7 @@ async function createCheckoutOrder(req: NextRequest, requestId: string) {
         totalComm += commissionAmount;
         totalNet += vendorAmount;
         items.push({
-          productId: line.orderItemProductId ?? line.productId,
+          productId: line.orderItemProductId,
           productName: line.name,
           image: line.image,
           quantity: line.quantity,
@@ -554,7 +571,7 @@ async function createCheckoutOrder(req: NextRequest, requestId: string) {
         const vendorAmount =
           Math.round((saleAmount - commissionAmount) * 100) / 100;
 
-        await mp.vendorOrder.create({
+        const vendorOrder = await tx.vendorOrder.create({
           data: {
             vendorId: vs.vendorId,
             orderId: o.id,
@@ -570,15 +587,18 @@ async function createCheckoutOrder(req: NextRequest, requestId: string) {
             status: "pending",
           },
         });
+        vendorOrderByLine.set(line, vendorOrder.id);
 
-        const vendorStock = await tx.vendorProduct.updateMany({
-          where: { id: vs.vendorProductId, stock: { gte: line.quantity } },
-          data: {
-            stock: { decrement: line.quantity },
-            totalSold: { increment: line.quantity },
-          },
-        });
-        if (vendorStock.count !== 1) throw new Error("Insufficient stock");
+        if (vs.vendorProductId) {
+          const vendorStock = await tx.vendorProduct.updateMany({
+            where: { id: vs.vendorProductId, stock: { gte: line.quantity } },
+            data: {
+              stock: { decrement: line.quantity },
+              totalSold: { increment: line.quantity },
+            },
+          });
+          if (vendorStock.count !== 1) throw new Error("Insufficient stock");
+        }
 
         await mp.vendor.update({
           where: { id: vs.vendorId },
@@ -604,6 +624,20 @@ async function createCheckoutOrder(req: NextRequest, requestId: string) {
     for (const service of services) {
       await tx.orderService.create({ data: { ...service, orderId: o.id, events: { create: { actor: `customer:${session.user.email}`, status: "PENDING", note: "Service booked with product checkout." } } } });
     }
+    if (standaloneService && quote) {
+      const rate = await resolveCommissionPercent(mp, quote.want.category, quote.revision.offer.vendor.specialCommissionRate);
+      const gross = quote.revision.price.mul(quote.revision.quantity);
+      const commission = gross.mul(rate).div(100).toDecimalPlaces(2);
+      const booking = await tx.orderService.create({ data: {
+        orderId: o.id, vendorId: quote.revision.offer.vendorId, serviceId: null, productId: null,
+        quantity: quote.revision.quantity, price: quote.revision.price, commissionRate: rate,
+        commissionAmount: commission, vendorPayable: gross.sub(commission),
+        snapshot: { kind: "ACCEPTED_SERVICE_QUOTE", quoteId: quote.id, wantId: quote.wantId, offerId: quote.revision.offerId, revisionId: quote.revisionId, name: quote.want.title, total: gross.toString(), unitPrice: quote.revision.price.toString(), quantity: quote.revision.quantity, city: String(city), address: String(customerAddress), warranty: quote.revision.warranty, description: quote.revision.message, delivery: quote.revision.delivery, currency: "PKR" },
+        events: { create: { actor: `customer:${customer.id}`, status: "PENDING", note: "Accepted service quote booked. Payment remains pending until separately verified." } },
+      } });
+      await tx.vendorNotification.create({ data: { vendorId: booking.vendorId, type: "order_new", title: "New service booking", message: `${orderNumber}: ${quote.want.title}. Review this booking in Services.` } });
+      await tx.orderConfirmationEmail.upsert({ where: { orderId_recipientKey: { orderId: o.id, recipientKey: `service:${booking.id}` } }, update: {}, create: { orderId: o.id, recipientKey: `service:${booking.id}` } });
+    }
     if (quote) {
       const claimed = await tx.offerQuote.updateMany({ where: { id: quote.id, orderId: null }, data: { orderId: o.id } });
       if (claimed.count !== 1) throw new ApiError(409, "Quote already checked out.");
@@ -612,6 +646,7 @@ async function createCheckoutOrder(req: NextRequest, requestId: string) {
 
     for (let i = 0; i < resolvedProducts.length; i++) {
       const line = resolvedProducts[i]!;
+      if (!line.decrementFromPrisma) continue;
       const orderItem = createdOrderItems[i]!;
       await tx.orderInventoryLine.create({
         data: {
@@ -640,6 +675,7 @@ async function createCheckoutOrder(req: NextRequest, requestId: string) {
           paymentMethod: effectivePaymentMethod,
           paymentStatus: "pending",
           addresses,
+          lineSellers: resolvedProducts.filter(() => !standaloneService).map((line, index) => ({ orderItemId: createdOrderItems[index].id, vendorId: line.vendorSlice?.vendorId ?? null, vendorShopOrderId: line.vendorSlice ? shopOrderByVendor.get(line.vendorSlice.vendorId) ?? null : null, vendorOrderId: vendorOrderByLine.get(line) ?? null })),
         },
       },
     });

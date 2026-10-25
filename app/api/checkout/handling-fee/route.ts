@@ -4,6 +4,7 @@ import { api, ApiError, customerActor, sameOrigin } from "@/lib/marketplace-api"
 import { consumeOrReject } from "@/lib/security/rate-limit";
 import { prisma } from "@/lib/prisma";
 import { calculateHandlingFee } from "@/lib/handling-fee";
+import { checkoutQuote } from "@/lib/offer-checkout-service";
 
 export const dynamic = "force-dynamic";
 const limiter = new RateLimiterMemory({ points: 60, duration: 60 });
@@ -20,7 +21,14 @@ export async function POST(request: NextRequest) {
     if (!gate.ok) throw new ApiError(429, "Too many requests. Please wait a minute.");
     const body = await request.json();
     if (!Array.isArray(body.products) || !body.products.length || body.products.length > 50) throw new ApiError(400, "Check your cart.");
-    if (body.quoteId) return { handlingFee: calculateHandlingFee() };
+    if (body.quoteId) {
+      if (typeof body.quoteId !== "string") throw new ApiError(400, "Invalid accepted quote.");
+      const quote = await checkoutQuote(prisma, body.quoteId, customer.id);
+      const line = body.products[0];
+      if (body.products.length !== 1 || !line || ![quote.revision.productId, `quote:${quote.id}`].includes(line.productId) || line.quantity !== quote.revision.quantity || line.serviceId || line.variant) throw new ApiError(400, "Checkout the accepted quote on its own with the agreed quantity.");
+      if (quote.orderId) throw new ApiError(409, "This quote has already been ordered. Please check My Orders.");
+      return { handlingFee: calculateHandlingFee(), quotePricing: { subtotal: Number(quote.revision.price.mul(quote.revision.quantity)), shipping: Number(quote.revision.shipping), requestType: quote.want.requestType, city: quote.want.city } };
+    }
 
     for (const entry of body.products) {
       if (!entry || typeof entry.productId !== "string" || !Number.isSafeInteger(entry.quantity) || entry.quantity < 1) throw new ApiError(400, "Invalid cart item.");

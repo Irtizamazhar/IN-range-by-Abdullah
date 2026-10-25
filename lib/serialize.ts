@@ -1,6 +1,7 @@
 import type {
   Order,
   OrderItem,
+  OrderService,
   Product,
   ProductImage,
 } from "@prisma/client";
@@ -111,6 +112,7 @@ function vendorShopsForCustomerView(
 export function serializeOrder(
   order: Order & {
     orderItems: OrderItem[];
+    services?: Pick<OrderService, "id" | "serviceId" | "snapshot" | "price" | "quantity" | "status">[];
     vendorShopOrders?: { status: string; shopOrderNumber?: string | null }[];
     couponRedemption?: { discount: { toString(): string }; platformFunded: { toString(): string }; snapshot: unknown; status: string } | null;
   },
@@ -140,6 +142,8 @@ export function serializeOrder(
     customerEmail: order.customerEmail,
     customerAddress: order.customerAddress,
     city: order.city,
+    fulfillmentType: !order.orderItems.length && order.services?.some(s => s.serviceId === null) ? "SERVICE" : "PHYSICAL",
+    serviceStatus: order.services?.find(s => s.serviceId === null)?.status,
     totalAmount: Number(order.totalAmount),
     handlingFee: Number(order.handlingFee ?? 0),
     coupon: order.couponRedemption ? { discount: Number(order.couponRedemption.discount), code: (order.couponRedemption.snapshot as { code?: string })?.code || "", fundingType: (order.couponRedemption.snapshot as { fundingType?: string })?.fundingType || "", status: order.couponRedemption.status, ...(opts?.forAdmin ? { platformFunded: Number(order.couponRedemption.platformFunded) } : {}) } : null,
@@ -160,7 +164,7 @@ export function serializeOrder(
     ...(opts?.forAdmin ? { notes: order.notes } : {}),
     createdAt: order.createdAt,
     updatedAt: order.updatedAt,
-    products: order.orderItems.map((i) => ({
+    products: [...order.orderItems, ...(order.services ?? []).filter(s => s.serviceId === null).map(s => ({ id: s.id, productId: null, name: String((s.snapshot as { name?: string } | null)?.name || "Booked service"), price: s.price, quantity: s.quantity, image: "", variant: null }))].map((i) => ({
       _id: i.id,
       id: i.id,
       productId: i.productId,

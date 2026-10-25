@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
 import { calculateHandlingFee } from "../lib/handling-fee";
+import { Prisma } from "@prisma/client";
 
 test("fee preview never adds a separate customer charge", async () => {
   const products = new Set(["one", "two"]);
@@ -18,6 +19,7 @@ test("fee preview never adds a separate customer charge", async () => {
     "@/lib/security/rate-limit": { consumeOrReject: async () => ({ ok: true }) },
     "@/lib/prisma": { prisma: { product: { findFirst: async ({ where }: { where: { id: string } }) => products.has(where.id) ? { id: where.id } : null } } },
     "@/lib/handling-fee": { calculateHandlingFee },
+    "@/lib/offer-checkout-service": { checkoutQuote: async () => ({ id: "quote-1", orderId: null, revision: { productId: "one", quantity: 1, price: new Prisma.Decimal(1000), shipping: new Prisma.Decimal(75) }, want: { requestType: "GIFT", city: "Lahore" } }) },
   };
   const exported = {} as { POST: (request: Request) => Promise<Response> };
   const js = ts.transpileModule(readFileSync("app/api/checkout/handling-fee/route.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;

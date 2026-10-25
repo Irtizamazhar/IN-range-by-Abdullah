@@ -6,6 +6,8 @@ import { z } from "zod";
 import { requireCustomerApi } from "@/lib/customer-api-auth";
 import { isPrismaUniqueError, RETURN_INCLUDE, serializeCustomerReturn } from "@/lib/after-sales";
 import { prisma } from "@/lib/prisma";
+import { resolveOrderLineSeller } from "@/lib/order-line-seller";
+import { ApiError } from "@/lib/marketplace-api";
 
 const createSchema = z.object({
   orderItemId: z.string().min(1),
@@ -64,7 +66,8 @@ export async function POST(req: NextRequest) {
         });
         if (!item) throw new Error("NOT_FOUND");
 
-        const delivered = item.inventoryLine?.vendorShopOrder
+        const seller = !item.productId && !item.inventoryLine ? await resolveOrderLineSeller(tx, item.id) : null;
+        const delivered = seller ? seller.status === "delivered" : item.inventoryLine?.vendorShopOrder
           ? item.inventoryLine.vendorShopOrder.status === "delivered"
           : item.order.orderStatus === "delivered";
         if (!delivered) throw new Error("NOT_DELIVERED");
@@ -94,7 +97,7 @@ export async function POST(req: NextRequest) {
             customerId: auth.customer.id,
             orderId: item.orderId,
             orderItemId: item.id,
-            vendorId: item.inventoryLine?.vendorProduct?.vendorId ?? null,
+            vendorId: seller?.vendorId ?? item.inventoryLine?.vendorProduct?.vendorId ?? null,
             quantity: parsed.data.quantity,
             reason: parsed.data.reason,
             details: parsed.data.details || null,
@@ -129,6 +132,7 @@ export async function POST(req: NextRequest) {
     );
     return NextResponse.json({ return: serializeCustomerReturn(result) }, { status: 201 });
   } catch (error) {
+    if (error instanceof ApiError) return NextResponse.json({ error: error.message }, { status: error.status });
     if (isPrismaUniqueError(error)) {
       return NextResponse.json(
         { error: "An active return request already exists for this item" },

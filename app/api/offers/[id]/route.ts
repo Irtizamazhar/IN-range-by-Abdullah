@@ -2,7 +2,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { api, ApiError, customerActor, sameOrigin } from "@/lib/marketplace-api";
 import { getVendorFromSession } from "@/lib/vendor-auth-server";
-import { offerTerms, sanitizeOfferTerms, validateOfferExpiry, validateOfferProduct } from "@/lib/offer-service";
+import { offerTerms, sanitizeOfferTerms, validateOfferExpiry, validateOfferItem } from "@/lib/offer-service";
 import { notifyCustomer, notifyVendor } from "@/lib/marketplace-notifications";
 export const dynamic = "force-dynamic";
 type Context = { params: { id: string } };
@@ -29,9 +29,9 @@ export async function PATCH(request: Request, { params }: Context) { return api(
     const vendorHref = `/vendor/dashboard/offers#${offer.id}`;
     if (action === "accept") {
       if (!customer || latest.initiator !== "VENDOR") throw new ApiError(409, "Wait for the vendor to respond to your counter.");
-      const product = await validateOfferProduct(tx, offer.vendorId, latest.productId, latest.quantity);
+      const product = await validateOfferItem(tx, offer.vendorId, latest.productId, latest.quantity, offer.want.requestType);
       const key = z.string().uuid().parse(body.idempotencyKey);
-      const quote = await tx.offerQuote.create({ data: { idempotencyKey: key, customerId: customer.id, wantId: offer.wantId, revisionId: latest.id, expiresAt: latest.expiresAt, snapshot: { productId: product.id, name: product.name, vendorId: offer.vendorId, price: latest.price.toString(), quantity: latest.quantity, shipping: latest.shipping.toString(), payable: latest.price.mul(latest.quantity).add(latest.shipping).toString(), city: offer.want.city, delivery: latest.delivery, condition: latest.condition, warranty: latest.warranty, currency: "PKR" } } });
+      const quote = await tx.offerQuote.create({ data: { idempotencyKey: key, customerId: customer.id, wantId: offer.wantId, revisionId: latest.id, expiresAt: latest.expiresAt, snapshot: { productId: product?.id ?? null, name: product?.name ?? offer.want.title, requestType: offer.want.requestType, vendorId: offer.vendorId, price: latest.price.toString(), quantity: latest.quantity, shipping: latest.shipping.toString(), payable: latest.price.mul(latest.quantity).add(latest.shipping).toString(), city: offer.want.city, delivery: latest.delivery, condition: latest.condition, warranty: latest.warranty, currency: "PKR" } } });
       await tx.wantOffer.update({ where: { id: offer.id }, data: { status: "ACCEPTED" } });
       await notifyVendor(tx, offer.vendorId, `offer-accepted:${offer.id}`, "Offer accepted", vendorHref, `Your offer on "${offer.want.title}" was accepted. Await the customer's checkout.`);
       return { quote };
@@ -47,7 +47,7 @@ export async function PATCH(request: Request, { params }: Context) { return api(
     // quantity, delivery and condition always carry over from the current terms, whatever the client sends.
     const terms = sanitizeOfferTerms({ ...offerTerms.parse(body), quantity: latest.quantity, shipping: Number(latest.shipping), delivery: latest.delivery, condition: latest.condition }); validateOfferExpiry(new Date(terms.expiresAt));
     if (!vendor && terms.productId !== latest.productId) throw new ApiError(400, "A counter cannot substitute the vendor product.");
-    if (terms.productId) await validateOfferProduct(tx, offer.vendorId, terms.productId, terms.quantity);
+    await validateOfferItem(tx, offer.vendorId, terms.productId, terms.quantity, offer.want.requestType);
     const version = offer.version + 1;
     await tx.offerRevision.create({ data: { ...terms, expiresAt: new Date(terms.expiresAt), offerId: offer.id, revisionNumber: version, initiator: vendor ? "VENDOR" : "CUSTOMER" } });
     const updated = await tx.wantOffer.update({ where: { id: offer.id }, data: { version, status: vendor ? "SUBMITTED" : "COUNTERED" } });

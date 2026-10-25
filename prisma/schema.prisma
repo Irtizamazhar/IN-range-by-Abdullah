@@ -1536,9 +1536,10 @@ model OrderService {
   order            Order           @relation(fields: [orderId], references: [id], onDelete: Restrict)
   vendorId         String
   vendor           Vendor          @relation(fields: [vendorId], references: [id], onDelete: Restrict)
-  serviceId        String
-  service          ServiceOffering @relation(fields: [serviceId], references: [id], onDelete: Restrict)
-  productId        String
+  /// Null only for a standalone accepted service quote, linked through order.offerQuote.
+  serviceId        String?
+  service          ServiceOffering? @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  productId        String?
   snapshot         Json
   quantity         Int
   price            Decimal         @db.Decimal(12, 2)

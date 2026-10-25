@@ -32,13 +32,13 @@ export function OrderConfirmedModal({ order }: { order: CheckoutReceipt }) {
     if (!element.open) element.showModal();
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const timer = window.setTimeout(() => { void done(); }, 3000);
+    const timer = order.addressSaveWarning ? undefined : window.setTimeout(() => { void done(); }, 3000);
     return () => {
       window.clearTimeout(timer);
       element.close();
       document.body.style.overflow = previousOverflow;
     };
-  }, [done]);
+  }, [done, order.addressSaveWarning]);
 
   return <main className={styles.page}>
     <dialog ref={dialog} className={styles.card} aria-labelledby="order-confirmed-title" aria-describedby="order-confirmed-description" onCancel={event => { event.preventDefault(); void done(); }}>
@@ -51,8 +51,9 @@ export function OrderConfirmedModal({ order }: { order: CheckoutReceipt }) {
         {order.totalAmount != null && <p className={styles.total}>Order total <strong>{formatPKR(order.totalAmount)}</strong></p>}
       </div>
       {error && <p role="alert" className={styles.error}>{error}</p>}
+      {order.addressSaveWarning && <p role="status" className={styles.error}>{order.addressSaveWarning}</p>}
       <LoadingButton type="button" onClick={done} loadingLabel="Opening your order..." className={styles.done}>Done</LoadingButton>
-      <p className={styles.redirect}>{error ? "Your order is saved." : "Opening your order details in 3 seconds..."}</p>
+      <p className={styles.redirect}>{error || order.addressSaveWarning ? "Your order is saved. Tap Done to open its details." : "Opening your order details in 3 seconds..."}</p>
     </dialog>
   </main>;
 }

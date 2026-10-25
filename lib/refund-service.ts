@@ -9,6 +9,8 @@ import {
   grossUpPlatformRefundCents,
 } from "@/lib/refund-math";
 import { createCustomerNotification } from "@/lib/customer-notifications";
+import { resolveOrderLineSeller } from "@/lib/order-line-seller";
+import { ApiError } from "@/lib/marketplace-api";
 
 export async function createPendingRefund(params: {
   returnRequestId: string;
@@ -23,11 +25,15 @@ export async function createPendingRefund(params: {
     async (tx) => {
       const request = await tx.returnRequest.findUnique({
         where: { id: params.returnRequestId },
-        include: { orderItem: true, refund: true },
+        include: { orderItem: { include: { inventoryLine: true } }, refund: true },
       });
       if (!request) throw new Error("NOT_FOUND");
       if (request.refund) return request.refund;
       if (request.status !== "received") throw new Error("INVALID_STATE");
+      if (!request.orderItem.productId && !request.orderItem.inventoryLine) {
+        const seller = await resolveOrderLineSeller(tx, request.orderItemId);
+        if ((seller?.vendorId ?? null) !== request.vendorId) throw new ApiError(409, "Return seller attribution needs administrative reconciliation before refund creation.");
+      }
 
       const redemption = await tx.couponRedemption.findUnique({ where: { orderId: request.orderId } });
       const snapshot = redemption?.snapshot as { fundingType?: string; allocations?: Array<{ orderItemId?: string; discount?: number; base?: number }> } | undefined;
@@ -121,6 +127,9 @@ export async function processManualRefund(params: {
         throw new Error("INVALID_STATE");
       }
       if (refund.order.paymentStatus !== "received") throw new Error("PAYMENT_NOT_RECEIVED");
+      const nonStockSeller = !refund.returnRequest.orderItem.productId && !refund.returnRequest.orderItem.inventoryLine
+        ? await resolveOrderLineSeller(tx, refund.returnRequest.orderItemId) : null;
+      if (!refund.returnRequest.orderItem.productId && !refund.returnRequest.orderItem.inventoryLine && ((nonStockSeller?.vendorId ?? null) !== refund.vendorId || refund.returnRequest.vendorId !== refund.vendorId)) throw new ApiError(409, "Refund seller attribution needs administrative reconciliation. No refund was recorded.");
 
       const couponRedemption = await tx.couponRedemption.findUnique({ where: { orderId: refund.orderId } });
       const couponSnapshot = couponRedemption?.snapshot as { fundingType?: string; allocations?: Array<{ orderItemId?: string; discount?: number; base?: number }> } | undefined;
@@ -210,12 +219,20 @@ export async function processManualRefund(params: {
       }
 
       if (refund.vendorId) {
-        const earning = inventory?.vendorShopOrderId
+        const sellerShopId = inventory?.vendorShopOrderId ?? nonStockSeller?.vendorShopOrderId;
+        const earning = sellerShopId
           ? await tx.vendorEarning.findUnique({
-              where: { vendorShopOrderId: inventory.vendorShopOrderId },
+              where: { vendorShopOrderId: sellerShopId },
             })
           : null;
         let debit = refund.amount;
+        if (nonStockSeller) {
+          const earlier = await tx.refund.findMany({ where: { orderId: refund.orderId, id: { not: refund.id }, status: "processed", returnRequest: { orderItemId: refund.returnRequest.orderItemId } }, select: { id: true } });
+          const earlierDebits = earlier.length ? await tx.vendorLedgerEntry.aggregate({ where: { vendorId: refund.vendorId, idempotencyKey: { in: earlier.map(row => `refund:${row.id}`) }, type: "refund_debit" }, _sum: { amount: true } }) : null;
+          const calculated = calculateVendorRefundDebitCents({ customerRefundCents: toCents(refund.amount.toString()), lineSaleCents: toCents(nonStockSeller.saleAmount.toString()), lineVendorCents: toCents(nonStockSeller.vendorAmount.toString()) });
+          const remaining = Math.max(0, toCents(nonStockSeller.vendorAmount.toString()) + toCents(earlierDebits?._sum.amount?.toString() || "0"));
+          debit = new Prisma.Decimal((Math.min(calculated, remaining) / 100).toFixed(2));
+        }
         if (earning && inventory?.vendorProductId) {
           const vendorLine = await tx.vendorOrder.findFirst({
             where: {

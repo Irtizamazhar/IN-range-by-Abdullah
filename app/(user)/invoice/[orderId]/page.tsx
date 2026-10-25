@@ -39,7 +39,7 @@ export default async function InvoicePage({ params }: { params: { orderId: strin
         <div className="overflow-x-auto py-6">
           <table className="w-full min-w-[520px] text-left text-sm">
             <thead><tr className="border-b border-borderGray text-darkText/45"><th className="py-3">Item</th><th className="py-3">Qty</th><th className="py-3 text-right">Unit price</th><th className="py-3 text-right">Total</th></tr></thead>
-            <tbody>{order.orderItems.map((item) => <tr key={item.id} className="border-b border-borderGray/70"><td className="py-4"><p className="font-bold text-brand-dark">{item.name}</p>{item.variant ? <p className="mt-0.5 text-xs text-darkText/50">{item.variant}</p> : null}</td><td className="py-4">{item.quantity}</td><td className="py-4 text-right">{formatPKR(Number(item.price))}</td><td className="py-4 text-right font-bold">{formatPKR(Number(item.price) * item.quantity)}</td></tr>)}</tbody>
+            <tbody>{[...order.orderItems, ...order.services.map(service => ({ id: service.id, name: String((service.snapshot as { name?: string } | null)?.name || "Booked service"), price: service.price, quantity: service.quantity, variant: null }))].map((item) => <tr key={item.id} className="border-b border-borderGray/70"><td className="py-4"><p className="font-bold text-brand-dark">{item.name}</p>{item.variant ? <p className="mt-0.5 text-xs text-darkText/50">{item.variant}</p> : null}</td><td className="py-4">{item.quantity}</td><td className="py-4 text-right">{formatPKR(Number(item.price))}</td><td className="py-4 text-right font-bold">{formatPKR(Number(item.price) * item.quantity)}</td></tr>)}</tbody>
           </table>
         </div>
 

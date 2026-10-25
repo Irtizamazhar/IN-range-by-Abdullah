@@ -25,6 +25,9 @@ type Icon = LucideIcon;
 
 type TrackedProduct = { id: string; productId?: string | null; name: string; price: number; quantity: number; image?: string; variant?: string | null };
 type TrackedOrder = {
+  fulfillmentType?: "SERVICE" | "PHYSICAL";
+  serviceStatus?: string;
+  paymentStatus?: string;
   id: string;
   orderNumber: string;
   orderStatus: string;
@@ -286,6 +289,8 @@ export default function TrackOrderPage() {
   const firstProduct = order?.products[0];
   const totalQty = order?.products.reduce((sum, p) => sum + p.quantity, 0) ?? 0;
   const blockedMsg = order && ["packing", "packed", "shipped", "delivered"].includes(status);
+
+  if (order?.fulfillmentType === "SERVICE") return <main className="mx-auto max-w-3xl space-y-4 px-4 py-10"><h1 className="text-2xl font-bold">Service order {order.orderNumber}</h1><p>Service: {order.serviceStatus || order.orderStatus}</p><p>Payment: {order.paymentStatus || "pending"}</p><p>{order.customerAddress}, {order.city}</p><p className="font-bold">Total: {formatPKR(order.totalAmount)}</p><Link href="/account/services" className="inline-block rounded-xl bg-brand-primary px-5 py-3 font-bold">Scheduling &amp; service history</Link><Link href={`/account/orders/${order.id}`} className="block font-bold text-brand-link underline">Order details and support</Link></main>;
 
   return (
     <div className="min-h-screen bg-[#F7F8F2] text-[#172033]">

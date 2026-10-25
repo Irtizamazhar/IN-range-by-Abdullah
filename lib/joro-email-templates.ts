@@ -10,7 +10,7 @@ type ConfirmedEmailOrder = {
   customerAddress: string; city: string; paymentMethod: string; paymentStatus: string;
   totalAmount: unknown; handlingFee?: unknown; orderItems: EmailItem[];
   couponRedemption?: { discount: unknown } | null;
-  services?: { quantity: number; price: unknown }[];
+  services?: { quantity: number; price: unknown; snapshot?: unknown }[];
 };
 const emailMoney = (value: unknown) => `PKR ${Number(value).toLocaleString("en-PK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const emailDate = (date: Date) => date.toLocaleDateString("en-PK", { timeZone: "Asia/Karachi", year: "numeric", month: "long", day: "numeric" });
@@ -34,7 +34,7 @@ const detailHtml = (details: string[]) => details.map(line => `<p style="overflo
 const orderClosing = "Thank you for choosing JORO.\nJo Chahiye, Yahin Mile!\nJORO Support";
 
 export function orderConfirmationEmail(order: ConfirmedEmailOrder): JoroEmail {
-  const items = emailItems(order.orderItems);
+  const items = emailItems([...order.orderItems, ...(order.services ?? []).map(s => ({ name: String((s.snapshot as { name?: string } | null)?.name || "Booked service"), quantity: s.quantity, price: s.price }))]);
   const { productSubtotal, serviceSubtotal, discount, handlingFee, delivery, total } = storedOrderBreakdown(order);
   const details = [`Order Number: ${order.orderNumber}`, `Order Date: ${emailDate(order.createdAt)}`, `Subtotal: ${emailMoney(productSubtotal)}`, ...(serviceSubtotal ? [`Booked services: ${emailMoney(serviceSubtotal)}`] : []), ...(discount ? [`Discount: ${emailMoney(discount)}`] : []), ...(handlingFee > 0 ? [`Handling Fee: ${emailMoney(handlingFee)}`] : []), ...(delivery > 0 ? [`Delivery Charges: ${emailMoney(delivery)}${handlingFee === 0 ? " (includes applicable fulfilment and handling)" : ""}`] : []), `Final Order Total: ${emailMoney(total)}`, ...paymentDetails(order), `Delivery Address: ${[order.customerAddress, order.city].filter(Boolean).join(", ")}`];
   return brand({ subject: `JORO | Order Confirmed - #${order.orderNumber}`, preview: "Thank you for shopping with JORO!", greeting: `Hello ${order.customerName},`, bodyHtml: `<p>Thank you for shopping with JORO!</p><p>Your order has been confirmed successfully.</p><h2 style="font-size:19px">Order details</h2>${items.html}${detailHtml(details)}`, bodyText: `Thank you for shopping with JORO!\nYour order has been confirmed successfully.\n${items.text}\n${details.join("\n")}`, action: { label: "Track Your Order", url: `${appOrigin()}/account/orders/${encodeURIComponent(order.id)}` }, footer: orderClosing });
@@ -43,6 +43,12 @@ export function orderConfirmationEmail(order: ConfirmedEmailOrder): JoroEmail {
 export function sellerShippedEmail(input: { orderId: string; orderNumber: string; shopOrderNumber: string; customerName: string; trackingNumber: string }): JoroEmail {
   const detail = `Seller order ${input.shopOrderNumber} has been handed to the courier. Tracking: ${input.trackingNumber}.`;
   return brand({ subject: `JORO | Seller Order Shipped - #${input.shopOrderNumber}`, preview: detail, greeting: `Hello ${input.customerName},`, bodyHtml: detailHtml([detail]), bodyText: detail, action: { label: "Track Your Order", url: `${appOrigin()}/account/orders/${encodeURIComponent(input.orderId)}` }, footer: orderClosing });
+}
+
+export function vendorServiceBookingEmail(order: Pick<ConfirmedEmailOrder, "orderNumber" | "customerName" | "customerAddress" | "city" | "paymentStatus">, booking: { quantity: number; price: unknown; snapshot: unknown; vendor: { shopName: string } }): JoroEmail {
+  const snapshot = booking.snapshot as { name?: string } | null;
+  const details = [`Order: ${order.orderNumber}`, `Service: ${snapshot?.name || "Accepted service requirement"}`, `Quantity: ${booking.quantity}`, `Agreed service amount: ${emailMoney(Number(booking.price) * booking.quantity)}`, `Payment: ${order.paymentStatus}`, `Service recipient: ${order.customerName}`, `Service location: ${order.customerAddress}, ${order.city}`];
+  return brand({ subject: `JORO | New Service Booking - #${order.orderNumber}`, preview: "An accepted service quote has been booked.", greeting: `Hello ${booking.vendor.shopName},`, bodyHtml: detailHtml(details), bodyText: details.join("\n"), action: { label: "View Service Bookings", url: `${appOrigin()}/vendor/dashboard/services` }, footer: orderClosing });
 }
 
 export function vendorOrderEmail(order: Pick<ConfirmedEmailOrder, "orderNumber" | "paymentMethod" | "paymentStatus">, shop: {
