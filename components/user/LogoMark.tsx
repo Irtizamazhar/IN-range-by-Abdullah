@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "@/components/ui/LoadingLink";
 import brandLogo from "@/public/logo.png";
+import inverseLogo from "@/public/logo-inverse.png";
 import styles from "./LogoMark.module.css";
 
 type LogoMarkProps = {
@@ -22,7 +23,7 @@ export function LogoMark({
       className={`${styles.root} ${compact ? styles.compact : ""} ${inverse ? styles.inverse : ""}`}
     >
       <Image
-        src={brandLogo}
+        src={inverse ? inverseLogo : brandLogo}
         alt="JORO.pk — Jo Chahiye, Yahin Mile!"
         sizes={compact ? "(max-width: 639px) 106px, 116px" : "(max-width: 639px) 118px, 164px"}
         priority
