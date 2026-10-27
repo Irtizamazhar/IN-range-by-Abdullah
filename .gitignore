@@ -28,6 +28,10 @@ yarn-error.log*
 # local env files
 .env
 .env*.local
+.env.live.local
+.env.live.*
+!.env.live.example
+/.joro-live/
 
 # Private vendor identity and appeal documents stay out of source control.
 /public/uploads/vendor-docs/

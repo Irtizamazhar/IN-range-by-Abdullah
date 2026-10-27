@@ -1,5 +1,22 @@
 # Database migrations
 
+## Current verified status (2026-10-27)
+
+Read-only checks through the local managed SSH tunnel passed for production identity,
+archived history, checksums and migration sequence. `0_baseline` is already applied.
+Production has 24 successful archived migrations, one documented historical rollback
+and all six active migrations applied: **zero pending production migrations**.
+`npm run db:check` passed and **206 automated tests passed**.
+
+The checkout matches fetched `origin/main` at `c16fba3` after a safe fast-forward
+from `73e7a04`. Local changes and private environment contents were preserved.
+These results verify local tooling access and recorded history, not independent
+Hostinger deployment or backup readiness. No production changes were made.
+
+Do not manually edit `_prisma_migrations`. The baseline and recovery material at
+the end is historical reference only, not applicable to the current production
+database and **not approved for execution**.
+
 ## Why the history was baselined (2026-10-17)
 
 The original migration history could not be replayed on an empty database, so
@@ -16,16 +33,21 @@ The original migration history could not be replayed on an empty database, so
   case-sensitive (`lower_case_table_names=0`).
 
 The old migrations are kept unchanged in `prisma/migrations_archive/` for reference.
-Prisma does not read that folder. The active history is:
+Prisma does not read that folder. The current active history is:
 
 | Migration | Purpose |
 | --- | --- |
 | `0_baseline` | Creates the complete schema from `prisma/schema.prisma`, plus the six default `servicecommissionrange` rows. Existing databases never execute it; it is recorded as applied. |
-| `20261018000000_add_want_report` | Creates `wantreport`, which production lacks. Idempotent: on a database where `0_baseline` ran, it changes nothing. |
+| `20261018000000_add_want_report` | Creates `wantreport`, which was absent in the 2026-10-17 backup. Now applied in production. Idempotent on a database where `0_baseline` ran. |
+| `20261022000000_pickup_management` | Pickup management; applied in production. |
+| `20261024000000_customer_reset_otp` | Customer password reset OTP support; applied in production. |
+| `20261025000000_standalone_quote_service_booking` | Standalone quote/service booking support; applied in production. |
+| `20261025010000_want_photos` | Optional Want photo list; authentic upstream migration reconciled and applied in production. |
 
 ## Workflow for every schema change
 
-`npm run dev` only starts Next.js (`next dev`); it does not check, generate or apply migrations. The migration
+`npm run dev` verifies the normal Next.js development environment points to a safe local database, then starts
+Next.js (`next dev`); it does not connect, generate or apply migrations and never loads the private live profile. The migration
 cycle runs only when you start it:
 
 1. `git pull --rebase` first, so you start from your teammate's latest migrations.
@@ -97,7 +119,8 @@ server holds it), `npm run db:check:full -- --update-manifest` records the manif
 
 There is no CI workflow. Before pushing a schema change, run `npm test`, `npm run db:check` and
 `npm run db:check:full`. The migration scenarios run locally against a disposable server, never a database you use:
-`MIGRATION_TEST_SERVER_URL=mysql://user:password@127.0.0.1:3306 npm run test:migrations:scenarios`
+Set `MIGRATION_TEST_SERVER_URL` privately to the disposable local server, then run
+`npm run test:migrations:scenarios`
 (also `test:migrations:watch` and `test:migrations:deploy`). They only create and drop `joro_disposable_*` databases.
 
 ### Two developers on `main`
@@ -114,10 +137,9 @@ There is no CI workflow. Before pushing a schema change, run `npm test`, `npm ru
 
 A development database that still has the archived history reports "migration history that is not in
 prisma/migrations". Either point `DATABASE_URL` in `.env.local` at a new empty database (the cycle creates the
-whole schema), or give the existing local database the same one-time baseline as production: confirm with
-`npx prisma migrate diff --from-url <local> --to-schema-datamodel prisma/schema.prisma` that only accepted
-differences remain, run `npx prisma migrate resolve --applied 0_baseline` against that local database, then
-`npm run db:migrate`.
+whole schema). The historical baseline reconciliation of existing databases required
+separate review. This guide does not recommend manual migration-history changes;
+do not copy production baseline/recovery statements into a current database.
 
 ## Hostinger deployment
 
@@ -138,8 +160,9 @@ differences remain, run `npx prisma migrate resolve --applied 0_baseline` agains
   `.env` or `.env.local`, so a local file cannot turn migrations on. `npm run build:deploy` runs the same
   migration chain regardless of the variable. Hostinger's documentation says the live version is switched only
   after a successful build; confirm this once on the first real deployment.
-  Set the variable only after the one-time baseline below has been completed; before that, step 1 stops the
-  deployment without touching the database.
+  The production baseline is already applied. A successful history check does not
+  authorize enabling migrations: verify the deployment environment, backup and
+  intended release separately. An unbaselined populated database is blocked by preflight.
 - Start command: `npm start`.
 - `DATABASE_URL` must be set in Hostinger's environment variables. Hostinger injects environment variables
   into the build and the running app. Never commit it. Development and production use different credentials;
@@ -147,7 +170,7 @@ differences remain, run `npx prisma migrate resolve --applied 0_baseline` agains
 - After a deployment that applied a migration, the build log lists `Applying migration ...`; check the new
   tables or columns, then the affected pages.
 
-## Local testing
+## Historical local testing of the baseline (2026-10-17)
 
 Production runs MariaDB 11.8.9 with `lower_case_table_names=0`. The physical table names are the lowercase
 `@@map` names, except `OrderConfirmationEmail`, which has no `@@map` and is mixed-case.
@@ -180,6 +203,10 @@ columns as "type changed" (MariaDB stores JSON as `LONGTEXT` with a `json_valid`
 database with `--from-url` does not, so use `--from-url` for MariaDB comparisons.
 
 ## Production state (2026-10-17 backups)
+
+This section describes the old backup, not today's production state. The baseline,
+`wantreport` and later migrations are now applied as recorded above. Counts and
+missing-table observations below remain only as historical comparison evidence.
 
 ### Migration history
 
@@ -215,10 +242,19 @@ After `20261018000000_add_want_report` it has 115 = 114 + 1.
 capitalization-only names. Once `wantreport` exists, its generated SQL would drop both legacy tables, drop 105
 and add 104 foreign keys, and drop and recreate 131 indexes, so it must never be executed against production.
 
-## One-time production baseline (PENDING: not yet performed; requires separate approval)
+## Historical one-time production baseline (already applied; reference only)
 
-`0_baseline` is recorded as applied with one SQL statement in phpMyAdmin. The pending
-`20261018000000_add_want_report` migration then runs through the permanent Hostinger build (`npm run build` with `JORO_DEPLOY_MIGRATIONS=true`),
+**NOT APPLICABLE TO CURRENT PRODUCTION. NOT APPROVED FOR EXECUTION.**
+Read-only verification confirms `0_baseline` and all subsequent active migrations
+are applied. The original plan and recovery SQL below are retained to explain the
+2026-10-17 rehearsal, not as current operating instructions. Do not execute any of
+these steps, manually insert/update/delete `_prisma_migrations` rows, or drop tables
+in the current production database. A future incident requires a separately reviewed
+recovery plan based on its actual state and a verified backup.
+
+The historical plan recorded `0_baseline` as applied with one SQL statement in
+phpMyAdmin. The then-pending `20261018000000_add_want_report` migration was intended
+to run through the Hostinger build (`npm run build` with `JORO_DEPLOY_MIGRATIONS=true`),
 which uses Hostinger's production environment variables. No Prisma command is run by hand against production.
 
 The checksum in step 6 is the SHA-256 of the exact committed `prisma/migrations/0_baseline/migration.sql`.
@@ -258,7 +294,11 @@ were unchanged.
    - `wantpost` and `wantofferlegacy20260914` still exist.
    Then test reporting a Want on the site. Every later build log shows `No pending migrations to apply.`
 
-### Recovery (each statement rehearsed)
+### Historical recovery rehearsal (not approved for current execution)
+
+**REFERENCE ONLY.** These history-editing and destructive SQL examples describe a
+past disposable-database rehearsal. They are not recommendations or authorization
+to change current production, where the migration history now passes.
 
 If step 6 must be undone before the build in step 7:
 
