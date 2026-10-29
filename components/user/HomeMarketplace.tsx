@@ -1,4 +1,5 @@
 import Link from "@/components/ui/LoadingLink";
+import { ArrowRight, TrendingUp } from "lucide-react";
 import { ProductCard, type ProductCardData } from "./ProductCard";
 import { ServiceCard, type PublicService } from "./services/ServiceCard";
 import { TrendingWantCard } from "./TrendingWantCard";
@@ -9,10 +10,16 @@ type MarketplaceStore = { id: string; shopName: string; storeSlug: string | null
 function Heading({ title, href, link }: { title: string; href: string; link: string }) { return <header className="mb-5 flex items-end justify-between gap-3"><h2 className="text-2xl font-black tracking-tight text-emerald-950 sm:text-3xl">{title}</h2><Link href={href} className="shrink-0 rounded-xl bg-lime-100 px-3 py-2 text-sm font-bold text-emerald-900 hover:bg-lime-200">{link} →</Link></header>; }
 function ProductGrid({ products }: { products: ProductCardData[] }) { return products.length ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">{products.slice(0, 5).map(product => <ProductCard key={product._id} product={product} variant="marketplace" />)}</div> : <p className="rounded-2xl border bg-white p-6 text-gray-600">No products available right now.</p>; }
 export function HomeMarketplace({ products, wants, services, gifts, stores }: { products: ProductCardData[]; wants: MarketplaceWant[]; services: PublicService[]; gifts: ProductCardData[]; stores: MarketplaceStore[] }) { return <div data-home-marketplace className="mx-auto max-w-7xl space-y-10 px-4 pb-10 sm:px-6">
-  <section id="trending-wants" aria-labelledby="trending-wants-heading">
-    <header className="mb-4 mt-4 flex items-center justify-between gap-3 sm:mt-6"><h2 id="trending-wants-heading" className="text-2xl font-black tracking-tight text-emerald-950 sm:text-3xl">Trending Wants</h2><Link href="/wants?tab=trending" className="shrink-0 whitespace-nowrap rounded-lg bg-lime-100 px-2.5 py-1.5 text-xs font-bold text-emerald-900 hover:bg-lime-200 sm:rounded-xl sm:px-3 sm:py-2 sm:text-sm">View all requests →</Link></header>
+  <section id="trending-wants" aria-labelledby="trending-wants-heading" className="-mx-2.5 rounded-[24px] bg-[#F8FBF5] p-2.5 pt-4 sm:mx-0 sm:p-5">
+    <header className="mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <h2 id="trending-wants-heading" className="flex items-center gap-1.5 text-[22px] font-black tracking-tight text-[#003D36] sm:text-3xl">Trending Wants <TrendingUp className="h-5 w-5 shrink-0 text-[#63C52E] sm:h-6 sm:w-6" strokeWidth={2.5} aria-hidden="true" /></h2>
+        <Link href="/wants?tab=trending" className="inline-flex min-h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-[#E8F8BE] px-3 text-[11px] font-bold text-[#00483B] shadow-[0_3px_10px_rgba(73,126,42,0.08)] transition hover:bg-[#DCF29F] active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005055] sm:min-h-10 sm:px-4 sm:text-sm">View all requests <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={2.5} aria-hidden="true" /></Link>
+      </div>
+      <p className="mt-1 text-[11px] leading-snug text-slate-500 sm:text-sm">People are requesting these items and services</p>
+    </header>
     {wants.length
-      ? <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 xl:grid-cols-6">{wants.map(want => <TrendingWantCard key={want.id} want={{
+      ? <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 lg:gap-4">{wants.map(want => <TrendingWantCard key={want.id} want={{
           id: want.id, title: want.title, requestType: want.requestType, city: want.city, photo: want.photo, createdAt: want.createdAt,
           budgetMin: want.budgetMin == null ? null : Number(want.budgetMin), budgetMax: want.budgetMax == null ? null : Number(want.budgetMax), budgetFlexible: want.budgetFlexible,
           joined: want._count.interests, offers: want._count.offers,
