@@ -2,18 +2,18 @@
 import Link from "@/components/ui/LoadingLink";
 import { useEffect, useRef } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Bookmark, CalendarDays, CircleHelp, ClipboardList, Heart, House, Package, Settings, ShoppingCart, Tag, UserRoundPlus, type LucideIcon } from "lucide-react";
+import { Bookmark, CalendarDays, CircleHelp, ClipboardList, House, Package, Settings, ShoppingCart, Tag, UserRoundPlus, type LucideIcon } from "lucide-react";
 /** Each destination's icon and its colour tile (tinted background, matching icon colour). */
 const icons: Record<(typeof accountDestinations)[number][0], [LucideIcon, string]> = {
   overview: [House, "bg-[#E3F4E8] text-[#047857]"], orders: [ClipboardList, "bg-[#E8F0FE] text-[#2563EB]"],
-  wants: [Heart, "bg-[#FDE8EE] text-[#E11D48]"], offers: [Tag, "bg-[#FEF3DC] text-[#D97706]"],
+  offers: [Tag, "bg-[#FEF3DC] text-[#D97706]"],
   saved: [Bookmark, "bg-[#F0E9FE] text-[#7C3AED]"], stores: [UserRoundPlus, "bg-[#E0F5FA] text-[#0891B2]"],
   stuff: [Package, "bg-[#FBEDE3] text-[#C2410C]"], together: [ShoppingCart, "bg-[#E5F7EA] text-[#16A34A]"],
   services: [CalendarDays, "bg-[#FCE8F3] text-[#DB2777]"], profile: [Settings, "bg-[#ECEFF4] text-[#475569]"],
   help: [CircleHelp, "bg-[#DFF5F1] text-[#0D9488]"],
 };
 export const accountDestinations = [
-  ["overview","Overview","/account"], ["orders","Orders","/account?tab=orders"], ["wants","My Wants","/account?tab=wants"],
+  ["overview","Overview","/account"], ["orders","Orders","/account?tab=orders"],
   ["offers","Received Offers","/account/offers"], ["saved","Saved Items","/account?tab=saved"], ["stores","Following","/account?tab=stores"],
   ["stuff","My Stuff","/my-stuff"],
   ["together","Family Cart","/account/together"],

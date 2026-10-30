@@ -57,9 +57,9 @@ export function HomePersonalization() {
   if (!activity && !loading && !error) return null;
   const firstName = activity?.name.trim().split(/\s+/)[0] || "there";
   const cards = activity ? [
-    { title: "My Requests", count: activity.counts.wants, icon: Package, href: "/account?tab=wants", action: "View My Requests", empty: "You haven't posted a request yet.", emptyHref: "/wants/new", emptyAction: "Post Your First Want", rows: activity.wants },
+    { title: "My Requests", count: activity.counts.wants, icon: Package, href: "/wants?tab=mine", action: "View My Requests", empty: "You haven't posted a request yet.", emptyHref: "/wants/new", emptyAction: "Post Your First Want", rows: activity.wants },
     { title: "Joined Requests", count: activity.counts.joined, icon: Users, href: "/wants?tab=joined", action: "View Joined Requests", empty: "No joined requests yet.", emptyHref: "/wants", emptyAction: "Explore Requests", rows: activity.joined },
-    { title: "My Private Offers", count: activity.counts.offers, icon: Store, href: "/account?tab=wants", action: "View My Requests", empty: "Offers for your requests will appear here.", emptyHref: "/account?tab=wants", emptyAction: "View My Requests", rows: activity.wants.filter(want => want.offers > 0) },
+    { title: "My Private Offers", count: activity.counts.offers, icon: Store, href: "/wants?tab=mine", action: "View My Requests", empty: "Offers for your requests will appear here.", emptyHref: "/wants?tab=mine", emptyAction: "View My Requests", rows: activity.wants.filter(want => want.offers > 0) },
   ] : [];
 
   async function dismissWelcome() {
