@@ -117,7 +117,7 @@
 
 /* Community directory layout; existing feed state and social actions are unchanged. */
 .page { padding: 24px 24px 64px; background: #f7faf8; }
-.container { max-width: 1400px; }
+.container { max-width: var(--joro-site-max); }
 .heading { position: relative; isolation: isolate; overflow: hidden; min-height: 222px; padding: 28px 34px; border: 1px solid #e4f0e9; border-radius: 20px; background: linear-gradient(110deg,#f0f9f6 0%,#f8fcf8 49%,#e1f3df 100%); margin-bottom: 16px; }
 .heading::after { content: ""; position: absolute; z-index: -1; width: 300px; height: 300px; border: 34px solid #d0eee177; border-radius: 65px; transform: rotate(35deg); right: -80px; top: -80px; }
 .heroCopy { max-width: 490px; position: relative; z-index: 1; }

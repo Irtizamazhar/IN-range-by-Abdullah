@@ -125,7 +125,7 @@ export default function NewArrivalDetailPage() {
 
   if (!item) {
     return (
-      <div className="mx-auto max-w-7xl px-4 py-8 text-darkText/60">
+      <div className="mx-auto max-w-site px-4 py-8 text-darkText/60">
         <p role="alert">{error || "Product not found."}</p>
         <LoadingButton onClick={() => load()} className="mt-4 rounded-xl bg-brand-primary px-4 py-2 font-semibold">Try again</LoadingButton>
       </div>

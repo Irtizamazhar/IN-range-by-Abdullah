@@ -691,7 +691,7 @@ export default async function HomePage() {
 
 
 
-        <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        <section className="mx-auto max-w-site px-4 py-8 sm:px-6">
           <div className="mb-4 flex items-center justify-between gap-2 sm:gap-3">
             <h2 className="whitespace-nowrap text-[20px] font-black tracking-[-0.035em] text-brand-dark sm:text-[22px]">
               Shop by Category
@@ -713,7 +713,7 @@ export default async function HomePage() {
         {/* Promotional collections — visual treatments only; destinations unchanged. */}
         <section
           aria-label="Explore JORO collections"
-          className="mx-auto grid max-w-7xl gap-4 px-4 pb-7 sm:grid-cols-2 sm:px-6 lg:grid-cols-3 lg:gap-5"
+          className="mx-auto grid max-w-site gap-4 px-4 pb-7 sm:grid-cols-2 sm:px-6 lg:grid-cols-3 lg:gap-5"
         >
           {/* Electronics */}
           <article
@@ -827,7 +827,7 @@ export default async function HomePage() {
         {/* Customer request callout — all text and buttons are real HTML elements. */}
         <section
           aria-label="Post your want"
-          className="mx-auto max-w-7xl px-4 pb-9 sm:px-6"
+          className="mx-auto max-w-site px-4 pb-9 sm:px-6"
         >
           <div
             className={`${styles.wantCard} relative isolate overflow-hidden rounded-[24px] border border-[#155f40] bg-gradient-to-r from-[#073b2a] via-[#0b5338] to-[#136c48] text-white shadow-panel`}
@@ -934,7 +934,7 @@ export default async function HomePage() {
 
           id="together"
 
-          className="mx-auto max-w-7xl px-4 pb-10 pt-2 sm:px-6"
+          className="mx-auto max-w-site px-4 pb-10 pt-2 sm:px-6"
 
         >
 

@@ -18,7 +18,7 @@ export function HeroSection({
 }) {
   return (
     <section className={`${styles.section} relative isolate overflow-hidden`}>
-      <div className={`${styles.card} joro-v4-hero relative isolate mx-auto max-w-7xl overflow-hidden text-white`}>
+      <div className={`${styles.card} joro-v4-hero relative isolate mx-auto max-w-site overflow-hidden text-white`}>
       <div className="joro-v4-grid pointer-events-none absolute inset-0" />
       <div className="joro-v4-glow pointer-events-none absolute inset-0" />
 

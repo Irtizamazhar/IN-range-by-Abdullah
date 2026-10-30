@@ -255,7 +255,7 @@ export function Navbar({
         ================================================= */}
 
         <div className="border-b border-black/[0.08] bg-white">
-          <div className="mx-auto max-w-7xl px-3 py-2 sm:px-6 lg:py-2.5">
+          <div className="mx-auto max-w-site px-3 py-2 sm:px-6 lg:py-2.5">
             <div className={`${styles.mainRow} flex min-w-0 flex-wrap items-center gap-1.5 sm:gap-3 lg:flex-nowrap lg:gap-3 xl:gap-5`}>
               {/* MOBILE MENU */}
 

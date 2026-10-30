@@ -221,7 +221,7 @@ export default function NotificationsPage() {
   const allFilters = [...categoryFilters, ...stateFilters];
   const activeLabel = allFilters.find(f => f.id === filter)?.label ?? "All Notifications";
   return <main className="min-h-dvh bg-[#F5F6F4] px-3 py-4 sm:px-5 sm:py-6 lg:px-7">
-    <div className="mx-auto max-w-[1280px] rounded-[22px] border border-[#ECEEEA] bg-white px-4 py-5 shadow-[0_2px_10px_rgba(15,23,42,0.04)] sm:px-6 sm:py-6 lg:px-7 lg:py-6">
+    <div className="mx-auto max-w-site rounded-[22px] border border-[#ECEEEA] bg-white px-4 py-5 shadow-[0_2px_10px_rgba(15,23,42,0.04)] sm:px-6 sm:py-6 lg:px-7 lg:py-6">
       <header className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div>
           <h1 className="text-[24px] font-bold leading-tight tracking-[-0.02em] text-[#0B1220] sm:text-[28px]">Notifications</h1>

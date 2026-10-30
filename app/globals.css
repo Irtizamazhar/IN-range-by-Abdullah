@@ -7,6 +7,8 @@
 ========================================================= */
 
 :root {
+  /* Widest public page content; layout containers use it via `max-w-site` or var(--joro-site-max). */
+  --joro-site-max: 1600px;
   --brand-primary-rgb: 183 227 58;
   --brand-hover-rgb: 167 201 87;
   --brand-dark-rgb: 17 17 17;

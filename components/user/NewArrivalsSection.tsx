@@ -136,7 +136,7 @@ export function NewArrivalsSection({
 
   return (
     <section className="bg-brand-background py-9 sm:py-11">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+      <div className="mx-auto max-w-site px-4 sm:px-6">
         <div className="mb-4 flex items-center justify-between gap-2">
           <div>
             <div className="mb-1.5 inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.15em] text-brand-link">

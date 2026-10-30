@@ -113,7 +113,7 @@ export default function TogetherPage() {
   const sorted = useMemo(() => [...rooms].sort((a, b) =>
     sort === "name" ? a.name.localeCompare(b.name) : sort === "products" ? b._count.items - a._count.items : sort === "oldest" ? a.createdAt.localeCompare(b.createdAt) : b.createdAt.localeCompare(a.createdAt)), [rooms, sort]);
 
-  return <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:py-8">
+  return <main className="mx-auto max-w-site px-4 py-6 sm:px-6 lg:py-8">
     <section className="relative overflow-hidden rounded-[22px] border border-[#DCEBD6] bg-[#F3F9F0]">
       <HowItWorks />
       <div className="grid lg:grid-cols-[minmax(0,1.32fr)_minmax(0,1fr)]">

@@ -537,7 +537,7 @@ export function ProductDetailClient({
 
   return (
     <div className="min-h-screen bg-[#F7F8F2]">
-      <div className="mx-auto max-w-[1440px] px-4 pb-8 pt-4 sm:px-5 sm:pt-5">
+      <div className="mx-auto max-w-site px-4 pb-8 pt-4 sm:px-5 sm:pt-5">
         <nav aria-label="Breadcrumb" className="mb-4">
           <ol className="flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap text-[12px] text-[#6B7280] sm:gap-2 sm:text-[14px]">
             <li className="shrink-0">

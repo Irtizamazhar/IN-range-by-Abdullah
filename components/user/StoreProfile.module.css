@@ -1,4 +1,4 @@
-.page { max-width: 1280px; min-width: 0; margin: auto; padding: 22px 24px 36px; color: #153c31; }
+.page { max-width: var(--joro-site-max); min-width: 0; margin: auto; padding: 22px 24px 36px; color: #153c31; }
 .profile { border: 1px solid #e6eee8; border-radius: 22px; background: #fff; box-shadow: 0 4px 20px rgb(11 60 36 / 3%); }
 .banner { display: none; position: relative; width: 100%; height: 120px; overflow: hidden; border-radius: 21px 21px 0 0; background: #edf5ee; }
 .identity { display: flex; align-items: center; gap: 24px; min-width: 0; padding: 26px 28px; border-radius: 21px 21px 0 0; background: #f7fbf6; }

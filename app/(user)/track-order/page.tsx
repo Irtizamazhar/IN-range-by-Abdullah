@@ -257,7 +257,7 @@ export default function TrackOrderPage() {
           <div className="absolute -left-24 top-28 h-72 w-72 rounded-full bg-[#D8EEC0]/60 blur-3xl" />
           <div className="absolute -right-24 top-6 h-80 w-80 rounded-full bg-[#E2F3CC]/80 blur-3xl" />
           <div className="absolute left-1/2 top-40 h-64 w-[38rem] -translate-x-1/2 rounded-full bg-white/70 blur-3xl" />
-          <div className="absolute inset-x-0 bottom-0 mx-auto hidden h-full max-w-[1440px] xl:block">
+          <div className="absolute inset-x-0 bottom-0 mx-auto hidden h-full max-w-site xl:block">
             <Image src={PARCEL.src} alt="" width={PARCEL.width} height={PARCEL.height} unoptimized priority className="absolute bottom-2 left-0 h-auto w-[290px] drop-shadow-[0_18px_24px_rgba(0,75,59,0.16)] 2xl:left-2 2xl:w-[320px]" />
             <Image src={VAN.src} alt="" width={VAN.width} height={VAN.height} unoptimized priority className="absolute bottom-0 right-0 h-auto w-[380px] drop-shadow-[0_18px_24px_rgba(0,75,59,0.14)] 2xl:w-[420px]" />
           </div>

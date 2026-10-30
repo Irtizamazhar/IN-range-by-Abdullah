@@ -23,7 +23,7 @@ export default async function ServicesPage({ searchParams }: { searchParams?: { 
     if (value) params.set("category", value);
     return { value, label: value || "All services", href: `/services${params.size ? `?${params}` : ""}` };
   });
-  return <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+  return <main className="mx-auto max-w-site px-4 py-8 sm:px-6">
     <div className="rounded-3xl bg-[#123d27] p-7 text-white sm:p-10"><p className="text-sm font-bold uppercase tracking-widest text-lime-300">JORO services</p><h1 className="mt-2 text-3xl font-black sm:text-4xl">Find a trusted service provider</h1><p className="mt-3 max-w-2xl text-white/75">Explore active services from approved JORO vendors in your city.</p><Link href="/wants/new?type=service" className="mt-5 inline-block rounded-xl bg-brand-primary px-5 py-3 font-bold text-brand-dark">Post a service requirement</Link></div>
     <CategoryFilterRail label="Browse service categories" items={categoryItems} selected={category} />
     <form action="/services" className="mt-7 grid gap-3 rounded-2xl border bg-white p-4 sm:grid-cols-[2fr_1fr_1fr_auto]">

@@ -1,5 +1,5 @@
 .page { background: #f5f5f5; min-height: 70vh; color: #123d27; }
-.container { max-width: 1480px; margin: 0 auto; padding: 25px 40px 64px; }
+.container { max-width: var(--joro-site-max); margin: 0 auto; padding: 25px 40px 64px; }
 .breadcrumb { display: flex; align-items: center; gap: 9px; color: #7b857e; font-size: 12px; }
 .breadcrumb svg { width: 13px; height: 13px; }
 .breadcrumb a:hover { color: #123d27; }

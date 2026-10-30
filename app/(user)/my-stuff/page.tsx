@@ -111,7 +111,7 @@ export default function MyStuffPage() {
   if (unauthorized) return <main className="mx-auto max-w-lg px-4 py-20 text-center"><section className="rounded-2xl border border-borderGray bg-white p-8 shadow-card"><h1 className="text-2xl font-black text-brand-dark">Sign in to view My Stuff</h1><p className="mt-2 text-sm text-darkText/60">Purchases, invoices, returns and disputes are private.</p><LoadingButton onClick={() => openAuthModal("login")} className="mt-6 w-full rounded-xl bg-brand-primary px-4 py-3 font-black text-brand-dark">Sign in</LoadingButton></section></main>;
 
   return (
-    <main className="mx-auto max-w-7xl px-4 pb-10 pt-4 sm:px-6 sm:pt-5">
+    <main className="mx-auto max-w-site px-4 pb-10 pt-4 sm:px-6 sm:pt-5">
       {errorMessage && <p role="alert" className="mb-4 text-red-700">{errorMessage}<LoadingButton onClick={load} className="ml-3 underline">Try again</LoadingButton></p>}
       <AccountPageHero id="my-stuff-heading" eyebrow="Purchases & ownership" caps title="My Stuff" image={{ src: "/images/my-stuff/joro-bag-parcels.webp", alt: "JORO shopping bag with delivered parcels", width: 960, height: 480 }}>Manage your delivered products, warranties, returns and disputes in one place.</AccountPageHero>
 

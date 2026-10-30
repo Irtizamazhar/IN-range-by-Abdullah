@@ -55,7 +55,7 @@ export default async function CustomerReviewsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 md:py-14">
+    <div className="mx-auto max-w-site px-4 py-10 md:py-14">
       <header className="text-center">
         <h1 className="text-3xl font-black text-darkText md:text-4xl">
           Customer Reviews
