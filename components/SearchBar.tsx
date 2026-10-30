@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useLoadingRouter } from "@/hooks/useLoadingRouter";
-import { LoaderCircle, Mic, Search, X } from "lucide-react";
+import { LoaderCircle, Mic, Search } from "lucide-react";
 import type { SearchItem } from "@/lib/public-search";
 import type { ProductCardData } from "@/components/user/ProductCard";
 import Image from "next/image";
@@ -225,7 +225,6 @@ export function SearchBar() {
         if ((event.key === "ArrowDown" || event.key === "ArrowUp") && !showVoiceProducts) { event.preventDefault(); setOpen(true); setActiveIndex((index) => event.key === "ArrowDown" ? Math.min(items.length - 1, index + 1) : Math.max(-1, index - 1)); }
         if (event.key === "Enter" && activeIndex >= 0 && items[activeIndex]) { event.preventDefault(); setOpen(false); void router.push(items[activeIndex].href); }
       }} role="combobox" aria-autocomplete="list" aria-expanded={suggestions} aria-controls="joro-search-options" aria-activedescendant={activeIndex >= 0 ? `joro-search-option-${activeIndex}` : undefined} aria-label="Search JORO marketplace" maxLength={100} autoComplete="off" placeholder="Search products, services & more" className="h-full min-w-0 flex-1 border-0 bg-transparent px-3 text-[13px] text-neutral-900 outline-none placeholder:text-neutral-500 sm:px-4 sm:text-sm" />
-      {query && <button type="button" onClick={() => { if (listening || voicePending.current) releaseVoice(); voiceProductRequest.current?.abort(); setShowVoiceProducts(false); setQuery(""); setItems([]); setVoiceStatus(""); input.current?.focus(); }} aria-label="Clear search" className="flex w-8 shrink-0 items-center justify-center text-neutral-500 hover:text-emerald-800"><X className="h-4 w-4" /></button>}
       {voiceSupported && <select value={language} onChange={(event) => { setLanguage(event.target.value); sessionStorage.setItem("joro:voice-language", event.target.value); }} aria-label="Voice search language" className="w-9 shrink-0 appearance-none border-l border-[#e4ebe2] bg-white text-center text-[10px] font-bold text-emerald-900 outline-none sm:w-11"><option value="en-PK">EN</option><option value="ur-PK">UR</option></select>}
       <button type="button" onClick={startVoice} aria-label={!voiceSupported ? "Voice search unavailable in this browser" : listening || startingVoice ? "Stop voice search" : "Start voice search"} aria-pressed={listening} title={!voiceSupported ? "Voice search is not supported in this browser" : listening || startingVoice ? "Tap to stop" : "Search by voice"} className={`flex w-9 shrink-0 items-center justify-center ${listening ? "bg-emerald-100 text-emerald-800" : "text-brand-link hover:text-emerald-800"}`}><Mic className="h-[18px] w-[18px]" /></button>
       <button type="submit" aria-label="Search marketplace" className="m-1 flex w-10 shrink-0 items-center justify-center rounded-xl bg-brand-primary text-brand-dark transition-colors hover:bg-brand-hover md:w-[74px]"><Search className="h-5 w-5 md:hidden" /><span className="hidden text-xs font-bold md:inline">SEARCH</span></button>
