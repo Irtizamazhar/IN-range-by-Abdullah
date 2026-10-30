@@ -294,10 +294,12 @@ export default function AdminCategoriesPage() {
         )}
 
         <div className="flex gap-3">
+          {/* Submit stays disabled until an image is uploaded, pasted or linked. */}
           <LoadingButton loadingLabel="Saving…"
             type="submit"
-
-            className="rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-semibold text-brand-dark disabled:opacity-60"
+            disabled={!imageUrl.trim() && !imageFile}
+            title={!imageUrl.trim() && !imageFile ? "Upload an image first" : undefined}
+            className="rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-semibold text-brand-dark disabled:cursor-not-allowed disabled:opacity-60"
           >
             {mode === "add"
                 ? "Submit"
