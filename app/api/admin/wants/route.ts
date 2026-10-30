@@ -32,6 +32,7 @@ export async function GET(request: Request) {
       take: 200,
       include: {
         customer: { select: { name: true, email: true, isActive: true } },
+        quote: { select: { orderId: true } },
         _count: { select: { offers: true, interests: true, reactions: true, reports: { where: { status: "OPEN" } } } },
       },
     }),
