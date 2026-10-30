@@ -17,7 +17,7 @@ import styles from "./HomePageHighlights.module.css";
 
 import type { ProductCardData } from "@/components/user/ProductCard";
 
-import { HomeMarketplace } from "@/components/user/HomeMarketplace";
+import { HomeAllProducts, HomeMarketplace, HomeTrendingWants } from "@/components/user/HomeMarketplace";
 
 
 
@@ -47,6 +47,7 @@ import { newArrivalsWindowStart } from "@/lib/product-new-arrival-window";
 import { catalogProductSelect } from "@/lib/catalog-product-select";
 
 import { prisma } from "@/lib/prisma";
+import { actingIdentity, actorWhere, resolveWantViewer } from "@/lib/want-engagement";
 
 import { serializeProduct } from "@/lib/serialize";
 
@@ -536,7 +537,7 @@ export default async function HomePage() {
 
       orderBy: { createdAt: "desc" },
 
-      take: 12, // up to two rows of the 6-column Trending Wants grid
+      take: 8, // two rows of the 4-column Trending Wants grid
 
       select: {
 
@@ -562,6 +563,9 @@ export default async function HomePage() {
 
         _count: { select: { offers: true, interests: true } },
 
+        // Latest active joiners, shown as overlapping avatars on the Join Request button.
+        interests: { where: { customer: { isActive: true } }, orderBy: { createdAt: "desc" }, take: 3, select: { customer: { select: { name: true, image: true } } } },
+
       },
 
     }),
@@ -574,6 +578,20 @@ export default async function HomePage() {
 
   ]);
 
+  // The heart on each Trending Want is the viewer's existing "Love" reaction.
+  const wantActor = actingIdentity(await resolveWantViewer());
+  const lovedWantIds = new Set(wantActor && wantExamples.length
+    ? (await prisma.wantReaction.findMany({ where: { wantId: { in: wantExamples.map((want) => want.id) }, type: "LOVE", ...actorWhere(wantActor) }, select: { wantId: true } })).map((row) => row.wantId)
+    : []);
+  // Only an avatar image and first initial reach the client — never customer ids or full names.
+  const trendingWants = wantExamples.map(({ interests, ...want }) => ({
+    ...want,
+    loved: lovedWantIds.has(want.id),
+    joiners: interests.map(({ customer }) => ({
+      image: customer.image || null,
+      initial: (Array.from(customer.name.trim())[0] ?? "?").toUpperCase(),
+    })),
+  }));
   const sellerRows = topVendorRows.length ? topVendorRows.map(row => ({ vendor: row.vendor, label: row.label })) : (await publicStores()).slice(0, 4).map(vendor => ({ vendor, label: null }));
 
   const topVendorRatings = await vendorReviewStatsService(sellerRows.map((row) => row.vendor.id));
@@ -632,7 +650,7 @@ export default async function HomePage() {
 
    * If no bestseller data exists,
 
-   * use Featured Products.
+   * use the featured products.
 
    */
 
@@ -876,53 +894,31 @@ export default async function HomePage() {
 
 
 
+        <HomeTrendingWants wants={trendingWants} />
+
+        {/* =================================================
+            NEW ARRIVALS
+        ================================================= */}
+
+        <NewArrivalsSection
+          initialProducts={newArrivals.initial}
+          totalCount={newArrivals.total}
+          pageSize={NEW_ARRIVALS_PAGE_SIZE}
+        />
+
         <HomeMarketplace
-
-          products={homepageProducts}
-
-          wants={wantExamples}
-
           services={serviceExamples}
-
           gifts={giftExamples}
-
           stores={storeExamples}
-
         />
 
         <VendorSpotlight />
 
-
-
         {/* =================================================
-
-            NEW ARRIVALS
-
+            ALL PRODUCTS
         ================================================= */}
 
-
-
-        <NewArrivalsSection
-
-          initialProducts={
-
-            newArrivals.initial
-
-          }
-
-          totalCount={
-
-            newArrivals.total
-
-          }
-
-          pageSize={
-
-            NEW_ARRIVALS_PAGE_SIZE
-
-          }
-
-        />
+        <HomeAllProducts products={homepageProducts} />
 
 
 

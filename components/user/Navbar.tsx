@@ -294,19 +294,16 @@ export function Navbar({
               ================================================= */}
 
               <div className={`${styles.actions} order-3 ml-auto flex shrink-0 items-center gap-0.5 lg:order-4 lg:ml-0`}>
-                {/* WANTS */}
+                {/* WANTS: heart icon below desktop, a text link like Together/Stores on desktop */}
 
                 <Link
                   href="/wants"
-                  className="group relative flex h-11 items-center gap-1.5 rounded-xl px-2 text-brand-link focus-visible:outline-brand-link sm:px-2.5"
+                  className="group relative flex h-11 items-center gap-1.5 rounded-xl px-2 text-brand-link focus-visible:outline-brand-link sm:px-2.5 lg:hidden"
                   aria-label="Wants"
                 >
                   <Heart className="h-[19px] w-[19px] transition-transform group-hover:scale-105" />
-
-                  <span className="hidden text-[12px] font-black decoration-2 underline-offset-4 group-hover:underline group-focus-visible:underline xl:inline">
-                    Wants
-                  </span>
                 </Link>
+                <Link href="/wants" className="hidden h-11 items-center rounded-xl px-2 text-xs font-semibold text-brand-link decoration-2 underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-brand-link lg:flex">Wants</Link>
 
                 <Link href="/together" aria-label="Together" className="hidden h-11 items-center rounded-xl px-2 text-xs font-semibold text-brand-link decoration-2 underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-brand-link md:flex">Together</Link>
                 <Link href="/stores" aria-label="Stores" className="hidden h-11 items-center rounded-xl px-2 text-xs font-semibold text-brand-link decoration-2 underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-brand-link md:flex">Stores</Link>
@@ -330,10 +327,6 @@ export function Navbar({
                   aria-label="Open cart"
                 >
                   <ShoppingCart className="h-[20px] w-[20px] transition-transform group-hover:scale-105" />
-
-                  <span className="hidden text-[12px] font-black decoration-2 underline-offset-4 group-hover:underline group-focus-visible:underline xl:inline">
-                    Cart
-                  </span>
 
                   {totalQty > 0 ? (
                     <span className="absolute right-0 top-0 flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-brand-primary px-1 text-[12px] font-black text-brand-dark ring-2 ring-white">

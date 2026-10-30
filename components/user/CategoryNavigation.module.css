@@ -389,3 +389,14 @@
   .stripIcon { width: 15px; height: 15px; }
   .trigger { padding-inline: 10px; }
 }
+
+/* Wants stays in the mobile strip only; desktop reaches it from the page itself. */
+@media (min-width: 1024px) {
+  .mobileOnly { display: none; }
+}
+
+/* Mobile: the Categories button is hidden (categories stay in the menu drawer); the strip starts at the edge padding. */
+@media (max-width: 639px) {
+  .trigger { display: none; }
+  .stripWrap { margin-left: 0; }
+}

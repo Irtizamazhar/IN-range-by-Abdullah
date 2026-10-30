@@ -256,7 +256,7 @@ export function CategoryNavigation() {
                 href={href}
                 onNavigateComplete={() => setOpen(false)}
                 aria-current={active ? "page" : undefined}
-                className={styles.stripLink}
+                className={href === "/wants" ? `${styles.stripLink} ${styles.mobileOnly}` : styles.stripLink}
               >
                 {contents}
               </Link>
