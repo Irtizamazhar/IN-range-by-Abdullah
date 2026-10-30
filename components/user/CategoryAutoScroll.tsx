@@ -32,19 +32,26 @@ function categoryImage(category: CategoryItem) {
 }
 
 // Every item shares these exact sizes.
-const item = "group flex w-[84px] shrink-0 snap-start flex-col items-center text-center outline-none sm:w-[96px]";
-const circle = "relative flex h-[68px] w-[68px] items-center justify-center overflow-hidden rounded-full border-2 border-white ring-1 transition duration-200 group-hover:-translate-y-0.5 group-focus-visible:-translate-y-0.5 sm:h-[76px] sm:w-[76px]";
+const item = "group flex w-[92px] shrink-0 snap-start flex-col items-center text-center outline-none sm:w-[96px]";
+const circle = "relative flex h-[80px] w-[80px] items-center justify-center overflow-hidden rounded-full border-2 border-white ring-1 transition duration-200 group-hover:-translate-y-0.5 group-focus-visible:-translate-y-0.5 sm:h-[76px] sm:w-[76px]";
 const label = "mt-1.5 line-clamp-2 w-full break-normal text-xs leading-tight text-brand-dark [hyphens:none] [overflow-wrap:normal] sm:text-sm";
 const row = "hide-scrollbar flex snap-x snap-proximity overflow-x-auto scroll-px-1 px-1 pb-1 pt-1";
 const PIXELS_PER_SECOND = 30;
 const RESUME_AFTER_TOUCH_MS = 2500;
 
+/** Uploaded category images go through the optimizer (small WebP instead of the full original); other unoptimizable sources stay direct. */
+function optimizable(src: string) {
+  return src.startsWith("/uploads/categories/") || !shouldUnoptimizeImageSrc(src);
+}
+
 function CategoryCircle({ category, hidden = false }: { category: CategoryItem; hidden?: boolean }) {
   const src = categoryImage(category);
+  // If the optimizer cannot read a file (e.g. one uploaded after the build), fall back to the original once.
+  const [direct, setDirect] = useState(false);
   return <Link href={`/products?category=${encodeURIComponent(category.name)}`} title={category.name} tabIndex={hidden ? -1 : undefined} className={item}>
-    <span className={`${circle} bg-brand-soft ring-green-200 group-hover:ring-green-500 group-focus-visible:ring-2 group-focus-visible:ring-green-600`}>
+    <span className={`${circle} bg-white ring-green-200 sm:bg-brand-soft group-hover:ring-green-500 group-focus-visible:ring-2 group-focus-visible:ring-green-600`}>
       {src
-        ? <Image src={src} alt="" fill sizes="76px" loading="lazy" unoptimized={shouldUnoptimizeImageSrc(src)} className="object-cover" />
+        ? <Image src={src} alt="" fill sizes="(min-width: 640px) 76px, 80px" loading="lazy" unoptimized={direct || !optimizable(src)} onError={() => { if (!direct && optimizable(src)) setDirect(true); }} className="object-contain sm:object-cover" />
         : <span aria-hidden="true" className="text-[24px] font-bold text-brand-dark/70 sm:text-[26px]">{category.name.trim().charAt(0).toUpperCase() || "?"}</span>}
     </span>
     <span className={label}>{category.name}</span>
