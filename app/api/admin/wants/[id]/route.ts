@@ -5,6 +5,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { ApiError, sameOrigin } from "@/lib/marketplace-api";
 import { requireAdminPermission, writeAdminAudit } from "@/lib/admin-rbac";
+import { deleteWants, removeWantPhotos } from "@/lib/admin-want-delete";
 
 type Context = { params: { id: string } };
 const account = {
@@ -59,5 +60,29 @@ export async function PATCH(request: Request, { params }: Context) {
     if (error instanceof z.ZodError) return NextResponse.json({ error: "Please check the supplied fields." }, { status: 400 });
     console.error("Admin want review failed", error instanceof Error ? error.name : "Unknown error");
     return NextResponse.json({ error: "This feature is temporarily unavailable. Please try again later." }, { status: 503 });
+  }
+}
+
+/** Permanently deletes one Want and its Want-module records. Wants that already became an order are kept. */
+export async function DELETE(request: Request, { params }: Context) {
+  const auth = await requireAdminPermission("moderation.manage");
+  if ("response" in auth) return auth.response;
+  try {
+    sameOrigin(request);
+    const result = await prisma.$transaction(async (tx) => {
+      const want = await tx.want.findUnique({ where: { id: params.id }, select: { id: true, title: true, status: true, customerId: true } });
+      if (!want) throw new ApiError(404, "Want not found.");
+      const deleted = await deleteWants(tx, { id: want.id });
+      if (!deleted.ids.length) throw new ApiError(409, "This Want already has an order, so it can't be deleted.");
+      await tx.marketplaceAudit.create({ data: { actor: auth.admin.email || "admin", action: "WANT_DELETED", target: want.id, reason: "Permanently deleted by admin." } });
+      await writeAdminAudit(tx, { adminId: auth.admin.id, action: "want_deleted", entityType: "Want", entityId: want.id, details: { title: want.title, status: want.status, customerId: want.customerId } });
+      return deleted;
+    }, { isolationLevel: "Serializable" });
+    await removeWantPhotos(result.photos);
+    return NextResponse.json({ deleted: result.ids.length });
+  } catch (error) {
+    if (error instanceof ApiError) return NextResponse.json({ error: error.message }, { status: error.status });
+    console.error("Admin want delete failed", error instanceof Error ? error.name : "Unknown error");
+    return NextResponse.json({ error: "Could not delete this Want. Please try again later." }, { status: 503 });
   }
 }

@@ -7,6 +7,10 @@ import { prisma } from "@/lib/prisma";
 import { ApiError, sameOrigin } from "@/lib/marketplace-api";
 import { requireAdminPermission, writeAdminAudit } from "@/lib/admin-rbac";
 import { createCustomerNotification } from "@/lib/customer-notifications";
+import { deleteWants, removeWantPhotos } from "@/lib/admin-want-delete";
+
+/** Typed by the client after the second confirmation; guards against an accidental bulk delete. */
+const DELETE_ALL_CONFIRMATION = "DELETE ALL WANTS";
 
 const FILTERS: Record<string, Prisma.WantWhereInput> = {
   all: {},
@@ -79,5 +83,28 @@ export async function PATCH(request: Request) {
     if (error instanceof z.ZodError) return NextResponse.json({ error: "Please check the supplied fields." }, { status: 400 });
     console.error("Admin want moderation failed", error instanceof Error ? error.name : "Unknown error");
     return NextResponse.json({ error: "This feature is temporarily unavailable. Please try again later." }, { status: 503 });
+  }
+}
+
+/** Permanently deletes every Want in every status. Wants that already became an order are kept and counted as skipped. */
+export async function DELETE(request: Request) {
+  const auth = await requireAdminPermission("moderation.manage");
+  if ("response" in auth) return auth.response;
+  try {
+    sameOrigin(request);
+    z.object({ confirm: z.literal(DELETE_ALL_CONFIRMATION) }).parse(await request.json());
+    const result = await prisma.$transaction(async (tx) => {
+      const deleted = await deleteWants(tx, {});
+      await tx.marketplaceAudit.create({ data: { actor: auth.admin.email || "admin", action: "WANT_DELETED_ALL", target: "all", reason: `Permanently deleted ${deleted.ids.length} Wants.` } });
+      await writeAdminAudit(tx, { adminId: auth.admin.id, action: "want_deleted_all", entityType: "Want", details: { deleted: deleted.ids.length, skipped: deleted.skipped } });
+      return deleted;
+    }, { isolationLevel: "Serializable", timeout: 60_000 });
+    await removeWantPhotos(result.photos);
+    return NextResponse.json({ deleted: result.ids.length, skipped: result.skipped });
+  } catch (error) {
+    if (error instanceof ApiError) return NextResponse.json({ error: error.message }, { status: error.status });
+    if (error instanceof z.ZodError) return NextResponse.json({ error: "Delete All was not confirmed." }, { status: 400 });
+    console.error("Admin want delete all failed", error instanceof Error ? error.name : "Unknown error");
+    return NextResponse.json({ error: "Could not delete Wants. Please try again later." }, { status: 503 });
   }
 }

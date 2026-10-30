@@ -6,7 +6,7 @@ import { LoadingButton } from "@/components/ui/LoadingButton";
 import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import Link from "next/link";
-import { Eye, Flag, ImageOff } from "lucide-react";
+import { Eye, Flag, ImageOff, Trash2 } from "lucide-react";
 import { ImageLightbox } from "@/components/ui/ImageLightbox";
 import { ContainedImage } from "@/components/user/ContainedImage";
 import { formatPKR } from "@/lib/format";
@@ -67,6 +67,30 @@ function ReviewPanel({ want, onChanged }: { want: Want; onChanged: () => void })
   </div>;
 }
 
+const DELETE_ALL_CONFIRMATION = "DELETE ALL WANTS";
+
+function ConfirmDialog({ title, message, confirmLabel, typeToConfirm, onCancel, onConfirm }: { title: string; message: string; confirmLabel: string; typeToConfirm?: string; onCancel: () => void; onConfirm: () => Promise<unknown> }) {
+  const [typed, setTyped] = useState("");
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    const close = (event: KeyboardEvent) => { if (event.key === "Escape" && !busy) onCancel(); };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [busy, onCancel]);
+  const blocked = Boolean(typeToConfirm) && typed !== typeToConfirm;
+  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => { if (!busy) onCancel(); }}>
+    <div role="alertdialog" aria-modal="true" aria-labelledby="want-delete-title" aria-describedby="want-delete-message" onClick={(event) => event.stopPropagation()} className="w-full max-w-md rounded-2xl border border-borderGray bg-white p-6 shadow-xl">
+      <h2 id="want-delete-title" className="flex items-center gap-2 text-lg font-black text-red-700"><Trash2 className="h-5 w-5 shrink-0" aria-hidden="true" />{title}</h2>
+      <p id="want-delete-message" className="mt-2 text-sm leading-6 text-darkText/70">{message}</p>
+      {typeToConfirm && <label className="mt-4 block text-xs font-bold text-darkText/60">Type <span className="font-black text-red-700">{typeToConfirm}</span> to confirm<input autoFocus value={typed} onChange={(event) => setTyped(event.target.value)} className="mt-1 w-full rounded-lg border border-borderGray px-3 py-2 text-sm font-normal text-darkText" /></label>}
+      <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <button type="button" disabled={busy} onClick={onCancel} className="rounded-xl border border-borderGray px-4 py-2 text-sm font-bold text-darkText disabled:opacity-50">Cancel</button>
+        <LoadingButton type="button" disabled={blocked} loadingLabel="Deleting…" onClick={async () => { setBusy(true); try { await onConfirm(); } finally { setBusy(false); } }} className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-50"><Trash2 className="h-4 w-4" aria-hidden="true" />{confirmLabel}</LoadingButton>
+      </div>
+    </div>
+  </div>;
+}
+
 export default function AdminWantsPage() {
   const [wants, setWants] = useState<Want[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -75,6 +99,8 @@ export default function AdminWantsPage() {
   const [loadError, setLoadError] = useState("");
   const [viewing, setViewing] = useState<Want | null>(null);
   const [reviewing, setReviewing] = useState("");
+  const [deleting, setDeleting] = useState<Want | null>(null);
+  const [deleteAllStep, setDeleteAllStep] = useState<0 | 1 | 2>(0);
   const load = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
     try {
@@ -98,6 +124,25 @@ export default function AdminWantsPage() {
     toast.success("Want updated");
     await load(false);
   }
+  async function deleteOne(want: Want) {
+    const response = await fetch(`/api/admin/wants/${want.id}`, { method: "DELETE" });
+    const data = await readJson<object>(response);
+    if (!response.ok) { toast.error(data.error || "Could not delete Want"); return; }
+    setDeleting(null);
+    setWants((current) => current.filter((row) => row.id !== want.id));
+    if (reviewing === want.id) setReviewing("");
+    toast.success("Want deleted permanently");
+    await load(false);
+  }
+  async function deleteAll() {
+    const response = await fetch("/api/admin/wants", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirm: DELETE_ALL_CONFIRMATION }) });
+    const data = await readJson<{ deleted?: number; skipped?: number }>(response);
+    if (!response.ok) { toast.error(data.error || "Could not delete Wants"); return; }
+    setDeleteAllStep(0); setReviewing("");
+    toast.success(`${(data.deleted || 0).toLocaleString("en-PK")} Wants deleted permanently${data.skipped ? ` · ${data.skipped} kept because they already have an order` : ""}`);
+    await load(false);
+  }
+  const totalWants = stats ? Object.values(stats.byStatus).reduce((sum, count) => sum + count, 0) : 0;
   const tiles = stats ? [
     ["Pending", (stats.byStatus.PENDING_MODERATION || 0) + (stats.byStatus.SUBMITTED || 0)],
     ["Live", stats.byStatus.OPEN || 0],
@@ -109,7 +154,7 @@ export default function AdminWantsPage() {
   ] as const : [];
   return <main className="p-6 md:p-8"><h1 className="text-2xl font-black text-darkText">Wants moderation</h1><p className="mt-1 text-sm text-darkText/60">Approve customer demand before it goes public, hide abusive posts and review reports. Actions are recorded in audit history.</p>
     {tiles.length > 0 && <dl className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-7">{tiles.map(([label, value]) => <div key={label} className="rounded-xl border border-borderGray bg-white p-3"><dt className="text-xs font-bold text-darkText/50">{label}</dt><dd className="mt-1 text-xl font-black text-[#005235]">{value.toLocaleString("en-PK")}</dd></div>)}</dl>}
-    <nav aria-label="Filter Wants" className="mt-5 flex flex-wrap gap-2">{FILTERS.map(([id, label]) => <button key={id} type="button" aria-pressed={filter === id} onClick={() => setFilter(id)} className={`rounded-full px-4 py-2 text-sm font-bold ${filter === id ? "bg-[#005235] text-white" : "border border-borderGray bg-white text-darkText/70"}`}>{label}</button>)}</nav>
+    <nav aria-label="Filter Wants" className="mt-5 flex flex-wrap gap-2">{FILTERS.map(([id, label]) => <button key={id} type="button" aria-pressed={filter === id} onClick={() => setFilter(id)} className={`rounded-full px-4 py-2 text-sm font-bold ${filter === id ? "bg-[#005235] text-white" : "border border-borderGray bg-white text-darkText/70"}`}>{label}</button>)}<button type="button" disabled={!totalWants} onClick={() => setDeleteAllStep(1)} className="inline-flex items-center gap-1.5 rounded-full border border-red-300 bg-white px-4 py-2 text-sm font-bold text-red-700 hover:bg-red-50 disabled:opacity-50"><Trash2 className="h-4 w-4" aria-hidden="true" />Delete All</button></nav>
     {loadError && <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4"><p role="alert" className="text-sm text-red-800">{loadError}</p><LoadingButton type="button" onClick={() => load(false)} loadingLabel="Retrying…" className="mt-3 rounded-lg bg-brand-primary px-4 py-2 text-sm font-bold text-brand-dark">Try again</LoadingButton></div>}
     {loading ? <PageSkeleton rows={3} /> : wants.length ? <div className="mt-6 space-y-4">{wants.map((want) => <article key={want.id} className="rounded-2xl border border-borderGray bg-white p-5 shadow-card"><div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"><div className="flex min-w-0 max-w-3xl flex-col gap-4 sm:flex-row">
       {/* Customer's reference image, shown whole so the admin can check it before approving. */}
@@ -118,7 +163,10 @@ export default function AdminWantsPage() {
         {want.photo && <button type="button" onClick={() => setViewing(want)} aria-label={`View image for ${want.title}`} className="absolute bottom-2 right-2 inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-xs font-bold text-emerald-950 shadow hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-700"><Eye className="h-3.5 w-3.5" aria-hidden="true" />View</button>}
       </div>
       <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-bold text-brand-link">{want.requestType.charAt(0) + want.requestType.slice(1).toLowerCase()} · {want.category}</span><span className="rounded-full border border-borderGray px-2.5 py-1 text-xs font-bold capitalize">{want.status === "CLOSED" ? "hidden / closed" : want.status.replaceAll("_", " ").toLowerCase()}</span>{want._count.reports > 0 && <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-1 text-xs font-bold text-red-700"><Flag className="h-3.5 w-3.5" aria-hidden="true" />{want._count.reports} open {want._count.reports === 1 ? "report" : "reports"}</span>}{!want.customer?.isActive && <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-bold text-gray-600">Owner deactivated</span>}</div><h2 className="mt-3 text-lg font-black text-darkText">{want.title}</h2><p className="mt-2 text-sm leading-6 text-darkText/60">{want.description}</p><p className="mt-3 text-xs text-darkText/45">{want.customer?.name} · {want.customer?.email} · {want.city} · {want._count.offers} offers · {want._count.interests} joined · {want._count.reactions} reactions{want.budgetMax ? ` · Up to ${formatPKR(Number(want.budgetMax))}` : ""}</p>{want.moderationReason && <p className="mt-2 text-xs font-semibold text-red-700">Note: {want.moderationReason}</p>}</div></div>
-      <div className="flex shrink-0 flex-wrap gap-2">{["PENDING_MODERATION", "SUBMITTED", "REJECTED"].includes(want.status) && <LoadingButton loadingLabel="Processing…" onClick={() => moderate(want.id, "OPEN")} className="rounded-xl bg-brand-primary px-4 py-2 text-sm font-bold text-brand-dark">Approve</LoadingButton>}{want.status !== "REJECTED" && want.status !== "CLOSED" && <LoadingButton loadingLabel="Processing…" onClick={() => moderate(want.id, "REJECTED")} className="rounded-xl border border-red-200 px-4 py-2 text-sm font-bold text-red-700">Reject</LoadingButton>}{want.status === "OPEN" && <LoadingButton loadingLabel="Processing…" onClick={() => moderate(want.id, "CLOSED")} className="rounded-xl border border-borderGray px-4 py-2 text-sm font-bold text-darkText">Hide</LoadingButton>}<button type="button" aria-expanded={reviewing === want.id} onClick={() => setReviewing((current) => current === want.id ? "" : want.id)} className="rounded-xl border border-borderGray px-4 py-2 text-sm font-bold text-[#005235]">{reviewing === want.id ? "Close review" : "Review reports & reactions"}</button></div></div>
+      <div className="flex shrink-0 flex-wrap gap-2">{["PENDING_MODERATION", "SUBMITTED", "REJECTED"].includes(want.status) && <LoadingButton loadingLabel="Processing…" onClick={() => moderate(want.id, "OPEN")} className="rounded-xl bg-brand-primary px-4 py-2 text-sm font-bold text-brand-dark">Approve</LoadingButton>}{want.status !== "REJECTED" && want.status !== "CLOSED" && <LoadingButton loadingLabel="Processing…" onClick={() => moderate(want.id, "REJECTED")} className="rounded-xl border border-red-200 px-4 py-2 text-sm font-bold text-red-700">Reject</LoadingButton>}{want.status === "OPEN" && <LoadingButton loadingLabel="Processing…" onClick={() => moderate(want.id, "CLOSED")} className="rounded-xl border border-borderGray px-4 py-2 text-sm font-bold text-darkText">Hide</LoadingButton>}<button type="button" aria-expanded={reviewing === want.id} onClick={() => setReviewing((current) => current === want.id ? "" : want.id)} className="rounded-xl border border-borderGray px-4 py-2 text-sm font-bold text-[#005235]">{reviewing === want.id ? "Close review" : "Review reports & reactions"}</button><button type="button" onClick={() => setDeleting(want)} className="inline-flex items-center gap-1.5 rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700"><Trash2 className="h-4 w-4" aria-hidden="true" />Delete</button></div></div>
       {reviewing === want.id && <ReviewPanel want={want} onChanged={() => void load(false)} />}
-    </article>)}</div> : !loadError ? <div className="mt-7 rounded-2xl border border-borderGray bg-white p-10 text-center text-darkText/55">No Wants in this view.</div> : null}{viewing?.photo && <ImageLightbox images={wantImages(viewing)} title={viewing.title} onClose={() => setViewing(null)} />}</main>;
+    </article>)}</div> : !loadError ? <div className="mt-7 rounded-2xl border border-borderGray bg-white p-10 text-center text-darkText/55">No Wants in this view.</div> : null}{viewing?.photo && <ImageLightbox images={wantImages(viewing)} title={viewing.title} onClose={() => setViewing(null)} />}
+    {deleting && <ConfirmDialog title="Delete this Want?" message="Are you sure you want to permanently delete this want? This action cannot be undone." confirmLabel="Delete Permanently" onCancel={() => setDeleting(null)} onConfirm={() => deleteOne(deleting)} />}
+    {deleteAllStep === 1 && <ConfirmDialog title="WARNING!" message="WARNING! Are you sure you want to permanently delete ALL Wants across every status? This action cannot be undone." confirmLabel="Continue" onCancel={() => setDeleteAllStep(0)} onConfirm={async () => setDeleteAllStep(2)} />}
+    {deleteAllStep === 2 && <ConfirmDialog title="Final confirmation" message={`This will permanently delete ALL ${totalWants.toLocaleString("en-PK")} Wants (Pending, Live, Hidden, Rejected and Reported) together with their joins, reactions, reports and vendor offers. Wants that already became an order are kept. Products, orders, customers and vendors are not touched.`} confirmLabel="Delete All Permanently" typeToConfirm={DELETE_ALL_CONFIRMATION} onCancel={() => setDeleteAllStep(0)} onConfirm={deleteAll} />}</main>;
 }
