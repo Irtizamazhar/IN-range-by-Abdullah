@@ -294,15 +294,7 @@ export function Navbar({
               ================================================= */}
 
               <div className={`${styles.actions} order-3 ml-auto flex shrink-0 items-center gap-0.5 lg:order-4 lg:ml-0`}>
-                {/* WANTS: heart icon below desktop, a text link like Together/Stores on desktop */}
-
-                <Link
-                  href="/wants"
-                  className="group relative flex h-11 items-center gap-1.5 rounded-xl px-2 text-brand-link focus-visible:outline-brand-link sm:px-2.5 lg:hidden"
-                  aria-label="Wants"
-                >
-                  <Heart className="h-[19px] w-[19px] transition-transform group-hover:scale-105" />
-                </Link>
+                {/* WANTS: desktop text link (mobile reaches Wants from the section strip and bottom nav) */}
                 <Link href="/wants" className="hidden h-11 items-center rounded-xl px-2 text-xs font-semibold text-brand-link decoration-2 underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-brand-link lg:flex">Wants</Link>
 
                 <Link href="/together" aria-label="Together" className="hidden h-11 items-center rounded-xl px-2 text-xs font-semibold text-brand-link decoration-2 underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-brand-link md:flex">Together</Link>
