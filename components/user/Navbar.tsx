@@ -470,7 +470,7 @@ export function Navbar({
         <motion.div key="mobile-drawer" ref={mobileMenuRef} id="mobile-navigation" role="dialog" aria-modal="true" initial={{ x: reduceMotion ? 0 : "-100%" }} animate={{ x: 0 }} exit={{ x: reduceMotion ? 0 : "-100%" }} transition={{ duration: reduceMotion ? 0 : 0.24, ease: "easeOut" }} className={`${styles.mobileMenu} lg:hidden`} aria-label="Mobile navigation">
           <div className={styles.mobileHero}>
             <div className={styles.mobileTop}>
-              <LogoMark compact className={styles.mobileLogo} />
+              <Image src="/images/brand/drawer-bag.webp" alt="" width={213} height={206} unoptimized className={styles.mobileBag} />
               <LoadingButton type="button" onClick={() => setMobileOpen(false)} className={styles.mobileClose} aria-label="Close menu"><X className="h-[18px] w-[18px]" /></LoadingButton>
             </div>
             <p className={styles.tagline}>Pakistan ka Apna Marketplace</p>
