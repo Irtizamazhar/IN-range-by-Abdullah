@@ -4,6 +4,7 @@ import { usePageLoading } from "@/hooks/usePageLoading";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import Link from "@/components/ui/LoadingLink";
+import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { ArrowRight, ChevronRight, LoaderCircle, PackageSearch, RotateCcw, SlidersHorizontal, Truck, X } from "lucide-react";
@@ -217,7 +218,7 @@ export function ProductsClient() {
               {loadingMore && Array.from({ length: 6 }, (_, index) => <ProductCardSkeleton key={`more-${index}`} variant="marketplace" />)}
             </div>
             {(error || (!loading && products.length === 0)) && <div className={styles.empty}>
-              <div className={styles.emptyIcon}><PackageSearch aria-hidden="true" /></div>
+              {error ? <div className={styles.emptyIcon}><PackageSearch aria-hidden="true" /></div> : <Image src="/images/products/joro-empty-box.webp" alt="" width={720} height={627} unoptimized className={styles.emptyArt} />}
               <h2>{error || "No matches just yet"}</h2>
               <p>{error ? "Please check your connection and give it another try." : "Try a different category or a wider price range. Your next great find could be one filter away."}</p>
               {error ? <LoadingButton type="button" className={styles.primaryButton} onClick={retryProducts}><RotateCcw aria-hidden="true" /> Try again</LoadingButton> : <><LoadingButton type="button" className={styles.primaryButton} onClick={browseAll}>Browse all products <ArrowRight aria-hidden="true" /></LoadingButton><PostWantButton initialTitle={search} className={styles.wantLink}>Looking for something specific? Post a Want</PostWantButton></>}

@@ -78,6 +78,7 @@
 .empty { display: flex; align-items: center; flex-direction: column; min-height: 440px; justify-content: center; padding: 48px 24px; border: 1px dashed #d7e1d0; border-radius: 18px; text-align: center; background: #ffffffa6; }
 .emptyIcon { display: grid; place-items: center; height: 80px; width: 80px; margin-bottom: 22px; border-radius: 50%; background: #edf3e4; }
 .emptyIcon svg { width: 34px; height: 34px; color: #6e9250; stroke-width: 1.4; }
+.emptyArt { display: block; width: 220px; max-width: 70%; height: auto; margin-bottom: 18px; object-fit: contain; }
 .empty h2 { font-size: 24px; font-weight: 750; letter-spacing: -.035em; }
 .empty p { max-width: 340px; margin: 12px 0 24px; font-size: 13px; line-height: 1.8; color: #7d8a7b; }
 .wantLink { margin-top: 20px; font-size: 11px; color: #647a58; text-decoration: underline; text-underline-offset: 4px; }
