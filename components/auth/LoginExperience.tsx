@@ -31,6 +31,7 @@ import { PakistanMobileInput } from "@/components/ui/PakistanMobileInput";
 import { vendorEntry } from "@/lib/vendor-entry";
 
 import { safeAccountLink } from "@/lib/customer-account-policy";
+import { afterGoogleSignInUrl } from "@/lib/customer-welcome-policy";
 import { setCustomerOAuthRememberChoice } from "@/lib/customer-remember-policy";
 
 import { normalizePakistanMobile, PAKISTAN_MOBILE_ERROR } from "@/lib/pakistan-phone";
@@ -166,7 +167,7 @@ function AuthForm({role,mode,callback,google,development,setBusy}:{role:Role;mod
 
  {signup&&vendor&&<p className="mt-2 text-xs leading-5 text-neutral-500">Next: business details and verification. Admin approval is required before selling.</p>}
 
- {!vendor&&(development||google)&&<><div className="my-5 flex items-center gap-3 text-xs text-neutral-500"><span className="h-px flex-1 bg-neutral-200"/>OR<span className="h-px flex-1 bg-neutral-200"/></div><div className="grid gap-2 min-[420px]:grid-cols-1">{(development||google)&&<LoadingButton type="button" disabled={pending} title={google?undefined:"Google configuration required in .env.local"} onClick={async()=>{if(!google){setMessage("Google login is not configured. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env.local, then restart the server.");return;}setPending(true);setBusy(true);try{setCustomerOAuthRememberChoice(!signup&&remember);await signIn("google",{callbackUrl:callback},{prompt:"select_account"});}catch{setMessage("Social sign-in could not start. Please try again.");}finally{setPending(false);setBusy(false);}}} className={`${styles.googleButton} flex min-h-11 items-center justify-center gap-2 rounded-xl border border-neutral-300 px-2 text-xs font-bold hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-700`}><ProviderIcon provider="google"/>Continue with Google</LoadingButton>}</div></>}
+ {!vendor&&(development||google)&&<><div className="my-5 flex items-center gap-3 text-xs text-neutral-500"><span className="h-px flex-1 bg-neutral-200"/>OR<span className="h-px flex-1 bg-neutral-200"/></div><div className="grid gap-2 min-[420px]:grid-cols-1">{(development||google)&&<LoadingButton type="button" disabled={pending} title={google?undefined:"Google configuration required in .env.local"} onClick={async()=>{if(!google){setMessage("Google login is not configured. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env.local, then restart the server.");return;}setPending(true);setBusy(true);try{setCustomerOAuthRememberChoice(!signup&&remember);await signIn("google",{callbackUrl:afterGoogleSignInUrl(callback)},{prompt:"select_account"});}catch{setMessage("Social sign-in could not start. Please try again.");}finally{setPending(false);setBusy(false);}}} className={`${styles.googleButton} flex min-h-11 items-center justify-center gap-2 rounded-xl border border-neutral-300 px-2 text-xs font-bold hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-700`}><ProviderIcon provider="google"/>Continue with Google</LoadingButton>}</div></>}
 
  </div>;
 

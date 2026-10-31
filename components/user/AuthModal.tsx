@@ -28,6 +28,7 @@ import recoveryStyles from "@/components/auth/PasswordRecoveryModal.module.css";
 import { PasswordRecoveryModal } from "@/components/auth/PasswordRecoveryModal";
 import { PasswordStrength } from "@/components/auth/PasswordStrength";
 import { setCustomerOAuthRememberChoice } from "@/lib/customer-remember-policy";
+import { afterGoogleSignInUrl } from "@/lib/customer-welcome-policy";
 import { PakistanMobileInput } from "@/components/ui/PakistanMobileInput";
 import { normalizePakistanMobile, PAKISTAN_MOBILE_ERROR } from "@/lib/pakistan-phone";
 
@@ -423,7 +424,7 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
                       onClick={() => {
                         setCustomerOAuthRememberChoice(rememberMe);
                         return signIn("google", {
-                          callbackUrl: "/",
+                          callbackUrl: afterGoogleSignInUrl("/"),
                         }, {
                           prompt: "select_account",
                         });
@@ -564,10 +565,10 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
                       onClick={() => {
                         setCustomerOAuthRememberChoice(false);
                         return signIn("google", {
-                          callbackUrl:
+                          callbackUrl: afterGoogleSignInUrl(
                             typeof window !== "undefined"
                               ? window.location.pathname + window.location.search
-                              : "/",
+                              : "/"),
                         }, {
                           prompt: "select_account",
                         });

@@ -2,6 +2,8 @@ import { Prisma } from "@prisma/client";
 import { createHash, randomBytes } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { sanitizePlainText } from "@/lib/security/sanitize";
+import { isMailConfigured, sendMail } from "@/lib/mailer";
+import { customerWelcomeEmail } from "@/lib/joro-email-templates";
 export type CustomerOAuthProvider = "google";
 export class CustomerOAuthError extends Error {
   constructor(public code: "OAuthAccountNotLinked" | "OAuthEmailRequired" | "AccessDenied") { super(code); }
@@ -18,8 +20,10 @@ export async function resolveCustomerOAuth(input: { provider: CustomerOAuthProvi
       : null;
   const key = { provider, providerAccountId };
   for (let attempt = 0; attempt < 3; attempt++) {
+    // Set only by the attempt that actually creates the customer, so retries and returning users never re-trigger the welcome.
+    let created = false;
     try {
-      return await prisma.$transaction(async tx => {
+      const customer = await prisma.$transaction(async tx => {
         const linked = await tx.customerOAuthAccount.findUnique({ where: { provider_providerAccountId: key }, include: { customer: true } });
         if (linked) {
           if (!linked.customer.isActive) throw new CustomerOAuthError("AccessDenied");
@@ -43,14 +47,22 @@ export async function resolveCustomerOAuth(input: { provider: CustomerOAuthProvi
             },
           });
         }
+        created = true;
         return tx.customer.create({ data: {
           email, name: sanitizePlainText(profile.name, 200) || "Customer", image, provider,
+          // Same welcome eligibility as email/password signup (app/api/customer/register).
+          welcomeEligibleAt: new Date(),
           // Non-bcrypt, random, unusable for password login. Password reset remains the recovery path.
           passwordHash: `oauth-only:${randomBytes(32).toString("hex")}`,
           oauthAccounts: { create: key },
           notifications: { create: { type: "WELCOME_ONBOARDING", title: "Welcome to JORO", message: "Your marketplace journey starts here.", link: "/", idempotencyKey: `customer-welcome:${createHash("sha256").update(email).digest("hex")}` } },
         } });
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+      if (created && isMailConfigured()) {
+        // Same welcome email as email/password signup; a delivery failure never blocks the sign-in.
+        try { await sendMail({ to: customer.email, ...customerWelcomeEmail(customer.name) }); } catch { /* best effort */ }
+      }
+      return customer;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && ["P2002", "P2034"].includes(error.code) && attempt < 2) continue;
       throw error;
