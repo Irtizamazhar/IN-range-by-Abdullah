@@ -1,5 +1,5 @@
 import Link from "@/components/ui/LoadingLink";
-import { ArrowRight, TrendingUp } from "lucide-react";
+import { ArrowRight, Check, Crown, Star, TrendingUp } from "lucide-react";
 import { ProductCard, type ProductCardData } from "./ProductCard";
 import { ServiceCard, type PublicService } from "./services/ServiceCard";
 import { TrendingWantCard } from "./TrendingWantCard";
@@ -32,7 +32,28 @@ export function HomeTrendingWants({ wants }: { wants: MarketplaceWant[] }) { ret
 export function HomeMarketplace({ services, gifts, stores }: { services: PublicService[]; gifts: ProductCardData[]; stores: MarketplaceStore[] }) { return <div data-home-marketplace className="mx-auto max-w-site space-y-10 px-4 py-10 sm:px-6">
   <section id="all-services"><Heading title="Services" href="/services" link="View all services" />{services.length ? <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{services.map(service => <ServiceCard key={service.id} service={service} featured />)}</div> : <p className="rounded-2xl border bg-white p-6 text-gray-600">No active services from approved vendors yet.</p>}</section>
   <section id="all-gifts"><Heading title="Gifts" href="/gifts" link="View all gifts" /><ProductGrid products={gifts} /><Link href="/wants/new?type=gift" className="mt-4 inline-block rounded-xl bg-brand-primary px-5 py-3 font-bold text-brand-dark">Request a custom gift</Link></section>
-  <section id="stores" aria-label="Top Sellers" className="rounded-3xl border border-neutral-200 bg-neutral-50 p-5 text-brand-dark sm:p-7"><header className="mb-5 flex flex-wrap items-center justify-between gap-3"><h2 className="text-2xl font-black">Top Sellers</h2><Link href="/stores" className="rounded-xl bg-brand-primary px-4 py-2 text-sm font-bold text-brand-dark">View all sellers →</Link></header>{stores.length ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{stores.map(store => <Link key={store.id} href={`/stores/${store.storeSlug || store.id}`} className="min-w-0 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition duration-200 hover:border-neutral-300 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-link"><span className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 font-black text-brand-link">{store.shopName.slice(0, 2).toUpperCase()}</span><h3 className="mt-3 break-words font-bold">{store.shopName}</h3><p className="mt-1 text-sm text-neutral-500">{store.primaryCategory}</p>{store.rating.reviewCount > 0 && <p className="mt-2 text-sm text-brand-link">★ {store.rating.ratingAvg.toFixed(1)} ({store.rating.reviewCount})</p>}</Link>)}</div> : <p className="text-neutral-500">No featured sellers yet.</p>}</section>
+  <section id="stores" aria-label="Top Sellers" className="relative isolate overflow-hidden rounded-3xl border border-[#E3F0DA] bg-gradient-to-br from-[#F3FAEC] via-[#F9FCF6] to-[#EAF6E0] p-5 text-brand-dark shadow-[0_10px_30px_rgba(0,64,43,0.05)] sm:p-7">
+    <span className="pointer-events-none absolute -right-24 -top-24 -z-10 h-72 w-72 rounded-full bg-white/50" aria-hidden="true" />
+    <header className="mb-5 flex flex-wrap items-center justify-between gap-3">
+      <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#0F5C36] to-[#063B22] shadow-[0_0_0_5px_rgba(183,227,58,0.25)] sm:h-12 sm:w-12" aria-hidden="true"><Crown className="h-5 w-5 fill-[#F5D23C] text-[#F5D23C]" strokeWidth={2} /></span>
+        <div className="min-w-0">
+          <h2 className="relative inline-block text-2xl font-black tracking-tight text-[#0B3D24] sm:text-3xl">Top Sellers<span className="absolute -right-5 -top-2 flex gap-0.5" aria-hidden="true"><span className="h-2.5 w-[3px] -rotate-12 rounded-full bg-[#9BD83A]" /><span className="mt-0.5 h-2.5 w-[3px] rotate-[35deg] rounded-full bg-[#9BD83A]" /></span></h2>
+          <p className="mt-0.5 text-sm text-neutral-500">Meet our most trusted and active sellers on JORO.</p>
+        </div>
+      </div>
+      <Link href="/stores" className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#0B4A2E] to-[#15703D] px-5 py-2.5 text-sm font-bold text-white shadow-[0_6px_16px_rgba(11,74,46,0.25)] ring-2 ring-[#CBEB7E] transition hover:brightness-110">View all sellers <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
+    </header>
+    {stores.length ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{stores.map(store => <Link key={store.id} href={`/stores/${store.storeSlug || store.id}`} className="relative flex h-[149px] min-w-0 items-center gap-3 overflow-hidden rounded-2xl border border-[#E1EFD6] bg-white p-5 shadow-[0_8px_20px_rgba(0,64,43,0.07)] transition duration-200 hover:border-[#C9E4B6] hover:shadow-[0_12px_26px_rgba(0,64,43,0.12)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-link xl:gap-4">
+      <span className="pointer-events-none absolute right-0 top-0 flex h-12 w-12 items-start justify-end rounded-bl-[36px] bg-gradient-to-bl from-[#C8EE6A] to-[#EEF9D2] p-2" aria-hidden="true"><Star className="h-4 w-4 text-[#0B3D24]" strokeWidth={2.2} /></span>
+      <span className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#E6F8E2] to-[#CDEFC6] text-lg font-black text-[#0B3D24] ring-4 ring-[#F1FAEA] xl:h-16 xl:w-16 xl:text-xl">{store.shopName.slice(0, 2).toUpperCase()}<span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#2E9E3E] ring-2 ring-white" aria-hidden="true"><Check className="h-3 w-3 text-white" strokeWidth={3.2} /></span></span>
+      <div className="min-w-0 flex-1 pr-5">
+        <h3 className="truncate text-base font-extrabold text-[#102423] xl:text-lg" title={store.shopName}>{store.shopName}</h3>
+        <p className="truncate text-sm text-neutral-500">{store.primaryCategory}</p>
+        <span className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1"><span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-[#E9F8C7] px-2.5 py-1 text-xs font-bold text-[#0B3D24]"><Crown className="h-3.5 w-3.5 text-[#B88A00]" strokeWidth={2.2} aria-hidden="true" />Top Seller</span>{store.rating.reviewCount > 0 && <span className="whitespace-nowrap text-xs font-semibold text-brand-link">★ {store.rating.ratingAvg.toFixed(1)} ({store.rating.reviewCount})</span>}</span>
+      </div>
+    </Link>)}</div> : <p className="text-neutral-500">No featured sellers yet.</p>}
+  </section>
 </div>; }
 
 export function HomeAllProducts({ products }: { products: ProductCardData[] }) { return <div className="mx-auto max-w-site px-4 py-10 sm:px-6">
