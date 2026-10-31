@@ -1,7 +1,7 @@
 import {appOrigin} from "@/lib/app-url";
 import { notFound, redirect } from "next/navigation";
 import Image from "next/image";
-import { CalendarDays, MapPin, Package, PackageCheck, ShieldCheck, Star, FileText, Globe2, Info } from "lucide-react";
+import { CalendarDays, Check, MapPin, Package, PackageCheck, ShieldCheck, Star, FileText, Globe2, Info } from "lucide-react";
 import { type ProductCardData } from "@/components/user/ProductCard";
 import { StoreCatalog } from "@/components/user/StoreCatalog";
 import styles from "@/components/user/StoreProfile.module.css";
@@ -114,10 +114,13 @@ export default async function StorePage({ params }: { params: { slug: string } }
       <section className={styles.profile} aria-label="Store profile">
         {vendor.storeBanner && <div className={styles.banner}><Image src={vendor.storeBanner} alt="" fill unoptimized sizes="(max-width: 767px) 100vw, 1280px" className="object-cover" /></div>}
         <div className={`${styles.identity} ${vendor.storeBanner ? styles.withBanner : ""}`}>
-          {vendor.shopLogo ? <span className={styles.avatar}><Image src={vendor.shopLogo} alt={`${vendor.shopName} logo`} fill unoptimized sizes="(max-width: 767px) 80px, 112px" className="object-cover" /></span> : <span className={`${styles.avatar} ${styles.initials}`}>{vendor.shopName.slice(0, 2).toUpperCase()}</span>}
+          <span className={styles.avatarWrap}>
+            {vendor.shopLogo ? <span className={styles.avatar}><Image src={vendor.shopLogo} alt={`${vendor.shopName} logo`} fill unoptimized sizes="(max-width: 767px) 80px, 112px" className="object-cover" /></span> : <span className={`${styles.avatar} ${styles.initials}`}>{vendor.shopName.slice(0, 2).toUpperCase()}</span>}
+            <span className={styles.verified} aria-hidden="true"><Check /></span>
+          </span>
           <div className={styles.identityCopy}>
             <span className={styles.approved}><ShieldCheck aria-hidden="true"/>Approved seller</span>
-            <h1>{vendor.shopName}</h1>
+            <h1>{vendor.shopName}<span className={styles.rays} aria-hidden="true"><i /><i /><i /></span></h1>
             <p className={styles.category}>{vendor.primaryCategory}</p>
             {vendor.shopDescription && <p className={styles.description}>{vendor.shopDescription}</p>}
             <div className={styles.meta}>
@@ -138,10 +141,10 @@ export default async function StorePage({ params }: { params: { slug: string } }
         </div>
       </section>
       <nav className={styles.navigation} aria-label="Store sections">
-        <a href="#store-products" className={styles.productsLink}>Products</a>
-        <a href="#store-about">About</a>
-        {serviceCities.length > 0 && <a href="#store-coverage">Service coverage</a>}
-        {vendor.storePolicies && <a href="#store-policies">Store Policies</a>}
+        <a href="#store-products" className={styles.productsLink}><Package aria-hidden="true" />Products</a>
+        <a href="#store-about"><Info aria-hidden="true" />About</a>
+        {serviceCities.length > 0 && <a href="#store-coverage"><Globe2 aria-hidden="true" />Service coverage</a>}
+        {vendor.storePolicies && <a href="#store-policies"><FileText aria-hidden="true" />Store Policies</a>}
       </nav>
       <StoreCatalog key={vendor.id} products={cards}/>
       <div className={styles.information}>

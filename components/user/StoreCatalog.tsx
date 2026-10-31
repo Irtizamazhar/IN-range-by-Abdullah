@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Image from "next/image";
 import { Search } from "lucide-react";
 import { ProductCard, type ProductCardData } from "./ProductCard";
 import styles from "./StoreProfile.module.css";
@@ -36,7 +37,7 @@ export function StoreCatalog({ products }: { products: ProductCardData[] }) {
         {categories.length > 0 && <label className={styles.mobileCategories}><span className="sr-only">Product category</span><select aria-label="Product category" value={category} onChange={event => setCategory(event.target.value)}><option value="">All Products ({products.length})</option>{categories.map(([name, count]) => <option key={name} value={name}>{name} ({count})</option>)}</select></label>}
       </div>
       <p className="sr-only" role="status">{visible.length} products shown</p>
-      {visible.length ? <div className={styles.productGrid}>{visible.map(product => <ProductCard key={product._id} product={product}/>)}</div> : <div className={styles.empty}>{products.length ? "No products match your search or category." : "This store has no active products right now."}</div>}
+      {visible.length ? <div className={styles.productGrid}>{visible.map(product => <ProductCard key={product._id} product={product}/>)}</div> : <div className={styles.empty}>{!products.length && <Image src="/images/products/joro-empty-box.webp" alt="" width={720} height={627} unoptimized className={styles.emptyArt} />}<p>{products.length ? "No products match your search or category." : "This store has no active products right now."}</p></div>}
     </div>
   </section>;
 }
