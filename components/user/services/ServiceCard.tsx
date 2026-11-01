@@ -1,9 +1,10 @@
+import { ServiceImage } from "./ServiceImage";
 import Link from "@/components/ui/LoadingLink";
-import { MapPin, Wrench } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { coverageLabel } from "@/lib/service-coverage";
 
 export type PublicService = {
-  id: string; name: string; description: string; type: string; price: unknown; cities: unknown; coverage?: unknown; priceType?: string;
+  id: string; name: string; description: string; type: string; price: unknown; cities: unknown; coverage?: unknown; priceType?: string; imageUrl?: string | null; catalog?: { imageUrl?: string | null } | null;
   vendor: { id: string; shopName: string; storeSlug: string | null };
 };
 
@@ -11,10 +12,8 @@ export function ServiceCard({ service, featured = false }: { service: PublicServ
   return <article className={featured
     ? "flex h-full min-w-0 flex-col rounded-[20px] border border-[#E3EBDB] bg-white p-4 shadow-[0_4px_16px_rgba(17,17,17,.05)] transition duration-200 hover:-translate-y-0.5 hover:shadow-md"
     : "flex min-w-0 flex-col rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"}>
-    <div className={featured ? "flex min-w-0 items-center gap-2.5" : ""}>
-      <div className={featured
-        ? "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-lime-100 text-emerald-900"
-        : "flex h-14 w-14 items-center justify-center rounded-2xl bg-lime-100 text-emerald-900"}><Wrench aria-hidden="true" className={featured ? "h-5 w-5" : ""} /></div>
+    <ServiceImage imageUrl={service.imageUrl} defaultImageUrl={service.catalog?.imageUrl} alt={service.name} className="mb-3" />
+    <div>
       <p className={featured
         ? "min-w-0 truncate text-[11px] font-bold uppercase tracking-wide text-emerald-700"
         : "mt-4 text-xs font-bold uppercase tracking-wide text-emerald-700"} title={service.type}>{service.type}</p>

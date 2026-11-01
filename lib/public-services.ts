@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 export const publicServiceSelect = {
   id: true, name: true, description: true, type: true, price: true,
   cities: true, durationMinutes: true, leadDays: true, warranty: true,
-  cancellationTerms: true, coverage: true, priceType: true,
+  cancellationTerms: true, coverage: true, priceType: true, imageUrl: true,
+  catalog: { select: { imageUrl: true } },
   vendor: { select: { id: true, shopName: true, storeSlug: true, city: true, shopLogo: true } },
 } as const;
 

@@ -5,7 +5,7 @@ import sharp from "sharp";
 import { imageExtension } from "@/lib/security/image-signature";
 
 export const PUBLIC_UPLOAD_REFERENCE_MIME = "application/x-joro-public-upload-reference";
-const folders = new Set(["categories", "products", "promotions", "vendor-products", "wants", "reviews"]);
+const folders = new Set(["categories", "products", "promotions", "vendor-products", "wants", "reviews", "services"]);
 const MAX_BYTES = 8 * 1024 * 1024;
 
 export function publicUploadPath(value: string): string | null {
