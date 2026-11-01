@@ -1,8 +1,6 @@
 export const dynamic = "force-dynamic";
 
-import { promises as fs } from "fs";
-import path from "path";
-import { randomUUID } from "crypto";
+import { savePublicImage } from "@/lib/public-uploads";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { api, ApiError, customerActor, sameOrigin } from "@/lib/marketplace-api";
@@ -59,17 +57,9 @@ export async function POST(request: Request) {
     if (!safeCustomerId || safeCustomerId !== customer.id) {
       throw new ApiError(400, "Customer account identifier is invalid.");
     }
-    const uploadRoot = path.resolve(process.cwd(), "public", "uploads", "reviews");
-    const uploadDir = path.resolve(uploadRoot, safeCustomerId);
-    if (!uploadDir.startsWith(`${uploadRoot}${path.sep}`)) {
-      throw new ApiError(400, "Upload path is invalid.");
-    }
-    const fileName = `rev-${Date.now()}-${randomUUID()}.${extension}`;
-    await fs.mkdir(uploadDir, { recursive: true });
-    await fs.writeFile(path.join(uploadDir, fileName), Buffer.from(bytes));
-    return {
-      id: fileName,
-      url: `/uploads/reviews/${safeCustomerId}/${fileName}`,
-    };
+    try {
+      const image = await savePublicImage(Buffer.from(bytes), file.type, `reviews/${safeCustomerId}`, "rev");
+      return image;
+    } catch { throw new ApiError(503, "Image upload failed. Please try again."); }
   });
 }

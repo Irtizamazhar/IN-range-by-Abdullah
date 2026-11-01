@@ -1,0 +1,259 @@
+{
+  "checkedAt": "2026-11-01T09:16:03.496Z",
+  "migrationsEnabled": false,
+  "auditOnly": true,
+  "workingTreeDigest": "0e881a48024a1552a5f7aade189256d8f187ec1ef0010d075b91d50cb67684be",
+  "identityVerified": true,
+  "history": {
+    "applied": [
+      "20260403140000_add_reviews",
+      "20260407120000_drop_is_new_arrival",
+      "20260411180000_add_product_is_best_seller",
+      "20260412120000_vendor_product_original_price",
+      "20260416000000_vendor_shop_processing_status",
+      "20260417120000_vendor_shop_drop_processing_status",
+      "20260911000000_vendor_suspension_fields",
+      "20260913010000_joro_foundation_integrity",
+      "20260913020000_database_catalog",
+      "20260913030000_customer_stores_wants",
+      "20260913040000_after_sales_workflows",
+      "20260913050000_admin_rbac_audit",
+      "20260913060000_customer_account_controls",
+      "20260913070000_product_warranties",
+      "20260913080000_customer_notifications",
+      "20260913000000_joro_marketplace_foundation",
+      "20260913090000_joro_merge_reconciliation",
+      "20260913100000_legacy_marketplace_reconciliation",
+      "20260914000000_step8_top_vendors",
+      "20260915000000_step9_support_tickets",
+      "20260915010000_customer_oauth_vendor_onboarding",
+      "20260916000000_vendor_operational_onboarding",
+      "20261009000000_want_request_type",
+      "20261009010000_service_listing_moderation",
+      "0_baseline",
+      "20261018000000_add_want_report",
+      "20261022000000_pickup_management",
+      "20261024000000_customer_reset_otp",
+      "20261025000000_standalone_quote_service_booking",
+      "20261025010000_want_photos"
+    ],
+    "archivedRows": 25,
+    "pending": [
+      "20261101000000_service_catalog_coverage"
+    ],
+    "tableCount": 72
+  },
+  "server": {
+    "version": "11.8.9-MariaDB-log",
+    "flavor": "MariaDB Server",
+    "lower_case_table_names": "0",
+    "default_engine": "InnoDB",
+    "innodb_page_size": "16384"
+  },
+  "tables": [
+    {
+      "name": "customer",
+      "engine": "InnoDB",
+      "row_format": "Dynamic",
+      "collation": "utf8mb4_unicode_ci",
+      "data_bytes": "16384",
+      "index_bytes": "32768"
+    },
+    {
+      "name": "order",
+      "engine": "InnoDB",
+      "row_format": "Dynamic",
+      "collation": "utf8mb4_unicode_ci",
+      "data_bytes": "16384",
+      "index_bytes": "49152"
+    },
+    {
+      "name": "orderservice",
+      "engine": "InnoDB",
+      "row_format": "Dynamic",
+      "collation": "utf8mb4_unicode_ci",
+      "data_bytes": "16384",
+      "index_bytes": "49152"
+    },
+    {
+      "name": "product",
+      "engine": "InnoDB",
+      "row_format": "Dynamic",
+      "collation": "utf8mb4_unicode_ci",
+      "data_bytes": "16384",
+      "index_bytes": "49152"
+    },
+    {
+      "name": "serviceoffering",
+      "engine": "InnoDB",
+      "row_format": "Dynamic",
+      "collation": "utf8mb4_unicode_ci",
+      "data_bytes": "16384",
+      "index_bytes": "16384"
+    },
+    {
+      "name": "vendor",
+      "engine": "InnoDB",
+      "row_format": "Dynamic",
+      "collation": "utf8mb4_unicode_ci",
+      "data_bytes": "16384",
+      "index_bytes": "65536"
+    }
+  ],
+  "columns": [
+    {
+      "name": "id",
+      "type": "varchar(191)",
+      "nullable": "NO",
+      "default_value": null,
+      "collation": "utf8mb4_unicode_ci"
+    },
+    {
+      "name": "vendorId",
+      "type": "varchar(191)",
+      "nullable": "NO",
+      "default_value": null,
+      "collation": "utf8mb4_unicode_ci"
+    },
+    {
+      "name": "name",
+      "type": "varchar(160)",
+      "nullable": "NO",
+      "default_value": null,
+      "collation": "utf8mb4_unicode_ci"
+    },
+    {
+      "name": "description",
+      "type": "text",
+      "nullable": "NO",
+      "default_value": null,
+      "collation": "utf8mb4_unicode_ci"
+    },
+    {
+      "name": "type",
+      "type": "varchar(100)",
+      "nullable": "NO",
+      "default_value": null,
+      "collation": "utf8mb4_unicode_ci"
+    },
+    {
+      "name": "price",
+      "type": "decimal(12,2)",
+      "nullable": "NO",
+      "default_value": null,
+      "collation": null
+    },
+    {
+      "name": "cities",
+      "type": "longtext",
+      "nullable": "NO",
+      "default_value": null,
+      "collation": "utf8mb4_bin"
+    },
+    {
+      "name": "durationMinutes",
+      "type": "int(11)",
+      "nullable": "NO",
+      "default_value": null,
+      "collation": null
+    },
+    {
+      "name": "leadDays",
+      "type": "int(11)",
+      "nullable": "NO",
+      "default_value": null,
+      "collation": null
+    },
+    {
+      "name": "warranty",
+      "type": "varchar(1000)",
+      "nullable": "NO",
+      "default_value": null,
+      "collation": "utf8mb4_unicode_ci"
+    },
+    {
+      "name": "cancellationTerms",
+      "type": "text",
+      "nullable": "NO",
+      "default_value": null,
+      "collation": "utf8mb4_unicode_ci"
+    },
+    {
+      "name": "active",
+      "type": "tinyint(1)",
+      "nullable": "NO",
+      "default_value": "1",
+      "collation": null
+    },
+    {
+      "name": "createdAt",
+      "type": "datetime(3)",
+      "nullable": "NO",
+      "default_value": "current_timestamp(3)",
+      "collation": null
+    },
+    {
+      "name": "updatedAt",
+      "type": "datetime(3)",
+      "nullable": "NO",
+      "default_value": null,
+      "collation": null
+    },
+    {
+      "name": "moderationStatus",
+      "type": "varchar(16)",
+      "nullable": "NO",
+      "default_value": "'APPROVED'",
+      "collation": "utf8mb4_unicode_ci"
+    },
+    {
+      "name": "moderationReason",
+      "type": "varchar(1000)",
+      "nullable": "YES",
+      "default_value": "NULL",
+      "collation": "utf8mb4_unicode_ci"
+    }
+  ],
+  "indexes": [
+    {
+      "name": "PRIMARY",
+      "non_unique": "0",
+      "position": "1",
+      "column_name": "id",
+      "prefix_length": null
+    },
+    {
+      "name": "ServiceOffering_vendorId_active_idx",
+      "non_unique": "1",
+      "position": "1",
+      "column_name": "vendorId",
+      "prefix_length": null
+    },
+    {
+      "name": "ServiceOffering_vendorId_active_idx",
+      "non_unique": "1",
+      "position": "2",
+      "column_name": "active",
+      "prefix_length": null
+    }
+  ],
+  "states": [],
+  "counts": [
+    {
+      "customers": "16",
+      "vendors": "1",
+      "products": "2",
+      "services": "0",
+      "bookings": "0",
+      "orders": "19"
+    }
+  ],
+  "baselineDrift": {
+    "changed": true,
+    "summary": "[-] Removed tables\n  - wantofferlegacy20260914\n  - wantpost\n\n[*] Changed the `adminauditlog` table\n  [-] Removed foreign key on columns (adminId)\n  [+] Added foreign key on columns (adminId)\n  [*] Redefined index `AdminAuditLog_adminId_createdAt_idx`\n  [*] Redefined index `AdminAuditLog_createdAt_idx`\n  [*] Redefined index `AdminAuditLog_entityType_entityId_idx`\n\n[*] Changed the `adminuser` table\n  [*] Redefined index `AdminUser_email_key`\n  [*] Redefined index `AdminUser_isActive_role_idx`\n\n[*] Changed the `category` table\n  [*] Redefined index `Category_legacyId_key`\n  [*] Redefined index `Category_name_key`\n  [*] Redefined index `Category_slug_key`\n\n[*] Changed the `commissionsetting` table\n  [*] Redefined index `CommissionSetting_categoryName_key`\n\n[*] Changed the `customer` table\n  [*] Redefined index `Customer_email_key`\n  [*] Redefined index `Customer_isActive_createdAt_idx`\n\n[*] Changed the `customeraddress` table\n  [-] Removed foreign key on columns (customerId)\n  [+] Added foreign key on columns (customerId)\n  [*] Redefined index `CustomerAddress_customerId_isDefault_idx`\n\n[*] Changed the `customernotification` table\n  [-] Removed foreign key on columns (customerId)\n  [+] Added foreign key on columns (customerId)\n  [*] Redefined index `CustomerNotification_customerId_isRead_createdAt_idx`\n  [*] Redefined index `CustomerNotification_idempotencyKey_key`\n\n[*] Changed the `customeroauthaccount` table\n  [-] Removed foreign key on columns (customerId)\n  [+] Added foreign key on columns (customerId)\n  [*] Redefined index `CustomerOAuthAccount_customerId_idx`\n  [*] Redefined index `CustomerOAuthAccount_provider_providerAccountId_key`\n\n[*] Changed the `customerpasswordresettoken` table\n  [-] Removed foreign key on columns (customerId)\n  [+] Added foreign key on columns (customerId)\n  [*] Redefined index `CustomerPasswordResetToken_customerId_expiresAt_idx`\n  [*] Redefined index `CustomerPasswordResetToken_tokenHash_key`\n\n[*] Changed the `dispute` table\n  [-] Removed foreign key on columns (customerId)\n  [-] Removed foreign key on columns (orderId)\n  [-] Removed foreign key on columns (returnRequestId)\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (customerId)\n  [+] Added foreign key on columns (orderId)\n  [+] Added foreign key on columns (returnRequestId)\n  [+] Added foreign key on columns (vendorId)\n  [*] Redefined index `Dispute_activeKey_key`\n  [*] Redefined index `Dispute_customerId_createdAt_idx`\n  [*] Redefined index `Dispute_orderId_idx`\n  [*] Redefined index `Dispute_vendorId_status_idx`\n\n[*] Changed the `marketplaceaudit` table\n  [*] Redefined index `MarketplaceAudit_target_createdAt_idx`\n\n[*] Changed the `newarrivalreview` table\n  [*] Redefined index `NewArrivalReview_approved_createdAt_idx`\n  [*] Redefined index `NewArrivalReview_newArrivalId_idx`\n\n[*] Changed the `offerquote` table\n  [-] Removed foreign key on columns (customerId)\n  [-] Removed foreign key on columns (orderId)\n  [-] Removed foreign key on columns (revisionId)\n  [-] Removed foreign key on columns (wantId)\n  [+] Added foreign key on columns (customerId)\n  [+] Added foreign key on columns (wantId)\n  [+] Added foreign key on columns (revisionId)\n  [+] Added foreign key on columns (orderId)\n  [*] Redefined index `OfferQuote_idempotencyKey_key`\n  [*] Redefined index `OfferQuote_orderId_key`\n  [*] Redefined index `OfferQuote_revisionId_key`\n  [*] Redefined index `OfferQuote_wantId_key`\n\n[*] Changed the `offerrevision` table\n  [-] Removed foreign key on columns (offerId)\n  [-] Removed foreign key on columns (productId)\n  [+] Added foreign key on columns (offerId)\n  [+] Added foreign key on columns (productId)\n  [*] Redefined index `OfferRevision_offerId_revisionNumber_key`\n\n[*] Changed the `order` table\n  [-] Removed foreign key on columns (customerId)\n  [+] Added foreign key on columns (customerId)\n  [*] Redefined index `Order_checkoutKey_key`\n  [*] Redefined index `Order_customerId_createdAt_idx`\n  [*] Redefined index `Order_orderNumber_key`\n\n[*] Changed the `orderinventoryline` table\n  [-] Removed foreign key on columns (orderId)\n  [-] Removed foreign key on columns (orderItemId)\n  [-] Removed foreign key on columns (productId)\n  [-] Removed foreign key on columns (vendorProductId)\n  [-] Removed foreign key on columns (vendorShopOrderId)\n  [+] Added foreign key on columns (orderId)\n  [+] Added foreign key on columns (orderItemId)\n  [+] Added foreign key on columns (productId)\n  [+] Added foreign key on columns (vendorProductId)\n  [+] Added foreign key on columns (vendorShopOrderId)\n  [*] Redefined index `OrderInventoryLine_orderId_state_idx`\n  [*] Redefined index `OrderInventoryLine_orderItemId_key`\n  [*] Redefined index `OrderInventoryLine_vendorProductId_idx`\n  [*] Redefined index `OrderInventoryLine_vendorShopOrderId_state_idx`\n\n[*] Changed the `orderitem` table\n  [-] Removed foreign key on columns (orderId)\n  [-] Removed foreign key on columns (productId)\n  [+] Added foreign key on columns (orderId)\n  [+] Added foreign key on columns (productId)\n\n[*] Changed the `orderservice` table\n  [-] Removed foreign key on columns (orderId)\n  [-] Removed foreign key on columns (serviceId)\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (orderId)\n  [+] Added foreign key on columns (vendorId)\n  [+] Added foreign key on columns (serviceId)\n  [*] Redefined index `OrderService_orderId_idx`\n  [*] Redefined index `OrderService_vendorId_status_idx`\n\n[*] Changed the `orderstatusevent` table\n  [-] Removed foreign key on columns (orderId)\n  [+] Added foreign key on columns (orderId)\n  [*] Redefined index `OrderStatusEvent_idempotencyKey_key`\n  [*] Redefined index `OrderStatusEvent_orderId_createdAt_idx`\n\n[*] Changed the `paymentproofstaging` table\n  [-] Removed foreign key on columns (customerId)\n  [+] Added foreign key on columns (customerId)\n  [*] Redefined index `PaymentProofStaging_customerId_idx`\n  [*] Redefined index `PaymentProofStaging_expiresAt_idx`\n\n[*] Changed the `payoutallocation` table\n  [-] Removed foreign key on columns (earningId)\n  [-] Removed foreign key on columns (withdrawalId)\n  [+] Added foreign key on columns (withdrawalId)\n  [+] Added foreign key on columns (earningId)\n  [*] Redefined index `PayoutAllocation_earningId_status_idx`\n  [*] Redefined index `PayoutAllocation_withdrawalId_earningId_key`\n\n[*] Changed the `product` table\n  [-] Removed foreign key on columns (categoryRecordId)\n  [+] Added foreign key on columns (categoryRecordId)\n  [*] Redefined index `Product_categoryRecordId_idx`\n  [*] Redefined index `Product_isActive_isBestSeller_idx`\n  [*] Redefined index `Product_legacyNewArrivalId_key`\n\n[*] Changed the `productimage` table\n  [-] Removed foreign key on columns (productId)\n  [+] Added foreign key on columns (productId)\n\n[*] Changed the `productserviceaddon` table\n  [-] Removed foreign key on columns (productId)\n  [-] Removed foreign key on columns (serviceId)\n  [+] Added foreign key on columns (productId)\n  [+] Added foreign key on columns (serviceId)\n  [*] Redefined index `ProductServiceAddon_productId_serviceId_key`\n\n[*] Changed the `refund` table\n  [-] Removed foreign key on columns (customerId)\n  [-] Removed foreign key on columns (orderId)\n  [-] Removed foreign key on columns (returnRequestId)\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (customerId)\n  [+] Added foreign key on columns (orderId)\n  [+] Added foreign key on columns (returnRequestId)\n  [+] Added foreign key on columns (vendorId)\n  [*] Redefined index `Refund_customerId_createdAt_idx`\n  [*] Redefined index `Refund_idempotencyKey_key`\n  [*] Redefined index `Refund_orderId_status_idx`\n  [*] Redefined index `Refund_returnRequestId_key`\n  [*] Redefined index `Refund_vendorId_status_idx`\n\n[*] Changed the `returnrequest` table\n  [-] Removed foreign key on columns (customerId)\n  [-] Removed foreign key on columns (orderId)\n  [-] Removed foreign key on columns (orderItemId)\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (customerId)\n  [+] Added foreign key on columns (orderId)\n  [+] Added foreign key on columns (orderItemId)\n  [+] Added foreign key on columns (vendorId)\n  [*] Redefined index `ReturnRequest_activeKey_key`\n  [*] Redefined index `ReturnRequest_customerId_requestedAt_idx`\n  [*] Redefined index `ReturnRequest_orderId_idx`\n  [*] Redefined index `ReturnRequest_vendorId_status_idx`\n\n[*] Changed the `review` table\n  [-] Removed foreign key on columns (customerId)\n  [-] Removed foreign key on columns (orderId)\n  [-] Removed foreign key on columns (productId)\n  [+] Added foreign key on columns (productId)\n  [+] Added foreign key on columns (customerId)\n  [+] Added foreign key on columns (orderId)\n  [*] Redefined index `Review_approved_createdAt_idx`\n  [*] Redefined index `Review_customerId_productId_key`\n  [*] Redefined index `Review_orderId_productId_key`\n  [*] Redefined index `Review_productId_idx`\n\n[*] Changed the `roomcomment` table\n  [-] Removed foreign key on columns (itemId)\n  [-] Removed foreign key on columns (memberId)\n  [+] Added foreign key on columns (itemId)\n  [+] Added foreign key on columns (memberId)\n  [*] Redefined index `RoomComment_itemId_idx`\n\n[*] Changed the `roominvite` table\n  [-] Removed foreign key on columns (roomId)\n  [+] Added foreign key on columns (roomId)\n  [*] Redefined index `RoomInvite_roomId_idx`\n  [*] Redefined index `RoomInvite_tokenHash_key`\n\n[*] Changed the `roomitem` table\n  [-] Removed foreign key on columns (memberId)\n  [-] Removed foreign key on columns (productId)\n  [-] Removed foreign key on columns (roomId)\n  [+] Added foreign key on columns (roomId)\n  [+] Added foreign key on columns (productId)\n  [+] Added foreign key on columns (memberId)\n  [*] Redefined index `RoomItem_roomId_idx`\n\n[*] Changed the `roommember` table\n  [-] Removed foreign key on columns (customerId)\n  [-] Removed foreign key on columns (roomId)\n  [+] Added foreign key on columns (roomId)\n  [+] Added foreign key on columns (customerId)\n  [*] Redefined index `RoomMember_roomId_customerId_key`\n\n[*] Changed the `roomvote` table\n  [-] Removed foreign key on columns (itemId)\n  [-] Removed foreign key on columns (memberId)\n  [+] Added foreign key on columns (itemId)\n  [+] Added foreign key on columns (memberId)\n  [*] Redefined index `RoomVote_memberId_itemId_key`\n\n[*] Changed the `savedproduct` table\n  [-] Removed foreign key on columns (customerId)\n  [-] Removed foreign key on columns (productId)\n  [+] Added foreign key on columns (customerId)\n  [+] Added foreign key on columns (productId)\n  [*] Redefined index `SavedProduct_productId_idx`\n\n[*] Changed the `serviceevent` table\n  [-] Removed foreign key on columns (orderServiceId)\n  [+] Added foreign key on columns (orderServiceId)\n  [*] Redefined index `ServiceEvent_orderServiceId_createdAt_idx`\n\n[*] Changed the `serviceoffering` table\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (vendorId)\n  [*] Redefined index `ServiceOffering_vendorId_active_idx`\n\n[*] Changed the `storefollow` table\n  [-] Removed foreign key on columns (customerId)\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (customerId)\n  [+] Added foreign key on columns (vendorId)\n  [*] Redefined index `StoreFollow_customerId_vendorId_key`\n  [*] Redefined index `StoreFollow_vendorId_createdAt_idx`\n\n[*] Changed the `storeslugalias` table\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (vendorId)\n\n[*] Changed the `supportmessage` table\n  [-] Removed foreign key on columns (ticketId)\n  [+] Added foreign key on columns (ticketId)\n  [*] Redefined index `SupportMessage_ticketId_createdAt_idx`\n\n[*] Changed the `supportticket` table\n  [-] Removed foreign key on columns (assignedToId)\n  [-] Removed foreign key on columns (customerId)\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (customerId)\n  [+] Added foreign key on columns (vendorId)\n  [+] Added foreign key on columns (assignedToId)\n  [*] Redefined index `SupportTicket_actorType_customerId_status_idx`\n  [*] Redefined index `SupportTicket_actorType_vendorId_status_idx`\n  [*] Redefined index `SupportTicket_assignedToId_idx`\n  [*] Redefined index `SupportTicket_sequence_key`\n  [*] Redefined index `SupportTicket_status_priority_lastActivityAt_idx`\n\n[*] Changed the `topvendor` table\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (vendorId)\n  [*] Redefined index `TopVendor_enabled_priority_idx`\n  [*] Redefined index `TopVendor_vendorId_key`\n\n[*] Changed the `vendor` table\n  [*] Redefined index `Vendor_cnic_key`\n  [*] Redefined index `Vendor_email_key`\n  [*] Redefined index `Vendor_status_idx`\n  [*] Redefined index `Vendor_storeSlug_key`\n\n[*] Changed the `vendorauditlog` table\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (vendorId)\n  [*] Redefined index `VendorAuditLog_createdAt_idx`\n  [*] Redefined index `VendorAuditLog_vendorId_idx`\n\n[*] Changed the `vendorcoupon` table\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (vendorId)\n  [*] Redefined index `VendorCoupon_vendorId_couponCode_key`\n  [*] Redefined index `VendorCoupon_vendorId_idx`\n\n[*] Changed the `vendordocument` table\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (vendorId)\n  [*] Redefined index `VendorDocument_vendorId_idx`\n\n[*] Changed the `vendorearning` table\n  [-] Removed foreign key on columns (orderId)\n  [-] Removed foreign key on columns (orderServiceId)\n  [-] Removed foreign key on columns (vendorId)\n  [-] Removed foreign key on columns (vendorShopOrderId)\n  [+] Added foreign key on columns (vendorId)\n  [+] Added foreign key on columns (orderId)\n  [+] Added foreign key on columns (vendorShopOrderId)\n  [+] Added foreign key on columns (orderServiceId)\n  [*] Redefined index `VendorEarning_orderId_idx`\n  [*] Redefined index `VendorEarning_orderServiceId_key`\n  [*] Redefined index `VendorEarning_vendorId_idx`\n  [*] Redefined index `VendorEarning_vendorShopOrderId_idx`\n  [*] Redefined index `VendorEarning_vendorShopOrderId_key`\n\n[*] Changed the `vendorledgerentry` table\n  [-] Removed foreign key on columns (earningId)\n  [-] Removed foreign key on columns (vendorId)\n  [-] Removed foreign key on columns (withdrawalId)\n  [+] Added foreign key on columns (vendorId)\n  [+] Added foreign key on columns (earningId)\n  [+] Added foreign key on columns (withdrawalId)\n  [*] Redefined index `VendorLedgerEntry_idempotencyKey_key`\n  [*] Redefined index `VendorLedgerEntry_vendorId_createdAt_idx`\n  [*] Redefined index `VendorLedgerEntry_withdrawalId_idx`\n\n[*] Changed the `vendornotification` table\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (vendorId)\n  [*] Redefined index `VendorNotification_eventKey_key`\n  [*] Redefined index `VendorNotification_vendorId_idx`\n  [*] Redefined index `VendorNotification_vendorId_isRead_idx`\n\n[*] Changed the `vendororder` table\n  [-] Removed foreign key on columns (orderId)\n  [-] Removed foreign key on columns (vendorId)\n  [-] Removed foreign key on columns (vendorProductId)\n  [-] Removed foreign key on columns (vendorShopOrderId)\n  [+] Added foreign key on columns (vendorId)\n  [+] Added foreign key on columns (orderId)\n  [+] Added foreign key on columns (vendorShopOrderId)\n  [+] Added foreign key on columns (vendorProductId)\n  [*] Redefined index `VendorOrder_orderId_idx`\n  [*] Redefined index `VendorOrder_vendorId_idx`\n  [*] Redefined index `VendorOrder_vendorShopOrderId_idx`\n\n[*] Changed the `vendorproduct` table\n  [-] Removed foreign key on columns (publishedProductId)\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (vendorId)\n  [+] Added foreign key on columns (publishedProductId)\n  [*] Redefined index `VendorProduct_publishedProductId_key`\n  [*] Redefined index `VendorProduct_vendorId_idx`\n\n[*] Changed the `vendorpromotion` table\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (vendorId)\n  [*] Redefined index `VendorPromotion_status_placement_startAt_endAt_idx`\n\n[*] Changed the `vendorreview` table\n  [-] Removed foreign key on columns (customerId)\n  [-] Removed foreign key on columns (orderId)\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (vendorId)\n  [+] Added foreign key on columns (customerId)\n  [+] Added foreign key on columns (orderId)\n  [*] Redefined index `VendorReview_customerId_idx`\n  [*] Redefined index `VendorReview_vendorId_idx`\n\n[*] Changed the `vendorsession` table\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (vendorId)\n  [*] Redefined index `VendorSession_tokenHash_key`\n  [*] Redefined index `VendorSession_vendorId_idx`\n\n[*] Changed the `vendorshoporder` table\n  [-] Removed foreign key on columns (customerId)\n  [-] Removed foreign key on columns (orderId)\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (orderId)\n  [+] Added foreign key on columns (vendorId)\n  [+] Added foreign key on columns (customerId)\n  [*] Redefined index `VendorShopOrder_orderId_idx`\n  [*] Redefined index `VendorShopOrder_placedAt_idx`\n  [*] Redefined index `VendorShopOrder_shopOrderNumber_key`\n  [*] Redefined index `VendorShopOrder_vendorId_idx`\n  [*] Redefined index `VendorShopOrder_vendorId_status_idx`\n\n[*] Changed the `vendorwithdrawal` table\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (vendorId)\n  [*] Redefined index `VendorWithdrawal_openKey_key`\n  [*] Redefined index `VendorWithdrawal_status_idx`\n  [*] Redefined index `VendorWithdrawal_vendorId_idx`\n\n[*] Changed the `want` table\n  [-] Removed foreign key on columns (customerId)\n  [+] Added foreign key on columns (customerId)\n  [*] Redefined index `Want_category_city_idx`\n  [*] Redefined index `Want_customerId_createdAt_idx`\n  [*] Redefined index `Want_requestType_status_expiresAt_idx`\n  [*] Redefined index `Want_status_expiresAt_createdAt_idx`\n\n[*] Changed the `wantinterest` table\n  [-] Removed foreign key on columns (customerId)\n  [-] Removed foreign key on columns (wantId)\n  [+] Added foreign key on columns (customerId)\n  [+] Added foreign key on columns (wantId)\n  [*] Redefined index `WantInterest_customerId_wantId_key`\n  [*] Redefined index `WantInterest_wantId_createdAt_idx`\n\n[*] Changed the `wantoffer` table\n  [-] Removed foreign key on columns (vendorId)\n  [-] Removed foreign key on columns (wantId)\n  [+] Added foreign key on columns (wantId)\n  [+] Added foreign key on columns (vendorId)\n  [*] Redefined index `WantOffer_vendorId_status_idx`\n  [*] Redefined index `WantOffer_wantId_vendorId_key`\n\n[*] Changed the `wantpost` table\n  [-] Removed foreign key on columns (customerId)\n\n[*] Changed the `warrantyrecord` table\n  [-] Removed foreign key on columns (customerId)\n  [-] Removed foreign key on columns (orderId)\n  [-] Removed foreign key on columns (orderItemId)\n  [-] Removed foreign key on columns (productId)\n  [-] Removed foreign key on columns (vendorId)\n  [-] Removed foreign key on columns (vendorProductId)\n  [+] Added foreign key on columns (customerId)\n  [+] Added foreign key on columns (orderId)\n  [+] Added foreign key on columns (orderItemId)\n  [+] Added foreign key on columns (productId)\n  [+] Added foreign key on columns (vendorId)\n  [+] Added foreign key on columns (vendorProductId)\n  [*] Redefined index `WarrantyRecord_customerId_expiresAt_idx`\n  [*] Redefined index `WarrantyRecord_orderId_idx`\n  [*] Redefined index `WarrantyRecord_orderItemId_key`\n  [*] Redefined index `WarrantyRecord_vendorId_status_idx`"
+  },
+  "proposedSchemaDiff": {
+    "changed": true,
+    "summary": "[+] Added tables\n  - servicecatalog\n  - servicelocationrequest\n\n[-] Removed tables\n  - wantofferlegacy20260914\n  - wantpost\n\n[*] Changed the `adminauditlog` table\n  [-] Removed foreign key on columns (adminId)\n  [+] Added foreign key on columns (adminId)\n  [*] Redefined index `AdminAuditLog_adminId_createdAt_idx`\n  [*] Redefined index `AdminAuditLog_createdAt_idx`\n  [*] Redefined index `AdminAuditLog_entityType_entityId_idx`\n\n[*] Changed the `adminuser` table\n  [*] Redefined index `AdminUser_email_key`\n  [*] Redefined index `AdminUser_isActive_role_idx`\n\n[*] Changed the `category` table\n  [*] Redefined index `Category_legacyId_key`\n  [*] Redefined index `Category_name_key`\n  [*] Redefined index `Category_slug_key`\n\n[*] Changed the `commissionsetting` table\n  [*] Redefined index `CommissionSetting_categoryName_key`\n\n[*] Changed the `customer` table\n  [*] Redefined index `Customer_email_key`\n  [*] Redefined index `Customer_isActive_createdAt_idx`\n\n[*] Changed the `customeraddress` table\n  [-] Removed foreign key on columns (customerId)\n  [+] Added foreign key on columns (customerId)\n  [*] Redefined index `CustomerAddress_customerId_isDefault_idx`\n\n[*] Changed the `customernotification` table\n  [-] Removed foreign key on columns (customerId)\n  [+] Added foreign key on columns (customerId)\n  [*] Redefined index `CustomerNotification_customerId_isRead_createdAt_idx`\n  [*] Redefined index `CustomerNotification_idempotencyKey_key`\n\n[*] Changed the `customeroauthaccount` table\n  [-] Removed foreign key on columns (customerId)\n  [+] Added foreign key on columns (customerId)\n  [*] Redefined index `CustomerOAuthAccount_customerId_idx`\n  [*] Redefined index `CustomerOAuthAccount_provider_providerAccountId_key`\n\n[*] Changed the `customerpasswordresettoken` table\n  [-] Removed foreign key on columns (customerId)\n  [+] Added foreign key on columns (customerId)\n  [*] Redefined index `CustomerPasswordResetToken_customerId_expiresAt_idx`\n  [*] Redefined index `CustomerPasswordResetToken_tokenHash_key`\n\n[*] Changed the `dispute` table\n  [-] Removed foreign key on columns (customerId)\n  [-] Removed foreign key on columns (orderId)\n  [-] Removed foreign key on columns (returnRequestId)\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (customerId)\n  [+] Added foreign key on columns (orderId)\n  [+] Added foreign key on columns (returnRequestId)\n  [+] Added foreign key on columns (vendorId)\n  [*] Redefined index `Dispute_activeKey_key`\n  [*] Redefined index `Dispute_customerId_createdAt_idx`\n  [*] Redefined index `Dispute_orderId_idx`\n  [*] Redefined index `Dispute_vendorId_status_idx`\n\n[*] Changed the `marketplaceaudit` table\n  [*] Redefined index `MarketplaceAudit_target_createdAt_idx`\n\n[*] Changed the `newarrivalreview` table\n  [*] Redefined index `NewArrivalReview_approved_createdAt_idx`\n  [*] Redefined index `NewArrivalReview_newArrivalId_idx`\n\n[*] Changed the `offerquote` table\n  [-] Removed foreign key on columns (customerId)\n  [-] Removed foreign key on columns (orderId)\n  [-] Removed foreign key on columns (revisionId)\n  [-] Removed foreign key on columns (wantId)\n  [+] Added foreign key on columns (customerId)\n  [+] Added foreign key on columns (wantId)\n  [+] Added foreign key on columns (revisionId)\n  [+] Added foreign key on columns (orderId)\n  [*] Redefined index `OfferQuote_idempotencyKey_key`\n  [*] Redefined index `OfferQuote_orderId_key`\n  [*] Redefined index `OfferQuote_revisionId_key`\n  [*] Redefined index `OfferQuote_wantId_key`\n\n[*] Changed the `offerrevision` table\n  [-] Removed foreign key on columns (offerId)\n  [-] Removed foreign key on columns (productId)\n  [+] Added foreign key on columns (offerId)\n  [+] Added foreign key on columns (productId)\n  [*] Redefined index `OfferRevision_offerId_revisionNumber_key`\n\n[*] Changed the `order` table\n  [-] Removed foreign key on columns (customerId)\n  [+] Added foreign key on columns (customerId)\n  [*] Redefined index `Order_checkoutKey_key`\n  [*] Redefined index `Order_customerId_createdAt_idx`\n  [*] Redefined index `Order_orderNumber_key`\n\n[*] Changed the `orderinventoryline` table\n  [-] Removed foreign key on columns (orderId)\n  [-] Removed foreign key on columns (orderItemId)\n  [-] Removed foreign key on columns (productId)\n  [-] Removed foreign key on columns (vendorProductId)\n  [-] Removed foreign key on columns (vendorShopOrderId)\n  [+] Added foreign key on columns (orderId)\n  [+] Added foreign key on columns (orderItemId)\n  [+] Added foreign key on columns (productId)\n  [+] Added foreign key on columns (vendorProductId)\n  [+] Added foreign key on columns (vendorShopOrderId)\n  [*] Redefined index `OrderInventoryLine_orderId_state_idx`\n  [*] Redefined index `OrderInventoryLine_orderItemId_key`\n  [*] Redefined index `OrderInventoryLine_vendorProductId_idx`\n  [*] Redefined index `OrderInventoryLine_vendorShopOrderId_state_idx`\n\n[*] Changed the `orderitem` table\n  [-] Removed foreign key on columns (orderId)\n  [-] Removed foreign key on columns (productId)\n  [+] Added foreign key on columns (orderId)\n  [+] Added foreign key on columns (productId)\n\n[*] Changed the `orderservice` table\n  [-] Removed foreign key on columns (orderId)\n  [-] Removed foreign key on columns (serviceId)\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (orderId)\n  [+] Added foreign key on columns (vendorId)\n  [+] Added foreign key on columns (serviceId)\n  [*] Redefined index `OrderService_orderId_idx`\n  [*] Redefined index `OrderService_vendorId_status_idx`\n\n[*] Changed the `orderstatusevent` table\n  [-] Removed foreign key on columns (orderId)\n  [+] Added foreign key on columns (orderId)\n  [*] Redefined index `OrderStatusEvent_idempotencyKey_key`\n  [*] Redefined index `OrderStatusEvent_orderId_createdAt_idx`\n\n[*] Changed the `paymentproofstaging` table\n  [-] Removed foreign key on columns (customerId)\n  [+] Added foreign key on columns (customerId)\n  [*] Redefined index `PaymentProofStaging_customerId_idx`\n  [*] Redefined index `PaymentProofStaging_expiresAt_idx`\n\n[*] Changed the `payoutallocation` table\n  [-] Removed foreign key on columns (earningId)\n  [-] Removed foreign key on columns (withdrawalId)\n  [+] Added foreign key on columns (withdrawalId)\n  [+] Added foreign key on columns (earningId)\n  [*] Redefined index `PayoutAllocation_earningId_status_idx`\n  [*] Redefined index `PayoutAllocation_withdrawalId_earningId_key`\n\n[*] Changed the `product` table\n  [-] Removed foreign key on columns (categoryRecordId)\n  [+] Added foreign key on columns (categoryRecordId)\n  [*] Redefined index `Product_categoryRecordId_idx`\n  [*] Redefined index `Product_isActive_isBestSeller_idx`\n  [*] Redefined index `Product_legacyNewArrivalId_key`\n\n[*] Changed the `productimage` table\n  [-] Removed foreign key on columns (productId)\n  [+] Added foreign key on columns (productId)\n\n[*] Changed the `productserviceaddon` table\n  [-] Removed foreign key on columns (productId)\n  [-] Removed foreign key on columns (serviceId)\n  [+] Added foreign key on columns (productId)\n  [+] Added foreign key on columns (serviceId)\n  [*] Redefined index `ProductServiceAddon_productId_serviceId_key`\n\n[*] Changed the `refund` table\n  [-] Removed foreign key on columns (customerId)\n  [-] Removed foreign key on columns (orderId)\n  [-] Removed foreign key on columns (returnRequestId)\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (customerId)\n  [+] Added foreign key on columns (orderId)\n  [+] Added foreign key on columns (returnRequestId)\n  [+] Added foreign key on columns (vendorId)\n  [*] Redefined index `Refund_customerId_createdAt_idx`\n  [*] Redefined index `Refund_idempotencyKey_key`\n  [*] Redefined index `Refund_orderId_status_idx`\n  [*] Redefined index `Refund_returnRequestId_key`\n  [*] Redefined index `Refund_vendorId_status_idx`\n\n[*] Changed the `returnrequest` table\n  [-] Removed foreign key on columns (customerId)\n  [-] Removed foreign key on columns (orderId)\n  [-] Removed foreign key on columns (orderItemId)\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (customerId)\n  [+] Added foreign key on columns (orderId)\n  [+] Added foreign key on columns (orderItemId)\n  [+] Added foreign key on columns (vendorId)\n  [*] Redefined index `ReturnRequest_activeKey_key`\n  [*] Redefined index `ReturnRequest_customerId_requestedAt_idx`\n  [*] Redefined index `ReturnRequest_orderId_idx`\n  [*] Redefined index `ReturnRequest_vendorId_status_idx`\n\n[*] Changed the `review` table\n  [-] Removed foreign key on columns (customerId)\n  [-] Removed foreign key on columns (orderId)\n  [-] Removed foreign key on columns (productId)\n  [+] Added foreign key on columns (productId)\n  [+] Added foreign key on columns (customerId)\n  [+] Added foreign key on columns (orderId)\n  [*] Redefined index `Review_approved_createdAt_idx`\n  [*] Redefined index `Review_customerId_productId_key`\n  [*] Redefined index `Review_orderId_productId_key`\n  [*] Redefined index `Review_productId_idx`\n\n[*] Changed the `roomcomment` table\n  [-] Removed foreign key on columns (itemId)\n  [-] Removed foreign key on columns (memberId)\n  [+] Added foreign key on columns (itemId)\n  [+] Added foreign key on columns (memberId)\n  [*] Redefined index `RoomComment_itemId_idx`\n\n[*] Changed the `roominvite` table\n  [-] Removed foreign key on columns (roomId)\n  [+] Added foreign key on columns (roomId)\n  [*] Redefined index `RoomInvite_roomId_idx`\n  [*] Redefined index `RoomInvite_tokenHash_key`\n\n[*] Changed the `roomitem` table\n  [-] Removed foreign key on columns (memberId)\n  [-] Removed foreign key on columns (productId)\n  [-] Removed foreign key on columns (roomId)\n  [+] Added foreign key on columns (roomId)\n  [+] Added foreign key on columns (productId)\n  [+] Added foreign key on columns (memberId)\n  [*] Redefined index `RoomItem_roomId_idx`\n\n[*] Changed the `roommember` table\n  [-] Removed foreign key on columns (customerId)\n  [-] Removed foreign key on columns (roomId)\n  [+] Added foreign key on columns (roomId)\n  [+] Added foreign key on columns (customerId)\n  [*] Redefined index `RoomMember_roomId_customerId_key`\n\n[*] Changed the `roomvote` table\n  [-] Removed foreign key on columns (itemId)\n  [-] Removed foreign key on columns (memberId)\n  [+] Added foreign key on columns (itemId)\n  [+] Added foreign key on columns (memberId)\n  [*] Redefined index `RoomVote_memberId_itemId_key`\n\n[*] Changed the `savedproduct` table\n  [-] Removed foreign key on columns (customerId)\n  [-] Removed foreign key on columns (productId)\n  [+] Added foreign key on columns (customerId)\n  [+] Added foreign key on columns (productId)\n  [*] Redefined index `SavedProduct_productId_idx`\n\n[*] Changed the `serviceevent` table\n  [-] Removed foreign key on columns (orderServiceId)\n  [+] Added foreign key on columns (orderServiceId)\n  [*] Redefined index `ServiceEvent_orderServiceId_createdAt_idx`\n\n[*] Changed the `serviceoffering` table\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added column `catalogId`\n  [+] Added column `coverage`\n  [+] Added column `createdByAdmin`\n  [+] Added column `priceType`\n  [+] Added column `reviewedAt`\n  [+] Added column `reviewedBy`\n  [+] Added column `submittedAt`\n  [*] Altered column `moderationStatus` (default changed from `Some(Value(String(\"APPROVED\")))` to `Some(Value(String(\"PENDING_APPROVAL\")))`, type changed)\n  [+] Added index on columns (moderationStatus, submittedAt)\n  [+] Added unique index on columns (vendorId, catalogId)\n  [+] Added foreign key on columns (vendorId)\n  [+] Added foreign key on columns (catalogId)\n  [*] Redefined index `ServiceOffering_vendorId_active_idx`\n\n[*] Changed the `storefollow` table\n  [-] Removed foreign key on columns (customerId)\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (customerId)\n  [+] Added foreign key on columns (vendorId)\n  [*] Redefined index `StoreFollow_customerId_vendorId_key`\n  [*] Redefined index `StoreFollow_vendorId_createdAt_idx`\n\n[*] Changed the `storeslugalias` table\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (vendorId)\n\n[*] Changed the `supportmessage` table\n  [-] Removed foreign key on columns (ticketId)\n  [+] Added foreign key on columns (ticketId)\n  [*] Redefined index `SupportMessage_ticketId_createdAt_idx`\n\n[*] Changed the `supportticket` table\n  [-] Removed foreign key on columns (assignedToId)\n  [-] Removed foreign key on columns (customerId)\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (customerId)\n  [+] Added foreign key on columns (vendorId)\n  [+] Added foreign key on columns (assignedToId)\n  [*] Redefined index `SupportTicket_actorType_customerId_status_idx`\n  [*] Redefined index `SupportTicket_actorType_vendorId_status_idx`\n  [*] Redefined index `SupportTicket_assignedToId_idx`\n  [*] Redefined index `SupportTicket_sequence_key`\n  [*] Redefined index `SupportTicket_status_priority_lastActivityAt_idx`\n\n[*] Changed the `topvendor` table\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (vendorId)\n  [*] Redefined index `TopVendor_enabled_priority_idx`\n  [*] Redefined index `TopVendor_vendorId_key`\n\n[*] Changed the `vendor` table\n  [*] Redefined index `Vendor_cnic_key`\n  [*] Redefined index `Vendor_email_key`\n  [*] Redefined index `Vendor_status_idx`\n  [*] Redefined index `Vendor_storeSlug_key`\n\n[*] Changed the `vendorauditlog` table\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (vendorId)\n  [*] Redefined index `VendorAuditLog_createdAt_idx`\n  [*] Redefined index `VendorAuditLog_vendorId_idx`\n\n[*] Changed the `vendorcoupon` table\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (vendorId)\n  [*] Redefined index `VendorCoupon_vendorId_couponCode_key`\n  [*] Redefined index `VendorCoupon_vendorId_idx`\n\n[*] Changed the `vendordocument` table\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (vendorId)\n  [*] Redefined index `VendorDocument_vendorId_idx`\n\n[*] Changed the `vendorearning` table\n  [-] Removed foreign key on columns (orderId)\n  [-] Removed foreign key on columns (orderServiceId)\n  [-] Removed foreign key on columns (vendorId)\n  [-] Removed foreign key on columns (vendorShopOrderId)\n  [+] Added foreign key on columns (vendorId)\n  [+] Added foreign key on columns (orderId)\n  [+] Added foreign key on columns (vendorShopOrderId)\n  [+] Added foreign key on columns (orderServiceId)\n  [*] Redefined index `VendorEarning_orderId_idx`\n  [*] Redefined index `VendorEarning_orderServiceId_key`\n  [*] Redefined index `VendorEarning_vendorId_idx`\n  [*] Redefined index `VendorEarning_vendorShopOrderId_idx`\n  [*] Redefined index `VendorEarning_vendorShopOrderId_key`\n\n[*] Changed the `vendorledgerentry` table\n  [-] Removed foreign key on columns (earningId)\n  [-] Removed foreign key on columns (vendorId)\n  [-] Removed foreign key on columns (withdrawalId)\n  [+] Added foreign key on columns (vendorId)\n  [+] Added foreign key on columns (earningId)\n  [+] Added foreign key on columns (withdrawalId)\n  [*] Redefined index `VendorLedgerEntry_idempotencyKey_key`\n  [*] Redefined index `VendorLedgerEntry_vendorId_createdAt_idx`\n  [*] Redefined index `VendorLedgerEntry_withdrawalId_idx`\n\n[*] Changed the `vendornotification` table\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (vendorId)\n  [*] Redefined index `VendorNotification_eventKey_key`\n  [*] Redefined index `VendorNotification_vendorId_idx`\n  [*] Redefined index `VendorNotification_vendorId_isRead_idx`\n\n[*] Changed the `vendororder` table\n  [-] Removed foreign key on columns (orderId)\n  [-] Removed foreign key on columns (vendorId)\n  [-] Removed foreign key on columns (vendorProductId)\n  [-] Removed foreign key on columns (vendorShopOrderId)\n  [+] Added foreign key on columns (vendorId)\n  [+] Added foreign key on columns (orderId)\n  [+] Added foreign key on columns (vendorShopOrderId)\n  [+] Added foreign key on columns (vendorProductId)\n  [*] Redefined index `VendorOrder_orderId_idx`\n  [*] Redefined index `VendorOrder_vendorId_idx`\n  [*] Redefined index `VendorOrder_vendorShopOrderId_idx`\n\n[*] Changed the `vendorproduct` table\n  [-] Removed foreign key on columns (publishedProductId)\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (vendorId)\n  [+] Added foreign key on columns (publishedProductId)\n  [*] Redefined index `VendorProduct_publishedProductId_key`\n  [*] Redefined index `VendorProduct_vendorId_idx`\n\n[*] Changed the `vendorpromotion` table\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (vendorId)\n  [*] Redefined index `VendorPromotion_status_placement_startAt_endAt_idx`\n\n[*] Changed the `vendorreview` table\n  [-] Removed foreign key on columns (customerId)\n  [-] Removed foreign key on columns (orderId)\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (vendorId)\n  [+] Added foreign key on columns (customerId)\n  [+] Added foreign key on columns (orderId)\n  [*] Redefined index `VendorReview_customerId_idx`\n  [*] Redefined index `VendorReview_vendorId_idx`\n\n[*] Changed the `vendorsession` table\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (vendorId)\n  [*] Redefined index `VendorSession_tokenHash_key`\n  [*] Redefined index `VendorSession_vendorId_idx`\n\n[*] Changed the `vendorshoporder` table\n  [-] Removed foreign key on columns (customerId)\n  [-] Removed foreign key on columns (orderId)\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (orderId)\n  [+] Added foreign key on columns (vendorId)\n  [+] Added foreign key on columns (customerId)\n  [*] Redefined index `VendorShopOrder_orderId_idx`\n  [*] Redefined index `VendorShopOrder_placedAt_idx`\n  [*] Redefined index `VendorShopOrder_shopOrderNumber_key`\n  [*] Redefined index `VendorShopOrder_vendorId_idx`\n  [*] Redefined index `VendorShopOrder_vendorId_status_idx`\n\n[*] Changed the `vendorwithdrawal` table\n  [-] Removed foreign key on columns (vendorId)\n  [+] Added foreign key on columns (vendorId)\n  [*] Redefined index `VendorWithdrawal_openKey_key`\n  [*] Redefined index `VendorWithdrawal_status_idx`\n  [*] Redefined index `VendorWithdrawal_vendorId_idx`\n\n[*] Changed the `want` table\n  [-] Removed foreign key on columns (customerId)\n  [+] Added foreign key on columns (customerId)\n  [*] Redefined index `Want_category_city_idx`\n  [*] Redefined index `Want_customerId_createdAt_idx`\n  [*] Redefined index `Want_requestType_status_expiresAt_idx`\n  [*] Redefined index `Want_status_expiresAt_createdAt_idx`\n\n[*] Changed the `wantinterest` table\n  [-] Removed foreign key on columns (customerId)\n  [-] Removed foreign key on columns (wantId)\n  [+] Added foreign key on columns (customerId)\n  [+] Added foreign key on columns (wantId)\n  [*] Redefined index `WantInterest_customerId_wantId_key`\n  [*] Redefined index `WantInterest_wantId_createdAt_idx`\n\n[*] Changed the `wantoffer` table\n  [-] Removed foreign key on columns (vendorId)\n  [-] Removed foreign key on columns (wantId)\n  [+] Added foreign key on columns (wantId)\n  [+] Added foreign key on columns (vendorId)\n  [*] Redefined index `WantOffer_vendorId_status_idx`\n  [*] Redefined index `WantOffer_wantId_vendorId_key`\n\n[*] Changed the `wantpost` table\n  [-] Removed foreign key on columns (customerId)\n\n[*] Changed the `warrantyrecord` table\n  [-] Removed foreign key on columns (customerId)\n  [-] Removed foreign key on columns (orderId)\n  [-] Removed foreign key on columns (orderItemId)\n  [-] Removed foreign key on columns (productId)\n  [-] Removed foreign key on columns (vendorId)\n  [-] Removed foreign key on columns (vendorProductId)\n  [+] Added foreign key on columns (customerId)\n  [+] Added foreign key on columns (orderId)\n  [+] Added foreign key on columns (orderItemId)\n  [+] Added foreign key on columns (productId)\n  [+] Added foreign key on columns (vendorId)\n  [+] Added foreign key on columns (vendorProductId)\n  [*] Redefined index `WarrantyRecord_customerId_expiresAt_idx`\n  [*] Redefined index `WarrantyRecord_orderId_idx`\n  [*] Redefined index `WarrantyRecord_orderItemId_key`\n  [*] Redefined index `WarrantyRecord_vendorId_status_idx`"
+  }
+}

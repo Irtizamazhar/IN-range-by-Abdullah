@@ -13,6 +13,24 @@ function fixtureDirectory(work) {
   try { return work(directory); } finally { assert.equal(path.dirname(directory),parent); assert.ok(path.basename(directory).startsWith('joro-live-test-')); fs.rmSync(directory,{recursive:true,force:true}); }
 }
 
+// Exercise the real committed-payload guard against an isolated HEAD snapshot.
+// Uses existing Git objects only: no commits, staging, production access or guard override.
+function committedFixture(work) {
+  return fixtureDirectory(root => {
+    const git = args => { const r = spawnSync('git', args, {encoding:'utf8'}); assert.equal(r.status,0); return r.stdout.trim(); };
+    const gitDir = git(['rev-parse','--absolute-git-dir']);
+    const files = git(['ls-tree','-r','--name-only','HEAD','--','prisma/schema.prisma','prisma/migration-manifest.json','prisma/migrations','prisma/migrations_archive']).split('\n').filter(Boolean);
+    for(const file of files) {
+      assert.ok(file.startsWith('prisma/') && !file.includes('..'));
+      const result = spawnSync('git',['show','HEAD:'+file]); assert.equal(result.status,0);
+      const target = path.join(root,file); fs.mkdirSync(path.dirname(target),{recursive:true}); fs.writeFileSync(target,result.stdout);
+    }
+    fs.writeFileSync(path.join(root,'.git'),'gitdir: '+gitDir+'\n');
+    const previous = process.env.GIT_OPTIONAL_LOCKS; process.env.GIT_OPTIONAL_LOCKS='0';
+    try { return work(root); } finally { if(previous===undefined)delete process.env.GIT_OPTIONAL_LOCKS;else process.env.GIT_OPTIONAL_LOCKS=previous; }
+  });
+}
+
 test('private live environment initializes with exact settings and placeholder, preserving local environments', () => fixtureDirectory(root => {
   fs.writeFileSync(path.join(root,'.env'),'DATABASE_URL=local-fixture\n'); fs.writeFileSync(path.join(root,'.env.local'),'local-settings');
   assert.deepEqual(initializeConfig(root),LIVE_SETTINGS); initializeConfig(root);
@@ -85,8 +103,8 @@ test('active migration checksums remain byte-exact across line endings', () => {
   assert.throws(()=>analyzeHistory([{...row,checksum:sha256(active[0].sql.replace(/\n/g,'\r\n'))}],active),/checksum/);
 });
 
-test('documented archived history requires committed checksums, complete history and a later valid baseline', () => {
-  const repo = repositoryState(process.cwd(),true);
+test('documented archived history requires committed checksums, complete history and a later valid baseline', () => committedFixture(root => {
+  const repo = repositoryState(root,true);
   assert.equal(repo.legacyMigrations.length,24);
   const start = new Date('2026-10-01T00:00:00Z');
   const end = new Date('2026-10-02T00:00:00Z');
@@ -124,13 +142,17 @@ test('documented archived history requires committed checksums, complete history
   for(const name of ['20261014000000_coupon_system','20261028000000_unknown']) assert.throws(()=>check([...rows,{...archive[0],migration_name:name}]),/unknown/);
   assert.throws(()=>check([...rows,{...applied(migrations[1].name),checksum:'wrong'}]),/checksum/);
   assert.throws(()=>check([...rows,{...applied(migrations[1].name),finished_at:null}]),/unfinished/);
-});
+}));
 
 test('backup gate fingerprints a real nonempty file; committed repository history is consistent', () => fixtureDirectory(root=>{
   const file=path.join(root,'backup.sql');fs.writeFileSync(file,'isolated backup fixture');
   assert.equal(verifiedBackup(file).hash,sha256('isolated backup fixture'));
   assert.throws(()=>verifiedBackup(path.join(root,'missing')),/backup/);
-  assert.ok(repositoryState(process.cwd(),true).commit);
+  committedFixture(snapshot => {
+    assert.ok(repositoryState(snapshot,true).commit);
+    fs.appendFileSync(path.join(snapshot,'prisma/schema.prisma'),'\n// uncommitted edit\n');
+    assert.throws(()=>repositoryState(snapshot,true),/unchanged, committed/);
+  });
 }));
 
 test('environment/state files are ignored and every live npm command points to an implemented action', () => {

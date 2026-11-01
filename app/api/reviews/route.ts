@@ -1,3 +1,5 @@
+import { assertCloudinaryImageStored } from "@/lib/cloudinary";
+import { isCloudinaryPhoto } from "@/lib/cloudinary-policy";
 import { prisma } from "@/lib/prisma";
 import { api, ApiError, customerActor, sameOrigin } from "@/lib/marketplace-api";
 import { ORDER_INCLUDE_REVIEW } from "@/lib/prisma-order-includes";
@@ -51,6 +53,10 @@ async function save(request: Request) {
       throw new ApiError(400, "Please upload a valid review image.");
     }
 
+    if (input.imageUrl && isCloudinaryPhoto(input.imageUrl, "reviews", customer.id)) {
+      try { await assertCloudinaryImageStored(input.imageUrl, `joro/reviews/${customer.id}`); }
+      catch { throw new ApiError(400, "Review image could not be verified. Please upload it again."); }
+    }
     return prisma.$transaction(
       async (tx) => {
         const order = await tx.order.findUnique({

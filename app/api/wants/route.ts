@@ -15,7 +15,7 @@ export async function POST(request: Request) { return api(async () => {
   const expiresAt = input.expiresAt ? new Date(input.expiresAt) : new Date(Date.now() + 30 * 86400000);
   if (expiresAt.getTime() <= Date.now() || expiresAt.getTime() > Date.now() + 90 * 86400000) throw new ApiError(400, "Expiry must be within the next 90 days.");
   const photos = wantPhotoList(input);
-  for (const photo of photos) await assertWantPhotoStored(photo);
+  for (const photo of photos) await assertWantPhotoStored(photo, customer.id);
   const { draft, title, description, category, city, condition, photo: _photo, photos: _photos, ...data } = input; void _photo; void _photos;
   const want = await prisma.want.create({ data: { ...data, photo: photos[0] ?? null, photos, title: sanitizePlainText(title, 160), description: description ? sanitizePlainText(description, 5000) : undefined, category: sanitizePlainText(category, 100), city: sanitizePlainText(city, 100), condition: condition ? sanitizePlainText(condition, 60) : undefined, expiresAt, needBy: input.needBy ? new Date(input.needBy) : null, customerId: customer.id, status: draft ? "DRAFT" : "PENDING_MODERATION" }, select: { id: true, status: true } });
   return { want };

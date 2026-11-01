@@ -1,6 +1,7 @@
+import { isWantPhotoUrl } from "@/lib/cloudinary-policy";
 import { z } from "zod";
 import { MAX_WANT_PHOTOS } from "@/lib/want-images";
-const wantPhotoUrl = z.string().trim().max(2048).refine(v => /^\/uploads\/wants\/[A-Za-z0-9_-][A-Za-z0-9._-]{0,180}\.(?:jpe?g|png|webp)$/i.test(v), "Invalid photo.");
+const wantPhotoUrl = z.string().trim().max(2048).refine(v => isWantPhotoUrl(v), "Invalid photo.");
 export const wantInput = z.object({
   requestType: z.enum(["PRODUCT", "SERVICE", "GIFT"]).default("PRODUCT"),
   occasion: z.string().trim().max(100).optional().nullable(),
@@ -8,7 +9,7 @@ export const wantInput = z.object({
   budgetFlexible: z.boolean(), budgetMin: z.number().min(0).max(9999999999).nullable(), budgetMax: z.number().positive().max(9999999999).nullable(),
   quantity: z.number().int().min(1).max(10000), description: z.string().trim().max(5000).optional(),
   condition: z.enum(["Any", "New", "Used", "Refurbished"]).optional(),
-  photo: z.string().trim().max(2048).optional().nullable().refine(v => !v || /^\/uploads\/wants\/[A-Za-z0-9_-][A-Za-z0-9._-]{0,180}\.(?:jpe?g|png|webp)$/i.test(v), "Invalid photo."),
+  photo: z.string().trim().max(2048).optional().nullable().refine(v => !v || isWantPhotoUrl(v), "Invalid photo."),
   /** Full ordered photo list; when sent it replaces `photo`. */
   photos: z.array(wantPhotoUrl).max(MAX_WANT_PHOTOS, `Add up to ${MAX_WANT_PHOTOS} images.`).optional(),
   expiresAt: z.string().datetime().optional(), needBy: z.string().datetime().nullable().optional(),

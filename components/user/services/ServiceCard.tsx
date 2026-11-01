@@ -1,9 +1,9 @@
 import Link from "@/components/ui/LoadingLink";
 import { MapPin, Wrench } from "lucide-react";
-import { serviceCities } from "@/lib/public-services";
+import { coverageLabel } from "@/lib/service-coverage";
 
 export type PublicService = {
-  id: string; name: string; description: string; type: string; price: unknown; cities: unknown;
+  id: string; name: string; description: string; type: string; price: unknown; cities: unknown; coverage?: unknown; priceType?: string;
   vendor: { id: string; shopName: string; storeSlug: string | null };
 };
 
@@ -30,11 +30,11 @@ export function ServiceCard({ service, featured = false }: { service: PublicServ
       : "mt-3 text-sm font-semibold text-emerald-800 hover:underline"}>{service.vendor.shopName}</Link>
     <p className={featured
       ? "mt-1.5 flex min-w-0 items-center gap-1 text-xs text-gray-500"
-      : "mt-2 flex items-center gap-1 text-xs text-gray-500"}><MapPin size={14} className="shrink-0" aria-hidden="true" /><span className={featured ? "truncate" : ""}>{serviceCities(service.cities).join(", ")}</span></p>
+      : "mt-2 flex items-center gap-1 text-xs text-gray-500"}><MapPin size={14} className="shrink-0" aria-hidden="true" /><span className={featured ? "truncate" : ""} title={coverageLabel(service.coverage, service.cities)}>{coverageLabel(service.coverage, service.cities)}</span></p>
     <div className={featured
       ? "mt-auto flex flex-wrap items-end justify-between gap-2 pt-4"
       : "mt-auto flex items-end justify-between gap-2 pt-5"}>
-      <p className={featured ? "text-xs leading-tight text-gray-500" : "text-sm text-gray-500"}>Starting at <strong className={featured ? "mt-0.5 block text-base font-black text-emerald-950" : "block text-lg text-emerald-950"}>PKR {Number(service.price).toLocaleString("en-PK")}</strong></p>
+      <p className={featured ? "text-xs leading-tight text-gray-500" : "text-sm text-gray-500"}>{service.priceType === "FIXED" ? "Fixed Price" : "Starting From"} <strong className={featured ? "mt-0.5 block text-base font-black text-emerald-950" : "block text-lg text-emerald-950"}>PKR {Number(service.price).toLocaleString("en-PK")}</strong></p>
       <Link href={`/services/${service.id}`} className={featured
         ? "rounded-xl bg-brand-primary px-3.5 py-2 text-xs font-bold text-brand-dark transition hover:brightness-95"
         : "rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-bold text-brand-dark"}>View service</Link>

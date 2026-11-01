@@ -51,7 +51,7 @@ export async function PATCH(request: Request, { params }: Context) { return api(
     // A body with neither field keeps the current photos.
     const previous = wantImages(want);
     const photos = input.photos !== undefined || input.photo !== undefined ? wantPhotoList(input) : previous;
-    for (const photo of photos) if (!previous.includes(photo)) await assertWantPhotoStored(photo);
+    for (const photo of photos) if (!previous.includes(photo)) await assertWantPhotoStored(photo, customer.id);
     const expiresAt = data.expiresAt ? new Date(data.expiresAt) : want.expiresAt;
     if (expiresAt <= new Date() || expiresAt.getTime() > Date.now() + 90 * 86400000) throw new ApiError(400, "Invalid expiry.");
     const updated = await tx.want.update({ where: { id: want.id }, data: { ...data, photo: photos[0] ?? null, photos, title: sanitizePlainText(title, 160), description: description ? sanitizePlainText(description, 5000) : null, category: sanitizePlainText(category, 100), city: sanitizePlainText(city, 100), condition: condition ? sanitizePlainText(condition, 60) : undefined, needBy: needBy ? new Date(needBy) : null, expiresAt, status: draft ? "DRAFT" : "PENDING_MODERATION", moderationReason: null } });

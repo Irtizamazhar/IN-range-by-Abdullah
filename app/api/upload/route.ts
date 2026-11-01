@@ -2,8 +2,7 @@ import {imageExtension} from "@/lib/security/image-signature";
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-import { promises as fs } from "fs";
-import path from "path";
+import { savePublicImage, PUBLIC_UPLOAD_REFERENCE_MIME } from "@/lib/public-uploads";
 import { getCustomerSession } from "@/lib/sessions";
 import { requireAdminPermission } from "@/lib/admin-rbac";
 import { prisma } from "@/lib/prisma";
@@ -88,30 +87,11 @@ export async function POST(req: NextRequest) {
     }
     const buf = new Uint8Array(await file.arrayBuffer());
     if (!imageExtension(buf,mime)) return NextResponse.json({error:"Image bytes do not match the declared type."},{status:400});
-    const ext =
-      mime === "image/png"
-        ? "png"
-        : mime === "image/webp"
-          ? "webp"
-          : "jpg";
-    const random =
-      typeof crypto.randomUUID === "function"
-        ? crypto.randomUUID().slice(0, 8)
-        : Math.random().toString(36).slice(2, 10);
-    const prefix = "want";
-    const folder = "wants";
-    const fileName = `${prefix}-${Date.now()}-${random}.${ext}`;
-    const uploadDir = path.join(process.cwd(), "public", "uploads", folder);
     try {
-      await fs.mkdir(uploadDir, { recursive: true });
-      await fs.writeFile(path.join(uploadDir, fileName), Buffer.from(buf));
-      return NextResponse.json({
-        id: fileName,
-        url: `/uploads/${folder}/${fileName}`,
-      });
-    } catch (e) {
-      console.error("want upload", e);
-      return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+      const image = await savePublicImage(Buffer.from(buf), mime, `wants/${customerSession.user.id}`, "want");
+      return NextResponse.json(image);
+    } catch {
+      return NextResponse.json({ error: "Image upload failed. Please try again." }, { status: 503 });
     }
   }
 
@@ -156,50 +136,28 @@ export async function POST(req: NextRequest) {
     }
 
     if (isCategoryUpload || isLocalProductUpload || isPromotionUpload) {
-      const ext =
-        mime === "image/png"
-          ? "png"
-          : mime === "image/webp"
-          ? "webp"
-          : "jpg";
-      const safeBase = file.name
-        .toLowerCase()
-        .replace(/\.[^/.]+$/, "")
-        .replace(/[^a-z0-9-]+/g, "-")
-        .replace(/^-+|-+$/g, "")
-        .slice(0, 50) || "category";
-      const fileName = `${Date.now()}-${safeBase}.${ext}`;
-      const subfolder = isCategoryUpload ? "categories" : isPromotionUpload ? "promotions" : "products";
-      const uploadDir = path.join(
-        process.cwd(),
-        "public",
-        "uploads",
-        subfolder
-      );
-      await fs.mkdir(uploadDir, { recursive: true });
-      await fs.writeFile(path.join(uploadDir, fileName), Buffer.from(buf));
-      return NextResponse.json({
-        id: fileName,
-        url: `/uploads/${subfolder}/${fileName}`,
-      });
+      const folder = isCategoryUpload ? "categories" : isPromotionUpload ? "promotions" : "products";
+      const image = await savePublicImage(Buffer.from(buf), mime, folder);
+      return NextResponse.json(image);
     }
 
+    const image = await savePublicImage(Buffer.from(buf), mime, "products");
     const row = await prisma.productImage.create({
       data: {
         productId: null,
-        data: buf,
-        mimeType: mime || "image/jpeg",
+        data: Buffer.from(image.url, "utf8"),
+        mimeType: PUBLIC_UPLOAD_REFERENCE_MIME,
         sortOrder: 0,
       },
     });
     return NextResponse.json({
       id: row.id,
-      url: `/api/image/${row.id}`,
+      url: image.url,
     });
-  } catch (e) {
-    console.error("upload", e);
+  } catch {
+    console.error("Public image upload failed.");
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : "Upload failed" },
+      { error: "Upload failed. Please try again." },
       { status: 500 }
     );
   }

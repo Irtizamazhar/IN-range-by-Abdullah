@@ -1,21 +1,29 @@
 import { customerServiceSnapshot } from "@/lib/customer-service-policy";
 import { z } from "zod";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { api, ApiError, adminActor, customerActor, sameOrigin } from "@/lib/marketplace-api";
+import { api, ApiError, customerActor, sameOrigin } from "@/lib/marketplace-api";
+import { requireAdminPermission } from "@/lib/admin-rbac";
 import { getVendorFromSession } from "@/lib/vendor-auth-server";
 import { advanceQuoteService, isQuoteService } from "@/lib/service-quote-fulfillment";
 export const dynamic = "force-dynamic";
 export async function GET(request: Request) { return api(async () => {
-  const role = new URL(request.url).searchParams.get("role"); let where = {};
-  if (role === "admin") await adminActor();
+  const query = new URL(request.url).searchParams; const role = query.get("role"); let where: Prisma.OrderServiceWhereInput = {};
+  const page = z.coerce.number().int().min(1).max(100000).parse(query.get("page") || 1);
+  if (role === "admin") { const auth = await requireAdminPermission("orders.view"); if ("response" in auth) return auth.response; }
   else if (role === "vendor") { const s = await getVendorFromSession(); if (!s) throw new ApiError(401, "Vendor sign-in required."); where = { vendorId: s.vendor.id }; }
   else { const c = await customerActor(); where = { order: { customerId: c.id } }; }
-  const bookings = await prisma.orderService.findMany({ where, select: { id: true, serviceId: true, productId: true, status: true, scheduledAt: true, snapshot: true, refundStatus: true, order: { select: { id: true, orderNumber: true, paymentStatus: true } }, events: { select: { id: true, status: true, note: true, createdAt: true }, orderBy: { createdAt: "desc" } } }, orderBy: { createdAt: "desc" }, take: 100 }); return { bookings: bookings.map(b => { const { serviceId, productId, ...row } = b; return { ...row, standalone: isQuoteService({ ...b, serviceId, productId }), ...(role === "admin" || role === "vendor" ? {} : { snapshot: customerServiceSnapshot(b.snapshot), events: b.events.map(({ id, status, createdAt }) => ({ id, status, createdAt })) }) }; }) };
+  if (role === "admin") {
+    const status = query.get("status"); if (status) where.status = z.enum(["PENDING", "CONFIRMED", "SCHEDULE_REQUIRED", "SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED", "FAILED"]).parse(status);
+    const search = (query.get("search") || "").trim().slice(0, 100); if (search) where.OR = [{ order: { orderNumber: { contains: search } } }, { vendor: { shopName: { contains: search } } }];
+  }
+  const total = role === "admin" ? await prisma.orderService.count({ where }) : undefined;
+  const bookings = await prisma.orderService.findMany({ where, select: { id: true, serviceId: true, productId: true, status: true, scheduledAt: true, snapshot: true, refundStatus: true, order: { select: { id: true, orderNumber: true, paymentStatus: true } }, events: { select: { id: true, status: true, note: true, createdAt: true }, orderBy: { createdAt: "desc" } } }, orderBy: { createdAt: "desc" }, take: role === "admin" ? 20 : 100, ...(role === "admin" ? { skip: (page - 1) * 20 } : {}) }); return { total, page, bookings: bookings.map(b => { const { serviceId, productId, ...row } = b; return { ...row, standalone: isQuoteService({ ...b, serviceId, productId }), ...(role === "admin" || role === "vendor" ? {} : { snapshot: customerServiceSnapshot(b.snapshot), events: b.events.map(({ id, status, createdAt }) => ({ id, status, createdAt })) }) }; }) };
 }); }
 export async function PATCH(request: Request) { return api(async () => {
   sameOrigin(request); const input = z.object({ id: z.string(), role: z.enum(["customer", "vendor", "admin"]), status: z.enum(["CONFIRMED", "SCHEDULE_REQUIRED", "SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED", "FAILED"]), scheduledAt: z.string().datetime().optional(), note: z.string().trim().min(3).max(2000) }).parse(await request.json());
   let actor: string; let vendorId: string | undefined; let customerId: string | undefined;
-  if (input.role === "admin") actor = await adminActor();
+  if (input.role === "admin") { const auth = await requireAdminPermission("orders.manage"); if ("response" in auth) return auth.response; actor = `admin:${auth.admin.id}`; }
   else if (input.role === "vendor") { const s = await getVendorFromSession(); if (!s || s.vendor.status !== "approved") throw new ApiError(403, "Approved vendor required."); vendorId = s.vendor.id; actor = `vendor:${vendorId}`; }
   else { const c = await customerActor(); customerId = c.id; actor = `customer:${c.id}`; }
   return prisma.$transaction(async tx => {

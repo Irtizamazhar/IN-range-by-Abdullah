@@ -1,0 +1,32 @@
+{
+  "candidateBase": "5eab8fe74f77b461561ed02d33e9715ee115bdab",
+  "productionCommitVerified": false,
+  "migrationsEnabled": false,
+  "files": [
+    ".gitignore",
+    "next.config.mjs",
+    "app/api/admin/uploads/storage/route.ts",
+    "app/api/image/[id]/route.ts",
+    "app/api/reviews/photo/route.ts",
+    "app/api/reviews/route.ts",
+    "app/api/upload/route.ts",
+    "app/api/uploads/[...path]/route.ts",
+    "app/api/vendor/upload/route.ts",
+    "app/api/wants/[id]/route.ts",
+    "app/api/wants/route.ts",
+    "lib/cloudinary.ts",
+    "lib/cloudinary-policy.ts",
+    "lib/cloudinary-client-upload.ts",
+    "lib/public-uploads.ts",
+    "lib/review-policy.ts",
+    "lib/want-photo-file.ts",
+    "lib/want-schema.ts",
+    "scripts/uploads-migrate.mjs",
+    "scripts/test-public-uploads-http.mjs",
+    "tests/cloudinary-storage.test.ts",
+    "tests/public-uploads.test.ts",
+    "docs/PUBLIC_UPLOADS_READINESS.md",
+    "docs/IMAGE_STORAGE_RELEASE_MANIFEST.json",
+    "docs/IMAGE_STORAGE_RELEASE_PLAN.md"
+  ]
+}

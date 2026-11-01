@@ -15,6 +15,7 @@
 
 # production
 /build
+/.release-prep/
 
 # misc
 .DS_Store
@@ -34,6 +35,8 @@ yarn-error.log*
 /.joro-live/
 
 # Private vendor identity and appeal documents stay out of source control.
+# Runtime media must never be added by future blanket Git staging. Existing tracked images remain tracked.
+/public/uploads/
 /public/uploads/vendor-docs/
 /public/uploads/vendor-appeals/
 /storage/private/

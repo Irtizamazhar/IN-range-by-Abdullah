@@ -1,3 +1,4 @@
+import { isCloudinaryPhoto } from "@/lib/cloudinary-policy";
 import { z } from "zod";
 import { sanitizePlainText } from "@/lib/security/sanitize";
 
@@ -77,6 +78,7 @@ export function reviewPhotoUrlForCustomer(
   value: string,
   customerId: string
 ): boolean {
+  if (isCloudinaryPhoto(value, "reviews", customerId)) return true;
   if (value.includes("..") || value.includes("?") || value.includes("#")) {
     return false;
   }
@@ -91,6 +93,7 @@ export function reviewPhotoUrlForCustomer(
 }
 
 export function isPublicReviewPhotoUrl(value: string | null): boolean {
+  if (value && isCloudinaryPhoto(value, "reviews")) return true;
   if (!value || value.includes("..") || value.includes("?") || value.includes("#")) {
     return false;
   }

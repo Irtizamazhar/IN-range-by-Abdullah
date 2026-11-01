@@ -2,8 +2,7 @@ import {imageExtension} from "@/lib/security/image-signature";
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-import { promises as fs } from "fs";
-import path from "path";
+import { savePublicImage } from "@/lib/public-uploads";
 import { requireApprovedVendorApi } from "@/lib/vendor-api-auth";
 import { consumeOrReject, createUploadRateLimiter } from "@/lib/security/rate-limit";
 
@@ -55,30 +54,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Max 5MB per image" }, { status: 400 });
   }
 
-  const ext =
-    mime === "image/png" ? "png" : mime === "image/webp" ? "webp" : "jpg";
-  const random =
-    typeof crypto.randomUUID === "function"
-      ? crypto.randomUUID().slice(0, 8)
-      : Math.random().toString(36).slice(2, 10);
-  const fileName = `vp-${Date.now()}-${random}.${ext}`;
-  const uploadDir = path.join(
-    process.cwd(),
-    "public",
-    "uploads",
-    "vendor-products",
-    auth.vendor.id
-  );
-
   try {
-    await fs.mkdir(uploadDir, { recursive: true });
     const buf = Buffer.from(await file.arrayBuffer());
     if (!imageExtension(buf,mime)) return NextResponse.json({error:"Image bytes do not match the declared type."},{status:400});
-    await fs.writeFile(path.join(uploadDir, fileName), buf);
-    const url = `/uploads/vendor-products/${auth.vendor.id}/${fileName}`;
-    return NextResponse.json({ url });
-  } catch (e) {
-    console.error("vendor upload", e);
+    const image = await savePublicImage(buf, mime, `vendor-products/${auth.vendor.id}`, "vp");
+    return NextResponse.json({ url: image.url });
+  } catch {
+    console.error("Vendor image upload failed.");
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
 }

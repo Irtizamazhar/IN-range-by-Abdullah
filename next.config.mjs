@@ -37,6 +37,10 @@ const nextConfig = {
     }
     return [{ source: "/:path*", headers: security }];
   },
+  // beforeFiles ensures existing static files cannot bypass the public-image allowlist.
+  async rewrites() {
+    return { beforeFiles: [{ source: "/uploads/:path*", destination: "/api/uploads/:path*" }] };
+  },
   images: {
     remotePatterns: [
       {

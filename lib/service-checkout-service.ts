@@ -2,10 +2,12 @@ import { Prisma } from "@prisma/client";
 import { ApiError } from "@/lib/marketplace-api";
 import { serviceAmounts } from "@/lib/service-money";
 import { findServiceCommissionRange } from "@/lib/service-commission-ranges";
+import { supportsCityOnlyCheckout } from "@/lib/service-coverage";
 export async function resolveServiceAddon(tx: Prisma.TransactionClient, productId: string, serviceId: string, quantity: number, city: string) {
   const addon = await tx.productServiceAddon.findUnique({ where: { productId_serviceId: { productId, serviceId } }, include: { service: { include: { vendor: { select: { status: true } } } }, product: { select: { isActive: true, vendorPublication: { select: { vendorId: true, status: true } } } } } });
   if (!addon?.active || !addon.service.active || addon.service.moderationStatus !== "APPROVED" || !addon.product.isActive || addon.service.vendor.status !== "approved" || addon.product.vendorPublication?.vendorId !== addon.service.vendorId || addon.product.vendorPublication.status !== "active") throw new ApiError(409, "Service is no longer available for this product.");
   const service = addon.service;
+  if (!supportsCityOnlyCheckout(service.coverage, city)) throw new ApiError(409, "This service needs area-specific availability confirmation. Post a service requirement instead.");
   if (!Array.isArray(service.cities) || !service.cities.some(c => typeof c === "string" && c.toLowerCase() === city.trim().toLowerCase())) throw new ApiError(400, "Service is unavailable in your delivery city.");
   if (!Number.isSafeInteger(quantity) || quantity < 1) throw new ApiError(400, "Invalid service quantity.");
   // Commission base and range key: the service line only (unit price × quantity) — no product, delivery, handling fee or coupon.

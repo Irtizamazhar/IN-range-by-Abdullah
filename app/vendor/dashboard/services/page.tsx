@@ -1,160 +1,23 @@
-"use client";
-import { wholeNumberInputProps } from "@/lib/whole-number-input";
-
+﻿"use client";
 import { useCallback, useEffect, useState } from "react";
-import { LoadingButton } from "@/components/ui/LoadingButton";
-import { LoadingForm } from "@/components/ui/LoadingForm";
-import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { ServiceBookings } from "@/components/user/ServiceBookings";
-import { formatPKR } from "@/lib/format";
-
-type Service = {
-  id: string; name: string; description: string; type: string; price: string;
-  cities: string[]; durationMinutes: number; leadDays: number; warranty: string;
-  cancellationTerms: string; active: boolean; moderationStatus: string;
-  moderationReason: string | null;
-};
-type Addon = { id: string; active: boolean; product: { name: string }; service: { name: string } };
-
-const field = "mt-1 block w-full min-w-0 rounded-xl border border-[#DFEDE5] bg-white px-3 py-2.5 text-[#123D27] focus:border-[#005235] focus:outline-none focus:ring-2 focus:ring-[#B7E33A]/40";
-const card = "rounded-2xl border border-[#DFEDE5] bg-white p-5 shadow-sm sm:p-6";
-
-function servicePayload(service: Service, active: boolean) {
-  return {
-    id: service.id, name: service.name, description: service.description,
-    type: service.type, price: Number(service.price), cities: service.cities,
-    durationMinutes: service.durationMinutes, leadDays: service.leadDays,
-    warranty: service.warranty, cancellationTerms: service.cancellationTerms, active,
-  };
-}
-
-export default function VendorServices() {
-  const [loading, setLoading] = useState(true);
-  const [loadFailed, setLoadFailed] = useState(false);
-  const [services, setServices] = useState<Service[]>([]);
-  const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
-  const [addons, setAddons] = useState<Addon[]>([]);
-  const [bookingCount, setBookingCount] = useState(0);
-  const [serviceTypes, setServiceTypes] = useState<string[]>([]);
-  const [editing, setEditing] = useState<Service | null>(null);
-  const [showForm, setShowForm] = useState(false);
-  const [message, setMessage] = useState("");
-
-  const load = useCallback(async () => {
-    try {
-      const response = await fetch("/api/vendor/services", { cache: "no-store" });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Could not load services.");
-      setServices(data.services);
-      setProducts(data.products);
-      setAddons(data.addons);
-      setBookingCount(data.bookingCount);
-      setServiceTypes(data.serviceTypes);
-      setLoadFailed(false);
-    } catch (error) {
-      setLoadFailed(true);
-      setMessage(error instanceof Error ? error.message : "Could not load services.");
-    } finally { setLoading(false); }
-  }, []);
-  useEffect(() => { void load(); }, [load]);
-
-  async function post(body: Record<string, unknown>) {
-    try {
-      const response = await fetch("/api/vendor/services", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Could not save service.");
-      setMessage("Service changes saved. Existing purchase terms remain unchanged.");
-      await load();
-      if (body.action !== "attach") { setEditing(null); setShowForm(false); }
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not save service.");
-    }
-  }
-
-  if (loading) return <PageSkeleton label="Loading services…" variant="cards" />;
-  const approved = services.filter(service => service.moderationStatus === "APPROVED");
-  const eligible = approved.filter(service => service.active);
-
-  return <main className="mx-auto max-w-6xl space-y-7 p-4 text-[#123D27] sm:p-6">
-    <header className="flex flex-wrap items-center justify-between gap-4">
-      <div>
-        <p className="text-xs font-black uppercase tracking-widest text-[#005235]">JORO Vendor</p>
-        <h1 className="mt-1 text-3xl font-black text-[#063D2B]">My Services</h1>
-        <p className="mt-2 text-sm text-[#506257]">Manage your services, bookings and product add-ons.</p>
-      </div>
-      <LoadingButton type="button" onClick={() => { setEditing(null); setShowForm(true); }} className="rounded-xl bg-[#B7E33A] px-5 py-3 font-bold text-[#063D2B]">+ Add Service</LoadingButton>
-    </header>
-    {message && <p role="status" className={`rounded-xl px-4 py-3 text-sm ${loadFailed ? "bg-red-50 text-red-800" : "bg-[#EFFBF4] text-[#005235]"}`}>{message}</p>}
-    {loadFailed && <LoadingButton onClick={load} className="rounded-xl border border-[#DFEDE5] bg-white px-4 py-2 font-bold">Retry loading services</LoadingButton>}
-
-    <section aria-label="Service summary" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      {[
-        ["Total Services", services.length],
-        ["Active Services", services.filter(service => service.active && service.moderationStatus === "APPROVED").length],
-        ["Pending Review", services.filter(service => service.moderationStatus !== "APPROVED" && service.moderationStatus !== "HIDDEN").length],
-        ["Total Bookings", bookingCount],
-      ].map(([label, count]) => <div key={label} className={card}><p className="text-sm text-[#506257]">{label}</p><p className="mt-2 text-3xl font-black text-[#005235]">{count}</p></div>)}
-    </section>
-
-    {showForm && <section className={card}>
-      <div className="mb-5 flex items-center justify-between gap-3"><h2 className="text-xl font-black text-[#005235]">{editing ? "Edit Service" : "Add Service"}</h2><LoadingButton type="button" onClick={() => { setEditing(null); setShowForm(false); }} className="rounded-lg border px-3 py-2 text-sm">Close</LoadingButton></div>
-      <LoadingForm key={editing?.id || "new"} className="grid gap-4 sm:grid-cols-2" onSubmit={event => {
-        event.preventDefault();
-        const form = new FormData(event.currentTarget);
-        return post({
-          ...(editing ? { id: editing.id } : {}),
-          name: form.get("name"), description: form.get("description"), type: form.get("type"),
-          price: Number(form.get("price")), cities: String(form.get("cities")).split(",").map(city => city.trim()).filter(Boolean),
-          durationMinutes: Number(form.get("duration")), leadDays: Number(form.get("lead")),
-          warranty: form.get("warranty"), cancellationTerms: form.get("cancellation"), active: form.get("active") === "on",
-        });
-      }}>
-        <label className="text-sm font-bold">Service name<input className={field} name="name" defaultValue={editing?.name} required maxLength={160} /></label>
-        <label className="text-sm font-bold">Service category<select className={field} name="type" defaultValue={editing?.type || ""} required><option value="">Select service type</option>{editing?.type && !serviceTypes.includes(editing.type) && <option value={editing.type}>{editing.type} (legacy)</option>}{serviceTypes.map(type => <option key={type} value={type}>{type}</option>)}</select></label>
-        <label className="text-sm font-bold">Starting price (PKR)<input className={field} name="price" type="number" min={1} defaultValue={editing?.price == null ? undefined : Math.round(Number(editing.price))} required {...wholeNumberInputProps} /></label>
-        <label className="text-sm font-bold">Coverage cities (comma-separated)<input className={field} name="cities" defaultValue={editing?.cities.join(", ")} required /></label>
-        <label className="text-sm font-bold">Duration in minutes<input className={field} name="duration" type="number" min={1} defaultValue={editing?.durationMinutes || 60} required /></label>
-        <label className="text-sm font-bold">Lead time in days<input className={field} name="lead" type="number" min={0} defaultValue={editing?.leadDays ?? 1} required /></label>
-        <label className="text-sm font-bold sm:col-span-2">What is included / not included<textarea className={field} name="description" defaultValue={editing?.description} required maxLength={5000} rows={3} /></label>
-        <label className="text-sm font-bold">Warranty<input className={field} name="warranty" defaultValue={editing?.warranty || ""} maxLength={1000} /></label>
-        <label className="text-sm font-bold sm:col-span-2">Cancellation & scheduling terms<textarea className={field} name="cancellation" defaultValue={editing?.cancellationTerms} required maxLength={5000} rows={3} /></label>
-        <label className="flex items-center gap-2 text-sm font-bold"><input name="active" type="checkbox" defaultChecked={editing?.active ?? true} className="h-4 w-4 accent-[#005235]" />Active</label>
-        <LoadingButton type="submit" loadingLabel="Saving…" className="rounded-xl bg-[#B7E33A] px-5 py-3 font-bold text-[#063D2B] sm:col-span-2">{editing ? "Update Service" : "Create Service"}</LoadingButton>
-      </LoadingForm>
-    </section>}
-
-    <section className={card}>
-      <h2 className="text-xl font-black text-[#005235]">Service Listings</h2>
-      {services.length ? <div className="mt-4 grid gap-4 md:grid-cols-2">{services.map(service => <article key={service.id} className="min-w-0 rounded-xl border border-[#DFEDE5] bg-[#F7FAF7] p-4">
-        <div className="flex flex-wrap items-start justify-between gap-2"><h3 className="font-bold text-[#063D2B]">{service.name}</h3><span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-[#005235]">{service.moderationStatus}</span></div>
-        <p className="mt-1 text-sm text-[#506257]">{service.type} · {service.cities.join(", ")}</p>
-        <p className="mt-3 text-lg font-black text-[#005235]">{formatPKR(Number(service.price))}</p>
-        <p className="mt-1 text-xs text-[#506257]">{service.active ? "Active" : "Inactive"} · {service.durationMinutes} min · {service.leadDays} day lead time</p>
-        {service.moderationReason && <p className="mt-2 text-xs text-red-700">{service.moderationReason}</p>}
-        <div className="mt-4 flex flex-wrap gap-2"><LoadingButton type="button" disabled={service.moderationStatus !== "APPROVED"} onClick={() => { setEditing(service); setShowForm(true); }} className="rounded-lg border border-[#DFEDE5] bg-white px-4 py-2 text-sm font-bold disabled:opacity-50">Edit</LoadingButton><LoadingButton type="button" disabled={service.moderationStatus !== "APPROVED"} onClick={() => post(servicePayload(service, !service.active))} className="rounded-lg border border-[#DFEDE5] bg-white px-4 py-2 text-sm font-bold disabled:opacity-50">{service.active ? "Disable" : "Enable"}</LoadingButton></div>
-      </article>)}</div> : <p className="mt-4 rounded-xl bg-[#F7FAF7] p-6 text-sm text-[#506257]">No services yet. Add your first service to make it available for review.</p>}
-    </section>
-
-    <section className={card}>
-      <h2 className="text-xl font-black text-[#005235]">Product Service Add-ons</h2>
-      <p className="mt-1 text-sm text-[#506257]">Link an approved service to a product from your own store.</p>
-      <LoadingForm className="mt-5 grid items-end gap-4 sm:grid-cols-2 lg:grid-cols-3" onSubmit={event => {
-        event.preventDefault();
-        const form = new FormData(event.currentTarget);
-        return post({ action: "attach", productId: form.get("productId"), serviceId: form.get("serviceId"), active: form.get("active") === "on" });
-      }}>
-        <label className="text-sm font-bold">Own product<select className={field} name="productId" required defaultValue=""><option value="">Select a product</option>{products.map(product => <option key={product.id} value={product.id}>{product.name}</option>)}</select></label>
-        <label className="text-sm font-bold">Eligible service<select className={field} name="serviceId" required defaultValue=""><option value="">Select a service</option>{eligible.map(service => <option key={service.id} value={service.id}>{service.name}</option>)}</select></label>
-        <label className="flex items-center gap-2 text-sm font-bold lg:self-center"><input name="active" type="checkbox" defaultChecked className="h-4 w-4 accent-[#005235]" />Enable add-on</label>
-        <LoadingButton type="submit" disabled={!products.length || !eligible.length} loadingLabel="Saving…" className="rounded-xl bg-[#B7E33A] px-5 py-3 font-bold text-[#063D2B] disabled:opacity-50">Save Product Add-on</LoadingButton>
-      </LoadingForm>
-      {!products.length || !eligible.length ? <p className="mt-3 text-sm text-[#506257]">An owned product and an active approved service are needed before linking an add-on.</p> : null}
-      {addons.length > 0 && <div className="mt-5 space-y-2">{addons.map(addon => <p key={addon.id} className="flex flex-wrap justify-between gap-2 rounded-xl border border-[#DFEDE5] px-4 py-3 text-sm"><span>{addon.product.name} · {addon.service.name}</span><strong className="text-[#005235]">{addon.active ? "Enabled" : "Disabled"}</strong></p>)}</div>}
-    </section>
-
-    <section className={card}><h2 className="text-xl font-black text-[#005235]">Service Bookings</h2><p className="mt-1 text-sm text-[#506257]">Actual customer bookings and permitted actions.</p><div className="mt-4"><ServiceBookings role="vendor" /></div></section>
-  </main>;
+import { ServiceListingForm, type CatalogService, type EditableService } from "@/components/user/services/ServiceListingForm";
+import { coverageLabel } from "@/lib/service-coverage";
+type Service = EditableService & {moderationStatus:string;moderationReason:string|null};
+type Addon={id:string;active:boolean;product:{name:string};service:{name:string}};
+export default function VendorServices(){
+ const [services,setServices]=useState<Service[]>([]),[catalog,setCatalog]=useState<CatalogService[]>([]),[products,setProducts]=useState<{id:string;name:string}[]>([]),[addons,setAddons]=useState<Addon[]>([]);
+ const [loading,setLoading]=useState(true),[message,setMessage]=useState(""),[form,setForm]=useState(false),[editing,setEditing]=useState<Service>(),[bookingCount,setBookingCount]=useState(0);
+ const load=useCallback(async()=>{try{const r=await fetch('/api/vendor/services',{cache:'no-store'}),d=await r.json();if(!r.ok)throw new Error(d.error);setServices(d.services);setCatalog(d.catalog);setProducts(d.products);setAddons(d.addons);setBookingCount(d.bookingCount)}catch(e){setMessage(e instanceof Error?e.message:'Could not load services.')}finally{setLoading(false)}},[]);
+ useEffect(()=>{void load()},[load]);
+ async function post(body:Record<string,unknown>){try{const r=await fetch('/api/vendor/services',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}),d=await r.json();if(!r.ok)throw new Error(d.error);setMessage(body.action?'Changes saved.':'Submitted. Pending Admin Approval; hidden until reviewed.');await load();if(!body.action){setForm(false);setEditing(undefined)}return true}catch(e){setMessage(e instanceof Error?e.message:'Could not save.');return false}}
+ const eligible=services.filter(s=>s.active&&s.moderationStatus==='APPROVED');
+ return <main className="mx-auto max-w-6xl space-y-6 p-4 text-[#005055] sm:p-6"><header className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-3xl font-black">My Services</h1><p className="mt-2 text-sm">Choose a catalog service, set your price and verified coverage, then submit for review.</p></div><button type="button" className="rounded-xl bg-[#B8E632] px-5 py-3 font-bold" onClick={()=>{setEditing(undefined);setForm(true)}}>+ Add New Service</button></header>
+ {message&&<p role="status" className="rounded-xl border bg-white p-4">{message}</p>}{loading?<p role="status">Loading services…</p>:<button type="button" onClick={load} className="text-sm underline">Refresh services</button>}
+ <section aria-label="Service summary" className="grid grid-cols-2 gap-3 lg:grid-cols-4">{[['Total services',services.length],['Approved & active',eligible.length],['Pending approval',services.filter(s=>s.moderationStatus==='PENDING_APPROVAL').length],['Bookings',bookingCount]].map(([label,count])=><div className="rounded-2xl border bg-white p-4" key={label}><p className="text-sm">{label}</p><p className="text-2xl font-black">{count}</p></div>)}</section>
+ {form&&<ServiceListingForm key={editing?.id||'new'} catalog={catalog} service={editing} onSave={post} onCancel={()=>setForm(false)}/>}
+ <section><h2 className="text-xl font-bold">Your service listings</h2><div className="mt-3 grid gap-4 md:grid-cols-2">{services.map(s=><article key={s.id} className="min-w-0 rounded-2xl border bg-white p-4"><h3 className="font-bold">{s.name}</h3><p className="mt-1 text-xs font-bold">{s.moderationStatus==='PENDING_APPROVAL'?'Pending Admin Approval':s.moderationStatus} · {s.active?'Available':'Unavailable'}</p><p className="mt-2 text-lg font-bold">{s.priceType==='FIXED'?'Fixed Price':'Starting From'} PKR {Number(s.price).toLocaleString('en-PK')}</p><p className="mt-2 break-words text-sm">{coverageLabel(s.coverage, s.cities)}</p>{s.moderationReason&&<p className="mt-2 rounded-lg bg-amber-50 p-2 text-sm">Admin: {s.moderationReason}</p>}<div className="mt-3 flex flex-wrap gap-2"><button disabled={s.moderationStatus==='HIDDEN'} onClick={()=>{setEditing(s);setForm(true)}} className="rounded-lg border px-3 py-2 disabled:opacity-40">{s.moderationStatus==='REJECTED'?'Correct & resubmit':'Edit & resubmit'}</button><button disabled={s.moderationStatus!=='APPROVED'} onClick={()=>post({action:'availability',id:s.id,active:!s.active})} className="rounded-lg border px-3 py-2 disabled:opacity-40">{s.active?'Disable':'Enable'}</button></div></article>)}</div>{!loading&&!services.length&&<p className="mt-3 rounded-xl border p-5">No services yet. Select an admin catalog service to get started.</p>}</section>
+ <section className="rounded-2xl border bg-white p-4"><h2 className="text-xl font-bold">Product Service Add-ons</h2><p className="mt-1 text-sm">Link approved services to products in your store. Add-on purchases require whole-city coverage; area-specific services can be requested separately.</p><form className="mt-4 grid gap-3 sm:grid-cols-2" onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);void post({action:'attach',productId:f.get('product'),serviceId:f.get('service'),active:f.get('active')==='on'})}}><label className="text-sm">Own product<select name="product" required className="mt-1 w-full rounded-xl border p-3"><option value="">Select product</option>{products.map(p=><option value={p.id} key={p.id}>{p.name}</option>)}</select></label><label className="text-sm">Approved service<select name="service" required className="mt-1 w-full rounded-xl border p-3"><option value="">Select service</option>{eligible.map(s=><option value={s.id} key={s.id}>{s.name}</option>)}</select></label><label className="flex gap-2 text-sm"><input type="checkbox" name="active" defaultChecked/>Enable add-on</label><button disabled={!products.length||!eligible.length} className="rounded-xl bg-[#B8E632] p-3 font-bold disabled:opacity-40">Save product add-on</button></form><ul className="mt-3 space-y-2 text-sm">{addons.map(a=><li key={a.id}>{a.product.name} · {a.service.name}: {a.active?'Enabled':'Disabled'}</li>)}</ul></section>
+ <details className="rounded-2xl border bg-white p-4"><summary className="cursor-pointer font-bold">Cannot find your city or area? Request admin review</summary><p className="mt-2 text-sm">Requests do not publish coverage. Admin will investigate the source; unverified locations cannot be selected.</p><form className="mt-3 grid gap-3 sm:grid-cols-2" onSubmit={async e=>{e.preventDefault();const f=new FormData(e.currentTarget);try{const r=await fetch('/api/services/location-requests',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({city:f.get('city'),area:f.get('area'),details:f.get('details')})}),d=await r.json();if(!r.ok)throw new Error(d.error);setMessage('Location review requested. This does not add unverified coverage.')}catch(err){setMessage(err instanceof Error?err.message:'Could not request review.')}}}><label>City<input name="city" required minLength={2} maxLength={200} className="mt-1 w-full rounded-xl border p-3"/></label><label>Area<input name="area" required minLength={2} maxLength={200} className="mt-1 w-full rounded-xl border p-3"/></label><label className="sm:col-span-2">Details<input name="details" required minLength={3} maxLength={1000} className="mt-1 w-full rounded-xl border p-3"/></label><button className="rounded-xl border p-3 font-bold">Request location review</button></form></details>
+ <section className="rounded-2xl border bg-white p-4"><h2 className="text-xl font-bold">Service bookings</h2><ServiceBookings role="vendor"/></section></main>;
 }

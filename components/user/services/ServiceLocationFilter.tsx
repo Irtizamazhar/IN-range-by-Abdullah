@@ -1,0 +1,9 @@
+"use client";
+import { useState } from "react";
+import { placeSchema, type ServicePlace } from "@/lib/service-coverage";
+import { LocationAttribution, LocationSearch } from "./ServiceCoverageSelector";
+export function ServiceLocationFilter({ initialCity = "", initialArea = "" }: { initialCity?: string; initialArea?: string }) {
+  const [city, setCity] = useState<ServicePlace | undefined>(() => { try { const parsed = placeSchema.safeParse(JSON.parse(initialCity)); return parsed.success ? parsed.data : undefined; } catch { return undefined; } });
+  const [area, setArea] = useState<ServicePlace | undefined>(() => { try { const parsed = placeSchema.safeParse(JSON.parse(initialArea)); return parsed.success ? parsed.data : undefined; } catch { return undefined; } });
+  return <fieldset className="min-w-0 sm:col-span-full"><legend className="text-sm font-semibold">Choose a verified service location</legend><input type="hidden" name="cityId" value={city?.id || ""}/><input type="hidden" name="areaId" value={area?.id || ""}/><input type="hidden" name="citySelection" value={city ? JSON.stringify(city) : ""}/><input type="hidden" name="areaSelection" value={area ? JSON.stringify(area) : ""}/><div className="mt-2 grid gap-3 sm:grid-cols-2"><LocationSearch label="Search city" onSelect={c => { setCity(c); setArea(undefined); }}/>{city && <LocationSearch key={city.id} city={city} label={`Search area in ${city.name}`} onSelect={setArea}/>}</div>{city && <p className="mt-2 text-sm">{city.name}{area ? ` · ${area.name}` : " · All listed coverage in this city; choose an area to check availability"} <button type="button" className="ml-2 underline" onClick={() => { setCity(undefined); setArea(undefined); }}>Clear city</button>{area && <button type="button" className="ml-2 underline" onClick={() => setArea(undefined)}>Clear area</button>}</p>}<LocationAttribution/></fieldset>;
+}

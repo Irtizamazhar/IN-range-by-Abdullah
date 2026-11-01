@@ -1,3 +1,2 @@
-import { ServiceBookings } from "@/components/user/ServiceBookings";
-import { ServiceListings } from "@/components/admin/ServiceListings";
-export default function ServicesPage() { return <main className="p-6"><h1 className="text-3xl font-bold">Service bookings</h1><p className="my-4">Confirm actual completion and payment evidence before releasing earnings. Cancellation flags a refund review; it does not send a refund.</p><ServiceBookings role="admin" /><ServiceListings /></main>; }
+﻿import { ServiceListings } from "@/components/admin/ServiceListings";
+export default function ServicesPage(){return <main className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6"><header><h1 className="text-3xl font-bold text-[#005055]">Services Management</h1><p className="mt-2 text-sm text-gray-600">Catalog, vendor submissions, verified coverage and service bookings.</p></header><ServiceListings/></main>}

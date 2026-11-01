@@ -1,5 +1,5 @@
 /**
- * Upload via POST /api/upload — bytes stored in MySQL (ProductImage / PaymentProofStaging).
+ * Upload via POST /api/upload — public images use centralized persistent storage; private payment proofs retain their existing storage.
  */
 export async function uploadImageWithId(
   file: File,
