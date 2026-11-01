@@ -56,12 +56,10 @@ export function HomeMarketplace({ services, gifts, stores }: { services: PublicS
   </section>
 </div>; }
 
-export function HomeAllProducts({ products }: { products: ProductCardData[] }) { return <div className="mx-auto max-w-site px-4 py-10 sm:px-6">
+/** Products past their New Arrivals period (already limited to 12 by lib/home-all-products); hidden entirely when there are none. */
+export function HomeAllProducts({ products }: { products: ProductCardData[] }) { if (!products.length) return null; return <div className="mx-auto max-w-site px-4 py-10 sm:px-6">
   <section id="all-products" aria-labelledby="all-products-heading">
     <header className="mb-4 flex flex-wrap items-center justify-between gap-2"><h2 id="all-products-heading" className="text-xl font-black tracking-tight text-emerald-950 min-[400px]:text-2xl sm:text-3xl">All Products</h2><Link href="/products" className={HOME_VIEW_BUTTON}>View all products →</Link></header>
-    {products.length
-      // 12 when there are enough for two full desktop rows, otherwise one row of 6.
-      ? <div className={HOME_PRODUCT_GRID}>{products.slice(0, products.length >= 12 ? 12 : 6).map(product => <HomeProductCard key={product._id} product={product} featured />)}</div>
-      : <div className="rounded-2xl border border-dashed border-[#E3EBDB] bg-white px-6 py-8 text-center"><p className="font-bold text-emerald-950">No products yet</p><p className="mt-1 text-sm text-gray-600">New products from JORO sellers will appear here soon.</p><Link href="/products" className="mt-3 inline-block text-sm font-bold text-emerald-800 hover:underline">Browse all products →</Link></div>}
+    <div className={HOME_PRODUCT_GRID}>{products.map(product => <HomeProductCard key={product._id} product={product} featured />)}</div>
   </section>
 </div>; }

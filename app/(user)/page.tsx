@@ -4,9 +4,7 @@ import Image from "next/image";
 
 import { VendorSpotlight } from "@/components/user/MarketplaceHomePanels";
 
-import type { Prisma } from "@prisma/client";
 
-import { bestSellers } from "@/lib/best-sellers";
 
 
 
@@ -42,9 +40,8 @@ import { readActiveProductCategories } from "@/lib/categories-store";
 
 import { loadMergedNewArrivalCards } from "@/lib/new-arrivals-catalog";
 
-import { newArrivalsWindowStart } from "@/lib/product-new-arrival-window";
+import { homeAllProductRows } from "@/lib/home-all-products";
 
-import { catalogProductSelect } from "@/lib/catalog-product-select";
 
 import { prisma } from "@/lib/prisma";
 import { actingIdentity, actorWhere, resolveWantViewer } from "@/lib/want-engagement";
@@ -76,10 +73,6 @@ export const dynamic = "force-dynamic";
 
 
 const NEW_ARRIVALS_PAGE_SIZE = 6;
-
-const BEST_SELLERS_PAGE_SIZE = 6;
-
-const FEATURED_PAGE_SIZE = 8;
 
 // Fade the left side of each photo into its banner background.
 // Keeps the original images while removing their obvious rectangular edges.
@@ -174,325 +167,25 @@ async function getNewArrivalsInitial(): Promise<{
 
 
 /* =========================================================
-
-   BEST SELLERS
-
-
-
-   Used for homepage picks.
-
+   ALL PRODUCTS
+   Only products past their 14-day New Arrivals period (see
+   lib/home-all-products.ts). Newer products never fill this
+   section.
 ========================================================= */
 
-
-
-async function getBestSellersInitial(): Promise<{
-
-  initial: ProductCardData[];
-
-  total: number;
-
-}> {
-
+async function getHomeAllProducts(): Promise<ProductCardData[]> {
   try {
-
-    const data = await bestSellers(0,BEST_SELLERS_PAGE_SIZE);
-
-    const initial = data.products;
-
-
-
-    return {
-
-      initial,
-
-
-
-      total:
-
-        typeof data.total === "number"
-
-          ? data.total
-
-          : initial.length,
-
-    };
-
+    const rows = await homeAllProductRows();
+    const statsMap = await reviewStatsForProductIds(rows.map((product) => product.id));
+    return rows.map((product) => {
+      const base = serializeProduct(product);
+      const stat = pickReviewStat(statsMap, String(base._id));
+      return { ...base, reviewCount: stat.reviewCount, ratingAvg: stat.ratingAvg } as ProductCardData;
+    });
   } catch (error) {
-
-    console.error(
-
-      "getBestSellersInitial:",
-
-      error
-
-    );
-
-
-
-    return {
-
-      initial: [],
-
-      total: 0,
-
-    };
-
-  }
-
-}
-
-
-
-/* =========================================================
-
-   FEATURED PRODUCTS
-
-========================================================= */
-
-
-
-async function getFeatured(
-
-  excludePrismaIds: string[]
-
-): Promise<ProductCardData[]> {
-
-  try {
-
-    const windowStart =
-
-      newArrivalsWindowStart();
-
-
-
-    const strict =
-
-      await prisma.product.findMany({
-
-        where: {
-
-          isActive: true,
-
-
-
-          createdAt: {
-
-            lt: windowStart,
-
-          },
-
-        },
-
-
-
-        orderBy: {
-
-          createdAt: "desc",
-
-        },
-
-
-
-        take:
-
-          FEATURED_PAGE_SIZE,
-
-
-
-        select:
-
-          catalogProductSelect(),
-
-      });
-
-
-
-    let rows = strict;
-
-
-
-    if (
-
-      rows.length <
-
-      FEATURED_PAGE_SIZE
-
-    ) {
-
-      const need =
-
-        FEATURED_PAGE_SIZE -
-
-        rows.length;
-
-
-
-      const excludeIds = [
-
-        ...strict.map(
-
-          (product) => product.id
-
-        ),
-
-
-
-        ...excludePrismaIds,
-
-      ];
-
-
-
-      const where:
-
-        Prisma.ProductWhereInput =
-
-        {
-
-          isActive: true,
-
-
-
-          createdAt: {
-
-            gte: windowStart,
-
-          },
-
-        };
-
-
-
-      if (
-
-        excludeIds.length > 0
-
-      ) {
-
-        where.id = {
-
-          notIn: excludeIds,
-
-        };
-
-      }
-
-
-
-      const filler =
-
-        await prisma.product.findMany({
-
-          where,
-
-
-
-          orderBy: {
-
-            createdAt: "desc",
-
-          },
-
-
-
-          take: need,
-
-
-
-          select:
-
-            catalogProductSelect(),
-
-        });
-
-
-
-      rows = [
-
-        ...strict,
-
-        ...filler,
-
-      ];
-
-    }
-
-
-
-    const statsMap =
-
-      await reviewStatsForProductIds(
-
-        rows.map(
-
-          (product) => product.id
-
-        )
-
-      );
-
-
-
-    return rows.map(
-
-      (product) => {
-
-        const base =
-
-          serializeProduct(product);
-
-
-
-        const stat =
-
-          pickReviewStat(
-
-            statsMap,
-
-            String(base._id)
-
-          );
-
-
-
-        return {
-
-          ...base,
-
-
-
-          reviewCount:
-
-            stat.reviewCount,
-
-
-
-          ratingAvg:
-
-            stat.ratingAvg,
-
-        } as ProductCardData;
-
-      }
-
-    );
-
-  } catch (error) {
-
-    console.error(
-
-      "getFeatured:",
-
-      error
-
-    );
-
-
-
+    console.error("getHomeAllProducts:", error);
     return [];
-
   }
-
 }
 
 
@@ -622,45 +315,13 @@ export default async function HomePage() {
 
 
 
-  const bestSellers =
-
-    await getBestSellersInitial();
-
-
-
   const newArrivals =
 
     await getNewArrivalsInitial();
 
 
 
-  const featured =
-
-    await getFeatured(
-
-      newArrivals.stripPrismaIds
-
-    );
-
-
-
-  /*
-
-   * Prefer Best Sellers.
-
-   * If no bestseller data exists,
-
-   * use the featured products.
-
-   */
-
-  const homepageProducts =
-
-    bestSellers.initial.length > 0
-
-      ? bestSellers.initial
-
-      : featured;
+  const homepageProducts = await getHomeAllProducts();
 
 
 
