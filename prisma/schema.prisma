@@ -1494,6 +1494,7 @@ model RoomComment {
 }
 
 model ServiceOffering {
+  imageUrl          String?               @db.VarChar(2048)
   id                String                @id @default(cuid())
   vendorId          String
   vendor            Vendor                @relation(fields: [vendorId], references: [id], onDelete: Restrict)
@@ -1530,6 +1531,7 @@ model ServiceOffering {
 }
 
 model ServiceCatalog {
+  imageUrl     String? @db.VarChar(2048)
   id           String @id @default(cuid())
   name         String @db.VarChar(160)
   category     String @db.VarChar(100)
