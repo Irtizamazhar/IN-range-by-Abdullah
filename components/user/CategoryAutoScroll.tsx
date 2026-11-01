@@ -39,19 +39,14 @@ const row = "hide-scrollbar flex snap-x snap-proximity overflow-x-auto scroll-px
 const PIXELS_PER_SECOND = 30;
 const RESUME_AFTER_TOUCH_MS = 2500;
 
-/** Uploaded category images go through the optimizer (small WebP instead of the full original); other unoptimizable sources stay direct. */
-function optimizable(src: string) {
-  return src.startsWith("/uploads/categories/") || !shouldUnoptimizeImageSrc(src);
-}
-
 function CategoryCircle({ category, hidden = false }: { category: CategoryItem; hidden?: boolean }) {
   const src = categoryImage(category);
-  // If the optimizer cannot read a file (e.g. one uploaded after the build), fall back to the original once.
-  const [direct, setDirect] = useState(false);
+  // An image that cannot load (e.g. an external host the optimizer rejects, or a missing file) shows the initial instead.
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
   return <Link href={`/products?category=${encodeURIComponent(category.name)}`} title={category.name} tabIndex={hidden ? -1 : undefined} className={item}>
     <span className={`${circle} bg-white ring-green-200 sm:bg-brand-soft group-hover:ring-green-500 group-focus-visible:ring-2 group-focus-visible:ring-green-600`}>
-      {src
-        ? <Image src={src} alt="" fill sizes="(min-width: 640px) 76px, 80px" loading="lazy" unoptimized={direct || !optimizable(src)} onError={() => { if (!direct && optimizable(src)) setDirect(true); }} className="object-contain sm:object-cover" />
+      {src && src !== failedSrc
+        ? <Image src={src} alt="" fill sizes="(min-width: 640px) 76px, 80px" loading="lazy" unoptimized={shouldUnoptimizeImageSrc(src)} onError={() => setFailedSrc(src)} className="object-contain sm:object-cover" />
         : <span aria-hidden="true" className="text-[24px] font-bold text-brand-dark/70 sm:text-[26px]">{category.name.trim().charAt(0).toUpperCase() || "?"}</span>}
     </span>
     <span className={label}>{category.name}</span>
