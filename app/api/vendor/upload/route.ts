@@ -4,7 +4,6 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { savePublicImage } from "@/lib/public-uploads";
 import { requireApprovedVendorApi } from "@/lib/vendor-api-auth";
-import { consumeOrReject, createUploadRateLimiter } from "@/lib/security/rate-limit";
 
 const VENDOR_MAX = 5 * 1024 * 1024;
 const ALLOWED = new Set([
@@ -14,22 +13,9 @@ const ALLOWED = new Set([
   "image/webp",
 ]);
 
-const uploadLimiter = createUploadRateLimiter();
-
 export async function POST(req: NextRequest) {
   const auth = await requireApprovedVendorApi();
   if ("response" in auth) return auth.response;
-
-  const limited = await consumeOrReject(
-    uploadLimiter,
-    `vendor-upload:${auth.vendor.id}`
-  );
-  if (!limited.ok) {
-    return NextResponse.json(
-      { error: "Too many uploads. Try again later.", retrySecs: limited.retrySecs },
-      { status: 429 }
-    );
-  }
 
   let formData: FormData;
   try {
