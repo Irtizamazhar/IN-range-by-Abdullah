@@ -96,7 +96,7 @@ Admin login is a separate NextAuth credentials configuration. `AdminUser` suppor
 | Admin section | Route | Main operation/API | Permission or status |
 |---|---|---|---|
 | Overview | `/admin/dashboard` | Orders/product metrics via `/api/orders`, `/api/products` | `dashboard.view` and API-specific rights |
-| Catalog | `/admin/products`, `/admin/products/add`, `/admin/products/[id]/edit` | `/api/products`, `/api/products/[id]`, bestseller toggle | `catalog.manage` |
+| Catalog | `/admin/products`, `/admin/products/add`, `/admin/products/[id]/edit` | `/api/products`, `/api/products/[id]` | `catalog.manage` |
 | Categories | `/admin/categories` | `/api/categories`, `/api/categories/[id]` | `catalog.manage` |
 | New arrivals | `/admin/new-arrivals` plus add/edit | `/api/new-arrivals`, upload | `catalog.manage`; legacy JSON-backed path coexists |
 | Service/Want moderation | `/admin/services`, `/admin/wants` | `/api/admin/services`, `/api/admin/wants` | `moderation.manage` |
@@ -137,7 +137,7 @@ Source: `prisma/schema.prisma` (MySQL). All model names below are exact. Unless 
 | Model | Purpose, important fields and relationships | Key constraints/status/indexes |
 |---|---|---|
 | `Customer` | Identity, email/hash/name/phone; parent of orders, Wants, addresses, follows, reviews, tickets | Unique email; `isActive`, `sessionVersion`; active/date index |
-| `Product` | Public catalog item, price, stock, variants, category, images; optional linked `VendorProduct` | Unique optional `legacyNewArrivalId`; `isActive`, featured/bestseller; category/active indexes |
+| `Product` | Public catalog item, price, stock, variants, category, images; optional linked `VendorProduct` | Unique optional `legacyNewArrivalId`; `isActive`, featured flags (`isBestSeller` column kept, no longer used by the app); category/active indexes |
 | `Category` | Named catalog category, image, home placement, ordering | Unique name, slug, optional legacy ID; `isActive` |
 | `Review` | Product review, optional verified customer/order links | Integer auto ID; unique customer+product and order+product; approved/withdrawn indexes |
 | `NewArrivalReview` | Legacy JSON new-arrival review | Integer auto ID; new-arrival/approved indexes; public approval policy differs from verified `Review` |
@@ -245,7 +245,6 @@ The full route-handler inventory appears below. A route file may expose multiple
 | `/api/admin/notifications` | GET | admin / notifications; Admin permission | none or session | id, notifications | vendorAuditLog; 500 |
 | `/api/admin/payouts/[id]` | PATCH | admin / payouts; Admin permission | path parameter, JSON, Zod/schema | ok | vendorWithdrawal; 400/404 |
 | `/api/admin/payouts` | GET | admin / payouts; Admin permission | none or session | stats | vendorEarning, vendorWithdrawal; shared API errors |
-| `/api/admin/products/[id]/bestseller` | PATCH | products / bestseller; Admin permission | path parameter | ok | product; 400/404 |
 | `/api/admin/returns/[id]` | PATCH | admin / returns; Admin permission | path parameter, JSON, Zod/schema | return | orderStatusEvent, refund, returnRequest; 400/404/500 |
 | `/api/admin/returns` | GET | admin / returns; Admin permission | query | returns | returnRequest; shared API errors |
 | `/api/admin/reviews/[id]` | PATCH/DELETE | admin / reviews; Admin permission | path parameter, query, JSON | ok | newArrivalReview, review; 400/403/404/409/500 |
@@ -314,7 +313,6 @@ The full route-handler inventory appears below. A route file may expose multiple
 | `/api/product-categories` | GET | product-categories; Public GET; gated writes if present | none or session | JSON, handler-specific | via helper or none; shared API errors |
 | `/api/products/[id]` | GET/PUT/DELETE | products; Public/read role by method; admin writes | path parameter, JSON | ok | product, productImage; 400/404/500 |
 | `/api/products/[id]/services` | GET | products / services; Public GET; gated writes if present | path parameter | services | productServiceAddon; shared API errors |
-| `/api/products/bestsellers` | GET | products / bestsellers; Public GET; gated writes if present | query | JSON, handler-specific | via helper or none; 503 |
 | `/api/products/new-arrivals` | GET | products / new-arrivals; Public GET; gated writes if present | query | products | via helper or none; 500 |
 | `/api/products` | GET/POST | products; Public/read role by method; admin writes | query, JSON | products | product, productImage; 400/500 |
 | `/api/products/search` | GET | products / search; Public GET; gated writes if present | query | id, products | product; 500 |

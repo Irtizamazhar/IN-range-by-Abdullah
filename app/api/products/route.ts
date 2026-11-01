@@ -82,20 +82,7 @@ export async function GET(req: NextRequest) {
           _max: { price: true },
         }),
   ]);
-  let products = productRows;
-  if (isAdminList && products.length > 0) {
-    const ids = products.map((p) => p.id);
-    const flags = await prisma.$queryRaw<Array<{ id: string; b: unknown }>>(
-      Prisma.sql`SELECT id, isBestSeller AS b FROM product WHERE id IN (${Prisma.join(ids)})`
-    );
-    const map = new Map(
-      flags.map((r) => [r.id, Boolean(Number(r.b))] as const)
-    );
-    products = products.map((p) => ({
-      ...p,
-      isBestSeller: map.get(p.id) ?? false,
-    }));
-  }
+  const products = productRows;
   if (!isAdminList) {
     /**
      * Paginate the real `Product` table only. The previous implementation merged

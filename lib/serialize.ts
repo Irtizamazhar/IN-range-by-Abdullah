@@ -26,8 +26,6 @@ export type ProductSerializeInput = Pick<
   | "createdAt"
   | "updatedAt"
 > & {
-  /** Present when Prisma client + DB include `Product.isBestSeller` (admin list). */
-  isBestSeller?: boolean;
   productImages?: Pick<ProductImage, "id" | "sortOrder">[] | ProductImage[];
 };
 
@@ -87,9 +85,6 @@ export function serializeProduct(
       ? (p.variants as string[])
       : (p.variants as unknown as string[]) || [],
     isActive: p.isActive,
-    ...(opts?.forAdmin
-      ? { isBestSeller: Boolean((p as { isBestSeller?: boolean }).isBestSeller) }
-      : {}),
     createdAt: p.createdAt,
     updatedAt: p.updatedAt,
   };

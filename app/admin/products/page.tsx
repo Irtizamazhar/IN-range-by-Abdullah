@@ -50,17 +50,6 @@ export default function AdminProductsPage() {
     toast.success(next ? "Product activated" : "Product hidden");
   }
 
-  async function toggleBestSeller(p: Record<string, unknown>) {
-    const id = String(p._id);
-    const next = !Boolean(p.isBestSeller);
-    const response = await fetch(`/api/admin/products/${encodeURIComponent(id)}/bestseller`, {
-      method: "PATCH", credentials: "same-origin",
-    });
-    if (!response.ok) throw new Error("Could not update best seller");
-    setProducts(list => list.map(item => String(item._id) === id ? { ...item, isBestSeller: next } : item));
-    toast.success(next ? "Marked best seller" : "Removed from best sellers");
-  }
-
   async function del(id: string) {
     if (!confirm("Delete this product?")) return;
     const response = await fetch(`/api/products/${id}`, { method: "DELETE" });
@@ -119,7 +108,6 @@ export default function AdminProductsPage() {
               <th className="p-3">Original</th>
               <th className="p-3">Stock</th>
               <th className="p-3">Active</th>
-              <th className="p-3">Best Seller</th>
               <th className="p-3">Actions</th>
             </tr>
           </thead>
@@ -164,19 +152,6 @@ export default function AdminProductsPage() {
                     }`}
                   >
                     {p.isActive ? "ON" : "OFF"}
-                  </LoadingButton>
-                </td>
-                <td className="p-3">
-                  <LoadingButton loadingLabel="Processing…"
-                    type="button"
-                    onClick={() => toggleBestSeller(p)}
-                    className={`rounded-full px-3 py-1 text-xs font-bold ${
-                      p.isBestSeller
-                        ? "bg-green-100 text-green-800"
-                        : "bg-darkText/10 text-darkText/60"
-                    }`}
-                  >
-                    {p.isBestSeller ? "ON" : "OFF"}
                   </LoadingButton>
                 </td>
                 <td className="p-3 space-x-2">
