@@ -515,23 +515,21 @@ export function Navbar({
                 Track Order
               </Link>
 
-              {whatsappDigits(whatsappNumber) && (
-                <a
-                  href={`https://wa.me/${whatsappDigits(
-                    whatsappNumber
-                  )}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() =>
-                    setMobileOpen(
-                      false
-                    )
-                  }
-                  className="block rounded-xl px-3 py-3 text-[12px] font-bold text-black/60 transition hover:bg-brand-background"
-                >
-                  WhatsApp Support
-                </a>
-              )}
+              <a
+                href={`https://wa.me/${whatsappDigits(
+                  whatsappNumber
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() =>
+                  setMobileOpen(
+                    false
+                  )
+                }
+                className="block rounded-xl px-3 py-3 text-[12px] font-bold text-black/60 transition hover:bg-brand-background"
+              >
+                WhatsApp Support
+              </a>
             </div>
 
             {/* ACCOUNT */}

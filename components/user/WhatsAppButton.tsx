@@ -13,7 +13,6 @@ export function WhatsAppButton({
   label?: string;
 }) {
   const n = whatsappDigits(number);
-  if (!n) return null;
   const href = `https://wa.me/${n}`;
   return (
     <a
@@ -36,7 +35,6 @@ export function WhatsAppIconLink({
   className?: string;
 }) {
   const n = whatsappDigits(number);
-  if (!n) return null;
   return (
     <a
       href={`https://wa.me/${n}`}
@@ -52,7 +50,6 @@ export function WhatsAppIconLink({
 
 export function WhatsAppFloat({ number }: { number: string }) {
   const n = whatsappDigits(number);
-  if (!n) return null;
   return (
     <a
       href={`https://wa.me/${n}`}
