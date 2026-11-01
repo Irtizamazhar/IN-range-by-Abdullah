@@ -1,6 +1,7 @@
 "use client";
 
 import { MessageCircle } from "lucide-react";
+import { whatsappDigits } from "@/lib/whatsapp-sell";
 
 export function WhatsAppButton({
   number,
@@ -11,7 +12,8 @@ export function WhatsAppButton({
   className?: string;
   label?: string;
 }) {
-  const n = number.replace(/\D/g, "");
+  const n = whatsappDigits(number);
+  if (!n) return null;
   const href = `https://wa.me/${n}`;
   return (
     <a
@@ -33,7 +35,8 @@ export function WhatsAppIconLink({
   number: string;
   className?: string;
 }) {
-  const n = number.replace(/\D/g, "");
+  const n = whatsappDigits(number);
+  if (!n) return null;
   return (
     <a
       href={`https://wa.me/${n}`}
@@ -48,7 +51,8 @@ export function WhatsAppIconLink({
 }
 
 export function WhatsAppFloat({ number }: { number: string }) {
-  const n = number.replace(/\D/g, "");
+  const n = whatsappDigits(number);
+  if (!n) return null;
   return (
     <a
       href={`https://wa.me/${n}`}

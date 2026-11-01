@@ -12,6 +12,7 @@ import { SOCIAL_LINKS } from "@/lib/social-links";
 import type { ISettings } from "@/types/settings";
 import styles from "./Footer.module.css";
 import { PostWantButton } from "./PostWantButton";
+import { whatsappDigits } from "@/lib/whatsapp-sell";
 import { FOOTER_EXPLORE, FOOTER_HELP, type FooterDestination } from "@/lib/footer-navigation";
 
 const icons: Record<string, typeof ShoppingBag> = { shop: ShoppingBag, services: Wrench, gifts: Gift, wants: Tag, request: PlusCircle, trending: TrendingUp, connect: Users, stores: Store, seller: Store, grow: Sprout, about: Info, track: Package, returns: RotateCcw, faq: CircleHelp, contact: MessageCircle, terms: FileText, privacy: Shield, cart: ShoppingCart };
@@ -32,8 +33,8 @@ function FooterLinks({ items }: { items: readonly FooterDestination[] }) {
 }
 
 function Contact({ number }: { number: string }) {
-  const digits = number.replace(/\D/g, "");
-  if (!digits || digits === "923001234567") return null;
+  const digits = whatsappDigits(number);
+  if (!digits) return null;
   return <a href={`https://wa.me/${digits}`} target="_blank" rel="noopener noreferrer" className={styles.contact}><MessageCircle aria-hidden="true" /><span>WhatsApp: <strong>{number}</strong></span><ArrowUpRight aria-hidden="true" className={styles.contactArrow} /></a>;
 }
 

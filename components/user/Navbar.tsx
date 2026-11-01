@@ -7,6 +7,7 @@ import { CategoryImage, CategoryNavigation, useNavCategories } from "./CategoryN
 import { MarketplaceNav } from "./MarketplaceNav";
 import styles from "./Navbar.module.css";
 import { PostWantButton } from "./PostWantButton";
+import { whatsappDigits } from "@/lib/whatsapp-sell";
 import Link from "@/components/ui/LoadingLink";
 import { usePathname } from "next/navigation";
 import { useLoadingRouter as useRouter } from "@/hooks/useLoadingRouter";
@@ -514,22 +515,23 @@ export function Navbar({
                 Track Order
               </Link>
 
-              <a
-                href={`https://wa.me/${whatsappNumber.replace(
-                  /\D/g,
-                  ""
-                )}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() =>
-                  setMobileOpen(
-                    false
-                  )
-                }
-                className="block rounded-xl px-3 py-3 text-[12px] font-bold text-black/60 transition hover:bg-brand-background"
-              >
-                WhatsApp Support
-              </a>
+              {whatsappDigits(whatsappNumber) && (
+                <a
+                  href={`https://wa.me/${whatsappDigits(
+                    whatsappNumber
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() =>
+                    setMobileOpen(
+                      false
+                    )
+                  }
+                  className="block rounded-xl px-3 py-3 text-[12px] font-bold text-black/60 transition hover:bg-brand-background"
+                >
+                  WhatsApp Support
+                </a>
+              )}
             </div>
 
             {/* ACCOUNT */}

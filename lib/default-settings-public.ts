@@ -7,7 +7,7 @@ export const fallbackSettings: ISettings = {
     easypaisa: { mobileNumber: "—" },
     jazzCash: { mobileNumber: "—" },
   },
-  whatsappNumber: process.env.WHATSAPP_NUMBER || "923001234567",
+  whatsappNumber: process.env.WHATSAPP_NUMBER || "",
   shopName: "In Range By Abdullah",
   codCharges: 150,
   codAvailableCities: ["Karachi", "Lahore", "Islamabad"],

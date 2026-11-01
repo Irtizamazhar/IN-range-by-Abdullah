@@ -139,7 +139,7 @@ export default function TrackOrderPage() {
   const [error, setError] = useState<LookupError | null>(null);
   const [loading, setLoading] = useState(false);
   const [myOrders, setMyOrders] = useState<{ orderNumber: string; orderStatus: string }[]>([]);
-  const [wa, setWa] = useState("923001234567");
+  const [wa, setWa] = useState("");
   const lastLookup = useRef("");
   const requestId = useRef(0);
   const resultRef = useRef<HTMLDivElement | null>(null);
