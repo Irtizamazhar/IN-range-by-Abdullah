@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { ADMIN_SESSION_COOKIE } from "@/lib/auth-cookies";
+import { adminBasePath, isInternalAdminPath, toInternalAdminPath } from "@/lib/admin-path";
 import { VENDOR_JWT_COOKIE } from "@/lib/vendor-cookies";
 import { resolveVendorJwtSecretKey } from "@/lib/vendor-jwt-secret";
 import { PRIVATE_LAUNCH_PAGE_PATH, decideGatedRequest } from "@/lib/private-launch/gate-policy";
@@ -75,22 +76,34 @@ async function authorizeArea(req: NextRequest) {
     return NextResponse.next();
   }
 
-  if (path.startsWith("/admin/login")) {
-    return NextResponse.next();
-  }
+  // The admin panel is only served under ADMIN_SECRET_PATH; the old /admin URLs are a plain 404.
+  if (isInternalAdminPath(path)) return notFound(req);
 
-  if (path.startsWith("/admin")) {
+  const adminBase = adminBasePath();
+  const adminPath = toInternalAdminPath(path, adminBase);
+  if (adminPath) {
+    const target = new URL(adminPath + req.nextUrl.search, req.url);
+    if (adminPath === "/admin/login" || adminPath.startsWith("/admin/login/")) {
+      return markPrivate(NextResponse.rewrite(target));
+    }
     const token = await getToken({
       req,
       secret: process.env.NEXTAUTH_SECRET!,
       cookieName: ADMIN_SESSION_COOKIE,
     });
-    return !token || (token as { role?: string }).role !== "admin"
-      ? NextResponse.redirect(new URL("/admin/login", req.url))
-      : NextResponse.next();
+    return markPrivate(
+      !token || (token as { role?: string }).role !== "admin"
+        ? NextResponse.redirect(new URL(`${adminBase}/login`, req.url))
+        : NextResponse.rewrite(target)
+    );
   }
 
   return NextResponse.next();
+}
+
+/** Renders the site's regular not-found page with a genuine 404 status. */
+function notFound(req: NextRequest) {
+  return markPrivate(NextResponse.rewrite(new URL("/_admin-not-found", req.url), { status: 404 }));
 }
 
 export async function middleware(req: NextRequest) {

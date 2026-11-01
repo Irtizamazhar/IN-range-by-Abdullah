@@ -7,6 +7,7 @@ import Link from "@/components/ui/LoadingLink";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { Bell, ChevronDown, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Settings, ShieldCheck } from "lucide-react";
 import { ADMIN_NAV_LINKS, activeAdminHref, signOutAdmin } from "@/components/admin/Sidebar";
+import { useAdminPath } from "@/components/admin/AdminPathContext";
 
 function sectionLabel(pathname: string | null): string {
   const href = activeAdminHref(pathname);
@@ -32,6 +33,7 @@ export function AdminHeader({
   collapsed: boolean;
   onToggleCollapsed: () => void;
 }) {
+  const admin = useAdminPath();
   const pathname = usePathname();
   const { data: session } = useSession();
   const [unresolved, setUnresolved] = useState<number | null>(null);
@@ -121,11 +123,11 @@ export function AdminHeader({
         <p className="hidden text-[11px] font-semibold uppercase tracking-[0.14em] text-admin-muted sm:block">
           JORO Admin
         </p>
-        <p className="truncate text-base font-bold text-admin-ink">{sectionLabel(pathname)}</p>
+        <p className="truncate text-base font-bold text-admin-ink">{sectionLabel(admin.local(pathname))}</p>
       </div>
 
       <Link
-        href="/admin/notifications"
+        href={admin.href("/notifications")}
         className={`${iconButton} relative`}
         aria-label={
           unresolved ? `Notifications, ${unresolved} unresolved` : "Notifications"
@@ -170,17 +172,17 @@ export function AdminHeader({
               {email ? <p className="truncate text-xs text-admin-muted">{email}</p> : null}
             </div>
             <div className="pt-1.5">
-              <Link role="menuitem" href="/admin/settings" className={menuItem}>
+              <Link role="menuitem" href={admin.href("/settings")} className={menuItem}>
                 <Settings className="h-4 w-4 text-admin-muted" /> Settings
               </Link>
-              <Link role="menuitem" href="/admin/dashboard/team" className={menuItem}>
+              <Link role="menuitem" href={admin.href("/dashboard/team")} className={menuItem}>
                 <ShieldCheck className="h-4 w-4 text-admin-muted" /> Admin Team
               </Link>
               <LoadingButton
                 role="menuitem"
                 loadingLabel="Processing…"
                 type="button"
-                onClick={signOutAdmin}
+                onClick={() => signOutAdmin(admin.href("/login"))}
                 className={menuItem}
               >
                 <LogOut className="h-4 w-4 text-admin-muted" /> Log out

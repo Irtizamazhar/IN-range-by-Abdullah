@@ -1,4 +1,5 @@
 "use client";
+import { useAdminPath } from "@/components/admin/AdminPathContext";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { LoadingForm } from "@/components/ui/LoadingForm";
 
@@ -9,6 +10,7 @@ import { PasswordToggleInput } from "@/components/ui/PasswordToggleInput";
 import { navigateDocument } from "@/lib/navigate-document";
 
 export default function AdminLoginPage() {
+  const admin = useAdminPath();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -22,10 +24,11 @@ export default function AdminLoginPage() {
       redirect: false,
     });
     if (!res || res.error) {
-      setError("Invalid email or password");
+      // "AdminLoginRateLimited" is ADMIN_LOGIN_RATE_LIMITED in lib/admin-auth-options.ts.
+      setError(res?.error === "AdminLoginRateLimited" ? "Too many failed attempts. Please try again in 15 minutes." : "Invalid email or password");
       return;
     }
-    await navigateDocument("/admin/dashboard");
+    await navigateDocument(admin.href("/dashboard"));
   }
 
   return (

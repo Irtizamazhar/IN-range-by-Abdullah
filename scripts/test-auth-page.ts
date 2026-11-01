@@ -114,7 +114,7 @@ async function main(){
  await page.goto(base+"/login?error=AccessDenied");await page.getByText("Sign-in was cancelled or this account is unavailable.",{exact:true}).waitFor();pass("role switching clears secrets, keyboard tabs and safe OAuth errors");
  const token=await encode({secret,token:{sub:active.id,email:active.email,name:active.name,role:"customer",sessionVersion:0},maxAge:3600});
  await page.context().addCookies([{name:"__Secure-next-auth.session-token.customer",value:token,domain:"localhost",path:"/",secure:true,httpOnly:true,sameSite:"Lax"}]);
- assert.equal((await json(page,"/api/vendor/store")).status(),401);await page.goto(base+"/vendor/dashboard");await page.waitForURL(/\/login\?role=vendor/);await page.goto(base+"/admin");await page.waitForURL(/\/admin\/login/);pass("customer session cannot access vendor or admin context");
+ assert.equal((await json(page,"/api/vendor/store")).status(),401);await page.goto(base+"/vendor/dashboard");await page.waitForURL(/\/login\?role=vendor/);const adminPath=process.env.ADMIN_SECRET_PATH;assert.ok(adminPath,"Set ADMIN_SECRET_PATH");await page.goto(base+adminPath);await page.waitForURL(u=>u.pathname===`${adminPath}/login`);pass("customer session cannot access vendor or admin context");
  await page.close();
  page=await browser.newPage({viewport:{width:1280,height:768}});
  await page.goto(base+"/");

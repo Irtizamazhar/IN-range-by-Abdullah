@@ -1,4 +1,5 @@
 "use client";
+import { useAdminPath } from "@/components/admin/AdminPathContext";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 
@@ -83,6 +84,7 @@ function fmtDate(iso?: string | null) {
 }
 
 export default function AdminVendorSuspensionPage() {
+  const admin = useAdminPath();
   const params = useParams();
   const id = String((params?.id as string | undefined) ?? "");
 
@@ -143,7 +145,7 @@ export default function AdminVendorSuspensionPage() {
       <div className="flex items-center justify-between">
         <div>
           <Link
-            href="/admin/vendors"
+            href={admin.href("/vendors")}
             className="text-sm font-semibold text-primaryBlue hover:underline"
           >
             ← Back to vendors

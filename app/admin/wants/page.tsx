@@ -1,4 +1,5 @@
 "use client";
+import { useAdminPath } from "@/components/admin/AdminPathContext";
 import { wantImages } from "@/lib/want-images";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { LoadingButton } from "@/components/ui/LoadingButton";
@@ -30,6 +31,7 @@ function who(row: Account) {
 async function readJson<T>(response: Response) { return (await response.json().catch(() => ({}))) as T & { error?: string }; }
 
 function ReviewPanel({ want, onChanged }: { want: Want; onChanged: () => void }) {
+  const admin = useAdminPath();
   const [data, setData] = useState<{ reports: Report[]; reactions: Reaction[] } | null>(null);
   const [error, setError] = useState("");
   const load = useCallback(async () => {
@@ -62,7 +64,7 @@ function ReviewPanel({ want, onChanged }: { want: Want; onChanged: () => void })
     <section>
       <h3 className="text-sm font-black text-darkText">Reactions ({data.reactions.length})</h3>
       {data.reactions.length ? <ul className="mt-2 max-h-72 space-y-1.5 overflow-y-auto">{data.reactions.map((reaction) => <li key={reaction.id} className="flex items-center justify-between gap-2 rounded-lg bg-lightGray px-3 py-2 text-xs"><span className="min-w-0 truncate"><span aria-label={reaction.type}>{reactionEmoji(reaction.type)}</span> {who(reaction)}</span><LoadingButton onClick={() => act({ action: "removeReaction", reactionId: reaction.id }, "Reaction removed")} className="shrink-0 font-bold text-red-700">Remove</LoadingButton></li>)}</ul> : <p className="mt-2 text-xs text-darkText/50">No reactions.</p>}
-      <p className="mt-3 text-xs text-darkText/55">Repeated misuse? Suspend the account from <Link href="/admin/customers" className="font-bold underline">Customers</Link> or <Link href="/admin/vendors" className="font-bold underline">Vendors</Link>.</p>
+      <p className="mt-3 text-xs text-darkText/55">Repeated misuse? Suspend the account from <Link href={admin.href("/customers")} className="font-bold underline">Customers</Link> or <Link href={admin.href("/vendors")} className="font-bold underline">Vendors</Link>.</p>
     </section>
   </div>;
 }

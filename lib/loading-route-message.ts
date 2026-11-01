@@ -1,10 +1,28 @@
+/**
+ * Public admin URL prefix (ADMIN_SECRET_PATH). Set at runtime by AdminPathProvider inside
+ * the admin panel only, so the secret is never part of this shared bundle.
+ */
+let adminRoutePrefix = "";
+
+export function setAdminRoutePrefix(prefix: string) {
+  adminRoutePrefix = prefix;
+}
+
+/** Admin URLs are classified by their internal /admin path. */
+function routePath(pathname: string) {
+  if (adminRoutePrefix && (pathname === adminRoutePrefix || pathname.startsWith(adminRoutePrefix + "/"))) {
+    return "/admin" + pathname.slice(adminRoutePrefix.length);
+  }
+  return pathname;
+}
+
 /** Public, route-only copy. Never include customer, product, or order data. */
 export function loadingMessageForRoute(input: string | null | undefined): string {
   if (!input) return "Loading JORO...";
   let url: URL;
   try { url = new URL(input, "https://joro.pk"); }
   catch { return "Loading JORO..."; }
-  const path = url.pathname.replace(/\/+$/, "") || "/";
+  const path = routePath(url.pathname).replace(/\/+$/, "") || "/";
   const segments = path.split("/").filter(Boolean);
   const [first, second, third] = segments;
 
@@ -45,7 +63,7 @@ export function loadingMessageForRoute(input: string | null | undefined): string
 export function loadingNeedsOpaqueBackground(input: string | null | undefined): boolean {
   if (!input) return false;
   try {
-    const path = new URL(input, "https://joro.pk").pathname;
+    const path = routePath(new URL(input, "https://joro.pk").pathname);
     return path.startsWith("/account") || path.startsWith("/checkout") || path.startsWith("/vendor/dashboard") || (path.startsWith("/admin") && !path.startsWith("/admin/login"));
   } catch { return false; }
 }

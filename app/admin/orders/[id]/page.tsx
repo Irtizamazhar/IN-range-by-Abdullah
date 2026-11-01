@@ -1,4 +1,5 @@
 "use client";
+import { useAdminPath } from "@/components/admin/AdminPathContext";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 
@@ -22,6 +23,7 @@ import {
 } from "lucide-react";
 
 export default function AdminOrderDetailPage() {
+  const admin = useAdminPath();
   const params = useParams();
   const id = String((params?.id as string | undefined) ?? "");
   const [loading, setLoading] = useState(true);
@@ -79,7 +81,7 @@ export default function AdminOrderDetailPage() {
   if (!order) {
     return (
       <div className="p-8 text-darkText/50">
-        <Link href="/admin/orders" className="text-primaryBlue">
+        <Link href={admin.href("/orders")} className="text-primaryBlue">
           ← Orders
         </Link>
         <p className="mt-4" role="alert">This order could not be loaded.</p>
@@ -245,7 +247,7 @@ export default function AdminOrderDetailPage() {
       <div className="mx-auto max-w-7xl">
         <nav className="flex items-center gap-2 text-sm text-gray-500">
           <Link
-            href="/admin/orders"
+            href={admin.href("/orders")}
             className="font-medium text-brand-dark transition hover:text-brand-dark"
           >
             Orders

@@ -1,4 +1,5 @@
 "use client";
+import { useAdminPath } from "@/components/admin/AdminPathContext";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
 
@@ -27,6 +28,7 @@ const TABS = [
 ] as const;
 
 export default function AdminOrdersPage() {
+  const admin = useAdminPath();
   const router = useRouter();
   const [tab, setTab] = useState<string>("all");
   const [orders, setOrders] = useState<Record<string, unknown>[]>([]);
@@ -180,7 +182,7 @@ export default function AdminOrdersPage() {
                   onClick={() => {
                     if (!oid) return;
                     if (selecting) toggle(oid);
-                    else router.push(`/admin/orders/${oid}`);
+                    else router.push(admin.href(`/orders/${oid}`));
                   }}
                 >
                   {selecting && (
@@ -191,7 +193,7 @@ export default function AdminOrdersPage() {
                   <td className="p-3">
                     {oid ? (
                       <Link
-                        href={`/admin/orders/${oid}`}
+                        href={admin.href(`/orders/${oid}`)}
                         onClick={(e) => e.stopPropagation()}
                         className="text-primaryBlue font-semibold hover:underline"
                       >

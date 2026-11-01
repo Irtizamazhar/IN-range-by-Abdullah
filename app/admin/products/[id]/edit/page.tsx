@@ -1,4 +1,5 @@
 "use client";
+import { useAdminPath } from "@/components/admin/AdminPathContext";
 import { blockNonDigitKeys, wholeNumber } from "@/lib/whole-number-input";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { LoadingForm } from "@/components/ui/LoadingForm";
@@ -21,6 +22,7 @@ type ImgEntry = { id: string; url: string };
 type ApiCategory = { id: number; name: string };
 
 export default function EditProductPage() {
+  const admin = useAdminPath();
   const params = useParams();
   const id = String(params?.id || "");
 
@@ -288,7 +290,7 @@ export default function EditProductPage() {
 
   return (
     <div className="p-6 md:p-8 max-w-2xl">
-      <Link href="/admin/products" className="text-primaryBlue text-sm">
+      <Link href={admin.href("/products")} className="text-primaryBlue text-sm">
         ← Products
       </Link>
       <div className="mt-4 mb-6">

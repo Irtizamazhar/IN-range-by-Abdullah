@@ -1,4 +1,5 @@
 "use client";
+import { useAdminPath } from "@/components/admin/AdminPathContext";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 
@@ -10,6 +11,7 @@ import { formatPKR } from "@/lib/format";
 import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 
 export default function AdminProductsPage() {
+  const admin = useAdminPath();
   const [products, setProducts] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -93,7 +95,7 @@ export default function AdminProductsPage() {
             />
           </label>
           <Link
-            href="/admin/products/add"
+            href={admin.href("/products/add")}
             className="shrink-0 rounded-xl bg-primaryYellow px-5 py-2.5 text-center font-semibold text-brand-dark"
           >
             Add Product
@@ -179,7 +181,7 @@ export default function AdminProductsPage() {
                 </td>
                 <td className="p-3 space-x-2">
                   <Link
-                    href={`/admin/products/${p._id}/edit`}
+                    href={admin.href(`/products/${p._id}/edit`)}
                     className="text-primaryBlue font-semibold"
                   >
                     Edit

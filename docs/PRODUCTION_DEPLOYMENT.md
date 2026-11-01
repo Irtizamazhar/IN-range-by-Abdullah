@@ -46,6 +46,11 @@ Required core variables (see `.env.example` for the full annotated list):
 - `ADMIN_EMAIL` + `ADMIN_PASSWORD_HASH` (preferred over plaintext `ADMIN_PASSWORD`) — the
   bootstrap super-admin account
 - `VENDOR_JWT_SECRET` — a different long random string from `NEXTAUTH_SECRET`
+- `ADMIN_SECRET_PATH` — server-only public URL of the admin panel (e.g. `/your-admin-path`,
+  lowercase letters, digits and hyphens, 8–64 characters). The panel is served at
+  `<path>/login`; the old `/admin` URLs always return 404, and if this is missing or
+  invalid the admin panel is disabled (404). Set it for both the build and the running
+  app, and never commit the real value.
 
 Optional, enable when the corresponding feature is needed in production:
 

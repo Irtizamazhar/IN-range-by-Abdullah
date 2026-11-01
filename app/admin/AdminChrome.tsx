@@ -3,10 +3,12 @@
 import { Suspense } from "react";
 import { usePathname } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { useAdminPath } from "@/components/admin/AdminPathContext";
 
 function AdminChromeInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  if (pathname === "/admin/login") {
+  const admin = useAdminPath();
+  if (admin.local(pathname) === "/login") {
     return <>{children}</>;
   }
   return <AdminShell>{children}</AdminShell>;

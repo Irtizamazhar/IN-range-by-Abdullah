@@ -54,6 +54,7 @@ Required core configuration:
 - `ADMIN_PASSWORD_HASH` (preferred) or `ADMIN_PASSWORD`
 - `VENDOR_JWT_SECRET`
 - `NEXT_PUBLIC_APP_URL`
+- `ADMIN_SECRET_PATH` (server-only admin panel URL; the panel 404s without it and `/admin` always 404s)
 
 Email recovery/notifications require either the shared SMTP names or the compatible email aliases already supported by the code:
 

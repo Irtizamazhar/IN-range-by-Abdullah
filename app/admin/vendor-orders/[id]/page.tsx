@@ -1,4 +1,5 @@
 "use client";
+import { useAdminPath } from "@/components/admin/AdminPathContext";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 
@@ -17,6 +18,7 @@ import { AdminLegacyPickupRecovery } from "@/components/orders/AdminLegacyPickup
 
 /** Admin detail: fulfillment (shipped / delivered) + force cancel. */
 export default function AdminVendorOrderDetailPage() {
+  const admin = useAdminPath();
   const params = useParams();
   const id = typeof params?.id === "string" ? params.id : "";
   const [data, setData] = useState<OrderDetailModel | null>(null);
@@ -104,7 +106,7 @@ export default function AdminVendorOrderDetailPage() {
   if (!data) {
     return (
       <div className="p-8">
-        <Link href="/admin/vendor-orders" className="text-primaryBlue font-bold">
+        <Link href={admin.href("/vendor-orders")} className="text-primaryBlue font-bold">
           ← Seller orders
         </Link>
       </div>
@@ -119,7 +121,7 @@ export default function AdminVendorOrderDetailPage() {
   return (
     <div className="mx-auto max-w-3xl p-6 md:p-8">
       <Link
-        href="/admin/vendor-orders"
+        href={admin.href("/vendor-orders")}
         className="mb-6 inline-block text-sm font-bold text-primaryBlue hover:underline"
       >
         ← Seller orders
@@ -142,7 +144,7 @@ export default function AdminVendorOrderDetailPage() {
         <div className="mt-8">
           <OrderDetail order={data} showVendorBlock />
         </div>
-        {data.orderStatus === "packed" ? <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">This order is packed. {data.pickupStatus ? <>Pickup: <strong>{data.pickupStatus.replaceAll("_", " ")}</strong>{data.pickupReference ? ` · ${data.pickupReference}` : ""}. </> : "The vendor has not requested pickup yet. "}Record collection and courier handover in <Link className="font-bold underline" href="/admin/vendor-orders/pickups">Pickup Management</Link> before shipping.</div> : null}
+        {data.orderStatus === "packed" ? <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">This order is packed. {data.pickupStatus ? <>Pickup: <strong>{data.pickupStatus.replaceAll("_", " ")}</strong>{data.pickupReference ? ` · ${data.pickupReference}` : ""}. </> : "The vendor has not requested pickup yet. "}Record collection and courier handover in <Link className="font-bold underline" href={admin.href("/vendor-orders/pickups")}>Pickup Management</Link> before shipping.</div> : null}
 
         {data.orderStatus === "packed" && !data.pickupStatus ? <AdminLegacyPickupRecovery shopOrderId={id} vendor={data.vendor} onSuccess={() => load(false)} /> : null}
 

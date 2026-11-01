@@ -1,4 +1,5 @@
 "use client";
+import { useAdminPath } from "@/components/admin/AdminPathContext";
 import Link from "@/components/ui/LoadingLink";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { LoadingButton } from "@/components/ui/LoadingButton";
@@ -82,6 +83,7 @@ function formatDate(iso: string) {
 }
 
 export default function AdminVendorsPage() {
+  const admin = useAdminPath();
   const [filter, setFilter] = useState<"" | VendorStatus>("pending");
   const [rows, setRows] = useState<AdminVendorRow[]>([]);
   const [page, setPage] = useState(1);
@@ -272,7 +274,7 @@ export default function AdminVendorsPage() {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Link
-                      href={`/admin/vendors/${encodeURIComponent(v.id)}/suspension`}
+                      href={admin.href(`/vendors/${encodeURIComponent(v.id)}/suspension`)}
                       className="rounded-lg border border-primaryBlue px-3 py-2 text-sm font-semibold text-primaryBlue hover:bg-primaryBlue/10"
                     >
                       View Risk Profile

@@ -1,11 +1,16 @@
 import assert from "node:assert/strict";
 
 const base = process.env.SMOKE_BASE_URL || "http://localhost:3100";
+// The admin panel is only served under ADMIN_SECRET_PATH (never committed); /admin is a 404.
+const adminPath = process.env.ADMIN_SECRET_PATH;
+if (!adminPath) throw new Error("Set ADMIN_SECRET_PATH to the deployed admin path to run the smoke test.");
 const checks = [
   ["/", 200],
   ["/products", 200],
   ["/vendor/login", 200],
-  ["/admin/login", 200],
+  [`${adminPath}/login`, 200],
+  ["/admin", 404],
+  ["/admin/login", 404],
   ["/api/admin/notifications", 401],
   ["/api/admin/sidebar-badges", 401],
   ["/api/vendor/appeal", 401, "POST"],

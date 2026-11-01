@@ -32,6 +32,7 @@ import {
   Mail,
 } from "lucide-react";
 import { LogoMark } from "@/components/user/LogoMark";
+import { useAdminPath } from "@/components/admin/AdminPathContext";
 
 const ADMIN_VENDORS_ACK_KEY = "admin_sidebar_vendors_ack";
 const ADMIN_SELLER_ORDERS_ACK_KEY = "admin_sidebar_seller_orders_ack";
@@ -59,73 +60,75 @@ function writeAck(key: string, n: number) {
 
 function isAdminVendorsPath(pathname: string | null): boolean {
   if (!pathname) return false;
-  return pathname === "/admin/vendors" || pathname.startsWith("/admin/vendors/");
+  return pathname === "/vendors" || pathname.startsWith("/vendors/");
 }
 
 function isAdminSellerOrdersPath(pathname: string | null): boolean {
   if (!pathname) return false;
   return (
-    pathname === "/admin/vendor-orders" ||
-    pathname.startsWith("/admin/vendor-orders/")
+    pathname === "/vendor-orders" ||
+    pathname.startsWith("/vendor-orders/")
   );
 }
 
 function isAdminNotificationsPath(pathname: string | null): boolean {
   if (!pathname) return false;
-  return pathname === "/admin/notifications" || pathname.startsWith("/admin/notifications/");
+  return pathname === "/notifications" || pathname.startsWith("/notifications/");
 }
 
+/** Hrefs are admin sub-paths; render them with useAdminPath().href(). */
 export const ADMIN_NAV_LINKS = [
-  { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/products", label: "Products", icon: Package, dividerBefore: true },
-  { href: "/admin/categories", label: "Categories", icon: Shapes },
-  { href: "/admin/new-arrivals", label: "New Arrivals", icon: Sparkles },
-  { href: "/admin/services", label: "Services", icon: Wrench },
-  { href: "/admin/wants", label: "Wants", icon: MessageSquareHeart },
-  { href: "/admin/orders", label: "Orders", icon: ShoppingBag, dividerBefore: true },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/products", label: "Products", icon: Package, dividerBefore: true },
+  { href: "/categories", label: "Categories", icon: Shapes },
+  { href: "/new-arrivals", label: "New Arrivals", icon: Sparkles },
+  { href: "/services", label: "Services", icon: Wrench },
+  { href: "/wants", label: "Wants", icon: MessageSquareHeart },
+  { href: "/orders", label: "Orders", icon: ShoppingBag, dividerBefore: true },
   {
-    href: "/admin/vendor-orders",
+    href: "/vendor-orders",
     label: "Seller orders",
     icon: Truck,
   },
-  { href: "/admin/dashboard/after-sales", label: "After-sales", icon: RotateCcw },
-  { href: "/admin/vendors", label: "Vendors", icon: Store, dividerBefore: true },
-  { href: "/admin/vendors/top-vendors", label: "Top Vendors", icon: Trophy },
-  { href: "/admin/vendor-promotions", label: "Vendor Promotions", icon: Megaphone },
-  { href: "/admin/marketing/coupons", label: "Coupons", icon: TicketPercent },
-  { href: "/admin/marketing/email-campaigns", label: "Email Campaigns", icon: Mail },
-  { href: "/admin/customers", label: "Customers", icon: Users },
-  { href: "/admin/reviews", label: "Reviews", icon: Star },
+  { href: "/dashboard/after-sales", label: "After-sales", icon: RotateCcw },
+  { href: "/vendors", label: "Vendors", icon: Store, dividerBefore: true },
+  { href: "/vendors/top-vendors", label: "Top Vendors", icon: Trophy },
+  { href: "/vendor-promotions", label: "Vendor Promotions", icon: Megaphone },
+  { href: "/marketing/coupons", label: "Coupons", icon: TicketPercent },
+  { href: "/marketing/email-campaigns", label: "Email Campaigns", icon: Mail },
+  { href: "/customers", label: "Customers", icon: Users },
+  { href: "/reviews", label: "Reviews", icon: Star },
   {
-    href: "/admin/dashboard/payouts",
+    href: "/dashboard/payouts",
     label: "Payouts",
     icon: Wallet,
     dividerBefore: true,
   },
   {
-    href: "/admin/dashboard/commission-settings",
+    href: "/dashboard/commission-settings",
     label: "Commission",
     icon: Percent,
   },
-  { href: "/admin/notifications", label: "Notifications", icon: Bell },
-  { href: "/admin/support", label: "Support", icon: LifeBuoy },
-  { href: "/admin/dashboard/team", label: "Admin Team", icon: ShieldCheck, dividerBefore: true },
-  { href: "/admin/settings", label: "Settings", icon: Settings },
+  { href: "/notifications", label: "Notifications", icon: Bell },
+  { href: "/support", label: "Support", icon: LifeBuoy },
+  { href: "/dashboard/team", label: "Admin Team", icon: ShieldCheck, dividerBefore: true },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 const links = ADMIN_NAV_LINKS;
 
 /** Existing admin logout: end the NextAuth admin session, then hard-navigate to login. */
-export async function signOutAdmin() {
+export async function signOutAdmin(loginHref: string) {
   await signOut({ redirect: false });
-  await navigateDocument("/admin/login");
+  await navigateDocument(loginHref);
 }
 
+/** `pathname` is the admin sub-path (useAdminPath().local), e.g. "/orders". */
 export function isAdminLinkActive(pathname: string | null, href: string): boolean {
   if (!pathname) return false;
   // Keep dashboard exact so nested dashboard tools highlight their own links only.
-  if (href === "/admin/dashboard") {
-    return pathname === "/admin/dashboard";
+  if (href === "/dashboard") {
+    return pathname === "/dashboard";
   }
   return pathname === href || pathname.startsWith(href + "/");
 }
@@ -143,7 +146,8 @@ const badgeBase =
   "ml-auto min-w-[1.375rem] shrink-0 rounded-full px-1.5 py-0.5 text-center text-[11px] font-bold leading-4 tabular-nums";
 
 export function AdminSidebar({ collapsed = false }: { collapsed?: boolean }) {
-  const pathname = usePathname();
+  const admin = useAdminPath();
+  const pathname = admin.local(usePathname());
   const [unreadOrders, setUnreadOrders] = useState(0);
   const [pendingVendors, setPendingVendors] = useState(0);
   const [pendingSellerOrders, setPendingSellerOrders] = useState(0);
@@ -253,7 +257,7 @@ export function AdminSidebar({ collapsed = false }: { collapsed?: boolean }) {
         {/* Shared brand mark with the customer navbar; sized down so it fits the rail. */}
         <LogoMark
           inverse
-          href="/admin/dashboard"
+          href={admin.href("/dashboard")}
           className={
             collapsed
               ? "[&_span:has(>img)]:!m-0 [&_span:has(>img)]:!h-10 [&_span:has(>img)]:!w-14"
@@ -285,20 +289,20 @@ export function AdminSidebar({ collapsed = false }: { collapsed?: boolean }) {
                 ? pendingSellerOrders
                 : Math.max(0, pendingSellerOrders - sellerOrdersAck);
             const showVendorsBadge =
-              href === "/admin/vendors" && vendorsNew > 0 && !onVendors;
+              href === "/vendors" && vendorsNew > 0 && !onVendors;
             const showSellerOrdersBadge =
-              href === "/admin/vendor-orders" &&
+              href === "/vendor-orders" &&
               sellerOrdersNew > 0 &&
               !onSellerOrders;
             const onNotifications = isAdminNotificationsPath(pathname);
             const appealsNew =
               appealsAck == null ? pendingAppeals : Math.max(0, pendingAppeals - appealsAck);
             const showAppealsBadge =
-              href === "/admin/notifications" && appealsNew > 0 && !onNotifications;
+              href === "/notifications" && appealsNew > 0 && !onNotifications;
 
             const active = href === activeHref;
             let badge: { count: number; title: string } | null = null;
-            if (href === "/admin/orders" && unreadOrders > 0) {
+            if (href === "/orders" && unreadOrders > 0) {
               badge = { count: unreadOrders, title: `${unreadOrders} unread order(s)` };
             } else if (showVendorsBadge) {
               badge = { count: vendorsNew, title: `${vendorsNew} new vendor signup(s)` };
@@ -314,7 +318,7 @@ export function AdminSidebar({ collapsed = false }: { collapsed?: boolean }) {
                 className={dividerBefore ? "mt-2 border-t border-white/10 pt-2" : undefined}
               >
                 <Link
-                  href={href}
+                  href={admin.href(href)}
                   aria-current={active ? "page" : undefined}
                   aria-label={collapsed ? (badge ? `${label}, ${badge.title}` : label) : undefined}
                   title={collapsed ? label : undefined}
@@ -353,7 +357,7 @@ export function AdminSidebar({ collapsed = false }: { collapsed?: boolean }) {
       <div className={`shrink-0 border-t border-white/10 py-3 ${collapsed ? "px-2" : "px-3"}`}>
         <LoadingButton loadingLabel="Processing…"
           type="button"
-          onClick={signOutAdmin}
+          onClick={() => signOutAdmin(admin.href("/login"))}
           aria-label={collapsed ? "Log out" : undefined}
           title={collapsed ? "Log out" : undefined}
           className={`flex min-h-[2.5rem] w-full items-center gap-3 rounded-lg text-[14px] font-medium text-white/85 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-admin-lime ${

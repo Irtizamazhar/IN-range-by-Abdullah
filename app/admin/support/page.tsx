@@ -1,4 +1,5 @@
 "use client";
+import { useAdminPath } from "@/components/admin/AdminPathContext";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -36,6 +37,7 @@ function priorityBadgeClass(p: string) {
 }
 
 export default function AdminSupportQueuePage() {
+  const admin = useAdminPath();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -114,7 +116,7 @@ export default function AdminSupportQueuePage() {
                 <td className="p-3"><span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${statusBadgeClass(t.status)}`}>{t.status.replace(/_/g, " ")}</span></td>
                 <td className="p-3 text-xs">{t.assignedTo?.name || "Unassigned"}</td>
                 <td className="p-3 whitespace-nowrap text-xs">{new Date(t.lastActivityAt).toLocaleString()}</td>
-                <td className="p-3"><Link href={`/admin/support/${t.id}`} className="font-bold text-brand-link underline">Open</Link></td>
+                <td className="p-3"><Link href={admin.href(`/support/${t.id}`)} className="font-bold text-brand-link underline">Open</Link></td>
               </tr>
             ))}
           </tbody>

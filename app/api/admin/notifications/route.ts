@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { hasAdminPermission } from "@/lib/admin-permissions";
 import { requireAdminPermission, writeAdminAudit } from "@/lib/admin-rbac";
 import { prisma } from "@/lib/prisma";
+import { adminBasePath } from "@/lib/admin-path";
 
 export type AdminNotificationKind = "appeal" | "want" | "gift" | "service" | "order" | "payout";
 
@@ -70,6 +71,7 @@ export async function GET() {
   const auth = await requireAdminPermission("dashboard.view");
   if ("response" in auth) return auth.response;
   const canSeeAppeals = hasAdminPermission([...auth.admin.permissions], "moderation.manage");
+  const adminBase = adminBasePath() ?? "";
 
   try {
     const [seenAt, appeals, wants, orders, payouts, services] = await Promise.all([
@@ -157,7 +159,7 @@ export async function GET() {
         createdAt: r.createdAt.toISOString(),
         title: `Vendor appeal: ${r.vendor.shopName} (${r.vendor.ownerName})`,
         body: `${appealReasonLabel(typeof d.reasonType === "string" ? d.reasonType : "general")} · ${message || "No message provided."}`,
-        href: `/admin/vendors/${encodeURIComponent(r.vendor.id)}/suspension`,
+        href: `${adminBase}/vendors/${encodeURIComponent(r.vendor.id)}/suspension`,
         needsAction: true,
         status: "Pending",
         attachmentUrl: typeof d.paymentProofUrl === "string" ? d.paymentProofUrl : null,
@@ -174,7 +176,7 @@ export async function GET() {
         createdAt: w.createdAt.toISOString(),
         title: `New ${label}: ${w.title}`,
         body: [w.customer?.name, w.city, w.occasion].filter(Boolean).join(" · "),
-        href: "/admin/wants",
+        href: `${adminBase}/wants`,
         needsAction: w.status === "PENDING_MODERATION" || w.status === "SUBMITTED",
         status: w.status.replace(/_/g, " ").toLowerCase(),
       });
@@ -187,7 +189,7 @@ export async function GET() {
         createdAt: o.createdAt.toISOString(),
         title: `New order #${o.orderNumber}`,
         body: [o.customerName, o.city, money(o.totalAmount), o.paymentMethod].filter(Boolean).join(" · "),
-        href: `/admin/orders/${encodeURIComponent(o.id)}`,
+        href: `${adminBase}/orders/${encodeURIComponent(o.id)}`,
         needsAction: !o.isRead,
         status: o.orderStatus,
       });
@@ -200,7 +202,7 @@ export async function GET() {
         createdAt: p.requestedAt.toISOString(),
         title: `Payout request: ${p.vendor?.shopName ?? "Vendor"}`,
         body: money(p.requestedAmount),
-        href: "/admin/dashboard/payouts",
+        href: `${adminBase}/dashboard/payouts`,
         needsAction: p.status === "pending",
         status: p.status,
       });
@@ -213,7 +215,7 @@ export async function GET() {
         createdAt: s.createdAt.toISOString(),
         title: `New service listing: ${s.name}`,
         body: [s.vendor?.shopName, s.type, money(s.price)].filter(Boolean).join(" · "),
-        href: "/admin/services",
+        href: `${adminBase}/services`,
         needsAction: s.moderationStatus !== "APPROVED" && s.moderationStatus !== "HIDDEN",
         status: s.moderationStatus.toLowerCase(),
       });

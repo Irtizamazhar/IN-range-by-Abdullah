@@ -4,17 +4,26 @@ import bcrypt from "bcryptjs";
 import { adminCookieOptions } from "@/lib/auth-cookies";
 import { prisma } from "@/lib/prisma";
 import { normalizePermissions, permissionsForRole } from "@/lib/admin-permissions";
+import { adminUrl } from "@/lib/admin-path";
+import { createLoginRateLimiter } from "@/lib/security/rate-limit";
 
-export const adminAuthOptions: NextAuthOptions = {
-  providers: [
-    CredentialsProvider({
-      id: "credentials",
-      name: "Credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
+/** Error code the admin login page shows as "too many attempts". */
+export const ADMIN_LOGIN_RATE_LIMITED = "AdminLoginRateLimited";
+
+/** Failed admin sign-ins: 5 per 15 minutes per client IP; a successful sign-in clears the count. */
+const adminLoginLimiter = createLoginRateLimiter();
+
+function requestIp(headers: Record<string, unknown> | undefined) {
+  const header = (name: string) => {
+    const value = headers?.[name];
+    return (Array.isArray(value) ? value[0] : typeof value === "string" ? value : "").trim();
+  };
+  return (header("x-forwarded-for").split(",")[0]?.trim() || header("x-real-ip") || "unknown").slice(0, 45);
+}
+
+type AdminCredentials = Record<"email" | "password", string> | undefined;
+
+async function verifyAdminCredentials(credentials: AdminCredentials) {
         const email = credentials?.email?.trim().toLowerCase();
         const password = credentials?.password ?? "";
         if (!email || !password) return null;
@@ -65,11 +74,30 @@ export const adminAuthOptions: NextAuthOptions = {
         await prisma.adminUser.update({ where: { id: row.id }, data: { lastLoginAt: new Date() } });
         const permissions = Array.from(new Set([...permissionsForRole(row.role), ...normalizePermissions(row.permissions)]));
         return { id: row.id, email: row.email, name: row.name, role: "admin" as const, adminRole: row.role, permissions };
+}
+
+export const adminAuthOptions: NextAuthOptions = {
+  providers: [
+    CredentialsProvider({
+      id: "credentials",
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials, req) {
+        const key = `admin-login:${requestIp(req?.headers)}`;
+        const state = await adminLoginLimiter.get(key);
+        if (state && state.remainingPoints <= 0) throw new Error(ADMIN_LOGIN_RATE_LIMITED);
+        const user = await verifyAdminCredentials(credentials);
+        if (user) await adminLoginLimiter.delete(key);
+        else await adminLoginLimiter.consume(key).catch(() => undefined);
+        return user;
       },
     }),
   ],
   session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 },
-  pages: { signIn: "/admin/login" },
+  pages: { signIn: adminUrl("/login") ?? "/" },
   cookies: adminCookieOptions,
   callbacks: {
     async jwt({ token, user }) {

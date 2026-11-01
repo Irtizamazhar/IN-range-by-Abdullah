@@ -1,4 +1,5 @@
 "use client";
+import { useAdminPath } from "@/components/admin/AdminPathContext";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
 
 import { useEffect, useMemo, useState } from "react";
@@ -155,6 +156,7 @@ function humanize(v: unknown) {
 }
 
 export default function AdminDashboardPage() {
+  const admin = useAdminPath();
   const router = useRouter();
   const [orders, setOrders] = useState<Row[]>([]);
   const [unread, setUnread] = useState(0);
@@ -206,7 +208,7 @@ export default function AdminDashboardPage() {
         if (!or.ok) {
           if (or.status === 401) {
             toast.error("Please sign in again");
-            router.push("/admin/login");
+            router.push(admin.href("/login"));
             return;
           }
           toast.error(o.error || `Orders failed (${or.status})`);
@@ -215,7 +217,7 @@ export default function AdminDashboardPage() {
         if (!pr.ok) {
           if (pr.status === 401) {
             toast.error("Please sign in again");
-            router.push("/admin/login");
+            router.push(admin.href("/login"));
             return;
           }
           toast.error(p.error || `Products failed (${pr.status})`);
@@ -254,7 +256,7 @@ export default function AdminDashboardPage() {
 
     void load();
     return () => ac.abort();
-  }, [router]);
+  }, [admin, router]);
 
   const now = useMemo(() => new Date(), []);
   const inRange = useMemo(() => {
@@ -360,7 +362,7 @@ export default function AdminDashboardPage() {
         <div className="flex flex-wrap items-center gap-2">
           {unread > 0 ? (
             <Link
-              href="/admin/orders"
+              href={admin.href("/orders")}
               className="inline-flex h-10 items-center gap-2 rounded-xl border border-admin-border bg-white px-4 text-sm font-semibold text-admin-primary hover:bg-admin-bg"
             >
               <Bell className="h-4 w-4" aria-hidden />
@@ -368,7 +370,7 @@ export default function AdminDashboardPage() {
             </Link>
           ) : null}
           <Link
-            href="/admin/products/add"
+            href={admin.href("/products/add")}
             className="inline-flex h-10 items-center gap-2 rounded-xl bg-admin-primary px-4 text-sm font-semibold text-white hover:bg-admin-dark"
           >
             <Plus className="h-4 w-4" aria-hidden />
@@ -445,7 +447,7 @@ export default function AdminDashboardPage() {
       <section className={`${card} min-w-0 overflow-hidden`}>
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-admin-border px-5 py-4">
           <h2 className="text-base font-bold text-admin-ink">Recent Orders</h2>
-          <Link href="/admin/orders" className="inline-flex items-center gap-1 text-sm font-semibold text-admin-primary hover:underline">
+          <Link href={admin.href("/orders")} className="inline-flex items-center gap-1 text-sm font-semibold text-admin-primary hover:underline">
             View all <ArrowRight className="h-4 w-4" aria-hidden />
           </Link>
         </div>
@@ -474,13 +476,13 @@ export default function AdminDashboardPage() {
                     key={oid || String(row.orderNumber)}
                     className="cursor-pointer border-t border-admin-border transition-colors hover:bg-admin-bg"
                     onClick={() => {
-                      if (oid) router.push(`/admin/orders/${oid}`);
+                      if (oid) router.push(admin.href(`/orders/${oid}`));
                     }}
                   >
                     <td className="whitespace-nowrap px-5 py-3">
                       {oid ? (
                         <Link
-                          href={`/admin/orders/${oid}`}
+                          href={admin.href(`/orders/${oid}`)}
                           onClick={(e) => e.stopPropagation()}
                           className="font-semibold text-admin-primary hover:underline"
                         >
@@ -528,7 +530,7 @@ export default function AdminDashboardPage() {
                     <td className="whitespace-nowrap px-5 py-3 text-right">
                       {oid ? (
                         <Link
-                          href={`/admin/orders/${oid}`}
+                          href={admin.href(`/orders/${oid}`)}
                           onClick={(e) => e.stopPropagation()}
                           className="inline-flex h-8 items-center rounded-lg border border-admin-border px-3 text-xs font-semibold text-admin-primary hover:bg-admin-bg"
                         >

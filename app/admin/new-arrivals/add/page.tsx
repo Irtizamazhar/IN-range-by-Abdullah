@@ -1,4 +1,5 @@
 "use client";
+import { useAdminPath } from "@/components/admin/AdminPathContext";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { LoadingForm } from "@/components/ui/LoadingForm";
 
@@ -14,6 +15,7 @@ import {
 } from "@/lib/clipboard-image-files";
 
 export default function AddNewArrivalPage() {
+  const admin = useAdminPath();
   const router = useRouter();
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
@@ -111,7 +113,7 @@ export default function AddNewArrivalPage() {
         return;
       }
       toast.success("New arrival added");
-      await router.push("/admin/new-arrivals");
+      await router.push(admin.href("/new-arrivals"));
     } finally {
       submitLockRef.current = false;
     }
@@ -132,7 +134,7 @@ export default function AddNewArrivalPage() {
 
   return (
     <div className="max-w-2xl p-6 md:p-8">
-      <Link href="/admin/new-arrivals" className="text-sm text-primaryBlue">
+      <Link href={admin.href("/new-arrivals")} className="text-sm text-primaryBlue">
         ← New Arrivals
       </Link>
       <h1 className="mb-6 mt-4 text-2xl font-bold text-darkText">Add New Arrival</h1>

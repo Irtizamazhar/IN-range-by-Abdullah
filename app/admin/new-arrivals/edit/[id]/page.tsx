@@ -1,4 +1,5 @@
 "use client";
+import { useAdminPath } from "@/components/admin/AdminPathContext";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { LoadingForm } from "@/components/ui/LoadingForm";
@@ -30,6 +31,7 @@ type Item = {
 };
 
 export default function EditNewArrivalPage() {
+  const admin = useAdminPath();
   const params = useParams();
   const router = useRouter();
   const id = String(params?.id || "");
@@ -126,7 +128,7 @@ export default function EditNewArrivalPage() {
         return;
       }
       toast.success("Updated");
-      await router.push("/admin/new-arrivals");
+      await router.push(admin.href("/new-arrivals"));
     } finally {
       submitLockRef.current = false;
     }
@@ -149,7 +151,7 @@ export default function EditNewArrivalPage() {
 
   return (
     <div className="max-w-2xl p-6 md:p-8">
-      <Link href="/admin/new-arrivals" className="text-sm text-primaryBlue">
+      <Link href={admin.href("/new-arrivals")} className="text-sm text-primaryBlue">
         ← New Arrivals
       </Link>
       <h1 className="mb-6 mt-4 text-2xl font-bold text-darkText">Edit New Arrival</h1>

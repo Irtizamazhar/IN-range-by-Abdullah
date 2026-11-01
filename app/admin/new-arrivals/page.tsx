@@ -1,4 +1,5 @@
 "use client";
+import { useAdminPath } from "@/components/admin/AdminPathContext";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 
@@ -18,6 +19,7 @@ type Row = {
 };
 
 export default function AdminNewArrivalsPage() {
+  const admin = useAdminPath();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -51,7 +53,7 @@ export default function AdminNewArrivalsPage() {
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-darkText">New Arrivals</h1>
         <Link
-          href="/admin/new-arrivals/add"
+          href={admin.href("/new-arrivals/add")}
           className="rounded-xl bg-primaryYellow px-5 py-2.5 font-semibold text-brand-dark"
         >
           Add New Product
@@ -87,7 +89,7 @@ export default function AdminNewArrivalsPage() {
                 <td className="p-3">{p.category}</td>
                 <td className="space-x-2 p-3">
                   <Link
-                    href={`/admin/new-arrivals/edit/${p.id}`}
+                    href={admin.href(`/new-arrivals/edit/${p.id}`)}
                     className="font-semibold text-primaryBlue"
                   >
                     Edit

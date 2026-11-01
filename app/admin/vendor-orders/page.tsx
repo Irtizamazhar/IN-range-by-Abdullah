@@ -1,4 +1,5 @@
 "use client";
+import { useAdminPath } from "@/components/admin/AdminPathContext";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
 
@@ -67,6 +68,7 @@ function toCsv(rows: ShopOrderListRow[]): string {
 
 /** Admin overview of all seller bundles + CSV export. */
 export default function AdminVendorOrdersPage() {
+  const admin = useAdminPath();
   const [status, setStatus] = useState<(typeof STATUSES)[number]>("all");
   const statusRef = useRef<(typeof STATUSES)[number]>("all");
   const requestRef = useRef(0);
@@ -172,7 +174,7 @@ export default function AdminVendorOrdersPage() {
             All bundled vendor checkouts — filter, inspect, export CSV.
           </p>
         </div>
-        <Link href="/admin/vendor-orders/pickups" className="rounded-xl bg-emerald-800 px-4 py-2 text-sm font-bold text-white">Pickup Management</Link>
+        <Link href={admin.href("/vendor-orders/pickups")} className="rounded-xl bg-emerald-800 px-4 py-2 text-sm font-bold text-white">Pickup Management</Link>
         <button
           type="button"
           onClick={exportCsv}
@@ -242,18 +244,18 @@ export default function AdminVendorOrdersPage() {
           <OrderTable
             rows={rows}
             showVendorColumn
-            getDetailHref={(id) => `/admin/vendor-orders/${id}`}
+            getDetailHref={(id) => admin.href(`/vendor-orders/${id}`)}
           />
           <OrderCard
             rows={rows}
             showVendor
-            getDetailHref={(id) => `/admin/vendor-orders/${id}`}
+            getDetailHref={(id) => admin.href(`/vendor-orders/${id}`)}
           />
         </>
       )}
 
       <p className="mt-8 text-sm text-darkText/50">
-        <Link href="/admin/orders" className="text-primaryBlue font-semibold">
+        <Link href={admin.href("/orders")} className="text-primaryBlue font-semibold">
           ← Storefront orders (checkout)
         </Link>
       </p>
