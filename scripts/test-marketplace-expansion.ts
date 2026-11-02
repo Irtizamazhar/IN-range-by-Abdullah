@@ -7,7 +7,7 @@ assert.ok(process.env.DATABASE_URL && ["localhost", "127.0.0.1", "[::1]"].includ
 async function main() {
 const { prisma } = await import("../lib/prisma");
 const { publicServices } = await import("../lib/public-services");
-const { giftProducts } = await import("../lib/gift-products");
+const { giftProducts, GIFT_CATEGORY_NAMES } = await import("../lib/gift-products");
 const run = `marketplace-test-${randomUUID()}`;
 const vendorIds: string[] = []; const serviceIds: string[] = []; const productIds: string[] = [];
 try {
@@ -25,7 +25,7 @@ try {
   assert.ok(!(await publicServices({ city: "Karachi" })).some(service => service.id === visible.id));
   console.log("PASS approved active services are public; hidden and unapproved services are excluded; city filter works");
 
-  const gift = await prisma.product.create({ data: { name: "Fixture Birthday Gift Box", description: "Fixture", price: 1500, category: "Gifts", stock: 2, variants: [] } });
+  const gift = await prisma.product.create({ data: { name: "Fixture Birthday Gift Box", description: "Fixture", price: 1500, category: GIFT_CATEGORY_NAMES[0], stock: 2, variants: [] } });
   const unrelated = await prisma.product.create({ data: { name: "Fixture Desk", description: "Fixture", price: 1500, category: "Furniture", stock: 2, variants: [] } });
   productIds.push(gift.id, unrelated.id);
   const gifts = await giftProducts({ search: "Fixture" });

@@ -15,22 +15,11 @@ export type NewArrivalMergedCard = ProductCardData & {
   createdAtTs: number;
 };
 
-function matchesJsonRow(
-  p: { name: string; category: string },
-  search: string,
-  category: string
-) {
-  const text = `${String(p.name || "")} ${String(p.category || "")}`.toLowerCase();
-  const matchesSearch =
-    !search || text.includes(String(search).toLowerCase());
-  const matchesCategory =
-    !category || String(p.category || "") === category;
-  return matchesSearch && matchesCategory;
-}
-
 /**
- * JSON-file new arrivals plus active Prisma products whose `createdAt` is within the
- * homepage new-arrivals window (14 days from `product-new-arrival-window`), merged newest-first.
+ * Active products whose `createdAt` is within the 14-day New Arrivals window
+ * (`product-new-arrival-window`), newest first. Admin-added New Arrivals are ordinary
+ * Product rows (`na-<legacyId>`), so they come from the same query and stay in All
+ * Products after the window; they keep their legacy `/new-arrivals/<id>` card here.
  */
 export async function loadMergedNewArrivalCards(options: {
   search: string;
@@ -39,17 +28,9 @@ export async function loadMergedNewArrivalCards(options: {
   const { search, category } = options;
   const windowStart = newArrivalsWindowStart();
 
-  const jsonRows = sortedNewArrivalRows(await readProducts()).filter((p) =>
-    matchesJsonRow(
-      { name: String(p.name || ""), category: String(p.category || "") },
-      search,
-      category
-    )
+  const legacyById = new Map(
+    sortedNewArrivalRows(await readProducts()).map((p) => [`na-${p.id}` as string, p] as const)
   );
-  const jsonPart: NewArrivalMergedCard[] = jsonRows.map((p) => ({
-    ...storedProductToNewArrivalCard(p),
-    createdAtTs: +new Date(p.createdAt || "1970-01-01"),
-  }));
 
   const where: Prisma.ProductWhereInput = {
     isActive: true,
@@ -70,7 +51,9 @@ export async function loadMergedNewArrivalCards(options: {
     select: catalogProductSelect(),
   });
   const stats = await reviewStatsForProductIds(prismaRows.map((p) => p.id));
-  const prismaPart: NewArrivalMergedCard[] = prismaRows.map((p) => {
+  const cards: NewArrivalMergedCard[] = prismaRows.map((p) => {
+    const legacy = legacyById.get(p.id);
+    if (legacy) return { ...storedProductToNewArrivalCard(legacy), createdAtTs: +new Date(p.createdAt) };
     const base = serializeProduct(p, { forAdmin: false });
     const stat = pickReviewStat(stats, String(base._id));
     return {
@@ -89,7 +72,5 @@ export async function loadMergedNewArrivalCards(options: {
     };
   });
 
-  return [...prismaPart, ...jsonPart].sort(
-    (a, b) => b.createdAtTs - a.createdAtTs
-  );
+  return cards.sort((a, b) => b.createdAtTs - a.createdAtTs);
 }

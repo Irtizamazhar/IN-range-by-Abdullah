@@ -12,6 +12,7 @@ import { formatPKR } from "@/lib/format";
 import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 import { displayDiscount } from "@/lib/product-discount";
 import { showCartSuccessToast } from "@/lib/cart-success-toast";
+import { isProductInNewArrivalsWindow } from "@/lib/product-new-arrival-window";
 import styles from "./ProductCard.module.css";
 
 export type ProductCardData = {
@@ -29,6 +30,7 @@ export type ProductCardData = {
   inStock?: boolean;
   available?: boolean;
   variants?: string[];
+  createdAt?: string | Date;
 };
 
 function ProductRating({ rating, count }: { rating: number; count: number }) {
@@ -71,11 +73,14 @@ export const ProductCard = memo(function ProductCard({
   product,
   ribbon,
   variant: presentation = "marketplace",
+  showNewTag = false,
 }: {
   product: ProductCardData;
   ribbon?: string;
   badgePosition?: "left" | "right";
   variant?: "default" | "featured" | "compact" | "marketplace";
+  /** Show a small "NEW" badge while the product is in its 14-day New Arrivals period. */
+  showNewTag?: boolean;
 }) {
   const { items, addItem } = useCart();
   const { ids, toggle, saving, loading: savedLoading } = useSavedProducts();
@@ -92,6 +97,7 @@ export const ProductCard = memo(function ProductCard({
   const reviews = Math.max(0, Math.floor(Number(product.reviewCount) || 0));
   const rating = Number(product.ratingAvg) || 0;
   const marketplace = presentation === "marketplace";
+  const isNew = showNewTag && !!product.createdAt && isProductInNewArrivalsWindow(new Date(product.createdAt));
 
   const stockKnown = typeof product.stock === "number" && Number.isFinite(product.stock);
   const maxStock = stockKnown ? Math.max(0, Number(product.stock)) : 99;
@@ -169,6 +175,7 @@ export const ProductCard = memo(function ProductCard({
         ) : ribbon ? (
           <span className={styles.badge}>{ribbon}</span>
         ) : null}
+        {isNew ? <span className={styles.newBadge}>NEW</span> : null}
         <LoadingButton
           type="button"
           onClick={() => toggle(String(product._id))}

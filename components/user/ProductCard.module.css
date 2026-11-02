@@ -91,6 +91,24 @@
   letter-spacing: 0.01em;
 }
 
+/* Small "NEW" tag in the image's bottom-left corner, clear of the discount badge and wishlist. */
+.newBadge {
+  position: absolute;
+  z-index: 2;
+  bottom: 8px;
+  left: 8px;
+  border-radius: 999px;
+  background: #d9f99d;
+  padding: 2px 7px;
+  color: #065f46;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 14px;
+  letter-spacing: 0.06em;
+  box-shadow: 0 1px 2px rgb(18 61 39 / 12%);
+  pointer-events: none;
+}
+
 .wishlist {
   position: absolute;
   z-index: 2;

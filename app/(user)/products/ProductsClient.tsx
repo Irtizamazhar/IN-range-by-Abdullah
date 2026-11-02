@@ -214,7 +214,7 @@ export function ProductsClient() {
               <LoadingButton type="button" className={styles.clearAll} onClick={clearFilters}>Clear all filters</LoadingButton>
             </div>}
             <div className={styles.grid} aria-busy={loading || loadingMore}>
-              {loading ? Array.from({ length: PAGE_SIZE }, (_, index) => <ProductCardSkeleton key={index} variant="marketplace" />) : products.map((product) => <ProductCard key={product._id} product={product} variant="marketplace" />)}
+              {loading ? Array.from({ length: PAGE_SIZE }, (_, index) => <ProductCardSkeleton key={index} variant="marketplace" />) : products.map((product) => <ProductCard key={product._id} product={product} variant="marketplace" showNewTag />)}
               {loadingMore && Array.from({ length: 6 }, (_, index) => <ProductCardSkeleton key={`more-${index}`} variant="marketplace" />)}
             </div>
             {(error || (!loading && products.length === 0)) && <div className={styles.empty}>

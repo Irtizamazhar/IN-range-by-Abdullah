@@ -67,7 +67,8 @@ export async function GET(req: NextRequest) {
   const [productRows, total, catalogPrices] = await Promise.all([
     prisma.product.findMany({
       where,
-      orderBy,
+      // id breaks ties (e.g. date-only New Arrival timestamps) so pages never skip or repeat a product.
+      orderBy: [orderBy, { id: "asc" }],
       skip,
       take: limit,
       select: catalogProductSelect(),

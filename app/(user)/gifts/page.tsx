@@ -1,7 +1,7 @@
 import Link from "@/components/ui/LoadingLink";
 import { ProductCard } from "@/components/user/ProductCard";
 import { CategoryFilterRail } from "@/components/user/CategoryFilterRail";
-import { giftProducts } from "@/lib/gift-products";
+import { giftCategoryWhere, giftProducts } from "@/lib/gift-products";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +10,7 @@ export default async function GiftsPage({ searchParams }: { searchParams?: { sea
   const category = (searchParams?.category || "").trim().slice(0, 100);
   const [products, categories] = await Promise.all([
     giftProducts({ search, category }),
-    prisma.product.findMany({ where: { isActive: true, OR: ["gift", "flower", "bouquet", "hamper", "birthday", "anniversary", "wedding"].map(term => ({ category: { contains: term } })) }, distinct: ["category"], select: { category: true }, take: 50 }),
+    prisma.product.findMany({ where: { isActive: true, ...giftCategoryWhere }, distinct: ["category"], select: { category: true }, take: 50 }),
   ]);
   const categoryNames = Array.from(new Set([...categories.map(item => item.category), ...(category ? [category] : [])]));
   const categoryItems = ["", ...categoryNames].map(value => {

@@ -54,7 +54,8 @@ export async function POST(req: NextRequest) {
       stock,
       inStock: stock > 0,
       isFeatured: body.isFeatured === true,
-      createdAt: new Date().toISOString().slice(0, 10),
+      // Full timestamp so the 14-day New Arrivals period starts at the moment of publishing.
+      createdAt: new Date().toISOString(),
     };
     const updated = [next, ...products];
     await writeProducts(updated);
