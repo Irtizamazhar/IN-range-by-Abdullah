@@ -6,23 +6,42 @@ import { getVendorFromSession } from "@/lib/vendor-auth-server";
 import { prisma } from "@/lib/prisma";
 import { syncVendorProductStorefront } from "@/lib/sync-vendor-product-storefront";
 import { parseImagesJson } from "@/lib/vendor-product-schemas";
-import { isProductInNewArrivalsWindow } from "@/lib/product-new-arrival-window";
+import {
+  isProductInNewArrivalsWindow,
+  newArrivalsProgress,
+  newArrivalsWindowEnd,
+} from "@/lib/product-new-arrival-window";
 
 export const dynamic = "force-dynamic";
-
-const MS_PER_DAY = 86_400_000;
 
 function firstImage(images: unknown): string | null {
   const arr = parseImagesJson(images);
   return arr[0] ?? null;
 }
 
+// Pakistan time, whatever timezone the server runs in.
 function formatDateLabel(date: Date): string {
   return date.toLocaleDateString("en-PK", {
     day: "2-digit",
     month: "short",
     year: "numeric",
+    timeZone: "Asia/Karachi",
   });
+}
+
+function formatDateTimeLabel(date: Date): string {
+  return `${formatDateLabel(date)}, ${date.toLocaleTimeString("en-PK", {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "Asia/Karachi",
+  })}`;
+}
+
+function timeLeftLabel(days: number, hours: number): string {
+  const parts = [];
+  if (days > 0) parts.push(`${days} day${days === 1 ? "" : "s"}`);
+  if (hours > 0) parts.push(`${hours} hour${hours === 1 ? "" : "s"}`);
+  return parts.join(" ") || "Less than an hour";
 }
 
 function formatPrice(value: unknown): string {
@@ -110,30 +129,10 @@ export default async function VendorProductsPage() {
             const uploadedOnLabel = storefrontCreatedAt
               ? formatDateLabel(storefrontCreatedAt)
               : null;
-            const featuredAt = storefrontCreatedAt
-              ? new Date(storefrontCreatedAt.getTime() + 14 * MS_PER_DAY)
+            const featuredOnLabel = storefrontCreatedAt
+              ? formatDateTimeLabel(newArrivalsWindowEnd(storefrontCreatedAt))
               : null;
-            const featuredOnLabel = featuredAt ? formatDateLabel(featuredAt) : null;
-            const daysUntilFeatured =
-              featuredAt != null
-                ? Math.max(
-                    0,
-                    Math.ceil((featuredAt.getTime() - Date.now()) / MS_PER_DAY)
-                  )
-                : null;
-            const daysElapsed =
-              storefrontCreatedAt != null
-                ? Math.max(
-                    0,
-                    Math.min(
-                      14,
-                      Math.floor(
-                        (Date.now() - storefrontCreatedAt.getTime()) / MS_PER_DAY
-                      )
-                    )
-                  )
-                : 0;
-            const progressPct = Math.round((daysElapsed / 14) * 100);
+            const progress = storefrontCreatedAt ? newArrivalsProgress(storefrontCreatedAt) : null;
             const showNewArrivalBadge =
               p.status === "active" &&
               storefrontCreatedAt != null &&
@@ -212,18 +211,18 @@ export default async function VendorProductsPage() {
                     <div className="space-y-1 text-xs text-neutral-600">
                       <p>📅 Listed: {uploadedOnLabel ?? "Not published yet"}</p>
                       <p>🚀 Featured on: {featuredOnLabel ?? "Pending publish"}</p>
-                      {storefrontCreatedAt ? (
+                      {progress ? (
                         <>
                           <div className="mt-1 h-2.5 w-full overflow-hidden rounded-full bg-neutral-200">
                             <div
                               className="h-full rounded-full bg-brand-soft transition-all duration-300"
-                              style={{ width: `${progressPct}%` }}
+                              style={{ width: `${progress.elapsedPct}%` }}
                             />
                           </div>
                           <p className="font-semibold text-amber-700">
-                            ⏳ {Math.max(0, daysUntilFeatured ?? 0)} day
-                            {Math.max(0, daysUntilFeatured ?? 0) === 1 ? "" : "s"}{" "}
-                            left in New ({progressPct}% elapsed)
+                            {progress.ended
+                              ? "✅ New Arrivals period complete — now in All Products"
+                              : `⏳ ${timeLeftLabel(progress.daysLeft, progress.hoursLeft)} left in New (${progress.elapsedPct}% elapsed)`}
                           </p>
                         </>
                       ) : null}

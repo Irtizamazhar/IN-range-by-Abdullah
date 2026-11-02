@@ -7,7 +7,7 @@ import ts from "typescript";
 import React from "react";
 import * as nextServer from "next/server";
 import { HOME_ALL_PRODUCTS_LIMIT, homeAllProductRows, homeAllProductsWhere } from "../lib/home-all-products";
-import { NEW_ARRIVAL_WINDOW_DAYS, isProductInNewArrivalsWindow, newArrivalsWindowStart } from "../lib/product-new-arrival-window";
+import { NEW_ARRIVAL_WINDOW_DAYS, isProductInNewArrivalsWindow, newArrivalsProgress, newArrivalsWindowEnd, newArrivalsWindowStart } from "../lib/product-new-arrival-window";
 import { syncVendorProductStorefront } from "../lib/sync-vendor-product-storefront";
 import type { ProductCardData } from "../components/user/ProductCard";
 
@@ -78,6 +78,23 @@ test("New Arrivals keeps products for 14 full days (unchanged)", async () => {
   assert.equal(isProductInNewArrivalsWindow(new Date(ago(336).getTime() - 1), NOW), false);
   const ids = await newArrivalIds([row("one-day", 24), row("thirteen-days", 13 * 24), row("fifteen-days", 15 * 24), row("inactive", 2, { isActive: false })]);
   assert.deepEqual(ids, ["one-day", "thirteen-days"]);
+});
+
+test("vendor countdown through New Arrivals moves hour by hour", () => {
+  const at = (hoursAgo: number) => newArrivalsProgress(ago(hoursAgo), NOW);
+  assert.deepEqual(at(0), { ended: false, daysLeft: 14, hoursLeft: 0, elapsedPct: 0 });
+  // The screenshot case: about 22 hours after publishing it no longer says "14 days, 0%".
+  assert.deepEqual(at(22), { ended: false, daysLeft: 13, hoursLeft: 2, elapsedPct: 6 });
+  assert.deepEqual(at(24), { ended: false, daysLeft: 13, hoursLeft: 0, elapsedPct: 7 });
+  assert.deepEqual(at(168), { ended: false, daysLeft: 7, hoursLeft: 0, elapsedPct: 50 });
+  assert.deepEqual(at(335.5), { ended: false, daysLeft: 0, hoursLeft: 1, elapsedPct: 99 });
+  assert.equal(at(336).ended, false);
+  assert.deepEqual(newArrivalsProgress(new Date(ago(336).getTime() - 1), NOW), { ended: true, daysLeft: 0, hoursLeft: 0, elapsedPct: 100 });
+  assert.equal(newArrivalsWindowEnd(ago(0)).getTime(), NOW.getTime() + 336 * HOUR);
+  // The countdown ends exactly when the product leaves New Arrivals.
+  for (const hours of [335, 336, 336.001, 400]) {
+    assert.equal(at(hours).ended, !isProductInNewArrivalsWindow(ago(hours), NOW), String(hours));
+  }
 });
 
 test("All Products never includes products younger than 14 days and has no fallback", async () => {
