@@ -168,9 +168,9 @@ async function getNewArrivalsInitial(): Promise<{
 
 /* =========================================================
    ALL PRODUCTS
-   Only products past their 14-day New Arrivals period (see
-   lib/home-all-products.ts). Newer products never fill this
-   section.
+   Latest active products, new ones included (see
+   lib/home-all-products.ts); cards show a "New" tag during the
+   14-day New Arrivals period.
 ========================================================= */
 
 async function getHomeAllProducts(): Promise<ProductCardData[]> {

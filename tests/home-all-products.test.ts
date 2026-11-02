@@ -43,7 +43,7 @@ function fakeDb(rows: Row[]) {
 }
 
 const allProducts = async (rows: Row[]) =>
-  (await homeAllProductRows(NOW, fakeDb(rows) as unknown as Parameters<typeof homeAllProductRows>[1])).map((product) => product.id);
+  (await homeAllProductRows(fakeDb(rows) as unknown as Parameters<typeof homeAllProductRows>[0])).map((product) => product.id);
 
 const require = createRequire(import.meta.url);
 function load(file: string, modules: Record<string, unknown>) {
@@ -97,42 +97,38 @@ test("vendor countdown through New Arrivals moves hour by hour", () => {
   }
 });
 
-test("All Products never includes products younger than 14 days and has no fallback", async () => {
+test("All Products shows new products right away, alongside older ones", async () => {
   const nineUploadedToday = Array.from({ length: 9 }, (_, index) => row(`today-${index}`, index + 1));
-  assert.deepEqual(await allProducts(nineUploadedToday), []);
-  assert.deepEqual(await allProducts([row("thirteen-days", 13 * 24), row("335h", 335), row("one-day", 24)]), []);
-  // Eligible products never pull younger ones in to fill the section.
-  assert.deepEqual(await allProducts([...nineUploadedToday, row("old", 20 * 24)]), ["old"]);
-});
-
-test("a product becomes eligible as soon as it completes 336 hours", async () => {
-  const exactly = ago(336);
-  assert.deepEqual(await allProducts([{ ...row("boundary", 0), createdAt: exactly }]), []);
-  assert.deepEqual(await allProducts([{ ...row("just-completed", 0), createdAt: new Date(exactly.getTime() - 1) }]), ["just-completed"]);
-  // The same instant is never in both sections.
-  for (const createdAt of [exactly, new Date(exactly.getTime() - 1), new Date(exactly.getTime() + 1)]) {
-    const inNew = isProductInNewArrivalsWindow(createdAt, NOW);
-    const inAll = (await allProducts([{ ...row("x", 0), createdAt }])).length === 1;
-    assert.notEqual(inNew, inAll, createdAt.toISOString());
-  }
-  assert.deepEqual(await allProducts([row("fifteen-days", 15 * 24)]), ["fifteen-days"]);
+  assert.deepEqual(await allProducts(nineUploadedToday), nineUploadedToday.map((product) => product.id));
+  assert.deepEqual(await allProducts([row("old", 20 * 24), row("one-day", 24), row("thirteen-days", 13 * 24)]), ["one-day", "thirteen-days", "old"]);
+  assert.equal(JSON.stringify(homeAllProductsWhere).includes("createdAt"), false);
 });
 
 test("Best Seller status has no influence on All Products", async () => {
-  assert.deepEqual(await allProducts([row("new-best-seller", 24, { isBestSeller: true })]), []);
-  const ids = await allProducts([row("old-plain", 20 * 24), row("older-best-seller", 30 * 24, { isBestSeller: true }), row("new-best-seller", 2, { isBestSeller: true })]);
-  assert.deepEqual(ids, ["old-plain", "older-best-seller"]);
-  assert.equal(JSON.stringify(homeAllProductsWhere(NOW)).includes("isBestSeller"), false);
+  const ids = await allProducts([row("old-plain", 20 * 24), row("older-best-seller", 30 * 24, { isBestSeller: true }), row("new-plain", 2)]);
+  assert.deepEqual(ids, ["new-plain", "old-plain", "older-best-seller"]);
+  assert.equal(JSON.stringify(homeAllProductsWhere).includes("isBestSeller"), false);
 });
 
 test("All Products is newest first, active only, and capped at 12", async () => {
   assert.equal(HOME_ALL_PRODUCTS_LIMIT, 12);
-  const old = Array.from({ length: 15 }, (_, index) => row(`old-${index}`, (15 + index) * 24));
-  const ids = await allProducts([...old].reverse().concat(row("inactive-old", 15 * 24, { isActive: false })));
-  assert.deepEqual(ids, old.slice(0, 12).map((product) => product.id));
+  const products = Array.from({ length: 15 }, (_, index) => row(`p-${index}`, index * 30));
+  const ids = await allProducts([...products].reverse().concat(row("inactive-new", 0.5, { isActive: false })));
+  assert.deepEqual(ids, products.slice(0, 12).map((product) => product.id));
 });
 
-test("homepage All Products section is hidden when empty and shows up to 12 cards", () => {
+test("the New tag lasts exactly the 14-day New Arrivals period", () => {
+  // HomeProductCard shows "New" while isProductInNewArrivalsWindow is true, the same rule New Arrivals uses.
+  const card = readFileSync("components/user/HomeProductCard.tsx", "utf8");
+  assert.ok(card.includes("const isNew = showNewTag && !!product.createdAt && isProductInNewArrivalsWindow(new Date(product.createdAt));"));
+  assert.equal(isProductInNewArrivalsWindow(ago(1), NOW), true);
+  assert.equal(isProductInNewArrivalsWindow(ago(13 * 24), NOW), true);
+  assert.equal(isProductInNewArrivalsWindow(ago(336), NOW), true);
+  assert.equal(isProductInNewArrivalsWindow(new Date(ago(336).getTime() - 1), NOW), false);
+  assert.equal(isProductInNewArrivalsWindow(ago(20 * 24), NOW), false);
+});
+
+test("homepage All Products is hidden when empty and shows up to 12 cards with the New tag enabled", () => {
   const HomeProductCard = () => null;
   const exported: Record<string, unknown> = {};
   const js = ts.transpileModule(readFileSync("components/user/HomeMarketplace.tsx", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React } }).outputText;
@@ -157,6 +153,7 @@ test("homepage All Products section is hidden when empty and shows up to 12 card
   };
   walk(HomeAllProducts({ products }));
   assert.equal(cards.length, 12);
+  assert.ok(cards.every((card) => (card as { props: { showNewTag?: boolean } }).props.showNewTag === true));
 });
 
 test("/products keeps listing newly uploaded products", async () => {

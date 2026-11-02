@@ -11,6 +11,7 @@ import { formatPKR } from "@/lib/format";
 import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 import { displayDiscount } from "@/lib/product-discount";
 import { showCartSuccessToast } from "@/lib/cart-success-toast";
+import { isProductInNewArrivalsWindow } from "@/lib/product-new-arrival-window";
 import type { ProductCardData } from "./ProductCard";
 
 /** Grid shared by every home product row: two columns on mobile. */
@@ -21,14 +22,13 @@ const SIZES = "(min-width: 1280px) 16vw, (min-width: 1024px) 20vw, (min-width: 7
 // Lift and green border only where a real pointer can hover; touch gets a press effect instead.
 const hoverLift = "[@media(hover:hover)]:hover:-translate-y-[3px] [@media(hover:hover)]:hover:border-emerald-400 [@media(hover:hover)]:hover:shadow-[0_10px_24px_rgba(17,17,17,.08)]";
 
-const NEW_FOR_MS = 14 * 24 * 60 * 60 * 1000;
 const card = "relative isolate flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-[#E3EBDB] bg-white shadow-[0_2px_8px_rgba(17,17,17,.04)]";
 const featuredCard = "relative isolate flex h-full min-w-0 flex-col overflow-hidden rounded-[20px] border border-[#E3EBDB] bg-white shadow-[0_4px_16px_rgba(17,17,17,.05)]";
 
 /**
- * Compact product card shared by the home product rows (Featured Products, New Arrivals). Other pages keep
+ * Compact product card shared by the home product rows (All Products, New Arrivals). Other pages keep
  * the original ProductCard; this one reuses the same cart and wishlist hooks so behaviour stays identical.
- * `showNewTag` adds a "New" tag for products created in the last 14 days.
+ * `showNewTag` adds a "New" tag while the product is in its 14-day New Arrivals period.
  */
 export const HomeProductCard = memo(function HomeProductCard({ product, showNewTag = false, featured = false }: { product: ProductCardData & { createdAt?: string | Date }; showNewTag?: boolean; featured?: boolean }) {
   const { items, addItem } = useCart();
@@ -44,7 +44,7 @@ export const HomeProductCard = memo(function HomeProductCard({ product, showNewT
 
   // Worked out from the prices, never the stored discountPercent (which produced "0%" and "-100%" badges).
   const discount = displayDiscount(product.price, product.originalPrice);
-  const isNew = showNewTag && !!product.createdAt && Date.now() - new Date(product.createdAt).getTime() < NEW_FOR_MS;
+  const isNew = showNewTag && !!product.createdAt && isProductInNewArrivalsWindow(new Date(product.createdAt));
   const reviews = Math.max(0, Math.floor(Number(product.reviewCount) || 0));
   const rating = Math.max(0, Math.min(5, Number(product.ratingAvg) || 0));
 

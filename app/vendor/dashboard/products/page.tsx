@@ -210,7 +210,7 @@ export default async function VendorProductsPage() {
 
                     <div className="space-y-1 text-xs text-neutral-600">
                       <p>📅 Listed: {uploadedOnLabel ?? "Not published yet"}</p>
-                      <p>🚀 Featured on: {featuredOnLabel ?? "Pending publish"}</p>
+                      <p>🏷️ New tag until: {featuredOnLabel ?? "Pending publish"}</p>
                       {progress ? (
                         <>
                           <div className="mt-1 h-2.5 w-full overflow-hidden rounded-full bg-neutral-200">
@@ -221,7 +221,7 @@ export default async function VendorProductsPage() {
                           </div>
                           <p className="font-semibold text-amber-700">
                             {progress.ended
-                              ? "✅ New Arrivals period complete — now in All Products"
+                              ? "✅ New Arrivals period complete — New tag removed"
                               : `⏳ ${timeLeftLabel(progress.daysLeft, progress.hoursLeft)} left in New (${progress.elapsedPct}% elapsed)`}
                           </p>
                         </>

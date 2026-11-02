@@ -56,10 +56,10 @@ export function HomeMarketplace({ services, gifts, stores }: { services: PublicS
   </section>
 </div>; }
 
-/** Products past their New Arrivals period (already limited to 12 by lib/home-all-products); hidden entirely when there are none. */
+/** Latest active products (already limited to 12 by lib/home-all-products); products under 14 days old show a "New" tag. Hidden when there are none. */
 export function HomeAllProducts({ products }: { products: ProductCardData[] }) { if (!products.length) return null; return <div className="mx-auto max-w-site px-4 py-10 sm:px-6">
   <section id="all-products" aria-labelledby="all-products-heading">
     <header className="mb-4 flex flex-wrap items-center justify-between gap-2"><h2 id="all-products-heading" className="text-xl font-black tracking-tight text-emerald-950 min-[400px]:text-2xl sm:text-3xl">All Products</h2><Link href="/products" className={HOME_VIEW_BUTTON}>View all products →</Link></header>
-    <div className={HOME_PRODUCT_GRID}>{products.map(product => <HomeProductCard key={product._id} product={product} featured />)}</div>
+    <div className={HOME_PRODUCT_GRID}>{products.map(product => <HomeProductCard key={product._id} product={product} featured showNewTag />)}</div>
   </section>
 </div>; }
