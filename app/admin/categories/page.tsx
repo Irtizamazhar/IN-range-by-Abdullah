@@ -5,7 +5,7 @@ import { LoadingForm } from "@/components/ui/LoadingForm";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import Image from "next/image";
-import { ClipboardEvent, FormEvent, useEffect, useMemo, useState } from "react";
+import { ClipboardEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 import toast from "react-hot-toast";
 
@@ -33,6 +33,8 @@ export default function AdminCategoriesPage() {
   const [filePreviewUrl, setFilePreviewUrl] = useState("");
   const [showOnHome, setShowOnHome] = useState(false);
   const [togglingId, setTogglingId] = useState<number | null>(null);
+  const formHeading = useRef<HTMLHeadingElement>(null);
+  const nameInput = useRef<HTMLInputElement>(null);
 
   const editingCategory = useMemo(
     () => categories.find((c) => c.id === editingId) || null,
@@ -87,7 +89,9 @@ export default function AdminCategoriesPage() {
     setImageUrl(category.image);
     setImageFile(null);
     setShowOnHome(category.showOnHome === true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    // The admin shell scrolls an inner panel, not the window, so scroll the form itself into view.
+    formHeading.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    nameInput.current?.focus({ preventScroll: true });
   }
 
   async function uploadCategoryImage(file: File) {
@@ -205,7 +209,7 @@ export default function AdminCategoriesPage() {
         onPaste={onImagePaste}
         className="mb-8 space-y-4 rounded-card border border-borderGray bg-white p-6 shadow-card"
       >
-        <h2 className="text-lg font-bold text-darkText">
+        <h2 ref={formHeading} className="scroll-mt-6 text-lg font-bold text-darkText">
           {mode === "add" ? "Add New Category" : "Edit Category"}
         </h2>
 
@@ -214,6 +218,7 @@ export default function AdminCategoriesPage() {
             Category name
           </label>
           <input
+            ref={nameInput}
             type="text"
             className="w-full rounded-xl border border-borderGray px-4 py-2"
             value={name}
@@ -318,7 +323,14 @@ export default function AdminCategoriesPage() {
       </LoadingForm>
 
       <div className="rounded-card border border-borderGray bg-white p-4 shadow-card">
-        <h2 className="mb-4 text-lg font-bold text-darkText">All Categories</h2>
+        <h2 className="mb-4 text-lg font-bold text-darkText">
+          All Categories
+          {!loading ? (
+            <span className="ml-2 rounded-full bg-brand-primary/20 px-2.5 py-0.5 align-middle text-sm font-semibold text-darkText">
+              {categories.length} {categories.length === 1 ? "category" : "categories"}
+            </span>
+          ) : null}
+        </h2>
 
         {loading ? (
           <PageSkeleton rows={3} />
