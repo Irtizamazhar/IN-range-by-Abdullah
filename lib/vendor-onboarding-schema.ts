@@ -49,7 +49,9 @@ const draftStrings = {
   returnPhone:text(20),bankName:text(120),accountTitle:text(200),accountNumber:text(40),iban:text(34),
 };
 export const vendorSetupDraftSchema = z.object({...draftStrings,businessType:z.enum(["individual","company"]),
-  returnSameAsPickup:bool,step,declarationAccepted:bool}).partial();
+  returnSameAsPickup:bool,step,declarationAccepted:bool,
+  // Set by the server from uploaded files, never from form fields.
+  documentNames:z.record(z.enum(["cnic_front","cnic_back","license"]),text(120))}).partial();
 export type VendorSetup = z.infer<typeof vendorSetupSchema>;
 export type VendorSetupDraft = z.infer<typeof vendorSetupDraftSchema>;
 export const SETUP_STEP_KEYS = [

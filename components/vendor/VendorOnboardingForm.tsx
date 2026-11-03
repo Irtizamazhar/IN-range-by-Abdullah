@@ -3,13 +3,13 @@ import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { LoadingForm } from "@/components/ui/LoadingForm";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import Link from "@/components/ui/LoadingLink";
 import { useLoadingRouter as useRouter } from "@/hooks/useLoadingRouter";
 import { LogoMark } from "@/components/user/LogoMark";
 import { CnicInput } from "@/components/ui/CnicInput";
 import { PakistanMobileInput } from "@/components/ui/PakistanMobileInput";
 import { PakistanCitySelect } from "@/components/ui/PakistanCitySelect";
-import { ArrowRight, Check, ChevronLeft, ClipboardCheck, IdCard, Landmark, Store, Truck, Upload } from "lucide-react";
+import { ArrowRight, Check, CheckCircle2, ChevronLeft, ClipboardCheck, Eye, FileText, IdCard, Image as ImageIcon, Landmark, Loader2, Store, Truck, Upload } from "lucide-react";
+import { ImageLightbox } from "@/components/ui/ImageLightbox";
 import { normalizePakistanMobile, formatPakistanMobileInput } from "@/lib/pakistan-phone";
 import { PAKISTAN_BANK_OPTIONS } from "@/lib/pakistan-banks";
 import { PAKISTAN_PROVINCES, provinceForCity } from "@/lib/pakistan-city-province";
@@ -65,7 +65,10 @@ export function VendorOnboardingForm() {
   const [current, setCurrent] = useState(0);
   const [fromReview, setFromReview] = useState(false);
   const [docs, setDocs] = useState<Doc[]>([]);
-  const [files, setFiles] = useState<Record<string, File>>({});
+  const [docNames, setDocNames] = useState<Record<string, string>>({});
+  const [uploading, setUploading] = useState<Record<string, boolean>>({});
+  const [preview, setPreview] = useState<string | null>(null);
+  const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
   const [categories, setCategories] = useState<string[]>([]);
   const [showPhone, setShowPhone] = useState(false);
   const [bankOther, setBankOther] = useState(false);
@@ -106,6 +109,7 @@ export function VendorOnboardingForm() {
       setShowPhone(!normalizePakistanMobile(str(loaded.phone)));
       setBankOther(Boolean(str(loaded.bankName)) && !(PAKISTAN_BANK_OPTIONS as readonly string[]).includes(str(loaded.bankName)));
       setDocs(Array.isArray(v.documents) ? v.documents : []);
+      setDocNames(saved.documentNames && typeof saved.documentNames === "object" ? saved.documentNames as Record<string, string> : {});
       setCurrent(Math.max(0, Math.min(4, Number(saved.step) || 0)));
       setRejection(str(v.rejectionReason));
       setLoadError("");
@@ -143,19 +147,42 @@ export function VendorOnboardingForm() {
     const province = provinceForCity(city);
     return province && province !== v[provinceKey] ? { [provinceKey]: province } : {};
   }
-  function chooseFile(type: string, file: File | undefined) {
-    if (!file) return;
+  /** Uploads one document straight away through the existing onboarding save, so its card appears only after the server stores it. */
+  async function uploadFile(type: string, file: File | undefined) {
+    if (!file || uploading[type]) return;
     if (!DOC_TYPES.includes(file.type) || file.size > MAX_DOC_BYTES) {
       setErrors(e => ({ ...e, [type]: "Use a JPG, PNG or WebP image under 5MB." }));
       return;
     }
-    setFiles(f => ({ ...f, [type]: file }));
     setErrors(e => ({ ...e, [type]: "", documents: "" }));
+    setUploading(u => ({ ...u, [type]: true }));
+    try {
+      const form = new FormData();
+      form.set("step", String(current));
+      form.set(type, file);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), SAVE_TIMEOUT_MS);
+      let r: Response;
+      let d: { ok?: boolean; error?: string; documents?: Doc[] } | null;
+      try {
+        r = await fetch("/api/vendor/onboarding", { method: "PATCH", body: form, signal: controller.signal, credentials: "same-origin" });
+        d = await r.json().catch(() => null);
+      } finally { clearTimeout(timeout); }
+      if (r.status === 401) throw Error("Your session has expired. Sign in again, then upload this image.");
+      if (!r.ok || d?.ok !== true || !Array.isArray(d.documents)) throw Error(typeof d?.error === "string" ? d.error : "Upload failed. Please try again.");
+      setDocs(d.documents);
+      setDocNames(n => ({ ...n, [type]: file.name }));
+      if (saveError) { setMessage(""); setSaveError(false); }
+    } catch (e) {
+      setErrors(er => ({ ...er, [type]: e instanceof Error && e.name === "AbortError" ? "Upload timed out. Please try again." : e instanceof Error ? e.message : "Upload failed. Please try again." }));
+    } finally {
+      setUploading(u => ({ ...u, [type]: false }));
+    }
   }
 
   function clientErrors(payload: Values, step: number) {
     const fieldErrors = setupStepErrors(payload, step);
-    if (step === 1) for (const type of requiredDocs(payload)) if (!files[type] && !docs.some(doc => doc.documentType === type)) fieldErrors[type] = "Upload this side to continue.";
+    if (step === 1) for (const type of requiredDocs(payload)) if (!docs.some(doc => doc.documentType === type)) fieldErrors[type] = "Upload this side to continue.";
     return fieldErrors;
   }
 
@@ -189,7 +216,6 @@ export function VendorOnboardingForm() {
       form.set("step", String(target));
       // The server re-validates the step being left; a jump back to Review is saved as a draft after the client check.
       if (mode === "continue" && !jumpToReview) { form.set("intent", "continue"); form.set("currentStep", String(current)); }
-      for (const [key, file] of Object.entries(files)) form.set(key, file);
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), SAVE_TIMEOUT_MS);
       let r: Response;
@@ -208,7 +234,7 @@ export function VendorOnboardingForm() {
       }
       if (d?.ok !== true) throw Error("The server did not confirm your save. Please try again.");
       if (mode === "submit") { await router.push("/vendor/status"); return true; }
-      if (d.documents) { setDocs(d.documents); setFiles({}); }
+      if (d.documents) setDocs(d.documents);
       setValues(payload);
       // A new seller's pickup default follows the business address they just entered.
       if (target === 2 && !pickupChosen.current) { pickupChosen.current = true; setToggles(t => ({ ...t, pickupFromShop: businessAddressComplete(payload) })); }
@@ -273,22 +299,59 @@ export function VendorOnboardingForm() {
     </label>;
   const note = (children: ReactNode) => <p className="rounded-lg bg-[#e9f5ee] px-4 py-2.5 text-xs font-medium text-[#0f5c3e]">{children}</p>;
 
+  const latestDoc = (type: string) => docs.filter(d => d.documentType === type).slice(-1)[0];
+  const docUrl = (doc: Doc) => "/api/private/vendor-documents/" + encodeURIComponent(doc.id);
+
   function docUpload(type: string) {
-    const selected = files[type];
-    const uploaded = docs.filter(d => d.documentType === type).slice(-1)[0];
+    const uploaded = latestDoc(type);
+    const busyUpload = Boolean(uploading[type]);
     return <div key={type} className="min-w-0">
-      <label className={"flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border bg-[#f6faf8] px-4 py-3 focus-within:ring-2 focus-within:ring-[#0f5c3e]/30 " + (errors[type] ? "border-red-500" : "border-[#e1ece6]")}>
-        {selected || uploaded ? <Check className="h-5 w-5 shrink-0 text-[#0f5c3e]" aria-hidden /> : <Upload className="h-5 w-5 shrink-0 text-[#0f5c3e]" aria-hidden />}
+      <label aria-busy={busyUpload || undefined} className={"flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border bg-[#f6faf8] px-4 py-3 focus-within:ring-2 focus-within:ring-[#0f5c3e]/30 " + (errors[type] ? "border-red-500" : "border-[#e1ece6]") + (busyUpload ? " cursor-wait" : "")}>
+        {busyUpload ? <Loader2 className="h-5 w-5 shrink-0 animate-spin text-[#0f5c3e]" aria-hidden /> : uploaded ? <Check className="h-5 w-5 shrink-0 text-[#0f5c3e]" aria-hidden /> : <Upload className="h-5 w-5 shrink-0 text-[#0f5c3e]" aria-hidden />}
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-semibold text-[#12352a]">{DOC_LABELS[type]}</span>
-          <span className="block truncate text-xs text-neutral-500">{selected ? selected.name : uploaded ? "Uploaded" : "JPG, PNG or WebP Â· max 5MB"}</span>
+          <span className="block truncate text-xs text-neutral-500" role={busyUpload ? "status" : undefined}>{busyUpload ? "Uploading…" : uploaded ? "Uploaded" : "JPG, PNG or WebP · max 5MB"}</span>
         </span>
-        <span className="shrink-0 rounded-md bg-[#e1f0e7] px-2.5 py-1 text-xs font-semibold text-[#0f5c3e]">{selected || uploaded ? "Replace" : "Upload"}</span>
-        <input type="file" name={type} accept={DOC_TYPES.join(",")} className="sr-only" aria-invalid={Boolean(errors[type]) || undefined} aria-describedby={errors[type] ? `${type}-error` : undefined} onChange={e => { chooseFile(type, e.target.files?.[0]); e.target.value = ""; }} />
+        <span className="shrink-0 rounded-md bg-[#e1f0e7] px-2.5 py-1 text-xs font-semibold text-[#0f5c3e]">{uploaded ? "Replace" : "Upload"}</span>
+        <input ref={node => { fileInputs.current[type] = node; }} type="file" name={type} disabled={busyUpload} accept={DOC_TYPES.join(",")} className="sr-only" aria-label={`${uploaded ? "Replace" : "Upload"} ${DOC_LABELS[type]}`} aria-invalid={Boolean(errors[type]) || undefined} aria-describedby={errors[type] ? `${type}-error` : undefined} onChange={e => { void uploadFile(type, e.target.files?.[0]); e.target.value = ""; }} />
       </label>
-      {uploaded && !selected && <Link href={"/api/private/vendor-documents/" + uploaded.id} target="_blank" className="mt-1 inline-block text-xs font-semibold text-[#0f5c3e] underline">View uploaded</Link>}
+      {uploaded && !busyUpload && <button type="button" onClick={() => setPreview(type)} className="mt-1 text-xs font-semibold text-[#0f5c3e] underline">View uploaded</button>}
       {errors[type] && <p id={`${type}-error`} className="mt-1 text-xs font-medium text-red-700">{errors[type]}</p>}
     </div>;
+  }
+
+  /** Cards appear only for CNIC sides the server has stored; a replacement has a new id, so the old image is never shown. */
+  function uploadedCnicCards() {
+    const cards = (["cnic_front", "cnic_back"] as const).flatMap(type => { const doc = latestDoc(type); return doc ? [{ type, doc }] : []; });
+    if (!cards.length) return null;
+    return <section aria-labelledby="uploaded-cnic-title" className="border-t border-[#e1ece6] pt-5">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h2 id="uploaded-cnic-title" className="flex items-center gap-2.5 text-base font-bold text-[#12352a]">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#e9f5ee] text-[#0f5c3e]"><ImageIcon className="h-4 w-4" aria-hidden /></span>
+          Uploaded CNIC cards
+        </h2>
+        <p className="text-xs text-neutral-500">You can preview or replace your uploaded documents.</p>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {cards.map(({ type, doc }) => <article key={doc.id} className="flex min-w-0 flex-col gap-3 rounded-xl border border-[#e1ece6] bg-white p-3 shadow-sm min-[420px]:flex-row min-[420px]:items-center">
+          <button type="button" onClick={() => setPreview(type)} aria-label={`View CNIC ${type === "cnic_front" ? "front" : "back"} side`} className="relative aspect-[1.58] w-full shrink-0 overflow-hidden rounded-lg border border-[#e1ece6] bg-[#f6faf8] min-[420px]:w-36">
+            {/* Private, session-protected image: next/image would proxy it through the public optimizer. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={docUrl(doc)} alt={`Uploaded CNIC ${type === "cnic_front" ? "front" : "back"} side`} loading="lazy" className="h-full w-full object-cover" />
+            {uploading[type] && <span className="absolute inset-0 flex items-center justify-center bg-white/70"><Loader2 className="h-6 w-6 animate-spin text-[#0f5c3e]" aria-hidden /></span>}
+          </button>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-sm font-semibold text-[#12352a]">CNIC {type === "cnic_front" ? "Front" : "Back"} Side</h3>
+            <p className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-[#2f8a3a]"><CheckCircle2 className="h-4 w-4" aria-hidden />Uploaded</p>
+            <p className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-neutral-500"><FileText className="h-3.5 w-3.5 shrink-0" aria-hidden /><span className="truncate">{docNames[type] || "Uploaded image"}</span></p>
+            <div className="mt-3 flex gap-2">
+              <button type="button" onClick={() => setPreview(type)} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-[#0f5c3e] px-3 text-xs font-semibold text-white hover:bg-[#0b4a31]"><Eye className="h-4 w-4" aria-hidden />View</button>
+              <button type="button" disabled={uploading[type]} onClick={() => fileInputs.current[type]?.click()} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-[#c9dccf] px-3 text-xs font-semibold text-[#0f5c3e] hover:bg-[#f6faf8] disabled:opacity-60"><Upload className="h-4 w-4" aria-hidden />{uploading[type] ? "Uploading…" : "Replace"}</button>
+            </div>
+          </div>
+        </article>)}
+      </div>
+    </section>;
   }
 
   const isCompany = values.businessType === "company";
@@ -326,6 +389,7 @@ export function VendorOnboardingForm() {
         <div className="grid gap-3 sm:grid-cols-2">{requiredDocs(values).map(docUpload)}</div>
         {errors.documents && <p id="documents-error" className="mt-2 text-xs font-medium text-red-700">{errors.documents}</p>}
       </div>
+      {uploadedCnicCards()}
       {note(isCompany ? "Documents are private and only seen by our verification team." : "Registered business? Change seller type in Step 1 to add its documents.")}
     </div>;
 
@@ -334,7 +398,7 @@ export function VendorOnboardingForm() {
       return <div className="space-y-3">
         {toggle("pickupFromShop", "Pickup from my shop address", shopLine || "Add your shop address in Step 1", toggles.pickupFromShop, on => { pickupChosen.current = true; setToggles(t => ({ ...t, pickupFromShop: on })); })}
         {!toggles.pickupFromShop && <div className="rounded-xl border border-[#e1ece6] p-4">{addressBlock("pickup")}</div>}
-        {toggle("contactFromAccount", "Use my contact for pickup", [str(values.name), phoneLabel].filter(Boolean).join(" Â· "), toggles.contactFromAccount, on => setToggles(t => ({ ...t, contactFromAccount: on })))}
+        {toggle("contactFromAccount", "Use my contact for pickup", [str(values.name), phoneLabel].filter(Boolean).join(" · "), toggles.contactFromAccount, on => setToggles(t => ({ ...t, contactFromAccount: on })))}
         {!toggles.contactFromAccount && <div className="grid gap-4 rounded-xl border border-[#e1ece6] p-4 sm:grid-cols-2">{text("pickupContactName", "Contact person")}{phone("pickupPhone", "Contact phone")}</div>}
         {toggle("returnSameAsPickup", "Return address same as pickup", "", Boolean(values.returnSameAsPickup), on => change("returnSameAsPickup", on))}
         {!values.returnSameAsPickup && <div className="space-y-4 rounded-xl border border-[#e1ece6] p-4">{addressBlock("return")}<div className="grid gap-4 sm:grid-cols-2">{text("returnContactName", "Contact person")}{phone("returnPhone", "Contact phone")}</div></div>}
@@ -369,10 +433,10 @@ export function VendorOnboardingForm() {
     const cardErr = (step: number) => Object.keys(errors).some(key => errors[key] && stepOfField(key) === step);
     const pickupSummary = toggles.pickupFromShop ? "Shop address" : str(values.pickupCity) || "Not added";
     const cards = [
-      { step: 0, title: "Shop", line: [str(values.shopName), str(values.category)].filter(Boolean).join(" Â· ") || "Not added" },
-      { step: 1, title: "Identity", line: `CNIC ${maskCnic(str(values.cnic))} Â· ${requiredDocs(values).filter(t => docs.some(d => d.documentType === t)).length}/${requiredDocs(values).length} documents` },
-      { step: 2, title: "Pickup & Return", line: `${pickupSummary} Â· ${values.returnSameAsPickup ? "Same returns" : "Separate returns"}` },
-      { step: 3, title: "Payout", line: `${str(values.bankName) || "No bank"} Â· ${maskAccount(str(values.iban) || str(values.accountNumber))}` },
+      { step: 0, title: "Shop", line: [str(values.shopName), str(values.category)].filter(Boolean).join(" · ") || "Not added" },
+      { step: 1, title: "Identity", line: `CNIC ${maskCnic(str(values.cnic))} · ${requiredDocs(values).filter(t => docs.some(d => d.documentType === t)).length}/${requiredDocs(values).length} documents` },
+      { step: 2, title: "Pickup & Return", line: `${pickupSummary} · ${values.returnSameAsPickup ? "Same returns" : "Separate returns"}` },
+      { step: 3, title: "Payout", line: `${str(values.bankName) || "No bank"} · ${maskAccount(str(values.iban) || str(values.accountNumber))}` },
     ];
     return <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2">
@@ -432,12 +496,13 @@ export function VendorOnboardingForm() {
             {message && <p role={saveError ? "alert" : "status"} aria-live="polite" className={"mt-5 rounded-xl px-4 py-3 text-sm " + (saveError ? "bg-red-50 text-red-800" : "bg-[#e9f5ee] text-[#0f5c3e]")}>{message}</p>}
             <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
               {current > 0 && <LoadingButton type="button" loadingLabel="Saving…" disabled={busy} onClick={() => save("draft", current - 1)} className="hidden min-h-12 rounded-xl px-5 text-sm font-semibold text-[#0f5c3e] hover:bg-[#e9f5ee] sm:inline-flex sm:items-center">Back</LoadingButton>}
-              <LoadingButton type="submit" loadingLabel={current === 4 ? "Submitting…" : "Saving…"} disabled={busy} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#0f5c3e] px-6 text-sm font-semibold text-white transition hover:bg-[#0b4a31] disabled:opacity-60 sm:w-auto">
+              <LoadingButton type="submit" loadingLabel={current === 4 ? "Submitting…" : "Saving…"} disabled={busy || Object.values(uploading).some(Boolean)} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#0f5c3e] px-6 text-sm font-semibold text-white transition hover:bg-[#0b4a31] disabled:opacity-60 sm:w-auto">
                 {current === 4 ? <>Submit for Approval <Check className="h-4 w-4" aria-hidden /></> : <>{fromReview ? "Save & Review" : "Continue"} <ArrowRight className="h-4 w-4" aria-hidden /></>}
               </LoadingButton>
             </div>
           </LoadingForm>}
       </section>
     </div>
+    {preview && latestDoc(preview) && <ImageLightbox images={[docUrl(latestDoc(preview))]} title={preview === "license" ? "Registration document" : `CNIC ${preview === "cnic_front" ? "front" : "back"} side`} zoomable onClose={() => setPreview(null)} />}
   </Shell>;
 }

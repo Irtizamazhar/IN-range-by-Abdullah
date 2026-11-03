@@ -10,6 +10,10 @@ export { vendorSetupSchema, vendorSetupDraftSchema } from "@/lib/vendor-onboardi
 export function vendorSetupData(input: VendorSetupDraft, current: Prisma.JsonValue | null = null) {
   const details: Record<string, unknown> = current && typeof current === "object" && !Array.isArray(current) ? {...current} : {};
   for (const key of PRIVATE_SETUP_KEYS) if (input[key] !== undefined) details[key] = input[key];
+  if (input.documentNames) {
+    const saved = details.documentNames && typeof details.documentNames === "object" ? details.documentNames : {};
+    details.documentNames = {...saved, ...input.documentNames};
+  }
   const data: Prisma.VendorUpdateManyMutationInput = {onboardingData: details as Prisma.InputJsonObject};
   for (const key of ["phone","shopName","shopDescription","businessType","businessRegNo","address","city","cnic","bankName","accountTitle","accountNumber","iban"] as const)
     if (input[key] !== undefined) Object.assign(data, {[key]:input[key] || (["cnic","iban","businessRegNo"].includes(key) ? null : "")});

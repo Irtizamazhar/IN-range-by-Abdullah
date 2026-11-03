@@ -32,10 +32,11 @@ async function setupRequest(request: Request) {
   if (!request.headers.get("content-type")?.includes("multipart/form-data")) {
     const fields = await request.json();
     if (!fields || typeof fields !== "object" || Array.isArray(fields)) throw new ApiError(400, "Please supply your seller setup details.");
+    delete fields.documentNames;
     return { fields, files: [] };
   }
   const form = await request.formData();
-  const fields = Object.fromEntries(Array.from(form.entries()).filter(([, value]) => typeof value === "string"));
+  const fields: Record<string, unknown> = Object.fromEntries(Array.from(form.entries()).filter(([key, value]) => typeof value === "string" && key !== "documentNames"));
   const files = (["cnic_front", "cnic_back", "license"] as const).flatMap(type => {
     const file = form.get(type);
     // Node 18 supports Request.formData() but has no global File constructor.
@@ -48,6 +49,8 @@ async function setupRequest(request: Request) {
     }
     if (!imageExtension(Buffer.from(await file.arrayBuffer()), file.type)) throw new ApiError(400, "Document contents must match the image type.");
   }
+  // Keep the seller's original file name (display only) beside their private progress.
+  if (files.length) fields.documentNames = Object.fromEntries(files.map(({ type, file }) => [type, String(file.name || "document").replace(/[^\w.\- ()]/g, "_").slice(0, 120)]));
   return { fields, files };
 }
 

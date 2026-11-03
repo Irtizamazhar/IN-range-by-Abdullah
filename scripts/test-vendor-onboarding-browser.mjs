@@ -24,7 +24,7 @@ async function main() {
     } }],
   });
   const config = loadConfig(path.join(root, 'tailwind.config.ts'));
-  const styles = await postcss([tailwind({ ...config, content: [path.join(root, 'components/vendor/VendorOnboardingForm.tsx'), path.join(root, 'components/ui/Pakistan*.tsx')] })]).process('@tailwind base; @tailwind components; @tailwind utilities;', { from: undefined });
+  const styles = await postcss([tailwind({ ...config, content: [path.join(root, 'components/vendor/VendorOnboardingForm.tsx'), path.join(root, 'components/ui/Pakistan*.tsx'), path.join(root, 'components/ui/ImageLightbox.tsx')] })]).process('@tailwind base; @tailwind components; @tailwind utilities;', { from: undefined });
   const js = build.outputFiles.find(file => file.path.endsWith('.js')).text;
   const css = styles.css + '\n' + (build.outputFiles.find(file => file.path.endsWith('.css'))?.text || '');
   const server = http.createServer((req, res) => {
@@ -50,6 +50,8 @@ async function main() {
       let proxyError = false;
       let release;
       let hold = false;
+      const imageRequests = [];
+      await page.route('**/api/private/vendor-documents/*', route => { imageRequests.push(route.request().url()); return route.fulfill({ contentType: 'image/png', body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=', 'base64') }); });
       await page.route('**/api/categories', route => route.fulfill({ json: [{ id: 1, name: 'Mobiles & Accessories' }, { id: 2, name: 'Other' }] }));
       await page.route('**/api/vendor/onboarding', async route => {
         if (route.request().method() === 'GET') return route.fulfill({ json: { vendor: saved } });
@@ -62,8 +64,10 @@ async function main() {
         if (malformed) return route.fulfill({ json: {} });
         const values = Object.fromEntries(form);
         assert.equal('bankName' in values && values.bankName === 'null', false, 'nullable saved fields must never be persisted as literal null text');
-        saved = { ...saved, ...values, ownerName: values.name, primaryCategory: values.category, onboardingData: { ...values, step: Number(values.step), returnSameAsPickup: values.returnSameAsPickup === 'true' } };
-        for (const type of ['cnic_front', 'cnic_back', 'license']) if (form.get(type) && typeof form.get(type) !== 'string') saved.documents = [...saved.documents, { id: type + saved.documents.length, documentType: type }];
+        const text = Object.fromEntries(Object.entries(values).filter(([, value]) => typeof value === 'string'));
+        const names = { ...(saved.onboardingData.documentNames || {}) };
+        for (const type of ['cnic_front', 'cnic_back', 'license']) if (form.get(type) && typeof form.get(type) !== 'string') { saved.documents = [...saved.documents, { id: type + saved.documents.length, documentType: type }]; names[type] = form.get(type).name; }
+        saved = { ...saved, ...text, ...('name' in text ? { ownerName: text.name } : {}), ...('category' in text ? { primaryCategory: text.category } : {}), onboardingData: { ...saved.onboardingData, ...text, documentNames: names, step: Number(text.step), ...('returnSameAsPickup' in text ? { returnSameAsPickup: text.returnSameAsPickup === 'true' } : {}) } };
         if (route.request().method() === 'POST') return route.fulfill({ json: { ok: true, status: 'pending' } });
         return route.fulfill({ json: { ok: true, documents: saved.documents } });
       });
@@ -111,8 +115,41 @@ async function main() {
       await page.getByText('Upload this side to continue.').first().waitFor();
       await page.locator('input[name=cnic_front]').setInputFiles({ ...png, mimeType: 'application/pdf', name: 'x.pdf' });
       await page.getByText('Use a JPG, PNG or WebP image under 5MB.').waitFor();
+      // No cards before a successful upload; a failed upload shows an error and still no card.
+      assert.equal(await page.getByRole('heading', { name: 'Uploaded CNIC cards' }).count(), 0);
+      fail = true;
       await page.locator('input[name=cnic_front]').setInputFiles(png);
-      await page.locator('input[name=cnic_back]').setInputFiles(png);
+      await page.locator('#cnic_front-error').getByText('Setup could not be saved. Please retry.').waitFor();
+      assert.equal(await page.getByRole('heading', { name: 'Uploaded CNIC cards' }).count(), 0);
+      fail = false;
+      // Uploading shows a loader, then only the uploaded side gets a card.
+      hold = true;
+      await page.locator('input[name=cnic_front]').setInputFiles({ ...png, name: 'cnic-front.png' });
+      await page.getByText('Uploading…').first().waitFor();
+      hold = false; release();
+      await page.getByRole('heading', { name: 'CNIC Front Side' }).waitFor();
+      assert.equal(await page.getByRole('heading', { name: 'CNIC Back Side' }).count(), 0);
+      await page.getByText('cnic-front.png').waitFor();
+      await page.locator('input[name=cnic_back]').setInputFiles({ ...png, name: 'cnic-back.png' });
+      await page.getByRole('heading', { name: 'CNIC Back Side' }).waitFor();
+      assert.ok(saved.documents.length === 2 && saved.onboardingData.documentNames.cnic_back === 'cnic-back.png');
+      // View opens a zoomable, closable preview of the current image.
+      await page.getByRole('button', { name: 'View', exact: true }).first().click();
+      const dialog = page.getByRole('dialog');
+      await dialog.waitFor();
+      assert.match(await dialog.locator('img').getAttribute('src'), /cnic_front0$/);
+      await dialog.getByRole('button', { name: 'Zoom in' }).click();
+      await dialog.getByRole('button', { name: 'Zoom out' }).waitFor();
+      await shot('2-identity-preview');
+      await page.keyboard.press('Escape');
+      await dialog.waitFor({ state: 'detached' });
+      // Replace uses the card button, uploads, and the card switches to the new document.
+      const chooser = page.waitForEvent('filechooser');
+      await page.getByRole('button', { name: 'Replace', exact: true }).first().click();
+      await (await chooser).setFiles({ ...png, name: 'new-front.png' });
+      await page.getByText('new-front.png').waitFor();
+      const frontSrc = await page.getByRole('img', { name: 'Uploaded CNIC front side' }).getAttribute('src');
+      assert.match(frontSrc, /cnic_front2$/, 'replacement shows the new image, not the old one');
       await noOverflow(); await shot('2-identity');
       await cont.click();
 
