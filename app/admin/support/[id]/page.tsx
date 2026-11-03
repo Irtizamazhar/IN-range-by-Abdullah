@@ -22,16 +22,17 @@ type LocationRequestView = {
 /** Approve / reject a seller's registered-location change linked to this ticket. */
 function LocationRequestPanel({ ticketId, request, onReviewed }: { ticketId: string; request: LocationRequestView; onReviewed: () => Promise<void> }) {
   const [note, setNote] = useState("");
+  // In-page confirmation (styled like the panel) instead of the browser's native confirm dialog.
+  const [confirming, setConfirming] = useState(false);
   const pending = request.status === "PENDING";
   async function review(action: "approve" | "reject") {
     if (action === "reject" && note.trim().length < 3) { toast.error("Add a short reason for the seller before rejecting."); return; }
-    if (action === "approve" && !window.confirm(`Update this seller's registered location to "${request.address}, ${request.city}"?`)) return;
     try {
       const r = await fetch(`/api/admin/vendors/${encodeURIComponent(request.vendorId)}/location-request`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ ticketId, action, note: note.trim() }) });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(d.error || "Could not update the request");
       toast.success(action === "approve" ? "Location updated and seller notified" : "Request rejected and seller notified");
-      setNote(""); await onReviewed();
+      setNote(""); setConfirming(false); await onReviewed();
     } catch (e) { toast.error(e instanceof Error ? e.message : "Could not update the request"); }
   }
   const row = (label: string, city: string, address: string) => <div className="min-w-0 rounded-xl bg-white p-3"><p className="text-xs font-bold uppercase tracking-wide text-darkText/50">{label}</p><p className="mt-1 break-words text-sm font-semibold text-darkText">{address}</p><p className="text-sm text-darkText/70">{city}</p></div>;
@@ -50,10 +51,19 @@ function LocationRequestPanel({ ticketId, request, onReviewed }: { ticketId: str
       <label className="text-sm font-bold text-darkText/70">Note to seller (required to reject)
         <textarea value={note} onChange={e => setNote(e.target.value)} rows={2} maxLength={1000} className="mt-1 block w-full rounded-lg border border-borderGray bg-white px-3 py-2 text-sm font-normal" />
       </label>
-      <div className="flex flex-wrap gap-3">
-        <LoadingButton type="button" loadingLabel="Approving…" onClick={() => review("approve")} className="rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-bold text-brand-dark">Approve &amp; update location</LoadingButton>
-        <LoadingButton type="button" loadingLabel="Rejecting…" onClick={() => review("reject")} className="rounded-xl border border-red-200 bg-white px-5 py-2.5 text-sm font-bold text-red-700">Reject</LoadingButton>
-      </div>
+      {confirming
+        ? <div role="alertdialog" aria-labelledby="location-confirm-title" className="rounded-xl border border-emerald-300 bg-white p-4 shadow-sm">
+          <p id="location-confirm-title" className="text-sm font-bold text-darkText">Update this seller&apos;s registered location?</p>
+          <p className="mt-1 break-words text-sm text-darkText/75">New location: {request.address}, {request.city}</p>
+          <div className="mt-3 flex flex-wrap gap-3">
+            <LoadingButton type="button" loadingLabel="Approving…" onClick={() => review("approve")} className="rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-bold text-brand-dark">Yes, update location</LoadingButton>
+            <button type="button" onClick={() => setConfirming(false)} className="rounded-xl border border-borderGray bg-white px-5 py-2.5 text-sm font-bold text-darkText/70">Cancel</button>
+          </div>
+        </div>
+        : <div className="flex flex-wrap gap-3">
+          <button type="button" onClick={() => setConfirming(true)} className="rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-bold text-brand-dark">Approve &amp; update location</button>
+          <LoadingButton type="button" loadingLabel="Rejecting…" onClick={() => review("reject")} className="rounded-xl border border-red-200 bg-white px-5 py-2.5 text-sm font-bold text-red-700">Reject</LoadingButton>
+        </div>}
     </div> : null}
   </section>;
 }
