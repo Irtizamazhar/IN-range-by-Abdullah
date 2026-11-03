@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import { vendorEmailVerificationRequired } from "@/lib/vendor-email-verification-flag";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/marketplace-api";
-import { isReservedOrInvalidSlug } from "@/lib/store-slug";
+import { generateUniqueStoreSlug, isReservedOrInvalidSlug } from "@/lib/store-slug";
 import { PRIVATE_SETUP_KEYS, vendorSetupSchema, type VendorSetupDraft } from "@/lib/vendor-onboarding-schema";
 export { vendorSetupSchema, vendorSetupDraftSchema } from "@/lib/vendor-onboarding-schema";
 
@@ -29,25 +29,39 @@ export async function validateSetupSlug(tx: Prisma.TransactionClient, vendorId: 
   if (vendor || alias && alias.vendorId !== vendorId) throw new ApiError(409,"That store URL is already in use.", {storeSlug:"That store URL is already in use."});
 }
 
+/** Required details a blank draft value must not erase; optional ones (postal code, IBAN, NTN…) may still be cleared. */
+const KEEP_WHEN_BLANK = ["name","phone","shopName","category","address","city","province","cnic","pickupAddress","pickupCity","pickupProvince","pickupContactName","pickupPhone","bankName","accountTitle","accountNumber"] as const;
+
+/** A store keeps its slug once assigned; otherwise one is generated from the store name. */
+async function assignStoreSlug(tx: Prisma.TransactionClient, vendorId: string, current: {storeSlug?: string|null; shopName?: string|null}, input: {storeSlug?: string; shopName?: string}) {
+  if (current.storeSlug) return current.storeSlug;
+  if (input.storeSlug) { await validateSetupSlug(tx,vendorId,input.storeSlug); return input.storeSlug; }
+  const name=(input.shopName||current.shopName||"").trim();
+  return name ? generateUniqueStoreSlug(tx,name,vendorId) : undefined;
+}
+
 export async function saveVendorSetup(vendorId: string, input: VendorSetupDraft, db = prisma) {
   return db.$transaction(async tx => {
-    const current=await tx.vendor.findUnique({where:{id:vendorId},select:{status:true,onboardingData:true}});
+    const current=await tx.vendor.findUnique({where:{id:vendorId},select:{status:true,onboardingData:true,storeSlug:true,shopName:true}});
     if (!current || !["onboarding","rejected"].includes(current.status)) throw new ApiError(409,"This application is no longer editable.");
-    await validateSetupSlug(tx,vendorId,input.storeSlug);
-    await tx.vendor.update({where:{id:vendorId},data:{...vendorSetupData(input,current.onboardingData),...(current.status==="rejected"?{status:"onboarding" as const}:{})}});
+    const draft={...input};
+    for (const key of KEEP_WHEN_BLANK) if (draft[key]==="") delete draft[key];
+    const storeSlug=await assignStoreSlug(tx,vendorId,current,draft);
+    await tx.vendor.update({where:{id:vendorId},data:{...vendorSetupData({...draft,storeSlug},current.onboardingData),...(current.status==="rejected"?{status:"onboarding" as const}:{})}});
   },{isolationLevel:"Serializable"});
 }
 
 export async function submitVendorSetup(vendorId: string, raw: unknown) {
   const input=vendorSetupSchema.parse(raw);
   return prisma.$transaction(async tx => {
-    const vendor=await tx.vendor.findUnique({where:{id:vendorId},select:{status:true}});
+    const vendor=await tx.vendor.findUnique({where:{id:vendorId},select:{status:true,onboardingData:true,storeSlug:true,shopName:true}});
     if (!vendor || !["onboarding","rejected"].includes(vendor.status)) throw new ApiError(409,"This application is no longer editable.");
-    await validateSetupSlug(tx,vendorId,input.storeSlug);
+    const storeSlug=await assignStoreSlug(tx,vendorId,vendor,input);
     const docs=await tx.vendorDocument.findMany({where:{vendorId},select:{documentType:true}});
     const required=input.businessType==="company"?["cnic_front","cnic_back","license"]:["cnic_front","cnic_back"];
     if (required.some(type=>!docs.some(doc=>doc.documentType===type))) throw new ApiError(400,"Upload all required verification documents before submitting.");
-    const data=vendorSetupData(input);
+    // Merge into saved progress so legacy private details are kept.
+    const data=vendorSetupData({...input,storeSlug},vendor.onboardingData);
     data.onboardingData={...(data.onboardingData as Prisma.InputJsonObject),step:4,declarationAcceptedAt:new Date().toISOString()};
     await tx.vendor.update({where:{id:vendorId},data:{...data,status:"pending",rejectionReason:null,onboardingSubmittedAt:new Date(),
       isEmailVerified:!vendorEmailVerificationRequired(),emailVerifyToken:vendorEmailVerificationRequired()?randomBytes(32).toString("hex"):null}});

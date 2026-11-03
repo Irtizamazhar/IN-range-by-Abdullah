@@ -60,3 +60,30 @@ test("save persists current progress and respects application status; failures r
   tx.vendor.update = async () => { throw new Error("Database unavailable"); };
   await assert.rejects(saveVendorSetup("test-vendor", { step: 2 }, db), /Database unavailable/);
 });
+
+test("slug is generated from the store name once and blank required values never erase saved ones", async () => {
+  let current: Record<string, unknown> = { status: "onboarding", onboardingData: {}, storeSlug: null, shopName: "" };
+  let persisted: Record<string, unknown> = {};
+  const tx = {
+    vendor: {
+      findUnique: async () => current,
+      findFirst: async () => null,
+      update: async ({ data }: { data: Record<string, unknown> }) => { persisted = data; },
+    },
+    storeSlugAlias: { findUnique: async () => null },
+  };
+  const db = { $transaction: async (work: (client: unknown) => Promise<unknown>) => work(tx) } as unknown as typeof prisma;
+  await saveVendorSetup("test-vendor", { shopName: "Khan Mobile", city: "", postalCode: "", step: 1 }, db);
+  assert.equal(persisted.storeSlug, "khan-mobile");
+  assert.equal("city" in persisted, false);
+  assert.equal((persisted.onboardingData as Record<string, unknown>).postalCode, "");
+  current = { ...current, storeSlug: "khan-mobile", shopName: "Khan Mobile" };
+  await saveVendorSetup("test-vendor", { shopName: "New Name", storeSlug: "other-slug", step: 1 }, db);
+  assert.equal(persisted.storeSlug, "khan-mobile");
+});
+
+test("store slug and description are no longer required from sellers", () => {
+  const { storeSlug: _slug, shopDescription: _description, ...rest } = complete;
+  assert.equal(vendorSetupSchema.safeParse(rest).success, true);
+  assert.equal(vendorSetupSchema.safeParse({ ...rest, storeSlug: "admin" }).success, false);
+});

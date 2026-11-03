@@ -11,8 +11,9 @@ const bool = z.preprocess(v => v === "true" ? true : v === "false" ? false : v, 
 const step = z.coerce.number().int().min(0).max(4);
 export const vendorSetupFields = {
   name: required(200), phone, shopName: required(160),
-  storeSlug: text(80).pipe(z.string().refine(v => !isReservedOrInvalidSlug(v), "Use a unique 3–80 character store slug with lowercase letters, numbers and hyphens.")),
-  shopDescription: required(5000, 10), businessType: z.enum(["individual", "company"]),
+  // The server assigns the slug from the store name; a supplied one must still be valid.
+  storeSlug: text(80).pipe(z.string().refine(v => !v || !isReservedOrInvalidSlug(v), "Use a unique 3–80 character store slug with lowercase letters, numbers and hyphens.")).optional().default(""),
+  shopDescription: text(5000).optional().default(""), businessType: z.enum(["individual", "company"]),
   businessRegNo: text(120).optional().default(""), businessLegalName: text(200).optional().default(""),
   taxNumber: text(32).optional().default(""), category: required(100),
   address: required(2000, 5), city: required(120), province: required(120), postalCode: text(20).optional().default(""),
@@ -66,7 +67,9 @@ export function setupStepErrors(input: Record<string, unknown>, step: number): R
   }
   const errors: Record<string, string> = {};
   for (const key of SETUP_STEP_KEYS[step] || []) {
-    const result = vendorSetupFields[key].safeParse(input[key]);
+    // A field that was never filled is treated as blank so it gets the normal "required" message.
+    const value = input[key] === undefined && key !== "returnSameAsPickup" && key !== "businessType" ? "" : input[key];
+    const result = vendorSetupFields[key].safeParse(value);
     if (!result.success) errors[key] = result.error.issues[0].message;
   }
   if (step === 1 && input.businessType === "company") {

@@ -50,6 +50,7 @@ async function main() {
       let proxyError = false;
       let release;
       let hold = false;
+      await page.route('**/api/categories', route => route.fulfill({ json: [{ id: 1, name: 'Mobiles & Accessories' }, { id: 2, name: 'Other' }] }));
       await page.route('**/api/vendor/onboarding', async route => {
         if (route.request().method() === 'GET') return route.fulfill({ json: { vendor: saved } });
         writes++;
@@ -62,107 +63,121 @@ async function main() {
         const values = Object.fromEntries(form);
         assert.equal('bankName' in values && values.bankName === 'null', false, 'nullable saved fields must never be persisted as literal null text');
         saved = { ...saved, ...values, ownerName: values.name, primaryCategory: values.category, onboardingData: { ...values, step: Number(values.step), returnSameAsPickup: values.returnSameAsPickup === 'true' } };
-        return route.fulfill({ json: { ok: true, documents: [] } });
+        for (const type of ['cnic_front', 'cnic_back', 'license']) if (form.get(type) && typeof form.get(type) !== 'string') saved.documents = [...saved.documents, { id: type + saved.documents.length, documentType: type }];
+        if (route.request().method() === 'POST') return route.fulfill({ json: { ok: true, status: 'pending' } });
+        return route.fulfill({ json: { ok: true, documents: saved.documents } });
       });
       const base = `http://127.0.0.1:${server.address().port}`;
       await page.goto(base);
-      await page.getByLabel('Store Name', { exact: true }).waitFor();
-      const primary = page.getByRole('button', { name: 'Save & Continue', exact: true });
-      const secondary = page.getByRole('button', { name: 'Save Progress', exact: true });
-      async function typeFocused(label, value) {
-        const input = page.getByLabel(label, { exact: true });
-        await input.fill(''); await input.click();
-        const element = await input.elementHandle();
-        await input.pressSequentially(value, { delay: 4 });
-        assert.equal(await element.evaluate(node => node.isConnected && document.activeElement === node), true, `${label}: typing must preserve the same focused DOM node`);
-      }
-      // Reproduces the original effect bug before validation has ever run.
-      await typeFocused('Store Name', 'Draft Store');
-      await typeFocused('Store Slug', 'draft-store');
-      await page.getByLabel('Store Slug', { exact: true }).evaluate(node => node.setSelectionRange(2, 2));
-      await page.keyboard.type('x');
-      assert.equal(await page.getByLabel('Store Slug', { exact: true }).evaluate(node => node.selectionStart), 3);
-      await page.keyboard.press('Tab');
-      assert.equal(await page.getByLabel('Primary Product Category', { exact: true }).evaluate(node => document.activeElement === node), true);
-      await page.getByLabel('Store Name', { exact: true }).fill('');
-      await page.getByLabel('Store Slug', { exact: true }).fill('');
-      await primary.click();
-      assert.equal(writes, 0, 'invalid active step must not be sent');
-      await page.getByRole('alert').first().waitFor();
-      await page.waitForFunction(() => document.activeElement?.getAttribute('name') === 'shopName');
-      for (const [label, value] of Object.entries({ 'Store Name': 'Pakistani Store', 'Store / Business Description': 'Carefully selected products for your home.', 'Contact Number': '3001234567', 'Business Address': '123 Test Street', 'City': 'Lahore', 'Province / Region': 'Punjab', 'Postal Code (optional)': '54000' })) await typeFocused(label, value);
-      // Save Progress persists without navigating.
-      await secondary.click();
-      await page.getByText('Progress saved.', { exact: false }).waitFor();
-      assert.equal(saved.onboardingData.step, 0);
-      await page.getByLabel('Store Name', { exact: true }).waitFor();
-      // Failed and malformed saves retain all values and the current step.
-      for (const mode of ['failure', 'malformed', 'expired', 'proxy']) {
-        fail = mode === 'failure'; malformed = mode === 'malformed';
-        expired = mode === 'expired'; proxyError = mode === 'proxy';
-        await primary.click();
-        await page.getByText(mode === 'failure' ? 'Setup could not be saved. Please retry.' : mode === 'malformed' ? 'The server did not confirm your save. Please try again.' : mode === 'expired' ? /session has expired/i : /server could not save your details/i).waitFor();
-        if (expired) assert.match(await page.getByRole('alert').first().innerText(), /session has expired/i);
-        if (proxyError) assert.match(await page.getByRole('alert').first().innerText(), /could not save your details/i);
-        assert.equal(await page.getByLabel('City', { exact: true }).inputValue(), 'Lahore');
-        assert.equal(await page.getByLabel('Postal Code (optional)', { exact: true }).inputValue(), '54000');
-        assert.equal(saved.onboardingData.step, 0);
-      }
-      fail = false; malformed = false; expired = false; proxyError = false; hold = true;
-      const before = writes;
-      await primary.click();
-      await page.waitForFunction(() => document.querySelector('form')?.getAttribute('aria-busy') === 'true');
-      assert.equal(await secondary.isDisabled(), true);
-      await page.locator('form').dispatchEvent('submit');
-      await page.waitForTimeout(75);
-      assert.equal(writes, before + 1, 'pending form must prevent duplicate submissions');
-      release(); hold = false;
-      await page.getByLabel('Legal Full Name', { exact: true }).waitFor();
+
+      const png = { name: 'cnic.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=', 'base64') };
+      const shots = path.join(root, 'node_modules/.cache/onboarding-shots');
+      fs.mkdirSync(shots, { recursive: true });
+      const shot = name => page.screenshot({ path: path.join(shots, `${width}-${name}.png`), fullPage: true });
+      const cont = page.getByRole('button', { name: /^(Continue|Save & Review)/ });
+      const noOverflow = async () => assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, 'no horizontal overflow');
+
+      // Step 1: blank record shows phone; Continue validates and focuses the first error.
+      await page.getByLabel(/^Store name/).waitFor();
+      await cont.click();
+      await page.getByText('Please fix the highlighted fields.').waitFor();
+      assert.equal(await page.getByLabel(/^Store name/).evaluate(node => document.activeElement === node), true);
+      assert.equal(writes, 0);
+      await page.getByLabel(/^Store name/).fill('Khan Mobile');
+      await page.getByLabel(/^What do you sell/).selectOption('Mobiles & Accessories');
+      await page.getByLabel(/^Shop address/).fill('Shop 12, Main Market');
+      await page.getByRole('combobox', { name: 'City' }).fill('Lahore');
+      await page.getByRole('combobox', { name: 'City' }).press('Escape');
+      assert.equal(await page.getByLabel(/^Province/).inputValue(), 'Punjab', 'city selects province');
+      await page.getByLabel(/^Contact number/).fill('3001234567');
+      assert.equal(await page.getByText('Store Slug').count(), 0, 'slug is never asked');
+      await noOverflow(); await shot('1-business');
+      // Save failure keeps entries.
+      fail = true; await cont.click();
+      await page.getByText('Setup could not be saved. Please retry.').waitFor();
+      assert.equal(await page.getByLabel(/^Store name/).inputValue(), 'Khan Mobile');
+      fail = false; expired = true; await cont.click();
+      await page.getByText(/session has expired/).waitFor();
+      expired = false; await cont.click();
+
+      // Step 2: individual needs two CNIC sides only.
+      await page.getByLabel(/^CNIC number/).waitFor();
       assert.equal(saved.onboardingData.step, 1);
+      assert.equal(saved.storeSlug, undefined, 'client never sends a slug');
+      assert.equal(await page.getByLabel(/^Full name/).inputValue(), 'Test Seller', 'name prefilled');
+      assert.equal(await page.getByText('Registration document', { exact: true }).count(), 0);
+      await page.getByLabel(/^CNIC number/).fill('3520212345671');
+      await cont.click();
+      await page.getByText('Upload this side to continue.').first().waitFor();
+      await page.locator('input[name=cnic_front]').setInputFiles({ ...png, mimeType: 'application/pdf', name: 'x.pdf' });
+      await page.getByText('Use a JPG, PNG or WebP image under 5MB.').waitFor();
+      await page.locator('input[name=cnic_front]').setInputFiles(png);
+      await page.locator('input[name=cnic_back]').setInputFiles(png);
+      await noOverflow(); await shot('2-identity');
+      await cont.click();
+
+      // Step 3: defaults reuse shop address/contact; different return address reveals fields.
+      await page.getByRole('switch', { name: /Pickup from my shop address/ }).waitFor();
+      assert.equal(await page.getByRole('switch', { name: /Pickup from my shop address/ }).isChecked(), true);
+      await shot('3-pickup');
+      await page.getByText('Return address same as pickup').click();
+      await page.getByLabel(/^Address/).fill('456 Return Street');
+      await page.getByRole('combobox', { name: 'City' }).fill('Karachi');
+      await page.getByRole('combobox', { name: 'City' }).press('Escape');
+      assert.equal(await page.getByLabel(/^Province/).inputValue(), 'Sindh');
+      await page.getByLabel(/^Contact person/).fill('Returns Desk');
+      await page.getByLabel(/^Contact phone/).fill('3009876543');
+      await noOverflow();
+      await cont.click();
+      await page.getByLabel(/^Account number/).waitFor();
+      assert.equal(saved.pickupAddress, 'Shop 12, Main Market', 'pickup copied from shop');
+      assert.equal(saved.pickupPhone, saved.phone);
+      assert.equal(saved.returnCity, 'Karachi');
+
+      // Step 4: payout.
+      assert.equal(await page.getByLabel(/^Account title/).inputValue(), 'Test Seller');
+      await page.getByLabel(/^Choose your bank/).selectOption('Meezan Bank');
+      await page.getByLabel(/^Account number/).fill('01234567894567');
+      await noOverflow(); await shot('4-payout');
+      await cont.click();
+
+      // Step 5: masked review, edit returns to step, Save & Review comes back.
+      await page.getByRole('button', { name: /Submit for Approval/ }).waitFor();
+      const review = await page.locator('main').innerText();
+      assert.ok(!review.includes('35202-1234567-1') && !review.includes('01234567894567'), 'sensitive data masked');
+      assert.ok(review.includes('•••• 4567'));
+      await shot('5-review');
+      await page.getByRole('button', { name: /Submit for Approval/ }).click();
+      await page.getByText('I confirm my details are correct.').waitFor();
+      assert.ok(await page.getByText('Confirm that your details are accurate before submitting.').count());
+      await page.getByRole('button', { name: 'Edit' }).nth(3).click();
+      await page.getByLabel(/^Account title/).fill('Hamid Khan');
+      await page.getByRole('button', { name: /Save & Review/ }).click();
+      await page.getByRole('button', { name: /Submit for Approval/ }).waitFor();
+      assert.equal(saved.accountTitle, 'Hamid Khan');
+      await page.getByText('I confirm my details are correct.').click();
+      await page.getByRole('button', { name: /Submit for Approval/ }).click();
+      await page.waitForFunction(() => window.__destination === '/vendor/status');
+
+      // Registered business: extra fields and document appear only then; resume lands on saved step.
+      saved = { ...saved, onboardingData: { ...saved.onboardingData, step: 1 }, businessType: 'company', documents: [{ id: 'a', documentType: 'cnic_front' }, { id: 'b', documentType: 'cnic_back' }] };
       await page.reload();
-      await page.getByLabel('Legal Full Name', { exact: true }).waitFor();
-      await page.getByRole('button', { name: /1\. Store & Business/ }).click();
-      await page.getByLabel('City', { exact: true }).waitFor();
-      assert.equal(await page.getByLabel('City', { exact: true }).inputValue(), 'Lahore');
-      assert.equal(await page.getByLabel('Primary Product Category', { exact: true }).inputValue(), 'Other');
-      // Business fields are available and validation preserves entered identity values.
-      await page.getByLabel('Seller Type').selectOption('company');
-      await primary.click();
-      await page.getByLabel('Registered Business Name', { exact: true }).waitFor();
-      await typeFocused('Legal Full Name', 'Test Seller');
-      await typeFocused('CNIC Number', '1234512345671');
-      await primary.click();
-      await page.getByRole('alert').first().waitFor();
-      assert.equal(await page.getByLabel('CNIC Number', { exact: true }).inputValue(), '12345-1234567-1');
-      await typeFocused('Registered Business Name', 'Example Limited');
-      await typeFocused('Business Registration Number', 'REG-123');
-      for (const label of ['CNIC front', 'CNIC back', 'Business registration document']) await page.getByLabel(label, { exact: true }).setInputFiles({ name: 'fixture.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jfRsAAAAASUVORK5CYII=', 'base64') });
-      await primary.click();
-      await page.getByLabel('Pickup Address', { exact: true }).waitFor();
-      for (const [label, value] of Object.entries({ 'Pickup Address': '123 Test Street', 'Pickup City': 'Lahore', 'Pickup Province': 'Punjab', 'Pickup Contact Person': 'Test Seller', 'Pickup Contact Phone': '3117654321' })) await typeFocused(label, value);
-      await page.getByRole('checkbox', { name: 'Return address same as pickup' }).uncheck();
-      for (const [label, value] of Object.entries({ 'Return Address': '456 Return Street', 'Return City': 'Karachi', 'Return Province': 'Sindh', 'Return Contact Person': 'Returns Contact', 'Return Contact Phone': '3009876543' })) await typeFocused(label, value);
-      await primary.click();
-      await page.getByLabel('Account Title', { exact: true }).waitFor();
-      for (const [label, value] of Object.entries({ 'Account Title': 'Test Seller', 'Bank Name': 'Test Bank', 'Account Number': '123456789' })) await typeFocused(label, value);
-      await secondary.click();
-      await page.getByText('Progress saved.', { exact: false }).waitFor();
-      assert.equal(saved.onboardingData.step, 3);
-      await primary.click();
-      await page.getByRole('button', { name: 'Submit for Approval' }).waitFor();
-      await page.getByRole('button', { name: 'Edit Bank / Payout' }).click();
-      await page.getByLabel('Account Title', { exact: true }).waitFor();
-      assert.equal(await page.getByLabel('Account Number', { exact: true }).inputValue(), '123456789');
-      await typeFocused('Account Title', 'Updated Seller');
-      // Form actions are ordered left/right and fit the viewport at both sizes.
-      const left = await secondary.boundingBox();
-      const right = await primary.boundingBox();
-      assert.ok(left.x + left.width <= right.x + 1);
-      assert.ok(left.width >= 44 && right.width >= 44 && left.height >= 44 && right.height >= 44);
-      assert.ok(right.x + right.width <= width);
-      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
+      await page.getByLabel(/^Registered business name/).waitFor();
+      assert.equal(await page.getByText('Registration document', { exact: true }).count(), 1);
+      await cont.click();
+      await page.locator('#businessRegNo-error').waitFor();
+      assert.ok(await page.locator('#businessRegNo-error').count());
+      await page.getByLabel(/^Registered business name/).fill('Khan Traders');
+      await page.getByLabel(/^Registration number/).fill('REG-1234');
+      await page.locator('input[name=license]').setInputFiles(png);
+      await noOverflow(); await shot('2-identity-company');
+      await cont.click();
+      await page.getByRole('switch', { name: /Pickup from my shop address/ }).waitFor();
+      assert.equal(saved.businessRegNo, 'REG-1234');
+      const button = await cont.boundingBox();
+      assert.ok(button.height >= 44 && button.x + button.width <= width);
       assert.deepEqual(clientErrors, []);
-      console.log(`PASS ${width}px: continuous focus/caret/Tab retention before and after validation across all editable steps, Review editing, fixed mobile fields, validation, Save Progress/Continue, error preservation, refresh persistence, action layout, no horizontal overflow`);
+      console.log(`PASS ${width}px: blank and prefilled records, validation focus, save failure/expiry, uploads, pickup/return toggles, payout, masked review, edit and resume, individual and registered business, submit`);
       await context.close();
     }
   } finally { if (browser) await browser.close(); await new Promise(resolve => server.close(resolve)); }
