@@ -5,6 +5,7 @@ import { LoadingForm } from "@/components/ui/LoadingForm";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import Image from "next/image";
+import { Search } from "lucide-react";
 import { ClipboardEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 import toast from "react-hot-toast";
@@ -33,6 +34,7 @@ export default function AdminCategoriesPage() {
   const [filePreviewUrl, setFilePreviewUrl] = useState("");
   const [showOnHome, setShowOnHome] = useState(false);
   const [togglingId, setTogglingId] = useState<number | null>(null);
+  const [search, setSearch] = useState("");
   const formHeading = useRef<HTMLHeadingElement>(null);
   const nameInput = useRef<HTMLInputElement>(null);
 
@@ -40,6 +42,11 @@ export default function AdminCategoriesPage() {
     () => categories.find((c) => c.id === editingId) || null,
     [categories, editingId]
   );
+
+  const visibleCategories = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return query ? categories.filter((c) => c.name.toLowerCase().includes(query)) : categories;
+  }, [categories, search]);
 
   async function loadCategories() {
     try {
@@ -323,19 +330,37 @@ export default function AdminCategoriesPage() {
       </LoadingForm>
 
       <div className="rounded-card border border-borderGray bg-white p-4 shadow-card">
-        <h2 className="mb-4 text-lg font-bold text-darkText">
-          All Categories
-          {!loading ? (
-            <span className="ml-2 rounded-full bg-brand-primary/20 px-2.5 py-0.5 align-middle text-sm font-semibold text-darkText">
-              {categories.length} {categories.length === 1 ? "category" : "categories"}
-            </span>
-          ) : null}
-        </h2>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-bold text-darkText">
+            All Categories
+            {!loading ? (
+              <span className="ml-2 rounded-full bg-brand-primary/20 px-2.5 py-0.5 align-middle text-sm font-semibold text-darkText">
+                {categories.length} {categories.length === 1 ? "category" : "categories"}
+              </span>
+            ) : null}
+          </h2>
+          <label className="relative w-full sm:w-64">
+            <span className="sr-only">Search categories</span>
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-darkText/50"
+              aria-hidden
+            />
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search categories"
+              className="w-full rounded-xl border border-borderGray py-2 pl-9 pr-3 text-sm"
+            />
+          </label>
+        </div>
 
         {loading ? (
           <PageSkeleton rows={3} />
         ) : categories.length === 0 ? (
           <p className="p-4 text-darkText/60">No categories yet.</p>
+        ) : visibleCategories.length === 0 ? (
+          <p className="p-4 text-darkText/60">No categories match &quot;{search.trim()}&quot;.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-[700px] w-full text-left text-sm">
@@ -348,7 +373,7 @@ export default function AdminCategoriesPage() {
                 </tr>
               </thead>
               <tbody>
-                {categories.map((category) => (
+                {visibleCategories.map((category) => (
                   <tr
                     key={category.id}
                     className="border-b border-borderGray hover:bg-lightGray/40"
