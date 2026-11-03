@@ -14,6 +14,50 @@ type Ticket = {
   customer: { name: string; email: string } | null; vendor: { shopName: string; email: string } | null;
 };
 
+type LocationRequestView = {
+  vendorId: string; status: "PENDING" | "APPROVED" | "REJECTED"; city: string; address: string; reason: string;
+  currentCity: string; currentAddress: string; previousCity: string; previousAddress: string; reviewNote?: string; reviewedAt?: string;
+};
+
+/** Approve / reject a seller's registered-location change linked to this ticket. */
+function LocationRequestPanel({ ticketId, request, onReviewed }: { ticketId: string; request: LocationRequestView; onReviewed: () => Promise<void> }) {
+  const [note, setNote] = useState("");
+  const pending = request.status === "PENDING";
+  async function review(action: "approve" | "reject") {
+    if (action === "reject" && note.trim().length < 3) { toast.error("Add a short reason for the seller before rejecting."); return; }
+    if (action === "approve" && !window.confirm(`Update this seller's registered location to "${request.address}, ${request.city}"?`)) return;
+    try {
+      const r = await fetch(`/api/admin/vendors/${encodeURIComponent(request.vendorId)}/location-request`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ ticketId, action, note: note.trim() }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || "Could not update the request");
+      toast.success(action === "approve" ? "Location updated and seller notified" : "Request rejected and seller notified");
+      setNote(""); await onReviewed();
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Could not update the request"); }
+  }
+  const row = (label: string, city: string, address: string) => <div className="min-w-0 rounded-xl bg-white p-3"><p className="text-xs font-bold uppercase tracking-wide text-darkText/50">{label}</p><p className="mt-1 break-words text-sm font-semibold text-darkText">{address}</p><p className="text-sm text-darkText/70">{city}</p></div>;
+  return <section aria-label="Location change request" className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5">
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <h2 className="text-base font-black text-darkText">Registered location change</h2>
+      <span className={`rounded-full px-3 py-1 text-xs font-bold ${pending ? "bg-amber-100 text-amber-900" : request.status === "APPROVED" ? "bg-emerald-100 text-emerald-900" : "bg-red-100 text-red-800"}`}>{request.status}</span>
+    </div>
+    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+      {row(pending ? "Current" : "Before", pending ? request.currentCity : request.previousCity, pending ? request.currentAddress : request.previousAddress)}
+      {row("Requested", request.city, request.address)}
+    </div>
+    <p className="mt-3 text-sm text-darkText/80"><span className="font-bold">Reason:</span> {request.reason}</p>
+    {request.reviewNote ? <p className="mt-1 text-sm text-darkText/80"><span className="font-bold">Decision note:</span> {request.reviewNote}</p> : null}
+    {pending ? <div className="mt-4 grid gap-3">
+      <label className="text-sm font-bold text-darkText/70">Note to seller (required to reject)
+        <textarea value={note} onChange={e => setNote(e.target.value)} rows={2} maxLength={1000} className="mt-1 block w-full rounded-lg border border-borderGray bg-white px-3 py-2 text-sm font-normal" />
+      </label>
+      <div className="flex flex-wrap gap-3">
+        <LoadingButton type="button" loadingLabel="Approving…" onClick={() => review("approve")} className="rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-bold text-brand-dark">Approve &amp; update location</LoadingButton>
+        <LoadingButton type="button" loadingLabel="Rejecting…" onClick={() => review("reject")} className="rounded-xl border border-red-200 bg-white px-5 py-2.5 text-sm font-bold text-red-700">Reject</LoadingButton>
+      </div>
+    </div> : null}
+  </section>;
+}
+
 const STATUSES = ["OPEN", "IN_PROGRESS", "WAITING_FOR_CUSTOMER", "CUSTOMER_REPLIED", "RESOLVED", "CLOSED"];
 const PRIORITIES = ["LOW", "NORMAL", "HIGH", "URGENT"];
 const CANNED_REPLIES = [
@@ -26,6 +70,7 @@ const CANNED_REPLIES = [
 export default function AdminTicketDetailPage({ params }: { params: { id: string } }) {
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [resource, setResource] = useState<{ id: string; label: string } | null>(null);
+  const [locationRequest, setLocationRequest] = useState<LocationRequestView | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [assignees, setAssignees] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,7 +87,7 @@ export default function AdminTicketDetailPage({ params }: { params: { id: string
       ]);
       const td = await tr.json(); const ad = await ar.json();
       if (!tr.ok) { toast.error(td.error || "Could not load ticket"); return; }
-      setTicket(td.ticket); setResource(td.resource); setMessages(td.messages || []);
+      setTicket(td.ticket); setResource(td.resource); setLocationRequest(td.locationRequest || null); setMessages(td.messages || []);
       if (ar.ok) setAssignees(ad.assignees || []);
     } catch { toast.error("Network error"); } finally { setLoading(false); }
   }, [params.id]);
@@ -90,6 +135,7 @@ export default function AdminTicketDetailPage({ params }: { params: { id: string
         {" · "}{ticket.category.replace(/_/g, " ")} · {ticket.actorType}
       </p>
       {resource ? <p className="mt-2 rounded-lg bg-brand-background px-3 py-2 text-sm font-bold text-darkText inline-block">Related: {resource.label}</p> : null}
+      {locationRequest ? <LocationRequestPanel ticketId={ticket.id} request={locationRequest} onReviewed={() => load(false)} /> : null}
 
       <div className="mt-5 grid gap-4 rounded-2xl border bg-white p-5 sm:grid-cols-3">
         <label className="text-sm font-bold text-darkText/70">Status

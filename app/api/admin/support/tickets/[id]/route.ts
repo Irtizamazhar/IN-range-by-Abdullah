@@ -2,6 +2,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { api, ApiError, sameOrigin } from "@/lib/marketplace-api";
 import { requireAdminPermission, writeAdminAudit } from "@/lib/admin-rbac";
+import { LOCATION_REQUEST_RESOURCE, readLocationRequest, type LocationRequest } from "@/lib/vendor-location-request";
 import { formatTicketNumber, TICKET_PRIORITIES, TICKET_STATUSES, updateTicketAdmin, verifyResourceOwnership } from "@/lib/support-service";
 export const dynamic = "force-dynamic";
 type Context = { params: { id: string } };
@@ -25,9 +26,17 @@ export async function GET(_request: Request, { params }: Context) {
       const ownerId = ticket.actorType === "CUSTOMER" ? ticket.customerId : ticket.vendorId;
       resource = ownerId ? await verifyResourceOwnership(ticket.actorType as "CUSTOMER" | "VENDOR", ownerId, ticket.relatedResourceType, ticket.relatedResourceId) : null;
     }
+    // Location change tickets carry their request so the admin can approve or reject in place.
+    let locationRequest: (LocationRequest & { vendorId: string; currentCity: string; currentAddress: string }) | null = null;
+    if (ticket.relatedResourceType === LOCATION_REQUEST_RESOURCE && ticket.vendorId && ticket.relatedResourceId === ticket.vendorId) {
+      const vendor = await prisma.vendor.findUnique({ where: { id: ticket.vendorId }, select: { city: true, address: true, onboardingData: true } });
+      const request = vendor ? readLocationRequest(vendor.onboardingData) : null;
+      if (vendor && request && request.ticketId === ticket.id) locationRequest = { ...request, vendorId: ticket.vendorId, currentCity: vendor.city, currentAddress: vendor.address };
+    }
     return {
       ticket: { ...ticket, ticketNumber: formatTicketNumber(ticket.sequence) },
       resource,
+      locationRequest,
       messages: ticket.messages.map(m => ({ id: m.id, senderType: m.senderType, body: m.body, isInternalNote: m.isInternalNote, attachmentUrl: m.attachmentUrl ? `/api/private/support-attachments/${m.id}` : null, createdAt: m.createdAt })),
     };
   });

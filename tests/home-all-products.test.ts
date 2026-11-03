@@ -134,7 +134,7 @@ test("homepage All Products is hidden when empty and shows up to 12 cards with t
   const js = ts.transpileModule(readFileSync("components/user/HomeMarketplace.tsx", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React } }).outputText;
   const stub = () => null;
   const modules: Record<string, unknown> = {
-    "@/components/ui/LoadingLink": { default: stub }, "lucide-react": new Proxy({}, { get: () => stub }),
+    "@/components/ui/LoadingLink": { default: stub }, "next/image": { default: stub }, "lucide-react": new Proxy({}, { get: () => stub }),
     "./ProductCard": { ProductCard: stub }, "./services/ServiceCard": { ServiceCard: stub }, "./TrendingWantCard": { TrendingWantCard: stub },
     "./HomeProductCard": { HOME_PRODUCT_GRID: "grid", HOME_VIEW_BUTTON: "button", HomeProductCard },
   };

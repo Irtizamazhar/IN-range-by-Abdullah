@@ -63,8 +63,7 @@ const links: {
   dividerBefore?: boolean;
 }[] = [
   { href: "/vendor/dashboard", label: "Dashboard", icon: Home },
-  { href: "/vendor/dashboard/store", label: "Store & QR", icon: QrCode, dividerBefore: true },
-  { href: "/vendor/dashboard/products", label: "My Products", icon: Package },
+  { href: "/vendor/dashboard/store", label: "Store & QR", icon: QrCode, dividerBefore: true },  { href: "/vendor/dashboard/products", label: "My Products", icon: Package },
   { href: "/vendor/dashboard/services", label: "Services", icon: Cog },
   { href: "/vendor/dashboard/demand", label: "Customer Demand", icon: UsersRound },
   { href: "/vendor/dashboard/offers", label: "Offers", icon: Tag },

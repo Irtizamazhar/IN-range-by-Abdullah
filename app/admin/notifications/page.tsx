@@ -3,7 +3,7 @@ import Link from "@/components/ui/LoadingLink";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import toast from "react-hot-toast";
-import { Gift, MessageSquareHeart, ShieldAlert, ShoppingBag, Wallet, Wrench } from "lucide-react";
+import { Gift, MapPin, MessageSquareHeart, ShieldAlert, ShoppingBag, Wallet, Wrench } from "lucide-react";
 
 import { useCallback, useEffect, useState } from "react";
 import type { AdminNotification, AdminNotificationKind } from "@/app/api/admin/notifications/route";
@@ -15,6 +15,7 @@ const KIND_META: Record<AdminNotificationKind, { label: string; Icon: typeof Gif
   service: { label: "Service", Icon: Wrench, tone: "bg-violet-100 text-violet-700" },
   order: { label: "Order", Icon: ShoppingBag, tone: "bg-emerald-100 text-emerald-700" },
   payout: { label: "Payout", Icon: Wallet, tone: "bg-amber-100 text-amber-800" },
+  location: { label: "Location", Icon: MapPin, tone: "bg-teal-100 text-teal-800" },
 };
 
 const FILTERS: Array<{ id: "all" | AdminNotificationKind; label: string }> = [
@@ -25,6 +26,7 @@ const FILTERS: Array<{ id: "all" | AdminNotificationKind; label: string }> = [
   { id: "service", label: "Services" },
   { id: "payout", label: "Payouts" },
   { id: "appeal", label: "Appeals" },
+  { id: "location", label: "Location changes" },
 ];
 
 function formatDate(iso: string) {

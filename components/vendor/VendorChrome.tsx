@@ -9,10 +9,12 @@ import { DashboardShell } from "@/components/DashboardShell";
 export function VendorChrome({
   shopName,
   ownerName,
+  shopLogo,
   children,
 }: {
   shopName: string;
   ownerName: string;
+  shopLogo?: string | null;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -34,7 +36,7 @@ export function VendorChrome({
       label="Vendor"
       className="vendor-ui"
       collapseKey="vendor_sidebar_collapsed"
-      topbar={<VendorTopbar ownerName={ownerName} shopName={shopName} unreadNotifications={unread} />}
+      topbar={<VendorTopbar ownerName={ownerName} shopName={shopName} shopLogo={shopLogo} unreadNotifications={unread} />}
       sidebar={(collapsed) => (
         <Suspense
           fallback={

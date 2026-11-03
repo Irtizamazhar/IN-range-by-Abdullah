@@ -10,8 +10,9 @@ const input = z.object({
   shopName: z.string().trim().min(1).max(160),
   storeSlug: z.string().trim().toLowerCase().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).min(3).max(80).refine(v => !isReservedOrInvalidSlug(v), "This store URL is reserved. Please choose another."),
   shopDescription: z.string().max(5000),
-  shopLogo: image,
-  storeBanner: image,
+  // Optional: logo and banner are edited on the Profile page; omitted values are left unchanged.
+  shopLogo: image.optional(),
+  storeBanner: image.optional(),
   storePolicies: z.string().max(5000),
   primaryCategory: z.string().trim().min(1).max(100),
   serviceCities: z.array(z.string().trim().min(1).max(100)).max(100),

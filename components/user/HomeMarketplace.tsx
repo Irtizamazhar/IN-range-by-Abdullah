@@ -1,4 +1,5 @@
 import Link from "@/components/ui/LoadingLink";
+import Image from "next/image";
 import { ArrowRight, Check, Crown, Star, TrendingUp } from "lucide-react";
 import { ProductCard, type ProductCardData } from "./ProductCard";
 import { ServiceCard, type PublicService } from "./services/ServiceCard";
@@ -6,7 +7,7 @@ import { TrendingWantCard } from "./TrendingWantCard";
 import { HOME_PRODUCT_GRID, HOME_VIEW_BUTTON, HomeProductCard } from "./HomeProductCard";
 
 type MarketplaceWant = { id: string; title: string; requestType: string; city: string; photo: string | null; createdAt: Date; budgetMin: { toString(): string } | null; budgetMax: { toString(): string } | null; budgetFlexible: boolean; _count: { offers: number; interests: number }; joiners: { image: string | null; initial: string }[]; loved: boolean };
-type MarketplaceStore = { id: string; shopName: string; storeSlug: string | null; primaryCategory: string | null; label: string | null; rating: { ratingAvg: number; reviewCount: number } };
+type MarketplaceStore = { id: string; shopName: string; storeSlug: string | null; shopLogo: string | null; primaryCategory: string | null; label: string | null; rating: { ratingAvg: number; reviewCount: number } };
 function Heading({ title, href, link }: { title: string; href: string; link: string }) { return <header className="mb-5 flex items-end justify-between gap-3"><h2 className="text-2xl font-black tracking-tight text-emerald-950 sm:text-3xl">{title}</h2><Link href={href} className="shrink-0 rounded-xl bg-lime-100 px-3 py-2 text-sm font-bold text-emerald-900 hover:bg-lime-200">{link} →</Link></header>; }
 function ProductGrid({ products }: { products: ProductCardData[] }) { return products.length ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">{products.slice(0, 5).map(product => <ProductCard key={product._id} product={product} variant="marketplace" />)}</div> : <p className="rounded-2xl border bg-white p-6 text-gray-600">No products available right now.</p>; }
 export function HomeTrendingWants({ wants }: { wants: MarketplaceWant[] }) { return <div className="mx-auto max-w-site px-4 sm:px-6">
@@ -46,7 +47,7 @@ export function HomeMarketplace({ services, gifts, stores }: { services: PublicS
     </header>
     {stores.length ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{stores.map(store => <Link key={store.id} href={`/stores/${store.storeSlug || store.id}`} className="relative flex h-[149px] min-w-0 items-center gap-3 overflow-hidden rounded-2xl border border-[#E1EFD6] bg-white p-5 shadow-[0_8px_20px_rgba(0,64,43,0.07)] transition duration-200 hover:border-[#C9E4B6] hover:shadow-[0_12px_26px_rgba(0,64,43,0.12)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-link xl:gap-4">
       <span className="pointer-events-none absolute right-0 top-0 flex h-12 w-12 items-start justify-end rounded-bl-[36px] bg-gradient-to-bl from-[#C8EE6A] to-[#EEF9D2] p-2" aria-hidden="true"><Star className="h-4 w-4 text-[#0B3D24]" strokeWidth={2.2} /></span>
-      <span className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#E6F8E2] to-[#CDEFC6] text-lg font-black text-[#0B3D24] ring-4 ring-[#F1FAEA] xl:h-16 xl:w-16 xl:text-xl">{store.shopName.slice(0, 2).toUpperCase()}<span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#2E9E3E] ring-2 ring-white" aria-hidden="true"><Check className="h-3 w-3 text-white" strokeWidth={3.2} /></span></span>
+      <span className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#E6F8E2] to-[#CDEFC6] text-lg font-black text-[#0B3D24] ring-4 ring-[#F1FAEA] xl:h-16 xl:w-16 xl:text-xl">{store.shopLogo ? <Image src={store.shopLogo} alt="" fill unoptimized sizes="64px" className="rounded-full object-cover" /> : store.shopName.slice(0, 2).toUpperCase()}<span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#2E9E3E] ring-2 ring-white" aria-hidden="true"><Check className="h-3 w-3 text-white" strokeWidth={3.2} /></span></span>
       <div className="min-w-0 flex-1 pr-5">
         <h3 className="truncate text-base font-extrabold text-[#102423] xl:text-lg" title={store.shopName}>{store.shopName}</h3>
         <p className="truncate text-sm text-neutral-500">{store.primaryCategory}</p>

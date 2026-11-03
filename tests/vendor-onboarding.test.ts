@@ -83,7 +83,15 @@ test("slug is generated from the store name once and blank required values never
 });
 
 test("store slug and description are no longer required from sellers", () => {
-  const { storeSlug: _slug, shopDescription: _description, ...rest } = complete;
+  const rest: Record<string, unknown> = { ...complete };
+  delete rest.storeSlug;
+  delete rest.shopDescription;
   assert.equal(vendorSetupSchema.safeParse(rest).success, true);
   assert.equal(vendorSetupSchema.safeParse({ ...rest, storeSlug: "admin" }).success, false);
+});
+
+test("a single document upload draft (one file name) is accepted", () => {
+  const parsed = vendorSetupDraftSchema.safeParse({ step: "1", documentNames: { cnic_front: "cnic-front.png" } });
+  assert.equal(parsed.success, true, JSON.stringify(parsed.error?.issues));
+  assert.equal(vendorSetupDraftSchema.safeParse({ documentNames: { passport: "x.png" } }).success, false);
 });

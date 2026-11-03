@@ -83,3 +83,13 @@ test("multipart Save & Continue succeeds without a global File constructor (Node
   assert.equal((await response.json()).ok, true);
   assert.equal((route.saved[0] as { step: number }).step, 1);
 });
+
+test("uploading one CNIC side on its own saves the file and its name (regression)", async () => {
+  const route = routeFixture();
+  const form = new FormData();
+  form.set("step", "1");
+  form.set("cnic_front", new Blob([Buffer.from("iVBORw0KGgo=", "base64")], { type: "image/png" }), "cnic-front.png");
+  const response = await route.multipart(form);
+  assert.equal(response.status, 200, JSON.stringify(await response.clone().json()));
+  assert.deepEqual((route.saved[0] as { documentNames: unknown }).documentNames, { cnic_front: "cnic-front.png" });
+});

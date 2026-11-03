@@ -724,6 +724,8 @@ model Vendor {
   storeBanner      String?              @db.Text
   storePolicies    String?              @db.Text
   serviceCities    Json?
+  /// Optional public social profile URLs keyed by platform (validated by lib/vendor-social-links.ts).
+  socialLinks      Json?
   slugAliases      StoreSlugAlias[]
   serviceOfferings ServiceOffering[]
   orderServices    OrderService[]

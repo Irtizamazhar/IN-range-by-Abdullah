@@ -11,7 +11,11 @@
 
 # next.js
 /.next/
+/.next-verify/
 /out/
+
+# local npm cache copies
+/.npm-cache-repair/
 
 # production
 /build

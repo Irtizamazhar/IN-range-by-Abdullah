@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Bell, ChevronDown, Search, Settings, ShieldCheck, Store } from "lucide-react";
+import Image from "next/image";
+import { Bell, ChevronDown, Search, Settings, ShieldCheck, Store, UserRound } from "lucide-react";
 import Link from "@/components/ui/LoadingLink";
 import { useLoadingRouter } from "@/hooks/useLoadingRouter";
 
@@ -15,10 +16,12 @@ function initials(name: string): string {
 export function VendorTopbar({
   ownerName,
   shopName,
+  shopLogo,
   unreadNotifications,
 }: {
   ownerName: string;
   shopName: string;
+  shopLogo?: string | null;
   unreadNotifications: number;
 }) {
   const router = useLoadingRouter();
@@ -92,9 +95,15 @@ export function VendorTopbar({
             onClick={() => setMenuOpen((v) => !v)}
             className="flex h-10 max-w-[15rem] items-center gap-2.5 rounded-xl border border-admin-border bg-white pl-1 pr-1 text-left transition-colors hover:bg-admin-bg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-primary sm:pr-2"
           >
-            <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-admin-primary text-xs font-bold text-admin-lime">
-              {initials(ownerName)}
-            </span>
+            {shopLogo ? (
+              <span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full border border-admin-border bg-admin-bg">
+                <Image src={shopLogo} alt="" fill unoptimized sizes="32px" className="object-cover" />
+              </span>
+            ) : (
+              <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-admin-primary text-xs font-bold text-admin-lime">
+                {initials(ownerName)}
+              </span>
+            )}
             <span className="hidden min-w-0 md:block">
               <span className="block max-w-[10rem] truncate text-sm font-semibold leading-tight text-admin-ink">{ownerName}</span>
               <span className="block max-w-[10rem] truncate text-[11px] leading-tight text-admin-muted" title={shopName}>{shopName || "Store Owner"}</span>
@@ -109,6 +118,7 @@ export function VendorTopbar({
               </div>
               <div className="pt-1.5">
                 {[
+                  { href: "/vendor/dashboard/profile", label: "Profile", icon: UserRound },
                   { href: "/vendor/dashboard/store", label: "Store & QR", icon: Store },
                   { href: "/vendor/dashboard/account-status", label: "Account Status", icon: ShieldCheck },
                   { href: "/vendor/dashboard/settings", label: "Settings", icon: Settings },

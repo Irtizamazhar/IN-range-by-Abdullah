@@ -5,8 +5,10 @@ import { hasAdminPermission } from "@/lib/admin-permissions";
 import { requireAdminPermission, writeAdminAudit } from "@/lib/admin-rbac";
 import { prisma } from "@/lib/prisma";
 import { adminBasePath } from "@/lib/admin-path";
+import { formatTicketNumber } from "@/lib/support-service";
+import { LOCATION_REQUEST_RESOURCE } from "@/lib/vendor-location-request";
 
-export type AdminNotificationKind = "appeal" | "want" | "gift" | "service" | "order" | "payout";
+export type AdminNotificationKind = "appeal" | "want" | "gift" | "service" | "order" | "payout" | "location";
 
 export type AdminNotification = {
   id: string;
@@ -71,10 +73,11 @@ export async function GET() {
   const auth = await requireAdminPermission("dashboard.view");
   if ("response" in auth) return auth.response;
   const canSeeAppeals = hasAdminPermission([...auth.admin.permissions], "moderation.manage");
+  const canSeeLocationRequests = hasAdminPermission([...auth.admin.permissions], "support.manage");
   const adminBase = adminBasePath() ?? "";
 
   try {
-    const [seenAt, appeals, wants, orders, payouts, services] = await Promise.all([
+    const [seenAt, appeals, wants, orders, payouts, services, locationTickets] = await Promise.all([
       readWatermark(auth.admin.id),
       canSeeAppeals
         ? prisma.vendorAuditLog.findMany({
@@ -142,9 +145,31 @@ export async function GET() {
           vendor: { select: { shopName: true } },
         },
       }),
+      canSeeLocationRequests
+        ? prisma.supportTicket.findMany({
+            where: { relatedResourceType: LOCATION_REQUEST_RESOURCE },
+            orderBy: { createdAt: "desc" },
+            take: PER_SOURCE,
+            select: { id: true, sequence: true, status: true, createdAt: true, vendor: { select: { shopName: true, city: true } } },
+          })
+        : Promise.resolve([]),
     ]);
 
     const items: Omit<AdminNotification, "unread">[] = [];
+
+    for (const t of locationTickets) {
+      const open = t.status !== "RESOLVED" && t.status !== "CLOSED";
+      items.push({
+        id: `location:${t.id}`,
+        kind: "location",
+        createdAt: t.createdAt.toISOString(),
+        title: `Location change request: ${t.vendor?.shopName ?? "Vendor"}`,
+        body: [formatTicketNumber(t.sequence), t.vendor?.city ? `Current city: ${t.vendor.city}` : ""].filter(Boolean).join(" · "),
+        href: `${adminBase}/support/${encodeURIComponent(t.id)}`,
+        needsAction: open,
+        status: open ? "Pending review" : t.status.toLowerCase(),
+      });
+    }
 
     // One latest unresolved appeal per vendor, as before.
     const appealVendors = new Set<string>();

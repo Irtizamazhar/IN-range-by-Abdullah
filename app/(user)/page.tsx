@@ -297,6 +297,8 @@ export default async function HomePage() {
 
     storeSlug: row.vendor.storeSlug,
 
+    shopLogo: row.vendor.shopLogo,
+
     primaryCategory: row.vendor.primaryCategory,
 
     label: row.label,

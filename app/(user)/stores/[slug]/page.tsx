@@ -7,6 +7,8 @@ import { StoreCatalog } from "@/components/user/StoreCatalog";
 import styles from "@/components/user/StoreProfile.module.css";
 import { StoreFollowButton } from "@/components/user/StoreFollowButton";
 import { CopyStoreLink } from "@/components/user/CopyStoreLink";
+import { SocialIcon } from "@/components/user/SocialIcon";
+import { readSocialLinks, SOCIAL_LABELS, SOCIAL_PLATFORMS } from "@/lib/vendor-social-links";
 import { catalogProductSelect } from "@/lib/catalog-product-select";
 import { generateUniqueStoreSlug } from "@/lib/store-slug";
 import { prisma } from "@/lib/prisma";
@@ -29,6 +31,7 @@ const STORE_SELECT = {
   storeBanner: true,
   storePolicies: true,
   serviceCities: true,
+  socialLinks: true,
   _count: { select: { followers: true } },
   vendorShopOrders: { where: { status: "delivered" as const }, select: { id: true } },
 } as const;
@@ -101,6 +104,8 @@ export default async function StorePage({ params }: { params: { slug: string } }
     ...(serializeProduct(product) as ProductCardData),
     ...pickReviewStat(productRatings, product.id),
   }));
+  const storedLinks = readSocialLinks(vendor.socialLinks);
+  const socialLinks = SOCIAL_PLATFORMS.flatMap(platform => { const url = storedLinks[platform]; return url ? [{ platform, url }] : []; });
   const serviceCities = Array.isArray(vendor.serviceCities) ? (vendor.serviceCities as unknown[]).filter((c): c is string => typeof c === "string") : [];
   const storeRating = storeRatings.get(vendor.id) ?? {
     ratingAvg: 0,
@@ -112,7 +117,7 @@ export default async function StorePage({ params }: { params: { slug: string } }
   return (
     <main className={styles.page}>
       <section className={styles.profile} aria-label="Store profile">
-        {vendor.storeBanner && <div className={styles.banner}><Image src={vendor.storeBanner} alt="" fill unoptimized sizes="(max-width: 767px) 100vw, 1280px" className="object-cover" /></div>}
+        {vendor.storeBanner && <div className={styles.banner}><Image src={vendor.storeBanner} alt="" fill unoptimized priority sizes="(max-width: 767px) 100vw, 1600px" className="object-cover" /></div>}
         <div className={`${styles.identity} ${vendor.storeBanner ? styles.withBanner : ""}`}>
           <span className={styles.avatarWrap}>
             {vendor.shopLogo ? <span className={styles.avatar}><Image src={vendor.shopLogo} alt={`${vendor.shopName} logo`} fill unoptimized sizes="(max-width: 767px) 80px, 112px" className="object-cover" /></span> : <span className={`${styles.avatar} ${styles.initials}`}>{vendor.shopName.slice(0, 2).toUpperCase()}</span>}
@@ -152,6 +157,9 @@ export default async function StorePage({ params }: { params: { slug: string } }
           <h2><Info aria-hidden="true"/>About this store</h2>
           <p>{vendor.shopDescription || "This seller hasn't added a store description yet."}</p>
           {vendor.primaryCategory && <p className={styles.aboutCategory}>{vendor.primaryCategory}</p>}
+          {socialLinks.length > 0 && <div className={styles.social} aria-label={`${vendor.shopName} on social media`}>
+            {socialLinks.map(({ platform, url }) => <a key={platform} href={url} target="_blank" rel="noopener noreferrer nofollow"><SocialIcon platform={platform} />{SOCIAL_LABELS[platform]}</a>)}
+          </div>}
         </section>
         {serviceCities.length > 0 && <section id="store-coverage" className={styles.infoCard}>
           <h2><Globe2 aria-hidden="true"/>Service coverage</h2>
