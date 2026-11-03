@@ -217,8 +217,7 @@ export default function VendorProfilePage() {
       <StoreStrength values={values} productCount={profile.productCount} storePath={storePath} />
     </div>
 
-    <div className="mt-6 hidden items-center justify-between gap-3 sm:flex">
-      <a href={storePath} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm font-semibold text-[#0f5c3e] hover:underline"><ExternalLink className="h-4 w-4" aria-hidden />View public store</a>
+    <div className="mt-6 hidden items-center justify-end gap-3 sm:flex">
       {actions("top")}
     </div>
     <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[#e3ede6] bg-white/95 px-4 py-3 backdrop-blur sm:hidden">{actions("bottom")}</div>
