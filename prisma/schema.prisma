@@ -724,7 +724,7 @@ model Vendor {
   storeBanner      String?              @db.Text
   storePolicies    String?              @db.Text
   serviceCities    Json?
-  /// Optional public social profile URLs keyed by platform (validated by lib/vendor-social-links.ts).
+  /// Unused: seller social links were removed to keep buyers on JORO. Kept (nullable) to avoid a destructive migration.
   socialLinks      Json?
   slugAliases      StoreSlugAlias[]
   serviceOfferings ServiceOffering[]

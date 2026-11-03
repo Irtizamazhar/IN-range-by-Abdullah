@@ -7,44 +7,16 @@ import ts from "typescript";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { api, ApiError, sameOrigin } from "../lib/marketplace-api";
-import * as social from "../lib/vendor-social-links";
-
-const { checkSocialUrl, readSocialLinks, socialLinksInputSchema } = social;
-
-test("social links require https and the platform's own domain", () => {
-  assert.deepEqual(checkSocialUrl("facebook", "https://www.facebook.com/gadgethub"), { url: "https://www.facebook.com/gadgethub" });
-  assert.ok("url" in checkSocialUrl("instagram", "https://instagram.com/gadgethub"));
-  assert.ok("url" in checkSocialUrl("tiktok", "https://www.tiktok.com/@gadgethub"));
-  assert.ok("url" in checkSocialUrl("youtube", "https://youtu.be/abc"));
-  assert.ok("url" in checkSocialUrl("whatsapp", "https://wa.me/923001234567"));
-  assert.ok("url" in checkSocialUrl("website", "https://gadgethub.pk"));
-  assert.ok("error" in checkSocialUrl("facebook", "http://facebook.com/x"), "http rejected");
-  assert.ok("error" in checkSocialUrl("facebook", "https://evilfacebook.com/x"), "look-alike domain rejected");
-  assert.ok("error" in checkSocialUrl("instagram", "https://facebook.com/x"), "wrong platform rejected");
-  assert.ok("error" in checkSocialUrl("website", "https://127.0.0.1/admin"));
-  assert.ok("error" in checkSocialUrl("website", "https://user:pass@shop.pk"));
-  assert.ok("error" in checkSocialUrl("website", "javascript:alert(1)"));
-});
-
-test("social input allows blanks, reports per-field errors and rejects unknown keys", () => {
-  assert.deepEqual(socialLinksInputSchema.parse({ facebook: "", instagram: "https://instagram.com/a" }), { instagram: "https://instagram.com/a" });
-  const bad = socialLinksInputSchema.safeParse({ facebook: "https://x.com/a" });
-  assert.equal(bad.success, false);
-  assert.deepEqual(bad.error?.issues[0].path, ["facebook"]);
-  assert.equal(socialLinksInputSchema.safeParse({ myspace: "https://myspace.com" }).success, false);
-  assert.deepEqual(readSocialLinks({ facebook: "https://facebook.com/a", instagram: "http://instagram.com/a", other: "x" }), { facebook: "https://facebook.com/a" });
-  assert.deepEqual(readSocialLinks(null), {});
-});
 
 function routeFixture() {
   let vendor: { id: string; status: string } | null = { id: "vendor-1", status: "approved" };
   const updates: Record<string, unknown>[] = [];
   const audits: unknown[] = [];
-  const row: Record<string, unknown> = { id: "vendor-1", status: "approved", shopName: "GadgetHub", storeSlug: "gadgethub", shopDescription: "", primaryCategory: "Other", shopLogo: "/uploads/vendor-products/vendor-1/logo.webp", storeBanner: null, city: "Taxila", address: "Main Bazar", socialLinks: null };
+  const row: Record<string, unknown> = { id: "vendor-1", status: "approved", shopName: "GadgetHub", storeSlug: "gadgethub", shopDescription: "", primaryCategory: "Other", shopLogo: "/uploads/vendor-products/vendor-1/logo.webp", storeBanner: null, city: "Taxila", address: "Main Bazar", _count: { products: 3 } };
   const prisma = {
     vendor: {
       findUnique: async () => ({ ...row }),
-      update: async ({ data }: { data: Record<string, unknown> }) => { updates.push(data); Object.assign(row, data, { socialLinks: data.socialLinks === Prisma.DbNull ? null : data.socialLinks }); return { id: "vendor-1" }; },
+      update: async ({ data }: { data: Record<string, unknown> }) => { updates.push(data); Object.assign(row, data); return { id: "vendor-1" }; },
     },
     marketplaceAudit: { create: async ({ data }: { data: unknown }) => { audits.push(data); return data; } },
     $transaction: async (ops: Promise<unknown>[]) => Promise.all(ops),
@@ -55,23 +27,22 @@ function routeFixture() {
     "@/lib/marketplace-api": { api, ApiError, sameOrigin },
     "@/lib/vendor-auth-server": { getVendorFromSession: async () => vendor ? { vendor } : null },
     "@/lib/categories-store": { readCategories: async () => [{ id: 1, name: "Mobiles & Accessories" }, { id: 2, name: "Other" }] },
-    "@/lib/vendor-social-links": social,
     "@/lib/vendor-location-request": { readLocationRequest: () => null, publicLocationRequest: () => null },
-    "@prisma/client": { Prisma },
   };
   const output = ts.transpileModule(readFileSync(resolve("app/api/vendor/profile/route.ts"), "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   const exported: { GET?: () => Promise<Response>; PATCH?: (request: Request) => Promise<Response> } = {};
   runInNewContext(output, { exports: exported, require: (name: string) => { assert.ok(name in imports, `Unexpected dependency: ${name}`); return imports[name]; } });
-  const valid = { shopName: "GadgetHub", shopDescription: "Smart gadgets", primaryCategory: "Mobiles & Accessories", shopLogo: "/uploads/vendor-products/vendor-1/new.webp", storeBanner: "", socialLinks: { instagram: "https://instagram.com/gadgethub" } };
+  const valid = { shopName: "GadgetHub", shopDescription: "Smart gadgets", primaryCategory: "Mobiles & Accessories", shopLogo: "/uploads/vendor-products/vendor-1/new.webp", storeBanner: "" };
   const patch = (body: unknown, origin = "https://joro.pk") => exported.PATCH!(new Request("https://joro.pk/api/vendor/profile", { method: "PATCH", headers: { "content-type": "application/json", origin }, body: JSON.stringify(body) }));
   return { get: () => exported.GET!(), patch, valid, updates, audits, row, setVendor: (value: typeof vendor) => { vendor = value; } };
 }
 
-test("profile API reads the vendor's own profile and requires sign-in", async () => {
+test("profile API reads the vendor's own profile with its product count and requires sign-in", async () => {
   const route = routeFixture();
   const body = await (await route.get()).json();
   assert.equal(body.profile.city, "Taxila");
-  assert.deepEqual(body.profile.socialLinks, {});
+  assert.equal(body.profile.productCount, 3);
+  assert.equal("_count" in body.profile, false);
   route.setVendor(null);
   assert.equal((await route.get()).status, 401);
   assert.equal((await route.patch(route.valid)).status, 401);
@@ -81,23 +52,16 @@ test("profile API updates only permitted fields with an audit entry", async () =
   const route = routeFixture();
   const response = await route.patch(route.valid);
   assert.equal(response.status, 200);
-  assert.deepEqual(Object.keys(route.updates[0]).sort(), ["primaryCategory", "shopDescription", "shopLogo", "shopName", "socialLinks", "storeBanner"]);
-  assert.deepEqual(route.updates[0].socialLinks, { instagram: "https://instagram.com/gadgethub" });
+  assert.deepEqual(Object.keys(route.updates[0]).sort(), ["primaryCategory", "shopDescription", "shopLogo", "shopName", "storeBanner"]);
   assert.equal(route.audits.length, 1);
-  assert.deepEqual((await response.json()).profile.socialLinks, { instagram: "https://instagram.com/gadgethub" });
-  // Clearing every link stores NULL rather than an empty object.
-  await route.patch({ ...route.valid, socialLinks: { instagram: "" } });
-  assert.equal(route.updates[1].socialLinks, Prisma.DbNull);
+  assert.equal((await response.json()).profile.productCount, 3);
 });
 
-test("profile API rejects mass assignment, bad links, unknown categories, unsafe images, foreign origins and unapproved vendors", async () => {
+test("profile API rejects mass assignment, social links, unknown categories, unsafe images, foreign origins and unapproved vendors", async () => {
   const route = routeFixture();
-  for (const extra of [{ city: "Lahore" }, { address: "x" }, { storeSlug: "new" }, { status: "approved" }, { id: "vendor-2" }]) {
+  for (const extra of [{ city: "Lahore" }, { address: "x" }, { storeSlug: "new" }, { status: "approved" }, { id: "vendor-2" }, { socialLinks: { facebook: "https://facebook.com/x" } }]) {
     assert.equal((await route.patch({ ...route.valid, ...extra })).status, 400, `rejects ${Object.keys(extra)[0]}`);
   }
-  const badLink = await route.patch({ ...route.valid, socialLinks: { facebook: "http://facebook.com/x" } });
-  assert.equal(badLink.status, 400);
-  assert.ok((await badLink.json()).fieldErrors["socialLinks.facebook"]);
   assert.equal((await route.patch({ ...route.valid, primaryCategory: "Made Up" })).status, 400);
   assert.equal((await route.patch({ ...route.valid, primaryCategory: "Other" })).status, 200, "current legacy category may be kept");
   assert.equal((await route.patch({ ...route.valid, shopLogo: "/uploads/../secret" })).status, 400);

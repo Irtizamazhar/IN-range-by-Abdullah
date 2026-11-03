@@ -3,9 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { api, ApiError, sameOrigin } from "@/lib/marketplace-api";
 import { getVendorFromSession } from "@/lib/vendor-auth-server";
 import { readCategories } from "@/lib/categories-store";
-import { readSocialLinks, socialLinksInputSchema } from "@/lib/vendor-social-links";
 import { publicLocationRequest, readLocationRequest } from "@/lib/vendor-location-request";
-import { Prisma } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -19,10 +17,15 @@ const input = z.object({
   primaryCategory: z.string().trim().min(1, "Choose a category.").max(100),
   shopLogo: image,
   storeBanner: image,
-  socialLinks: socialLinksInputSchema,
 }).strict();
 
-const PROFILE_SELECT = { id: true, status: true, shopName: true, storeSlug: true, shopDescription: true, primaryCategory: true, shopLogo: true, storeBanner: true, city: true, address: true, socialLinks: true } as const;
+const PROFILE_SELECT = { id: true, status: true, shopName: true, storeSlug: true, shopDescription: true, primaryCategory: true, shopLogo: true, storeBanner: true, city: true, address: true, _count: { select: { products: true } } } as const;
+
+type ProfileRow = { _count: { products: number } } & Record<string, unknown>;
+/** Flattens the product count used by the Store Strength card. */
+function toProfile({ _count, ...profile }: ProfileRow) {
+  return { ...profile, productCount: _count.products };
+}
 
 async function approvedVendor() {
   const session = await getVendorFromSession();
@@ -37,7 +40,7 @@ export async function GET() {
     if (!row) throw new ApiError(404, "Store profile not found.");
     // Only the location request is exposed from the private onboarding data.
     const { onboardingData, ...profile } = row;
-    return { profile: { ...profile, socialLinks: readSocialLinks(profile.socialLinks) }, locationRequest: publicLocationRequest(readLocationRequest(onboardingData)) };
+    return { profile: toProfile(profile), locationRequest: publicLocationRequest(readLocationRequest(onboardingData)) };
   });
 }
 
@@ -58,12 +61,11 @@ export async function PATCH(request: Request) {
     if (data.primaryCategory !== current?.primaryCategory && !categories.includes(data.primaryCategory)) {
       throw new ApiError(400, "Choose a category from the list.", { primaryCategory: "Choose a category from the list." });
     }
-    const socialLinks = Object.keys(data.socialLinks).length ? data.socialLinks : Prisma.DbNull;
     await prisma.$transaction([
-      prisma.vendor.update({ where: { id: vendor.id }, data: { ...data, socialLinks }, select: { id: true } }),
+      prisma.vendor.update({ where: { id: vendor.id }, data, select: { id: true } }),
       prisma.marketplaceAudit.create({ data: { actor: `vendor:${vendor.id}`, action: "STORE_PROFILE_UPDATED", target: vendor.id, reason: "Vendor edited store profile." } }),
     ]);
     const profile = await prisma.vendor.findUnique({ where: { id: vendor.id }, select: PROFILE_SELECT });
-    return { success: true, profile: profile && { ...profile, socialLinks: readSocialLinks(profile.socialLinks) } };
+    return { success: true, profile: profile && toProfile(profile) };
   });
 }

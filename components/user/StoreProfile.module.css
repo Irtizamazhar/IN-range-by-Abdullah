@@ -8,12 +8,7 @@
 .identity { display: flex; align-items: center; gap: 24px; min-width: 0; padding: 26px 28px; border-radius: 25px 25px 0 0; background: transparent; }
 .withBanner { align-items: flex-start; padding-top: 18px; border-radius: 0; }
 .avatarWrap { position: relative; flex: none; }
-.withBanner .avatarWrap { margin-top: -74px; }
-.social { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 13px; }
-.social a { display: inline-flex; align-items: center; gap: 7px; min-height: 38px; padding: 7px 13px; border: 1px solid #dcefcf; border-radius: 999px; background: #f4fbec; color: #00513c; font-size: 12px; font-weight: 650; transition: background .15s; }
-.social a:hover { background: #e6f6d6; }
-.social svg { width: 16px; height: 16px; flex: none; }
-.verified { position: absolute; right: 2px; bottom: 4px; display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: 3px solid #fff; border-radius: 50%; background: #22a447; color: #fff; box-shadow: 0 3px 8px rgb(11 60 36 / 20%); }
+.withBanner .avatarWrap { margin-top: -74px; }.verified { position: absolute; right: 2px; bottom: 4px; display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: 3px solid #fff; border-radius: 50%; background: #22a447; color: #fff; box-shadow: 0 3px 8px rgb(11 60 36 / 20%); }
 .verified svg { width: 16px; height: 16px; stroke-width: 3.2; }
 .avatar { position: relative; display: flex; align-items: center; justify-content: center; width: 112px; height: 112px; aspect-ratio: 1; flex: 0 0 112px; overflow: hidden; border: 5px solid #fff; border-radius: 50%; background: linear-gradient(145deg, #f2fbec, #ddf3d2); box-shadow: 0 8px 22px rgb(12 66 38 / 12%); }
 .initials { font-size: 34px; font-weight: 800; color: #0b3d24; letter-spacing: -.02em; }

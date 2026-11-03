@@ -2,18 +2,16 @@
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { ImageLightbox } from "@/components/ui/ImageLightbox";
-import { SocialIcon } from "@/components/user/SocialIcon";
 import { PakistanCitySelect } from "@/components/ui/PakistanCitySelect";
 import Link from "@/components/ui/LoadingLink";
 import { useLoadingRouter } from "@/hooks/useLoadingRouter";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Check, CircleCheck, ExternalLink, Info, Loader2, MapPin, Share2, Store, Trash2, Upload, UserRound } from "lucide-react";
+import { Check, Circle, CircleCheck, ExternalLink, Gauge, Info, Loader2, MapPin, Store, Trash2, Upload, UserRound } from "lucide-react";
 import toast from "react-hot-toast";
 import { fetchShopCategoryNameList } from "@/lib/shop-category-names";
-import { checkSocialUrl, SOCIAL_LABELS, SOCIAL_PLATFORMS, type SocialLinks, type SocialPlatform } from "@/lib/vendor-social-links";
 
-type Profile = { id: string; status: string; shopName: string; storeSlug: string | null; shopDescription: string | null; primaryCategory: string; shopLogo: string | null; storeBanner: string | null; city: string; address: string; socialLinks: SocialLinks };
-type Values = { shopName: string; shopDescription: string; primaryCategory: string; shopLogo: string; storeBanner: string; socialLinks: Record<SocialPlatform, string> };
+type Profile = { id: string; status: string; shopName: string; storeSlug: string | null; shopDescription: string | null; primaryCategory: string; shopLogo: string | null; storeBanner: string | null; city: string; address: string; productCount: number };
+type Values = { shopName: string; shopDescription: string; primaryCategory: string; shopLogo: string; storeBanner: string };
 type ImageKind = "shopLogo" | "storeBanner";
 type LocationRequest = { status: "PENDING" | "APPROVED" | "REJECTED"; city: string; address: string; ticketNumber: string; ticketHref: string; requestedAt: string; reviewedAt: string | null; reviewNote: string | null };
 type UploadState = { progress: number | null; done: boolean; error: string; warning: string };
@@ -24,10 +22,6 @@ const SPECS: Record<ImageKind, { title: string; size: string; minWidth: number; 
   shopLogo: { title: "Profile Photo (Logo)", size: "512 × 512 px (min 400 × 400), square", minWidth: 400, minHeight: 400, ratio: 1 },
   storeBanner: { title: "Store Banner", size: "1800 × 600 px (min 1200 × 400), 3:1", minWidth: 1200, minHeight: 400, ratio: 3 },
 };
-const PLACEHOLDERS: Record<SocialPlatform, string> = {
-  facebook: "https://facebook.com/yourstore", instagram: "https://instagram.com/yourstore", tiktok: "https://tiktok.com/@yourstore",
-  youtube: "https://youtube.com/@yourstore", website: "https://yourstore.com", whatsapp: "https://wa.me/923001234567",
-};
 const emptyUpload: UploadState = { progress: null, done: false, error: "", warning: "" };
 const card = "rounded-2xl border border-[#e3ede6] bg-white p-5 shadow-[0_6px_20px_rgba(11,60,36,0.05)] sm:p-6";
 const inputClass = "mt-1.5 w-full min-w-0 rounded-xl border border-[#d5e3dc] bg-white px-4 py-3 text-sm text-darkText outline-none transition focus:border-[#0f5c3e] focus:ring-2 focus:ring-[#0f5c3e]/15 aria-[invalid=true]:border-red-500";
@@ -36,7 +30,6 @@ function toValues(profile: Profile): Values {
   return {
     shopName: profile.shopName || "", shopDescription: profile.shopDescription || "", primaryCategory: profile.primaryCategory || "",
     shopLogo: profile.shopLogo || "", storeBanner: profile.storeBanner || "",
-    socialLinks: Object.fromEntries(SOCIAL_PLATFORMS.map(p => [p, profile.socialLinks?.[p] || ""])) as Record<SocialPlatform, string>,
   };
 }
 
@@ -112,18 +105,6 @@ export default function VendorProfilePage() {
     setValues(current => current ? { ...current, [key]: value } : current);
     setErrors(e => ({ ...e, [key]: "" }));
   }
-  function setSocial(platform: SocialPlatform, value: string) {
-    setValues(current => current ? { ...current, socialLinks: { ...current.socialLinks, [platform]: value } } : current);
-    setErrors(e => ({ ...e, [`socialLinks.${platform}`]: "" }));
-  }
-  function checkSocial(platform: SocialPlatform) {
-    if (!values) return;
-    let value = values.socialLinks[platform].trim();
-    if (value && !/^[a-z]+:\/\//i.test(value)) { value = `https://${value}`; setSocial(platform, value); }
-    if (!value) return;
-    const checked = checkSocialUrl(platform, value);
-    if ("error" in checked) setErrors(e => ({ ...e, [`socialLinks.${platform}`]: checked.error }));
-  }
 
   async function chooseImage(kind: ImageKind, file: File | undefined) {
     if (!file || uploads[kind].progress !== null) return;
@@ -159,17 +140,12 @@ export default function VendorProfilePage() {
     const clientErrors: Record<string, string> = {};
     if (!values.shopName.trim()) clientErrors.shopName = "Store name is required.";
     if (!values.primaryCategory.trim()) clientErrors.primaryCategory = "Choose a category.";
-    for (const platform of SOCIAL_PLATFORMS) {
-      const value = values.socialLinks[platform].trim();
-      const checked = value ? checkSocialUrl(platform, value) : null;
-      if (checked && "error" in checked) clientErrors[`socialLinks.${platform}`] = checked.error;
-    }
     if (Object.keys(clientErrors).length) { setErrors(clientErrors); toast.error("Please fix the highlighted fields."); focusError(clientErrors); return; }
     saveLock.current = true; setSaving(true);
     try {
       const response = await fetch("/api/vendor/profile", {
         method: "PATCH", headers: { "Content-Type": "application/json" }, credentials: "same-origin",
-        body: JSON.stringify({ ...values, socialLinks: Object.fromEntries(SOCIAL_PLATFORMS.map(p => [p, values.socialLinks[p].trim()])) }),
+        body: JSON.stringify(values),
       });
       const data = await response.json().catch(() => ({})) as { profile?: Profile; error?: string; fieldErrors?: Record<string, string> };
       if (!response.ok || !data.profile) {
@@ -199,7 +175,7 @@ export default function VendorProfilePage() {
   const categoryOptions = values.primaryCategory && !categories.includes(values.primaryCategory) ? [values.primaryCategory, ...categories] : categories;
   const actions = (where: "top" | "bottom") => <div className={where === "top" ? "hidden items-center gap-3 sm:flex" : "flex gap-3 sm:hidden"}>
     <button type="button" onClick={cancel} disabled={!dirty || saving} className="min-h-11 flex-1 whitespace-nowrap rounded-full border border-[#d5e3dc] bg-white px-5 text-sm font-semibold text-[#0f5c3e] hover:bg-[#f3f8f5] disabled:opacity-50">Cancel</button>
-    <LoadingButton type="button" onClick={save} loading={saving} loadingLabel="Saving…" disabled={!dirty || uploading} className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-[#0f5c3e] px-5 text-sm font-semibold text-white shadow-sm hover:bg-[#0b4a31] disabled:opacity-50"><Check className="h-4 w-4" aria-hidden />Save Changes</LoadingButton>
+    <LoadingButton type="button" onClick={save} loading={saving} loadingLabel="Saving…" disabled={!dirty || uploading} className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-[#0f5c3e] px-5 text-sm font-semibold text-white shadow-sm hover:bg-[#0b4a31] disabled:opacity-50"><span className="inline-flex items-center gap-2"><Check className="h-4 w-4" aria-hidden />Save Changes</span></LoadingButton>
   </div>;
 
   return <main className="mx-auto max-w-6xl px-4 pb-28 pt-6 sm:px-6 sm:pb-10 sm:pt-8">
@@ -238,20 +214,7 @@ export default function VendorProfilePage() {
         <p className="mt-4 text-xs leading-5 text-darkText/55">Location changes are checked by the JORO team before they go live. Service cities are managed in <Link href="/vendor/dashboard/store" className="font-semibold text-[#0f5c3e] underline">Store &amp; QR</Link>.</p>
       </section>
 
-      <section className={card} aria-labelledby="pf-social-title">
-        <SectionTitle id="pf-social-title" icon={<Share2 className="h-5 w-5" aria-hidden />} title="Social Media Links" />
-        <p className="mt-1 text-xs text-darkText/55">Optional. Only filled-in, valid https links appear on your public store.</p>
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          {SOCIAL_PLATFORMS.map(platform => {
-            const key = `socialLinks.${platform}`;
-            return <div key={platform} className="min-w-0">
-              <label htmlFor={`pf-socialLinks-${platform}`} className="flex items-center gap-2 text-sm font-semibold text-darkText"><SocialIcon platform={platform} className="h-4 w-4 text-[#0f5c3e]" />{SOCIAL_LABELS[platform]}</label>
-              <input id={`pf-socialLinks-${platform}`} type="url" inputMode="url" autoComplete="url" className={inputClass} value={values.socialLinks[platform]} placeholder={PLACEHOLDERS[platform]} aria-invalid={Boolean(errors[key]) || undefined} aria-describedby={errors[key] ? `pf-socialLinks-${platform}-error` : undefined} onChange={e => setSocial(platform, e.target.value)} onBlur={() => checkSocial(platform)} />
-              {errors[key] && <p id={`pf-socialLinks-${platform}-error`} className="mt-1 text-xs font-medium text-red-700">{errors[key]}</p>}
-            </div>;
-          })}
-        </div>
-      </section>
+      <StoreStrength values={values} productCount={profile.productCount} storePath={storePath} />
     </div>
 
     <div className="mt-6 hidden items-center justify-between gap-3 sm:flex">
@@ -262,6 +225,41 @@ export default function VendorProfilePage() {
 
     {preview && values[preview] && <ImageLightbox images={[values[preview]]} title={SPECS[preview].title} zoomable onClose={() => setPreview(null)} />}
   </main>;
+}
+
+/** How complete the storefront is, from the values on screen; every tip keeps customers on JORO. */
+function StoreStrength({ values, productCount, storePath }: { values: Values; productCount: number; storePath: string }) {
+  const description = values.shopDescription.trim().length;
+  const items = [
+    { done: Boolean(values.shopLogo), label: "Add a store logo", hint: "Customers recognise you faster." },
+    { done: Boolean(values.storeBanner), label: "Add a store banner", hint: "Makes your store page stand out." },
+    { done: description >= 80, label: "Write a store description", hint: description ? `${description}/80 characters` : "At least 80 characters about what you sell." },
+    { done: Boolean(values.primaryCategory) && values.primaryCategory !== "Other", label: "Choose your main category", hint: "Helps buyers find you in the right place." },
+    { done: productCount >= 5, label: "List at least 5 products", hint: `${productCount} listed so far`, href: "/vendor/dashboard/products" },
+  ];
+  const score = Math.round((items.filter(item => item.done).length / items.length) * 100);
+  const tone = score === 100 ? "bg-[#2f8a3a]" : score >= 60 ? "bg-[#0f5c3e]" : "bg-amber-500";
+  return <section className={card} aria-labelledby="pf-strength-title">
+    <SectionTitle id="pf-strength-title" icon={<Gauge className="h-5 w-5" aria-hidden />} title="Store Strength" />
+    <div className="mt-5 flex items-end justify-between gap-3">
+      <p className="text-3xl font-bold text-darkText">{score}%</p>
+      <p className="pb-1 text-xs font-semibold text-darkText/55">{score === 100 ? "Your store looks complete" : "Complete your store to win more buyers"}</p>
+    </div>
+    <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-[#e3ede6]" role="progressbar" aria-label="Store strength" aria-valuemin={0} aria-valuemax={100} aria-valuenow={score}>
+      <div className={`h-full rounded-full transition-all ${tone}`} style={{ width: `${score}%` }} />
+    </div>
+    <ul className="mt-5 space-y-3">
+      {items.map(item => <li key={item.label} className="flex items-start gap-3">
+        {item.done ? <CircleCheck className="mt-0.5 h-5 w-5 shrink-0 text-[#2f8a3a]" aria-hidden /> : <Circle className="mt-0.5 h-5 w-5 shrink-0 text-darkText/25" aria-hidden />}
+        <span className="min-w-0 flex-1">
+          <span className={`block text-sm font-semibold ${item.done ? "text-darkText/55 line-through decoration-darkText/30" : "text-darkText"}`}>{item.label}<span className="sr-only">{item.done ? " (done)" : " (to do)"}</span></span>
+          <span className="block text-xs text-darkText/55">{item.hint}</span>
+        </span>
+        {!item.done && item.href && <Link href={item.href} className="shrink-0 text-xs font-semibold text-[#0f5c3e] underline">Add</Link>}
+      </li>)}
+    </ul>
+    <a href={storePath} target="_blank" rel="noreferrer" className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-full border border-[#0f5c3e] px-4 text-sm font-semibold text-[#0f5c3e] hover:bg-[#f3f8f5]"><ExternalLink className="h-4 w-4" aria-hidden />See how customers see your store</a>
+  </section>;
 }
 
 /** Request form + status for changing the verified city/address; an admin approves before anything changes. */

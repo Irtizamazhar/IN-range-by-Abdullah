@@ -6,10 +6,7 @@ import { type ProductCardData } from "@/components/user/ProductCard";
 import { StoreCatalog } from "@/components/user/StoreCatalog";
 import styles from "@/components/user/StoreProfile.module.css";
 import { StoreFollowButton } from "@/components/user/StoreFollowButton";
-import { CopyStoreLink } from "@/components/user/CopyStoreLink";
-import { SocialIcon } from "@/components/user/SocialIcon";
-import { readSocialLinks, SOCIAL_LABELS, SOCIAL_PLATFORMS } from "@/lib/vendor-social-links";
-import { catalogProductSelect } from "@/lib/catalog-product-select";
+import { CopyStoreLink } from "@/components/user/CopyStoreLink";import { catalogProductSelect } from "@/lib/catalog-product-select";
 import { generateUniqueStoreSlug } from "@/lib/store-slug";
 import { prisma } from "@/lib/prisma";
 import { serializeProduct } from "@/lib/serialize";
@@ -31,7 +28,6 @@ const STORE_SELECT = {
   storeBanner: true,
   storePolicies: true,
   serviceCities: true,
-  socialLinks: true,
   _count: { select: { followers: true } },
   vendorShopOrders: { where: { status: "delivered" as const }, select: { id: true } },
 } as const;
@@ -104,8 +100,6 @@ export default async function StorePage({ params }: { params: { slug: string } }
     ...(serializeProduct(product) as ProductCardData),
     ...pickReviewStat(productRatings, product.id),
   }));
-  const storedLinks = readSocialLinks(vendor.socialLinks);
-  const socialLinks = SOCIAL_PLATFORMS.flatMap(platform => { const url = storedLinks[platform]; return url ? [{ platform, url }] : []; });
   const serviceCities = Array.isArray(vendor.serviceCities) ? (vendor.serviceCities as unknown[]).filter((c): c is string => typeof c === "string") : [];
   const storeRating = storeRatings.get(vendor.id) ?? {
     ratingAvg: 0,
@@ -156,11 +150,7 @@ export default async function StorePage({ params }: { params: { slug: string } }
         <section id="store-about" className={styles.infoCard}>
           <h2><Info aria-hidden="true"/>About this store</h2>
           <p>{vendor.shopDescription || "This seller hasn't added a store description yet."}</p>
-          {vendor.primaryCategory && <p className={styles.aboutCategory}>{vendor.primaryCategory}</p>}
-          {socialLinks.length > 0 && <div className={styles.social} aria-label={`${vendor.shopName} on social media`}>
-            {socialLinks.map(({ platform, url }) => <a key={platform} href={url} target="_blank" rel="noopener noreferrer nofollow"><SocialIcon platform={platform} />{SOCIAL_LABELS[platform]}</a>)}
-          </div>}
-        </section>
+          {vendor.primaryCategory && <p className={styles.aboutCategory}>{vendor.primaryCategory}</p>}        </section>
         {serviceCities.length > 0 && <section id="store-coverage" className={styles.infoCard}>
           <h2><Globe2 aria-hidden="true"/>Service coverage</h2>
           <div className={styles.cities}>{serviceCities.map(city => <span key={city}>{city}</span>)}</div>
