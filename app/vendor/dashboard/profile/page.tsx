@@ -336,7 +336,7 @@ function ImageCard({ kind, value, state, fallback, onPick, onRemove, onPreview }
   const media = value
     ? <button type="button" onClick={onPreview} aria-label={`Preview ${spec.title}`} className={isLogo ? "relative h-28 w-28 shrink-0 overflow-hidden rounded-full border-4 border-white bg-[#e6f4dc] shadow-[0_8px_22px_rgba(12,66,38,0.15)] sm:h-32 sm:w-32" : "relative block aspect-[3/1] w-full overflow-hidden rounded-xl border border-[#e3ede6] bg-[#f4f8f5]"}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={value} alt="" className="h-full w-full object-cover" />
+      <img src={value} alt="" className={`h-full w-full ${isLogo ? "object-cover" : "object-contain"}`} />
       {busy && <span className="absolute inset-0 flex items-center justify-center bg-white/70"><Loader2 className="h-6 w-6 animate-spin text-[#0f5c3e]" aria-hidden /></span>}
     </button>
     : <div className={isLogo ? "flex h-28 w-28 shrink-0 items-center justify-center rounded-full border-4 border-white bg-[#0f5c3e] text-3xl font-bold text-white shadow-[0_8px_22px_rgba(12,66,38,0.15)] sm:h-32 sm:w-32" : "flex aspect-[3/1] w-full flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[#c9dccf] bg-gradient-to-r from-[#eaf8dc] to-[#e3f6cf] text-sm text-[#0f5c3e]"}>

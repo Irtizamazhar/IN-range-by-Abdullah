@@ -4,11 +4,13 @@
 .profile::before { width: 520px; height: 520px; right: -140px; top: -300px; background: radial-gradient(circle, rgb(255 255 255 / 55%) 0%, rgb(255 255 255 / 0%) 70%); }
 .profile::after { width: 380px; height: 380px; right: 18%; top: -220px; border: 46px solid rgb(255 255 255 / 30%); }
 /* Banner art is 3:1 (1800 x 600); desktop shows a 200-250px band, mobile shows it whole. */
-.banner { display: block; position: relative; width: 100%; height: clamp(200px, 16vw, 250px); overflow: hidden; border-radius: 25px 25px 0 0; background: #edf5ee; }
+/* Banner art is 3:1 (1800 x 600): the box keeps that ratio at every width so the whole image is shown, never cropped. */
+.banner { display: block; position: relative; width: 100%; aspect-ratio: 3 / 1; overflow: hidden; border-radius: 25px 25px 0 0; background: #edf5ee; }
 .identity { display: flex; align-items: center; gap: 24px; min-width: 0; padding: 26px 28px; border-radius: 25px 25px 0 0; background: transparent; }
-.withBanner { align-items: flex-start; padding-top: 18px; border-radius: 0; }
+/* The logo sits below the banner (no overlap), so no part of the banner is hidden. */
+.withBanner { border-radius: 0; }
 .avatarWrap { position: relative; flex: none; }
-.withBanner .avatarWrap { margin-top: -74px; }.verified { position: absolute; right: 2px; bottom: 4px; display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: 3px solid #fff; border-radius: 50%; background: #22a447; color: #fff; box-shadow: 0 3px 8px rgb(11 60 36 / 20%); }
+.verified { position: absolute; right: 2px; bottom: 4px; display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: 3px solid #fff; border-radius: 50%; background: #22a447; color: #fff; box-shadow: 0 3px 8px rgb(11 60 36 / 20%); }
 .verified svg { width: 16px; height: 16px; stroke-width: 3.2; }
 .avatar { position: relative; display: flex; align-items: center; justify-content: center; width: 112px; height: 112px; aspect-ratio: 1; flex: 0 0 112px; overflow: hidden; border: 5px solid #fff; border-radius: 50%; background: linear-gradient(145deg, #f2fbec, #ddf3d2); box-shadow: 0 8px 22px rgb(12 66 38 / 12%); }
 .initials { font-size: 34px; font-weight: 800; color: #0b3d24; letter-spacing: -.02em; }
@@ -85,14 +87,13 @@
 @media (max-width: 767px) {
   .page { padding: 12px 12px 24px; }
   .profile { border-radius: 16px; }
-  .banner { height: auto; aspect-ratio: 3 / 1; border-radius: 15px 15px 0 0; }
+  .banner { border-radius: 15px 15px 0 0; }
   .identity { position: relative; display: grid; grid-template-columns: minmax(0,1fr); gap: 12px; padding: 18px 16px; border-radius: 15px 15px 0 0; background: transparent; }
   .avatarWrap { justify-self: start; }
   .avatar { width: 84px; height: 84px; flex-basis: 84px; border-width: 4px; }
   .initials { font-size: 26px; }
   .verified { right: 0; bottom: 2px; width: 26px; height: 26px; }
   .verified svg { width: 14px; height: 14px; }
-  .withBanner .avatarWrap { margin-top: -57px; }
   .identity h1 { font-size: 26px; margin-top: 5px; }
   .meta > span + span { margin-left: 12px; padding-left: 12px; }
   .emptyArt { width: 140px; }

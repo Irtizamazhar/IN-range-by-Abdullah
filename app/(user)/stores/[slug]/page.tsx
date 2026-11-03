@@ -111,7 +111,7 @@ export default async function StorePage({ params }: { params: { slug: string } }
   return (
     <main className={styles.page}>
       <section className={styles.profile} aria-label="Store profile">
-        {vendor.storeBanner && <div className={styles.banner}><Image src={vendor.storeBanner} alt="" fill unoptimized priority sizes="(max-width: 767px) 100vw, 1600px" className="object-cover" /></div>}
+        {vendor.storeBanner && <div className={styles.banner}><Image src={vendor.storeBanner} alt="" fill unoptimized priority sizes="(max-width: 767px) 100vw, 1600px" className="object-contain" /></div>}
         <div className={`${styles.identity} ${vendor.storeBanner ? styles.withBanner : ""}`}>
           <span className={styles.avatarWrap}>
             {vendor.shopLogo ? <span className={styles.avatar}><Image src={vendor.shopLogo} alt={`${vendor.shopName} logo`} fill unoptimized sizes="(max-width: 767px) 80px, 112px" className="object-cover" /></span> : <span className={`${styles.avatar} ${styles.initials}`}>{vendor.shopName.slice(0, 2).toUpperCase()}</span>}
