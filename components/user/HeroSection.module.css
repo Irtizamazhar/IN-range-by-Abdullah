@@ -26,8 +26,8 @@
   .primaryAction { background: rgb(var(--brand-primary-rgb)); }
   .secondaryAction { border-color: rgb(255 255 255 / 52%); }
   .tertiaryAction { border-color: rgb(255 255 255 / 30%); }
-  .visual { height: 136px; max-width: 100%; margin-top: 12px; justify-content: flex-end; }
-  .visual > div:last-child { max-width: 260px; border-radius: 16px; transform: rotate(-3deg); }
+  .visual { height: auto; max-width: 100%; margin-top: 12px; justify-content: center; }
+  .visual > div:last-child { border-radius: 16px; }
 }
 
 @media (max-width: 359px) {
