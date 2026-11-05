@@ -1,4 +1,4 @@
-import { getOrCreateSettings } from "@/lib/settings-db";
+import { readPublicSettings } from "@/lib/settings-db";
 import { fallbackSettings } from "@/lib/default-settings-public";
 import { UserRouteShell } from "@/components/user/UserRouteShell";
 
@@ -13,7 +13,7 @@ export default async function UserLayout({
 
   try {
     footerProps =
-      await getOrCreateSettings();
+      await readPublicSettings();
   } catch (error) {
     console.error(
       "Could not load site settings:",

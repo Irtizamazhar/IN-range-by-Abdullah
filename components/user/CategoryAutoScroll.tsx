@@ -10,6 +10,7 @@ import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 type CategoryItem = {
   id: string | number;
   name: string;
+  slug?: string;
   image: string;
 };
 
@@ -43,7 +44,7 @@ function CategoryCircle({ category, hidden = false }: { category: CategoryItem; 
   const src = categoryImage(category);
   // An image that cannot load (e.g. an external host the optimizer rejects, or a missing file) shows the initial instead.
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
-  return <Link href={`/products?category=${encodeURIComponent(category.name)}`} title={category.name} tabIndex={hidden ? -1 : undefined} className={item}>
+  return <Link href={category.slug ? `/categories/${encodeURIComponent(category.slug)}` : `/products?category=${encodeURIComponent(category.name)}`} title={category.name} tabIndex={hidden ? -1 : undefined} className={item}>
     <span className={`${circle} bg-white ring-green-200 sm:bg-brand-soft group-hover:ring-green-500 group-focus-visible:ring-2 group-focus-visible:ring-green-600`}>
       {src && src !== failedSrc
         ? <Image src={src} alt="" fill sizes="(min-width: 640px) 76px, 80px" loading="lazy" unoptimized={shouldUnoptimizeImageSrc(src)} onError={() => setFailedSrc(src)} className="object-contain sm:object-cover" />

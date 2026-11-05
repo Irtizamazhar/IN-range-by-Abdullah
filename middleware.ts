@@ -1,3 +1,4 @@
+import { shouldNoindex } from "@/lib/seo-policy";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
@@ -43,7 +44,7 @@ async function privateLaunchGate(req: NextRequest): Promise<NextResponse | null>
   });
   if (decision === "allow") return NextResponse.next();
   if (decision === "home") {
-    return NextResponse.rewrite(new URL("/public-home", req.url));
+    return markPrivate(NextResponse.rewrite(new URL("/public-home", req.url)));
   }
   if (decision === "block") {
     return markPrivate(
@@ -107,7 +108,12 @@ function notFound(req: NextRequest) {
 }
 
 export async function middleware(req: NextRequest) {
-  if (!isMaintenanceMode()) return authorizeArea(req);
+  if ((req.nextUrl.pathname === "/robots.txt" || req.nextUrl.pathname === "/sitemap.xml" || /^\/sitemaps\/[a-z]+-[0-9]+\.xml$/.test(req.nextUrl.pathname)) && ["GET", "HEAD"].includes(req.method)) return NextResponse.next();
+  if (!isMaintenanceMode()) {
+    const response = await authorizeArea(req);
+    if (shouldNoindex(req.nextUrl.pathname, req.nextUrl.searchParams) && !response.headers.has("X-Robots-Tag")) response.headers.set("X-Robots-Tag", "noindex, follow");
+    return response;
+  }
 
   const gated = await privateLaunchGate(req);
   if (gated) return gated;

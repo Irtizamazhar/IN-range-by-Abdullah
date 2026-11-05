@@ -1,7 +1,7 @@
 import Link from "@/components/ui/LoadingLink";
 import { ArrowRight, Tags } from "lucide-react";
 
-export const metadata = { title: "JORO Deals | Coming Soon" };
+export const metadata = { title: "Deals", robots: { index: false, follow: true } };
 
 export default function DealsPage() {
   return (

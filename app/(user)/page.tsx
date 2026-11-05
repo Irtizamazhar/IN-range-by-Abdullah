@@ -1,3 +1,6 @@
+import { pageMetadata, HOME_TITLE, HOME_DESCRIPTION, SITE_URL } from "@/lib/seo";
+import { JsonLd } from "@/components/seo/JsonLd";
+export const metadata = pageMetadata(HOME_TITLE, HOME_DESCRIPTION, "/");
 import Link from "@/components/ui/LoadingLink";
 
 import Image from "next/image";
@@ -340,7 +343,7 @@ export default async function HomePage() {
 
 
 
-      <HeroSection sellNowHref="/sell" />
+      <JsonLd data={{ "@context": "https://schema.org", "@graph": [{ "@type": "Organization", "@id": `${SITE_URL}/#organization`, name: "JORO.PK", url: SITE_URL, logo: `${SITE_URL}/icon.png` }, { "@type": "WebSite", "@id": `${SITE_URL}/#website`, name: "JORO.PK", url: SITE_URL, publisher: { "@id": `${SITE_URL}/#organization` } }] }} /><HeroSection sellNowHref="/sell" />
 
 
 
@@ -406,7 +409,7 @@ export default async function HomePage() {
                 </p>
               </div>
               <Link
-                href={electronics ? `/products?category=${encodeURIComponent(electronics.name)}` : "/products"}
+                href={electronics ? `/categories/${encodeURIComponent(electronics.slug)}` : "/products"}
                 className={`${styles.promoButton} mt-auto inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-brand-primary px-4 py-2 text-[12px] font-black text-brand-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white`}
               >
                 Shop Now <ArrowRight className={`${styles.promoArrow} h-4 w-4 shrink-0`} aria-hidden="true" />

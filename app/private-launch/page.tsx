@@ -8,8 +8,8 @@ import { isMaintenanceMode } from "@/lib/private-launch/session";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Coming Soon",
-  description: "We're working on something exciting. JORO.pk is coming soon.",
+  title: "JORO.PK ? maintenance",
+  description: "JORO.PK is temporarily unavailable for maintenance.",
   robots: { index: false, follow: false },
 };
 

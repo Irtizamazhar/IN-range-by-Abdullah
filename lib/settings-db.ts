@@ -1,3 +1,4 @@
+import { fallbackSettings } from "@/lib/default-settings-public";
 import type { Settings } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { ISettings } from "@/types/settings";
@@ -22,6 +23,12 @@ export function settingsRowToApp(row: Settings): ISettings {
       jazzCash: { mobileNumber: row.bankJazzcash },
     },
   };
+}
+
+/** Read-only public rendering; initialization stays in the existing admin/checkout workflow. */
+export async function readPublicSettings(): Promise<ISettings> {
+  const row = await prisma.settings.findFirst();
+  return row ? settingsRowToApp(row) : fallbackSettings;
 }
 
 export async function getOrCreateSettings(): Promise<ISettings> {

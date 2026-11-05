@@ -309,7 +309,9 @@ export function ProductDetailClient({
   delivery,
   soldCount,
   reviewsPostField,
+  categoryHref,
 }: {
+  categoryHref?: string;
   product: ProductDetailProduct;
   related: ProductCardData[];
   seller?: SellerInfo | null;
@@ -552,7 +554,7 @@ export function ProductDetailClient({
                 <BreadcrumbChevron />
                 <li className="min-w-0 max-w-[40%] truncate sm:max-w-none">
                   <Link
-                    href={`/products?category=${encodeURIComponent(product.category)}`}
+                    href={categoryHref || `/products?category=${encodeURIComponent(product.category)}`}
                     className="hover:text-[#00543D]"
                   >
                     {product.category}

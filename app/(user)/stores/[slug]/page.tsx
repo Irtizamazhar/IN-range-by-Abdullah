@@ -1,13 +1,15 @@
-import {appOrigin} from "@/lib/app-url";
-import { notFound, redirect } from "next/navigation";
+import { pageMetadata, SITE_URL, breadcrumbs, seoText, absoluteUrl } from "@/lib/seo";
+import { seoStore } from "@/lib/seo-data";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { notFound, permanentRedirect } from "next/navigation";
 import Image from "next/image";
 import { CalendarDays, Check, MapPin, Package, PackageCheck, ShieldCheck, Star, FileText, Globe2, Info } from "lucide-react";
 import { type ProductCardData } from "@/components/user/ProductCard";
 import { StoreCatalog } from "@/components/user/StoreCatalog";
 import styles from "@/components/user/StoreProfile.module.css";
 import { StoreFollowButton } from "@/components/user/StoreFollowButton";
-import { CopyStoreLink } from "@/components/user/CopyStoreLink";import { catalogProductSelect } from "@/lib/catalog-product-select";
-import { generateUniqueStoreSlug } from "@/lib/store-slug";
+import { CopyStoreLink } from "@/components/user/CopyStoreLink";
+import { catalogProductSelect } from "@/lib/catalog-product-select";
 import { prisma } from "@/lib/prisma";
 import { serializeProduct } from "@/lib/serialize";
 import { getCustomerSession } from "@/lib/sessions";
@@ -49,33 +51,19 @@ async function resolveVendor(param: string) {
   return null;
 }
 
-function canonicalOrigin() {
-  const configured = appOrigin();
-  try {
-    const url = new URL(configured || "");
-    if (url.protocol !== "https:" || url.username || url.password) return null;
-    return url.origin;
-  } catch {
-    return null;
-  }
+function canonicalOrigin() { return SITE_URL; }
+export async function generateMetadata({params}:{params:{slug:string}}) {
+  const store=await seoStore(params.slug);if(!store)notFound();
+  return pageMetadata(store.shopName + " - Seller Store",store.shopDescription||`Explore ${store.shopName}'s public listings on JORO.PK.`,`/stores/${encodeURIComponent(store.storeSlug||store.id)}`,store.storeBanner||store.shopLogo);
 }
 
 export default async function StorePage({ params }: { params: { slug: string } }) {
   const found = await resolveVendor(params.slug);
   if (!found) notFound();
-  let vendor = found;
-
-  // Lazily backfill a slug for any vendor approved before slugs became mandatory.
-  if (!vendor.storeSlug) {
-    const slug = await generateUniqueStoreSlug(prisma, vendor.shopName, vendor.id);
-    const backfilled = await prisma.vendor
-      .update({ where: { id: vendor.id }, data: { storeSlug: slug }, select: STORE_SELECT })
-      .catch(() => null);
-    if (backfilled) vendor = backfilled;
-  }
+  const vendor = found;
 
   if (vendor.storeSlug && vendor.storeSlug !== params.slug) {
-    redirect(`/stores/${vendor.storeSlug}`);
+    permanentRedirect(`/stores/${vendor.storeSlug}`);
   }
 
   const [products, session, storeRatings] = await Promise.all([
@@ -109,7 +97,7 @@ export default async function StorePage({ params }: { params: { slug: string } }
   const shareableUrl = `${origin ?? ""}/stores/${vendor.storeSlug || vendor.id}`;
 
   return (
-    <main className={styles.page}>
+    <main className={styles.page}><JsonLd data={breadcrumbs([{name:"Home",path:"/"},{name:"Stores",path:"/stores"},{name:vendor.shopName,path:`/stores/${encodeURIComponent(vendor.storeSlug||vendor.id)}`}])} /><JsonLd data={{"@context":"https://schema.org","@type":"Organization",name:vendor.shopName,description:seoText(vendor.shopDescription,5000),url:absoluteUrl(`/stores/${encodeURIComponent(vendor.storeSlug||vendor.id)}`)}} />
       <section className={styles.profile} aria-label="Store profile">
         {vendor.storeBanner && <div className={styles.banner}><Image src={vendor.storeBanner} alt="" fill unoptimized priority sizes="(max-width: 767px) 100vw, 1600px" className="object-contain" /></div>}
         <div className={`${styles.identity} ${vendor.storeBanner ? styles.withBanner : ""}`}>

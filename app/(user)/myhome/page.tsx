@@ -1,7 +1,7 @@
 import Link from "@/components/ui/LoadingLink";
 import { ArrowRight, House } from "lucide-react";
 
-export const metadata = { title: "JORO MyHome | Coming Soon" };
+export const metadata = { title: "MyHome", robots: { index: false, follow: true } };
 
 export default function MyHomePage() {
   return (

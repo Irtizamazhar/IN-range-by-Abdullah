@@ -13,6 +13,7 @@ import { ProductFilters } from "./ProductFilters";
 import { catalogQueryKey, readCatalogFilters, SORT_LABELS, updateCatalogQuery, type CatalogFilters } from "./catalog-filter-state";
 import { formatPKR } from "@/lib/format";
 import styles from "./Products.module.css";
+import type { InitialCatalog } from "@/lib/seo-catalog";
 
 const PAGE_SIZE = 18;
 function normalizeProducts(raw: unknown): ProductCardData[] {
@@ -23,21 +24,22 @@ function normalizeProducts(raw: unknown): ProductCardData[] {
   });
 }
 
-export function ProductsClient() {
+export function ProductsClient({ initial }: { initial?: InitialCatalog } = {}) {
+  const seedKey = useRef(initial?.key);
   const searchParams = useSearchParams();
-  const [products, setProducts] = useState<ProductCardData[]>([]);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [products, setProducts] = useState<ProductCardData[]>(initial?.products || []);
+  const [page, setPage] = useState(initial?.page || 1);
+  const [totalPages, setTotalPages] = useState(initial?.totalPages || 1);
+  const [total, setTotal] = useState(initial?.total || 0);
+  const [loading, setLoading] = useState(!initial);
   usePageLoading(loading);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
   const [moreError, setMoreError] = useState("");
   const [retry, setRetry] = useState(0);
   const [filterReset, setFilterReset] = useState(0);
-  const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
-  const [priceRange, setPriceRange] = useState<{ min: number; max: number } | null>(null);
+  const [categoryOptions, setCategoryOptions] = useState<string[]>(initial?.categories || []);
+  const [priceRange, setPriceRange] = useState<{ min: number; max: number } | null>(initial?.priceRange || null);
   const drawer = useRef<HTMLDialogElement>(null);
   const filterTrigger = useRef<HTMLButtonElement>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -59,6 +61,12 @@ export function ProductsClient() {
   if (inStock) query.set("inStock", "true");
   query.set("sort", sort);
   const filterKey = query.toString();
+  function pageHref(number: number) {
+    const params = new URLSearchParams(filterKey);
+    if (params.get("sort") === "newest") params.delete("sort");
+    if (number > 1) params.set("page", String(number));
+    return `/products${params.size ? `?${params}` : ""}`;
+  }
 
   const fetchPage = useCallback(async (pageNum: number, signal: AbortSignal) => {
     const params = new URLSearchParams(filterKey);
@@ -74,6 +82,11 @@ export function ProductsClient() {
     if (catalogQueryKey(new URLSearchParams(window.location.search)) !== catalogQueryKey(new URLSearchParams(filterKey))) return;
     const controller = new AbortController();
     request.current = controller;
+    if (seedKey.current === filterKey && retry === 0) {
+      seedKey.current = undefined; fetchingMore.current = false; setLoading(false);
+      return () => controller.abort();
+    }
+    seedKey.current = undefined;
     // Block queued scroll callbacks while the first page for these filters loads.
     fetchingMore.current = true;
     setLoading(true); setLoadingMore(false); setMoreError(""); setPage(1);
@@ -132,6 +145,7 @@ export function ProductsClient() {
   }, [error, loadMore, loading, loadingMore, moreError, page, totalPages]);
 
   useEffect(() => {
+    if (initial?.categories.length) return;
     const controller = new AbortController();
     void fetch("/api/product-categories", { signal: controller.signal }).then((response) => {
       if (!response.ok) throw new Error("Could not load categories");
@@ -140,7 +154,7 @@ export function ProductsClient() {
       setCategoryOptions(Array.isArray(data) ? data.map((item) => String(item.name || "").trim()).filter(Boolean) : []);
     }).catch(() => {});
     return () => controller.abort();
-  }, []);
+  }, [initial]);
 
   useEffect(() => {
     const resetDrafts = () => setFilterReset((previous) => previous + 1);
@@ -227,6 +241,10 @@ export function ProductsClient() {
               <p>You’ve explored {products.length} of {total.toLocaleString("en-PK")} products</p>
               <div className={styles.progress} aria-hidden="true"><span style={{ width: `${Math.min(100, products.length / Math.max(1, total) * 100)}%` }} /></div>
               {moreError && <p role="alert">{moreError}</p>}
+              <nav aria-label="Product pages" className="flex justify-center gap-5">
+                {page > 1 && <a href={pageHref(page - 1)}>Previous page</a>}
+                {page < totalPages && <a href={pageHref(page + 1)}>Next page</a>}
+              </nav>
               {page < totalPages && (moreError
                 ? <LoadingButton type="button" className={styles.retryMore} onClick={() => loadMore()}><RotateCcw aria-hidden="true" /> Try again</LoadingButton>
                 : <p role="status" className={styles.scrollStatus}>{loadingMore ? <><LoaderCircle aria-hidden="true" className={styles.filterSpinner} /> Loading more products…</> : "Scroll to discover more"}</p>)}

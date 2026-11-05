@@ -1,3 +1,5 @@
+import { pageMetadata } from "@/lib/seo";
+export const metadata = pageMetadata("Gifts in Pakistan", "Browse available gift listings on JORO.PK or request a custom gift from marketplace sellers.", "/gifts");
 import Link from "@/components/ui/LoadingLink";
 import { ProductCard } from "@/components/user/ProductCard";
 import { CategoryFilterRail } from "@/components/user/CategoryFilterRail";

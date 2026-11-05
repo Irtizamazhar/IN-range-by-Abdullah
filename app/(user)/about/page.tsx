@@ -1,14 +1,11 @@
-import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
+export const metadata = pageMetadata("About JORO.PK","Learn about JORO.PK, Pakistan?s marketplace connecting people, products, services and seller opportunities.","/about");
 import Image from "next/image";
 import Link from "@/components/ui/LoadingLink";
 import { ArrowRight, Bookmark, Compass, Link2, MessageSquarePlus, Search, Store, Wrench } from "lucide-react";
 import { PostWantButton } from "@/components/user/PostWantButton";
 import styles from "./page.module.css";
 
-export const metadata: Metadata = {
-  title: "About JORO | People, Products & Possibilities",
-  description: "Meet JORO, a Pakistan-focused marketplace connecting everyday needs with products, services and seller opportunities. Founded by Hamid Khan and Irtiza.",
-};
 
 const features = [
   { Icon: Search, title: "Discover Products", text: "Explore marketplace listings and find products to consider for your everyday needs.", href: "/products", action: "Explore products" },

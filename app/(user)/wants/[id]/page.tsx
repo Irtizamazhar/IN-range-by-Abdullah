@@ -1,42 +1,26 @@
-"use client";
-import { PageSkeleton } from "@/components/ui/PageSkeleton";
-import { LoadingButton } from "@/components/ui/LoadingButton";
-import { useCallback, useEffect, useState } from "react";
-import Link from "@/components/ui/LoadingLink";
-import { useCustomerAuth } from "@/context/CustomerAuthContext";
-import { WantCard, type WantSummary } from "@/components/user/WantCard";
-import { NeedHelpButton } from "@/components/support/NeedHelpButton";
-import { WantOwnerActions } from "@/components/user/WantOwnerActions";
-import { WantImageGallery } from "@/components/user/WantImageGallery";
-import { WantReportMenu, WantSocialBar, type SocialWant } from "@/components/wants/WantSocialBar";
-import { offerStatusLabel } from "@/lib/want-social";
-type Revision = { revisionNumber: number; initiator: string; price: unknown; quantity: number; shipping: unknown; delivery: string; condition: string; warranty: string; message: string; expiresAt: string };
-type Offer = { id: string; status: string; version?: number; updatedAt: string; vendor: { id: string; shopName: string; city: string; storeSlug: string | null }; revisions: Revision[] };
-/** Reads a JSON body, or null when the server sent something else (e.g. an HTML error page while dev recompiles). */
-async function readJson(response: Response) { try { return await response.json(); } catch { return null; } }
-function effectiveTotal(r: Revision) { return Number(r.price) * r.quantity + Number(r.shipping); }
-function isExpiredOffer(o: Offer) { const latest = o.revisions[0]; return !!latest && ["SUBMITTED", "COUNTERED"].includes(o.status) && new Date(latest.expiresAt).getTime() <= Date.now(); }
-function displayStatus(o: Offer) { return offerStatusLabel({ status: o.status, version: o.version, latestExpiresAt: o.revisions[0]?.expiresAt }); }
-export default function WantPage({ params, searchParams }: { params: { id: string }; searchParams?: { from?: string } }) {
-  const source = searchParams?.from;
-  const feedHref = typeof source === "string" && (source === "/wants" || source.startsWith("/wants?")) ? source : "/wants";
-  const { isCustomer } = useCustomerAuth(); const [want, setWant] = useState<(WantSummary & SocialWant & { description: string; condition: string | null; photo: string | null; images: string[]; needBy: string | null; expiresAt: string; status: string; isOwner: boolean; offers: Offer[] }) | null>(null); const [message, setMessage] = useState("Loading…");
-  // Reloads when the customer session changes so joined/reaction state always belongs to the current viewer.
-  const load = useCallback(async (signal?: AbortSignal) => {
-    try { const r = await fetch(`/api/wants/${params.id}`, { signal, cache: "no-store" }); const d = await readJson(r); if (!r.ok || !d?.want) throw new Error(d?.error || "Could not load this Want. Please try again."); setWant(d.want); setMessage(""); } catch(e) { if (!signal?.aborted) setMessage(e instanceof Error ? e.message : "Could not load Want."); }
-  }, [params.id, isCustomer]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { const c = new AbortController(); void load(c.signal); return () => c.abort(); }, [load]);
-  useEffect(() => { const reload = (event: Event) => { if ((event as CustomEvent<{ id: string }>).detail?.id === params.id) void load(); }; window.addEventListener("want-updated", reload); return () => window.removeEventListener("want-updated", reload); }, [load, params.id]);
-  return <main className="mx-auto max-w-3xl px-4 py-10"><Link href={feedHref} scroll={!source} className="mb-5 inline-flex rounded-lg px-2 py-1 text-sm font-bold text-brand-link">&larr; Back to Wants</Link><div className="mb-5 flex flex-wrap items-center justify-between gap-3"><h1 className="text-3xl font-bold">Want details</h1>{want && !want.isOwner && want.status === "OPEN" && <WantReportMenu wantId={want.id} viewer={want.viewer} />}{want?.isOwner &&<div className="flex flex-wrap items-center gap-2"><WantOwnerActions wantId={want.id} status={want.status} offerCount={want.offers.length} afterDelete="/wants?tab=mine" /><NeedHelpButton role="customer" resourceType="WANT" resourceId={want.id} /></div>}</div><p role="status">{message}</p>{!want && message === "Loading…" && <PageSkeleton label="Loading Request details…" rows={3} />}{!want && message !== "Loading…" && <LoadingButton onClick={() => load()} className="my-4 rounded-xl border p-3">Try again</LoadingButton>}{want && <><WantCard want={want} /><p className="my-5 whitespace-pre-wrap">{want.description}</p><div className="mb-5 flex flex-wrap gap-4 text-sm text-gray-700">{want.condition && <span>Condition: {want.condition}</span>}{want.needBy && <span>Needed by: {new Date(want.needBy).toLocaleDateString("en-PK")}</span>}<span>Expires: {new Date(want.expiresAt).toLocaleDateString("en-PK")}</span></div><WantImageGallery images={want.images || []} title={want.title} className="mb-5" />{want.status === "OPEN" && <div className="rounded-2xl border border-[#E3EAE4] bg-white px-4 pb-4 sm:px-5"><WantSocialBar want={want} ownerOffersHref="#offers" />{!want.isOwner && want.viewer.actor !== "vendor" && <p className="mt-3 text-sm text-gray-600">Joining does not place an order, reserve stock, or grant access to other customers&apos; private offers.</p>}</div>}{want.status === "PENDING_MODERATION" && <p>Your Want is awaiting moderation.</p>}{want.isOwner && (() => {
-  const activeOffers = want.offers.filter(o => ["SUBMITTED", "COUNTERED"].includes(o.status) && !isExpiredOffer(o) && o.revisions[0]);
-  const lowestTotal = activeOffers.length > 1 ? Math.min(...activeOffers.map(o => effectiveTotal(o.revisions[0]))) : null;
-  return <section id="offers" className="mt-8 scroll-mt-24"><h2 className="mb-1 text-xl font-bold">Seller offers ({want.offers.length})</h2><p className="mb-2 text-sm text-gray-600">Only you can see these offers. Other customers and sellers only see how many vendors offered.</p>{activeOffers.length > 1 && <p className="mb-4 text-sm text-gray-600">Comparing {activeOffers.length} active offers. Prices and delivery below come directly from each seller&apos;s current terms.</p>}{want.offers.length ? <div className="mt-4 grid gap-4 sm:grid-cols-2">{want.offers.map(o => { const latest = o.revisions[0]; const expired = isExpiredOffer(o); const total = latest ? effectiveTotal(latest) : null; const isLowest = lowestTotal !== null && total === lowestTotal && !expired && ["SUBMITTED", "COUNTERED"].includes(o.status); return <article key={o.id} className={`rounded-2xl border bg-white p-5 ${isLowest ? "border-brand-primary ring-1 ring-brand-primary" : ""}`}><div className="flex flex-wrap items-start justify-between gap-3"><Link href={`/stores/${o.vendor.storeSlug || o.vendor.id}`} className="font-bold text-brand-link">{o.vendor.shopName}</Link><span className={`rounded-full px-3 py-1 text-xs font-bold ${expired ? "bg-gray-200 text-gray-700" : "bg-brand-soft"}`}>{displayStatus(o)}</span></div>{isLowest && <span className="mt-2 inline-block rounded-full bg-brand-primary px-2.5 py-0.5 text-xs font-bold text-brand-dark">Lowest price</span>}{latest && <>
-    <p className="mt-2 text-lg font-bold">PKR {Number(latest.price).toLocaleString("en-PK")} × {latest.quantity}{latest.quantity > 1 ? ` = PKR ${(Number(latest.price) * latest.quantity).toLocaleString("en-PK")}` : ""}</p>
-    <p className="mt-1 text-sm text-gray-600">{Number(latest.shipping) > 0 && <>+ PKR {Number(latest.shipping).toLocaleString("en-PK")} delivery = </>}<strong>PKR {total?.toLocaleString("en-PK")} total</strong></p>
-    {latest.delivery && <p className="mt-2 text-sm text-gray-700">Delivery: {latest.delivery}</p>}
-    {(latest.condition || latest.warranty) && <p className="text-sm text-gray-700">{[latest.condition && `Condition: ${latest.condition}`, latest.warranty && `Warranty: ${latest.warranty}`].filter(Boolean).join(" · ")}</p>}
-    <p className="mt-1 text-xs text-gray-500">Expires {new Date(latest.expiresAt).toLocaleString("en-PK")}</p>
-    {latest.message && <p className="mt-2 whitespace-pre-wrap text-sm">{latest.message}</p>}
-  </>}<Link href={`/account/offers#${o.id}`} className="mt-4 inline-block font-bold text-brand-link">Manage this offer →</Link><details className="mt-3"><summary className="cursor-pointer text-xs font-bold text-gray-500">Revision history ({o.revisions.length})</summary><div className="mt-2 space-y-1">{o.revisions.map(v => <p key={v.revisionNumber} className="text-xs text-gray-600">V{v.revisionNumber} · {v.initiator === "VENDOR" ? "Seller" : "You"} · PKR {Number(v.price).toLocaleString("en-PK")} × {v.quantity}{Number(v.shipping) > 0 ? ` + ${Number(v.shipping).toLocaleString("en-PK")} shipping` : ""}</p>)}</div></details></article>; })}</div> : <p className="rounded-2xl bg-white p-6 text-gray-600">No seller offers yet.</p>}</section>;
-})()}</>}</main>;
+import { requestCache } from "@/lib/seo-cache";
+import { notFound } from "next/navigation";
+import { seoWant } from "@/lib/seo-data";
+import { pageMetadata, breadcrumbs } from "@/lib/seo";
+import { resolveWantViewer } from "@/lib/want-engagement";
+import { prisma } from "@/lib/prisma";
+import { JsonLd } from "@/components/seo/JsonLd";
+import WantDetailClient from "./WantDetailClient";
+export const dynamic = "force-dynamic";
+const privateOwnerAccess = requestCache(async (id: string) => {
+  const viewer = await resolveWantViewer();
+  return !!viewer.customerId && !!await prisma.want.findFirst({ where: { id, customerId: viewer.customerId }, select: { id: true } });
+});
+type Props = { params: { id: string }; searchParams?: { from?: string } };
+export async function generateMetadata({ params }: Props) {
+  const want = await seoWant(params.id);
+  if (!want && !await privateOwnerAccess(params.id)) notFound();
+  return want ? pageMetadata(want.title, want.description || `A public ${want.category} request in ${want.city} on JORO.PK.`, `/wants/${encodeURIComponent(want.id)}`, want.photo)
+    : pageMetadata("Marketplace request", "View your marketplace request on JORO.PK.", `/wants/${encodeURIComponent(params.id)}`, undefined, true);
+}
+export default async function WantPage({ params, searchParams }: Props) {
+  const want = await seoWant(params.id);
+  if (!want && !await privateOwnerAccess(params.id)) notFound();
+  return <>{want && <JsonLd data={breadcrumbs([{ name: "Home", path: "/" }, { name: "Wants", path: "/wants" }, { name: want.title, path: `/wants/${encodeURIComponent(want.id)}` }])} />}
+    <WantDetailClient params={params} searchParams={searchParams} publicTitle={want?.title} publicSummary={want?.description} /></>;
 }

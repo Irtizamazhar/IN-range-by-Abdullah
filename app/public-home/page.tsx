@@ -6,8 +6,9 @@ import { isMaintenanceMode } from "@/lib/private-launch/session";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "JORO.pk | Pakistan Marketplace",
-  description: "JORO is a Pakistan-focused marketplace for discovering products, services and gifts, posting Wants and connecting with sellers. The marketplace is in private launch.",
+  title: "JORO.PK ? temporarily unavailable",
+  description: "JORO.PK is temporarily unavailable for maintenance. Please check back shortly.",
+  robots: { index: false, follow: false },
   alternates: { canonical: "https://joro.pk" },
 };
 

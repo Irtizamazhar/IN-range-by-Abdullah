@@ -2,11 +2,11 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminPermission } from "@/lib/admin-rbac";
-import { getOrCreateSettings, updateSettingsFromBody } from "@/lib/settings-db";
+import { readPublicSettings, updateSettingsFromBody } from "@/lib/settings-db";
 import type { ISettings } from "@/types/settings";
 
 export async function GET() {
-  const settings = await getOrCreateSettings();
+  const settings = await readPublicSettings();
   return NextResponse.json(settings);
 }
 

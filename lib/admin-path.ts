@@ -20,7 +20,7 @@ const RESERVED_SEGMENTS = new Set([
   "gifts", "invoice", "join", "joined-requests", "joro-connect", "my-stuff", "myhome",
   "new-arrivals", "products", "reset-password", "return-policy", "reviews", "search",
   "services", "stores", "together", "track-order", "wants", "privacy-policy",
-  "terms-and-conditions", "branding", "payments", "videos",
+  "terms-and-conditions", "branding", "payments", "videos", "categories", "sitemaps",
 ]);
 
 /** Validated admin base path, or null when unset/invalid (the admin panel then 404s). */

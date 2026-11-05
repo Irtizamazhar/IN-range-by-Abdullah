@@ -1,3 +1,4 @@
+import { indexableProductWhere } from "@/lib/seo-data";
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
@@ -37,6 +38,7 @@ export async function GET(req: NextRequest) {
   const where: Prisma.ProductWhereInput = {};
   if (!adminList || !isAdmin) {
     where.isActive = true;
+    where.AND = [indexableProductWhere];
   }
   if (search) {
     where.OR = [
@@ -78,7 +80,7 @@ export async function GET(req: NextRequest) {
     isAdminList
       ? Promise.resolve(null)
       : prisma.product.aggregate({
-          where: { isActive: true },
+          where: indexableProductWhere,
           _min: { price: true },
           _max: { price: true },
         }),

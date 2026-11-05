@@ -1,3 +1,5 @@
+import { pageMetadata } from "@/lib/seo";
+export const metadata = pageMetadata("Seller Stores in Pakistan", "Discover approved JORO.PK seller storefronts, their listed products and public store information.", "/stores");
 import { prisma } from "@/lib/prisma";
 import { StoreDirectory } from "@/components/user/StoreDirectory";
 import { vendorReviewStatsService } from "@/lib/vendor-review-stats-service";

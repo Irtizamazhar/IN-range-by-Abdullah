@@ -1,8 +1,11 @@
+import { pageMetadata, productSchema, breadcrumbs } from "@/lib/seo";
+import { seoProduct, indexableProductWhere } from "@/lib/seo-data";
+import { JsonLd } from "@/components/seo/JsonLd";
 import { notFound } from "next/navigation";
 import { catalogProductSelect } from "@/lib/catalog-product-select";
 import { prisma } from "@/lib/prisma";
 import { serializeProduct } from "@/lib/serialize";
-import { getOrCreateSettings } from "@/lib/settings-db";
+import { readPublicSettings } from "@/lib/settings-db";
 import { ProductDetailClient, type ProductDeliveryInfo } from "./ProductDetailClient";
 import type { ProductCardData } from "@/components/user/ProductCard";
 import {
@@ -24,10 +27,17 @@ function sellerActivityLabel(lastLoginAt: Date | null, now = Date.now()): string
   return "Active over a month ago";
 }
 
+export async function generateMetadata({ params }: PageProps) {
+  const product = await seoProduct(params.id);
+  if (!product) notFound();
+  const item = serializeProduct(product);
+  return pageMetadata(product.name, product.description || `Explore ${product.name} in ${product.category} on JORO.PK. View actual pricing and availability.`, `/products/${encodeURIComponent(product.id)}`, item.images[0]);
+}
+
 export default async function ProductDetailPage({ params }: PageProps) {
   const { id } = params;
 
-  try {
+  {
     const product = await prisma.product.findUnique({
       where: { id },
       select: catalogProductSelect(),
@@ -38,9 +48,10 @@ export default async function ProductDetailPage({ params }: PageProps) {
       select: {
         status: true,
         totalSold: true,
-        vendor: { select: { shopName: true, storeSlug: true, shopLogo: true, status: true, lastLoginAt: true } },
+        vendor: { select: { id: true, shopName: true, storeSlug: true, shopLogo: true, status: true, lastLoginAt: true } },
       },
     });
+    if (publication && (publication.status !== "active" || publication.vendor.status !== "approved")) notFound();
     const sellerListed = publication?.status === "active" && publication.vendor.status === "approved";
     const seller = sellerListed
       ? {
@@ -57,7 +68,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
         OR: product.categoryRecordId
           ? [{ categoryRecordId: product.categoryRecordId }, { category: product.category }]
           : [{ category: product.category }],
-        isActive: true,
+        isActive: true, AND: [indexableProductWhere],
       },
       take: 4,
       select: catalogProductSelect(),
@@ -77,16 +88,20 @@ export default async function ProductDetailPage({ params }: PageProps) {
     // Checkout charges the shop-wide delivery fee; show the same figure here.
     let delivery: ProductDeliveryInfo | null = null;
     try {
-      const settings = await getOrCreateSettings();
+      const settings = await readPublicSettings();
       delivery = { fee: Number(settings.codCharges ?? 0), codCities: settings.codAvailableCities ?? [] };
     } catch {
       delivery = null;
     }
 
     const p = serializeProduct(product);
+    const category = await prisma.category.findFirst({ where: { name: product.category, isActive: true, products: { some: indexableProductWhere } }, select: { name: true, slug: true } });
+    const crumbs = [{ name: "Home", path: "/" }, { name: "Products", path: "/products" }, ...(category ? [{ name: category.name, path: `/categories/${encodeURIComponent(category.slug)}` }] : []), { name: product.name, path: `/products/${encodeURIComponent(product.id)}` }];
+    const schema = productSchema({ ...p, id: product.id }, sellerListed ? { name: publication.vendor.shopName, path: `/stores/${encodeURIComponent(publication.vendor.storeSlug || publication.vendor.id)}` } : null);
 
     return (
-      <ProductDetailClient
+      <><JsonLd data={schema} /><JsonLd data={breadcrumbs(crumbs)} /><ProductDetailClient
+        categoryHref={category ? `/categories/${encodeURIComponent(category.slug)}` : undefined}
         product={{
           ...p,
           ratingAvg: dash.averageRating,
@@ -96,9 +111,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
         seller={seller}
         delivery={delivery}
         soldCount={sellerListed ? publication.totalSold : null}
-      />
+      /></>
     );
-  } catch {
-    notFound();
   }
 }

@@ -1,3 +1,5 @@
+import { pageMetadata } from "@/lib/seo";
+export const metadata = pageMetadata("Services in Pakistan", "Explore approved service listings and real provider coverage on JORO.PK. Compare service details and request work from local providers.", "/services");
 import Link from "@/components/ui/LoadingLink";
 import { ServiceCard } from "@/components/user/services/ServiceCard";
 import { CategoryFilterRail } from "@/components/user/CategoryFilterRail";

@@ -1,3 +1,5 @@
+import { pageMetadata } from "@/lib/seo";
+export const metadata = pageMetadata("Return Policy","Read JORO.PK?s published return and exchange guidelines, requirements and support process.","/return-policy");
 import Link from "@/components/ui/LoadingLink";
 
 export default function ReturnPolicyPage() {

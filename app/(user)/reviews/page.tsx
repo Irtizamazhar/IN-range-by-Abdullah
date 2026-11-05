@@ -1,3 +1,5 @@
+import { pageMetadata } from "@/lib/seo";
+export const metadata = pageMetadata("Marketplace Product Reviews", "Read approved public product reviews on JORO.PK and explore the products they describe.", "/reviews");
 import Image from "next/image";
 import Link from "@/components/ui/LoadingLink";
 import { getApprovedPublicReviews } from "@/lib/public-reviews-list";
