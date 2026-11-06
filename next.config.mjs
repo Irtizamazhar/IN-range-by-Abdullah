@@ -4,6 +4,11 @@ import { fileURLToPath } from "node:url";
 const nextConfig = {
   // Isolate verification builds when a local development server is already running.
   distDir: process.env.JORO_NEXT_DIST_DIR || ".next",
+  // Exact raw Host match only. Ignore forwarded hosts; never derive the destination from a request.
+  async redirects() {
+    return [{ source: "/:path*", has: [{ type: "host", value: "www\\.joro\\.pk" }],
+      destination: "https://joro.pk/:path*", permanent: true }];
+  },
   experimental: {
     // Hostinger counts build workers against its process/thread allowance.
     cpus: 1,

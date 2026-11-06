@@ -4,6 +4,7 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import assert from 'node:assert/strict';
 import net from 'node:net';
+import { request as httpRequest } from 'node:http';
 import { existsSync } from 'node:fs';
 import { chromium } from 'playwright-core';
 const root = process.cwd();
@@ -48,6 +49,27 @@ async function stop() {
   child.kill(); await exited;
 }
 async function check(label, fn) { await fn(); passed++; console.log('PASS ' + label); }
+// Node's fetch ignores an overridden Host header. Use raw HTTP for hostname-routing tests.
+function hostRequest(url, options = {}) {
+  return new Promise((resolve, reject) => {
+    const headers = { ...options.headers, ...(options.body !== undefined ? { 'content-length': Buffer.byteLength(options.body) } : {}) };
+    const request = httpRequest(url, { method: options.method || 'GET', headers }, response => {
+      const chunks = [];
+      response.on('data', chunk => chunks.push(chunk));
+      response.on('error', reject);
+      response.on('end', () => {
+        const headers = new Headers();
+        for (const [name, values] of Object.entries(response.headers)) {
+          for (const value of Array.isArray(values) ? values : [values]) if (value !== undefined) headers.append(name, value);
+        }
+        resolve(new Response(options.method === 'HEAD' ? null : Buffer.concat(chunks), { status: response.statusCode, headers }));
+      });
+    });
+    request.on('error', reject);
+    request.setTimeout(15000, () => request.destroy(new Error('Local host-routing request timed out')));
+    request.end(options.body);
+  });
+}
 async function rejectedPage(response) {
   const body = await response.text();
   // Existing root Suspense streams the shell first. Next adds robots=noindex
@@ -57,6 +79,46 @@ async function rejectedPage(response) {
 }
 try {
   let origin = await start(false);
+  await check('WWW GET/HEAD preserves public, login and OAuth paths/queries with a fixed HTTPS apex 308', async () => {
+    for (const suffix of ['/', '/products/seo-p-01?utm_source=a&utm_source=b&q=a%26b', '/login?role=customer&callbackUrl=%2Fcheckout', '/api/auth/callback/google?code=fixture&state=a%2Bb', '/checkout?step=delivery']) {
+      for (const method of ['GET', 'HEAD']) {
+        const response = await hostRequest(origin + suffix, { method, headers: { host: 'www.joro.pk', 'x-forwarded-host': 'attacker.example', 'x-forwarded-proto': 'http' } });
+        assert.equal(response.status, 308);
+        const target = new URL(response.headers.get('location'));
+        const original = new URL(suffix, origin);
+        assert.equal(target.origin, 'https://joro.pk');
+        assert.equal(target.pathname, original.pathname);
+        assert.deepEqual([...target.searchParams], [...original.searchParams]);
+        await response.body?.cancel();
+      }
+    }
+  });
+  await check('WWW API methods use 308 without processing mutations; apex API handling stays local', async () => {
+    for (const method of ['POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']) {
+      const response = await hostRequest(origin + '/api/www-redirect-probe?signature=a%2Fb', { method, body: method === 'OPTIONS' ? undefined : '{"fixture":true}', headers: { host: 'www.joro.pk', 'content-type': 'application/json' } });
+      assert.equal(response.status, 308, method);
+      assert.equal(response.headers.get('location'), 'https://joro.pk/api/www-redirect-probe?signature=a%2Fb');
+      await response.body?.cancel();
+    }
+    const apex = await hostRequest(origin + '/api/www-redirect-probe', { method: 'POST', headers: { host: 'joro.pk', 'x-forwarded-host': 'www.joro.pk' } });
+    assert.equal(apex.status, 404);
+    assert.equal(apex.headers.get('location'), null);
+    await apex.body?.cancel();
+    const session = await hostRequest(origin + '/api/auth/session', { headers: { host: 'joro.pk' } });
+    assert.equal(session.status, 200); assert.equal(session.headers.get('location'), null);
+    await session.body?.cancel();
+  });
+  await check('apex/internal/localhost ignore forwarded www and keep vendor authorization', async () => {
+    for (const host of ['joro.pk', 'localhost:3000', '0.0.0.0:3000']) {
+      const response = await hostRequest(origin + '/robots.txt', { headers: { host, 'x-forwarded-host': 'www.joro.pk' } });
+      assert.equal(response.status, 200); assert.equal(response.headers.get('location'), null);
+      await response.body?.cancel();
+    }
+    const vendor = await hostRequest(origin + '/vendor/dashboard', { headers: { host: 'joro.pk' } });
+    assert.equal(vendor.status, 307);
+    assert.ok(vendor.headers.get('location')?.endsWith('/vendor/login'));
+    await vendor.body?.cancel();
+  });
   await check('database failure returns explicit non-cacheable sitemap 503', async () => {
     await fixture(true);
     const response = await fetch(origin + '/sitemap.xml');
