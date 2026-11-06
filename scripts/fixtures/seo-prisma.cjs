@@ -11,18 +11,35 @@ const products = Array.from({ length: 20 }, (_, i) => ({ id: `seo-p-${String(i +
   legacyNewArrivalId: i === 0 ? 1 : null, isFeatured: false, _count: {} }));
 products.push({ ...products[0], id: 'inactive-product', isActive: false }, { ...products[0], id: 'unapproved-product', vendorPublication: { ...publication, vendor: { ...vendor, status: 'pending' } } });
 const category = { id: 'seo-category', name: 'Phones', slug: 'phones', image: '/icon.png', isActive: true, createdAt: date, updatedAt: date, products, sortOrder: 0, showOnHome: true, legacyId: 1 };
+const extraCategories = Array.from({ length: 6 }, (_, i) => {
+  const id = `public-category-${i}`, name = `Fixture category ${i}`;
+  const product = { ...products[1], id: `category-product-${i}`, name: `Category item ${i}`, category: name, categoryRecordId: id, stock: i === 0 ? 0 : 3 };
+  products.push(product);
+  return { ...category, id, name, slug: id, products: [product], sortOrder: i + 1, legacyId: i + 2 };
+});
+const hiddenProduct = { ...products[1], id: 'hidden-category-product', category: 'Hidden homepage category', categoryRecordId: 'hidden-category' };
+products.push(hiddenProduct);
+const categoryCases = [
+  { ...category, id: 'empty-category', slug: 'empty-category', name: 'Empty category', products: [] },
+  { ...category, id: 'inactive-category', slug: 'inactive-category', name: 'Inactive category', isActive: false },
+  { ...category, id: 'inactive-product-category', slug: 'inactive-product-category', products: [products.find(p => p.id === 'inactive-product')] },
+  { ...category, id: 'pending-category', slug: 'pending-category', products: [products.find(p => p.id === 'unapproved-product')] },
+  { ...category, id: 'suspended-category', slug: 'suspended-category', products: [{ ...products[0], vendorPublication: { ...publication, vendor: { ...vendor, status: 'suspended' } } }] },
+  { ...category, id: 'private-category', slug: 'private-category', products: [{ ...products[0], vendorPublication: { ...publication, status: 'draft' } }] },
+  { ...category, id: 'hidden-category', slug: 'hidden-category', name: hiddenProduct.category, products: [hiddenProduct], showOnHome: false },
+];
 const service = { id: 'public-service', name: 'Fixture repair', description: 'Public service description.', type: 'Repairs', price: 2500, priceType: 'FIXED', cities: ['Lahore'], coverage: null,
   active: true, moderationStatus: 'APPROVED', vendor, vendorId: vendor.id, catalog: null, imageUrl: null, durationMinutes: 60, leadDays: 1, warranty: '', cancellationTerms: 'Fixture terms', updatedAt: date, createdAt: date };
 const want = { id: 'public-want', title: 'Public camera request', description: 'Public request details.', category: 'Phones', city: 'Lahore', requestType: 'PRODUCT', budgetMin: null, budgetMax: null,
   budgetFlexible: true, quantity: 1, condition: 'Any', photo: null, photos: [], needBy: null, createdAt: date, updatedAt: date, expiresAt: new Date('2099-01-01'), status: 'OPEN',
-  customerId: 'fixture-customer', customer: { isActive: true, name: 'Fixture Customer', image: null }, _count: { interests: 0, offers: 0 } };
+  customerId: 'fixture-customer', customer: { isActive: true, name: 'Fixture Customer', image: null }, interests: [], _count: { interests: 0, offers: 0 } };
 const tables = {
-  product: products, category: [category], vendor: [vendor, { ...vendor, id: 'pending-store', storeSlug: 'pending-store', status: 'pending' }], vendorProduct: [publication],
+  product: products, category: [category, ...extraCategories, ...categoryCases], vendor: [vendor, { ...vendor, id: 'pending-store', storeSlug: 'pending-store', status: 'pending' }], vendorProduct: [publication],
   serviceOffering: [service, { ...service, id: 'pending-service', moderationStatus: 'PENDING_APPROVAL' }],
   want: [want, { ...want, id: 'private-want', title: 'PRIVATE REQUEST MUST NOT LEAK', status: 'PENDING_MODERATION' }, { ...want, id: 'expired-want', expiresAt: date }],
   settings: [{ id: 'fixture-settings', shopName: 'JORO.PK', whatsappNumber: '', codCharges: 150, codAvailableCities: [], bankMeezanTitle: '', bankMeezanNumber: '', bankHblTitle: '', bankHblNumber: '', bankEasypaisa: '', bankJazzcash: '' }],
 };
-let failReads = false, blockedWrites = 0;
+let failReads = false, blockedWrites = 0, emptyHomeCategories = false;
 function matches(row, where) {
   if (!where) return true;
   return Object.entries(where).every(([key, condition]) => {
@@ -49,6 +66,7 @@ function matches(row, where) {
 }
 function read(model, args = {}) {
   if (failReads) throw new Error('Offline fixture read failure');
+  if (emptyHomeCategories && model === 'category' && args.where?.showOnHome === true) return [];
   let rows = (tables[model] || []).filter(row => matches(row, args.where));
   if (args.orderBy) rows = [...rows].sort((a, b) => {
     for (const order of Array.isArray(args.orderBy) ? args.orderBy : [args.orderBy]) {
@@ -77,6 +95,7 @@ globalThis.prisma = new Proxy({}, { get(_target, model) {
 process.on('message', message => {
   if (message?.type === 'seo-fixture') {
     if (typeof message.failReads === 'boolean') failReads = message.failReads;
+    if (typeof message.emptyHomeCategories === 'boolean') emptyHomeCategories = message.emptyHomeCategories;
     process.send?.({ type: 'seo-fixture', blockedWrites });
   }
 });

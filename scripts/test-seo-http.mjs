@@ -35,11 +35,11 @@ async function start(maintenance) {
   }
   return `http://127.0.0.1:${port}`;
 }
-async function fixture(failReads) {
+async function fixture(failReads, emptyHomeCategories = false) {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => reject(new Error('Fixture acknowledgement timeout')), 5000);
     child.once('message', message => { clearTimeout(timeout); assert.equal(message.blockedWrites, 0); resolve(); });
-    child.send({ type: 'seo-fixture', failReads });
+    child.send({ type: 'seo-fixture', failReads, emptyHomeCategories });
   });
 }
 async function stop() {
@@ -81,6 +81,30 @@ try {
     for (const suffix of ['/products/seo-p-01', '/categories/phones', '/services/public-service', '/stores/fixture-store', '/wants/public-want']) assert.ok(urls.includes('https://joro.pk' + suffix), suffix);
     assert.ok(!urls.some(url => /inactive-product|unapproved-product|pending-service|pending-store|private-want|expired-want|privacy-policy|terms-and-conditions|\/sell$/.test(url)));
   });
+  await check('every homepage category destination is populated, canonical, indexable and in the sitemap', async () => {
+    const home = await (await fetch(origin + '/')).text();
+    const destinations = [...new Set([...home.matchAll(/href="(\/categories\/[^"?#]+)"/g)].map(match => match[1]))];
+    assert.deepEqual(destinations.sort(), ['/categories/phones', ...Array.from({ length: 6 }, (_, i) => `/categories/public-category-${i}`)].sort());
+    for (const pathname of destinations) {
+      const response = await fetch(origin + pathname);
+      assert.equal(response.status, 200, pathname);
+      const body = await response.text();
+      assert.ok(body.includes(`rel="canonical" href="https://joro.pk${pathname}"`));
+      assert.ok(!/<meta name="robots" content="[^"]*noindex/.test(body));
+      assert.ok(!response.headers.get('x-robots-tag')?.includes('noindex'));
+      assert.match(body, /href="\/products\/[^"?]+"/);
+      assert.ok(urls.includes('https://joro.pk' + pathname));
+    }
+  });
+  await check('zero eligible homepage categories retain the existing empty state and product browsing', async () => {
+    await fixture(false, true);
+    const response = await fetch(origin + '/'); assert.equal(response.status, 200);
+    const home = await response.text();
+    assert.match(home, /No categories yet/);
+    assert.match(home, /href="\/products"/);
+    assert.ok(!/href="\/categories\//.test(home));
+    await fixture(false);
+  });
   for (const url of urls) await check('sitemap target HTTP 200: ' + new URL(url).pathname, async () => {
     const response = await fetch(origin + new URL(url).pathname);
     assert.equal(response.status, 200); const body = await response.text();
@@ -100,7 +124,7 @@ try {
     assert.ok((await page2.text()).includes('href="https://joro.pk/products?page=2"'));
     await rejectedPage(await fetch(origin + '/products?page=999'));
   });
-  for (const suffix of ['/products/inactive-product', '/products/unapproved-product', '/services/pending-service', '/stores/pending-store', '/wants/private-want', '/wants/expired-want']) await check('non-public record rejected with noindex: ' + suffix, async () => {
+  for (const suffix of ['/products/inactive-product', '/products/unapproved-product', '/services/pending-service', '/stores/pending-store', '/wants/private-want', '/wants/expired-want', ...['empty-category', 'inactive-category', 'inactive-product-category', 'pending-category', 'suspended-category', 'private-category', 'missing-category'].map(slug => '/categories/' + slug)]) await check('non-public record rejected with noindex: ' + suffix, async () => {
     await rejectedPage(await fetch(origin + suffix));
   });
   await check('actual Product/Offer JSON-LD and safely escaped output', async () => {
@@ -131,6 +155,18 @@ try {
         const sitemapResponse = await fetch(origin + '/sitemap.xml');
         const xml = await sitemapResponse.text();
         assert.equal(await page.evaluate(value => new DOMParser().parseFromString(value, 'application/xml').querySelectorAll('parsererror').length, xml), 0);
+        await page.goto(origin + '/', { waitUntil: 'networkidle' });
+        const categories = page.getByRole('list', { name: 'Product categories' });
+        assert.equal(await categories.locator('a').count(), 7);
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
+        if (width === 390) {
+          const scroll = categories.locator('..');
+          await scroll.hover();
+          const before = await scroll.evaluate(node => node.scrollLeft);
+          await page.getByRole('button', { name: 'Scroll categories right' }).click();
+          await page.waitForFunction(previous => document.querySelector('[aria-label="Product categories"]').parentElement.scrollLeft !== previous, before);
+        }
+        assert.deepEqual(errors, []);
         await page.close();
       }
     } finally { await browser.close(); }

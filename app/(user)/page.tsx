@@ -39,7 +39,7 @@ import { ScrollToTopButton } from "@/components/user/ScrollToTopButton";
 
 
 
-import { readActiveProductCategories } from "@/lib/categories-store";
+import { seoHomepageCategories } from "@/lib/seo-data";
 
 import { loadMergedNewArrivalCards } from "@/lib/new-arrivals-catalog";
 
@@ -211,7 +211,7 @@ export default async function HomePage() {
 
 
 
-  const categories = (await readActiveProductCategories()).filter((category) => category.showOnHome === true);
+  const categories = await seoHomepageCategories();
 
   const electronics = categories.find((category) => category.name.toLowerCase() === "electronics");
 

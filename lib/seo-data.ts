@@ -27,4 +27,10 @@ export const seoStore = cache(async (slug: string) => {
   } }) : null;
 });
 export const seoCategory = cache(async (slug: string) => prisma.category.findFirst({ where: { slug, isActive: true, products: { some: indexableProductWhere } }, select: { id: true, name: true, slug: true, image: true } }));
+/** Homepage navigation must only advertise categories whose public landing page is eligible. */
+export const seoHomepageCategories = cache(async () => prisma.category.findMany({
+  where: { isActive: true, showOnHome: true, products: { some: indexableProductWhere } },
+  select: { id: true, name: true, slug: true, image: true, showOnHome: true, sortOrder: true },
+  orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+}));
 export const seoWant = cache(async (id: string) => prisma.want.findFirst({ where: { id, ...indexableWantWhere() }, select: { id: true, title: true, description: true, city: true, category: true, photo: true, updatedAt: true } }));
