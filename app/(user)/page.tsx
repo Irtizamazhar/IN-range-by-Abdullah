@@ -23,6 +23,9 @@ import { HomeAllProducts, HomeMarketplace, HomeTrendingWants } from "@/component
 
 
 import { HeroSection } from "@/components/user/HeroSection";
+import { HomeHeroPreload } from "@/components/user/HomeHeroPreload";
+import { RouteLoading } from "@/components/ui/RouteLoading";
+import { Suspense } from "react";
 
 import { HomePersonalization } from "@/components/user/HomePersonalization";
 import { FirstCustomerWelcome } from "@/components/user/FirstCustomerWelcome";
@@ -201,7 +204,18 @@ async function getHomeAllProducts(): Promise<ProductCardData[]> {
 
 
 
-export default async function HomePage() {
+export default function HomePage() {
+  return (
+    <>
+      <HomeHeroPreload />
+      <Suspense fallback={<RouteLoading />}>
+        <HomePageContent />
+      </Suspense>
+    </>
+  );
+}
+
+async function HomePageContent() {
 
   /* -------------------------------------------------------
 
