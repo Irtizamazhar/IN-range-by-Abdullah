@@ -72,7 +72,8 @@ export function LoginExperience({initialRole,initialMode,googleEnabled,developme
 
  const [busy,setBusy]=useState(false);const [vendor,setVendor]=useState<{ownerName:string;status:string}|null>(null);const [vendorLoading,setVendorLoading]=useState(true);
 
- useEffect(()=>{const c=new AbortController();fetch("/api/vendor/me",{signal:c.signal,cache:"no-store"}).then(async r=>{if(r.ok)setVendor((await r.json()).vendor);else setVendor(null);}).catch(()=>{}).finally(()=>{if(!c.signal.aborted)setVendorLoading(false);});return()=>c.abort();},[]);
+ // Stale responses are ignored rather than aborted, so leaving the page never raises an AbortError.
+ useEffect(()=>{let active=true;fetch("/api/vendor/me",{cache:"no-store"}).then(async r=>{const next=r.ok?(await r.json()).vendor:null;if(active)setVendor(next);}).catch(()=>{}).finally(()=>{if(active)setVendorLoading(false);});return()=>{active=false;};},[]);
 
  const callback=safeAccountLink(search?.get("callbackUrl"))||"/";const error=search?.get("error");
 

@@ -9,7 +9,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 import toast from "react-hot-toast";
 
-type VendorStatus = "onboarding" | "pending" | "approved" | "rejected" | "suspended";
+type VendorStatus = "pending" | "approved" | "rejected" | "suspended";
 
 type VendorDoc = {
   id: string;
@@ -52,7 +52,6 @@ type RiskMini = { riskLevel: "GREEN" | "YELLOW" | "RED"; riskScore: number };
 
 const STATUS_OPTIONS: { value: "" | VendorStatus; label: string }[] = [
   { value: "", label: "All" },
-  { value: "onboarding", label: "Setup incomplete" },
   { value: "pending", label: "Pending review" },
   { value: "approved", label: "Approved" },
   { value: "rejected", label: "Rejected" },

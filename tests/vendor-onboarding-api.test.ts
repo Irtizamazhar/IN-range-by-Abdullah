@@ -93,3 +93,32 @@ test("uploading one CNIC side on its own saves the file and its name (regression
   assert.equal(response.status, 200, JSON.stringify(await response.clone().json()));
   assert.deepEqual((route.saved[0] as { documentNames: unknown }).documentNames, { cnic_front: "cnic-front.png" });
 });
+
+function adminVendorsFixture() {
+  const wheres: unknown[] = [];
+  const imports: Record<string, unknown> = {
+    "next/server": { NextResponse },
+    "@/lib/admin-rbac": { requireAdminPermission: async () => ({ admin: { id: "admin-1" } }) },
+    "@/lib/vendor-suspension": { sweepExpiredSuspensions: async () => {} },
+    "@/lib/prisma": { prisma: { vendor: {
+      count: async ({ where }: { where: unknown }) => { wheres.push(where); return 0; },
+      findMany: async ({ where }: { where: unknown }) => { wheres.push(where); return []; },
+    } } },
+  };
+  const output = ts.transpileModule(readFileSync(resolve("app/api/admin/vendors/route.ts"), "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+  const exported: { GET?: (request: { nextUrl: URL }) => Promise<Response> } = {};
+  runInNewContext(output, { exports: exported, console, require: (name: string) => { assert.ok(name in imports, `Unexpected dependency: ${name}`); return imports[name]; } });
+  return { wheres, list: (query = "") => exported.GET!({ nextUrl: new URL(`https://joro.pk/api/admin/vendors${query}`) }) };
+}
+
+test("admin vendor list never returns an unfinished seller setup", async () => {
+  const hidden = { status: { not: "onboarding" } };
+  for (const query of ["", "?status=onboarding"]) {
+    const route = adminVendorsFixture();
+    assert.equal((await route.list(query)).status, 200);
+    assert.deepEqual(JSON.parse(JSON.stringify(route.wheres)), [hidden, hidden]);
+  }
+  const route = adminVendorsFixture();
+  await route.list("?status=pending");
+  assert.deepEqual(JSON.parse(JSON.stringify(route.wheres)), [{ status: "pending" }, { status: "pending" }]);
+});

@@ -1,13 +1,13 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-import { VendorAccountStatus } from "@prisma/client";
+import type { Prisma, VendorAccountStatus } from "@prisma/client";
 import { requireAdminPermission } from "@/lib/admin-rbac";
 import { prisma } from "@/lib/prisma";
 import { sweepExpiredSuspensions } from "@/lib/vendor-suspension";
 
+// Unfinished seller setups stay out of the admin list until they are submitted for review.
 const STATUSES: VendorAccountStatus[] = [
-  "onboarding",
   "pending",
   "approved",
   "rejected",
@@ -23,16 +23,17 @@ export async function GET(req: NextRequest) {
     raw && STATUSES.includes(raw as VendorAccountStatus)
       ? (raw as VendorAccountStatus)
       : undefined;
+  const where: Prisma.VendorWhereInput = status ? { status } : { status: { not: "onboarding" } };
 
   try {
     await sweepExpiredSuspensions();
     const page = Math.max(1, Math.min(100000, Number(req.nextUrl.searchParams.get("page")) || 1));
     const pageSize = 20;
-    const total = await prisma.vendor.count({where: status ? {status} : undefined});
+    const total = await prisma.vendor.count({ where });
     const vendors = await prisma.vendor.findMany({
       take: pageSize,
       skip: (Math.floor(page) - 1) * pageSize,
-      where: status ? { status } : undefined,
+      where,
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
