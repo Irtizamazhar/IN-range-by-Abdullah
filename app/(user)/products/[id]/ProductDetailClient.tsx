@@ -1,4 +1,5 @@
 "use client";
+import { shouldUnoptimizeProductImage } from "@/lib/public-product-image-policy";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { ProductServices } from "@/components/user/ProductServices";
 import { SaveProductButton } from "@/components/user/SaveProductButton";
@@ -43,9 +44,6 @@ import { formatPKR } from "@/lib/format";
 import { showCartSuccessToast } from "@/lib/cart-success-toast";
 import { lockPageScroll } from "@/lib/scroll-lock";
 
-function isLocalProductImageSrc(src: string) {
-  return src.startsWith("/api/") || src.startsWith("/uploads/");
-}
 export type ProductDetailProduct = {
   _id: string;
   name: string;
@@ -253,7 +251,7 @@ function ImageViewer({
             src={src}
             alt={`${name} — image ${index + 1}`}
             fill
-            unoptimized={isLocalProductImageSrc(src)}
+            unoptimized={shouldUnoptimizeProductImage(src)}
             className="object-contain"
             sizes="100vw"
             onClick={(event) => event.stopPropagation()}
@@ -293,7 +291,7 @@ function ImageViewer({
                 i === index ? "border-[#A8E52E]" : "border-transparent opacity-70 hover:opacity-100"
               }`}
             >
-              <Image src={im} alt="" fill unoptimized={isLocalProductImageSrc(im)} className="object-cover" sizes="56px" />
+              <Image src={im} alt="" fill unoptimized={shouldUnoptimizeProductImage(im)} className="object-cover" sizes="56px" />
             </button>
           ))}
         </div>
@@ -356,7 +354,7 @@ export function ProductDetailClient({
   }, []);
 
   const mainImg = product.images[idx] || product.images[0];
-  const mainLocal = mainImg ? isLocalProductImageSrc(mainImg) : false;
+  const mainUnoptimized = mainImg ? shouldUnoptimizeProductImage(mainImg) : false;
   const hasDiscount =
     Boolean(product.originalPrice && product.originalPrice > product.price);
   const needsVariant = product.variants?.length > 0;
@@ -590,7 +588,7 @@ export function ProductDetailClient({
                         src={im}
                         alt=""
                         fill
-                        unoptimized={isLocalProductImageSrc(im)}
+                        unoptimized={shouldUnoptimizeProductImage(im)}
                         className="object-cover"
                         sizes="80px"
                       />
@@ -607,7 +605,7 @@ export function ProductDetailClient({
                         src={product.images[railShown]}
                         alt=""
                         fill
-                        unoptimized={isLocalProductImageSrc(product.images[railShown])}
+                        unoptimized={shouldUnoptimizeProductImage(product.images[railShown])}
                         className="object-cover opacity-45"
                         sizes="80px"
                       />
@@ -637,7 +635,7 @@ export function ProductDetailClient({
                     src={mainImg}
                     alt={product.name}
                     fill
-                    unoptimized={!!mainLocal}
+                    unoptimized={!!mainUnoptimized}
                     className="cursor-zoom-in object-cover object-center"
                     priority
                     sizes="(max-width:767px) 100vw, (max-width:1279px) 50vw, 560px"
@@ -1043,7 +1041,7 @@ export function ProductDetailClient({
                     src={supportingImage}
                     alt=""
                     fill
-                    unoptimized={isLocalProductImageSrc(supportingImage)}
+                    unoptimized={shouldUnoptimizeProductImage(supportingImage)}
                     className="object-cover"
                     sizes="(max-width:639px) 100vw, (max-width:1023px) 50vw, 400px"
                   />

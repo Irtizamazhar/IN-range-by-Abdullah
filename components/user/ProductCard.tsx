@@ -9,7 +9,7 @@ import { ArrowRight, Heart, ShoppingCart, Star } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useSavedProducts } from "@/lib/use-saved-products";
 import { formatPKR } from "@/lib/format";
-import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
+import { shouldUnoptimizeProductImage } from "@/lib/public-product-image-policy";
 import { displayDiscount } from "@/lib/product-discount";
 import { showCartSuccessToast } from "@/lib/cart-success-toast";
 import { isProductInNewArrivalsWindow } from "@/lib/product-new-arrival-window";
@@ -118,7 +118,7 @@ export const ProductCard = memo(function ProductCard({
       src={image}
       alt={product.name}
       fill
-      unoptimized={shouldUnoptimizeImageSrc(image)}
+      unoptimized={shouldUnoptimizeProductImage(image)}
       sizes={presentation === "featured"
         ? "(max-width: 639px) 47vw, 280px"
         : presentation === "compact"

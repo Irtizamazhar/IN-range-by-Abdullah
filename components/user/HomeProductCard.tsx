@@ -8,7 +8,7 @@ import Link from "@/components/ui/LoadingLink";
 import { useCart } from "@/context/CartContext";
 import { useSavedProducts } from "@/lib/use-saved-products";
 import { formatPKR } from "@/lib/format";
-import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
+import { shouldUnoptimizeProductImage } from "@/lib/public-product-image-policy";
 import { displayDiscount } from "@/lib/product-discount";
 import { showCartSuccessToast } from "@/lib/cart-success-toast";
 import { isProductInNewArrivalsWindow } from "@/lib/product-new-arrival-window";
@@ -86,7 +86,7 @@ export const HomeProductCard = memo(function HomeProductCard({ product, showNewT
       <Link href={href} tabIndex={-1} aria-hidden="true" className={`relative block overflow-hidden bg-neutral-50 ${featured ? "aspect-[4/3] rounded-2xl" : "aspect-square rounded-xl"} ${canAdd ? "" : "opacity-60"}`}>
         <span className={featured ? "absolute inset-0 flex items-center justify-center p-1" : "absolute inset-0 flex items-center justify-center p-1.5"}>
           {image
-            ? <Image src={image} alt="" fill sizes={SIZES} loading="lazy" unoptimized={shouldUnoptimizeImageSrc(image)} onError={() => setImageFailed(true)} className={featured ? "object-cover" : "object-contain p-2"} />
+            ? <Image src={image} alt="" fill sizes={SIZES} loading="lazy" unoptimized={shouldUnoptimizeProductImage(image)} onError={() => setImageFailed(true)} className={featured ? "object-cover" : "object-contain p-2"} />
             : <ImageOff className="h-8 w-8 text-neutral-300" aria-hidden="true" />}
         </span>
       </Link>
