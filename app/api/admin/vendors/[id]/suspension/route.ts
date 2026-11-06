@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { requireAdminPermission } from "@/lib/admin-rbac";
 import { prisma } from "@/lib/prisma";
+import { reactivateIfExpired, suspensionTypeOf } from "@/lib/vendor-suspension";
 
 type Ctx = { params: { id: string } };
 
@@ -13,6 +14,7 @@ export async function GET(_req: Request, ctx: Ctx) {
   const id = String(ctx.params.id || "");
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
+  await reactivateIfExpired(id);
   const vendor = await prisma.vendor.findUnique({
     where: { id },
     select: {
@@ -22,6 +24,11 @@ export async function GET(_req: Request, ctx: Ctx) {
       email: true,
       status: true,
       createdAt: true,
+      suspendedAt: true,
+      suspensionReason: true,
+      suspendedBy: true,
+      suspensionUntil: true,
+      suspensionCount: true,
     },
   });
   if (!vendor) {
@@ -42,35 +49,35 @@ export async function GET(_req: Request, ctx: Ctx) {
 
   const appeals = logs.filter((l) => l.action === "vendor_appeal");
   const suspendLogs = logs.filter((l) => l.action === "admin_suspend");
-  const latestSuspend = suspendLogs[0];
-  const latestSuspendDetails =
-    latestSuspend?.details && typeof latestSuspend.details === "object"
-      ? (latestSuspend.details as Record<string, unknown>)
-      : {};
-  const suspensionPayload =
-    latestSuspendDetails.payload && typeof latestSuspendDetails.payload === "object"
-      ? (latestSuspendDetails.payload as Record<string, unknown>)
-      : latestSuspendDetails;
+  const history = suspendLogs.map((log) => {
+    const details = log.details && typeof log.details === "object" ? (log.details as Record<string, unknown>) : {};
+    const payload = details.payload && typeof details.payload === "object" ? (details.payload as Record<string, unknown>) : details;
+    const until = typeof payload.suspensionUntil === "string" ? payload.suspensionUntil : null;
+    return {
+      id: log.id,
+      at: log.createdAt.toISOString(),
+      reason: typeof payload.reason === "string" ? payload.reason : null,
+      suspensionType: payload.suspensionType === "temporary" || until ? "temporary" : "permanent",
+      suspensionUntil: until,
+      suspendedBy: typeof details.adminEmail === "string" ? details.adminEmail : null,
+    };
+  });
+  const latest = history[0];
+  const suspended = vendor.status === "suspended";
 
   return NextResponse.json({
     vendor: {
       ...vendor,
-      suspensionCount: suspendLogs.length,
+      // Older suspensions may exist in only one of these, so show whichever recorded more.
+      suspensionCount: Math.max(vendor.suspensionCount, suspendLogs.length),
       createdAt: vendor.createdAt.toISOString(),
-      suspendedAt: latestSuspend ? latestSuspend.createdAt.toISOString() : null,
-      suspensionReason:
-        typeof suspensionPayload.reason === "string"
-          ? suspensionPayload.reason
-          : null,
-      suspendedBy:
-        typeof latestSuspendDetails.adminEmail === "string"
-          ? latestSuspendDetails.adminEmail
-          : null,
-      suspensionUntil:
-        typeof suspensionPayload.suspensionUntil === "string"
-          ? suspensionPayload.suspensionUntil
-          : null,
+      suspendedAt: (suspended && vendor.suspendedAt?.toISOString()) || latest?.at || null,
+      suspensionReason: (suspended && vendor.suspensionReason) || latest?.reason || null,
+      suspendedBy: latest?.suspendedBy ?? null,
+      suspensionType: suspended ? suspensionTypeOf(vendor.suspensionUntil) : latest?.suspensionType ?? null,
+      suspensionUntil: suspended ? vendor.suspensionUntil?.toISOString() ?? null : latest?.suspensionUntil ?? null,
     },
+    history,
     logs: logs.map((l) => ({
       ...l,
       createdAt: l.createdAt.toISOString(),

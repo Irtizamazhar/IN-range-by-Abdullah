@@ -167,17 +167,16 @@ export default function AdminDashboardPage() {
   const [query, setQuery] = useState("");
 
   useEffect(() => {
-    const ac = new AbortController();
+    // Stale responses are ignored rather than aborted, so leaving the page never raises an AbortError.
+    let active = true;
 
     async function load() {
       try {
         const [or, pr] = await Promise.all([
           fetch("/api/orders", {
-            signal: ac.signal,
             credentials: "same-origin",
           }),
           fetch("/api/products?admin=1&limit=500", {
-            signal: ac.signal,
             credentials: "same-origin",
           }),
         ]);
@@ -203,7 +202,7 @@ export default function AdminDashboardPage() {
           throw new Error("Invalid response from products API");
         }
 
-        if (ac.signal.aborted) return;
+        if (!active) return;
 
         if (!or.ok) {
           if (or.status === 401) {
@@ -229,33 +228,36 @@ export default function AdminDashboardPage() {
         const listed = (p.products || []).length;
         setProductCount(Number.isFinite(Number(p.total)) ? Number(p.total) : listed);
       } catch (e) {
-        if (ac.signal.aborted) return;
-        if (e instanceof DOMException && e.name === "AbortError") return;
+        if (!active) return;
         console.error(e);
         toast.error(
           e instanceof Error ? e.message : "Data load failed — check console"
         );
       } finally {
-        if (!ac.signal.aborted) setLoading(false);
+        if (active) setLoading(false);
       }
     }
 
     // Customer total is secondary: a failure or missing permission only affects its card.
-    fetch("/api/admin/customers", { signal: ac.signal, credentials: "same-origin" })
+    fetch("/api/admin/customers", { credentials: "same-origin" })
       .then(async (r) => {
+        if (!active) return;
         if (r.status === 403) return setCustomerCount("forbidden");
         if (!r.ok) return setCustomerCount("error");
         const data = (await r.json()) as { customers?: unknown[] };
+        if (!active) return;
         const n = (data.customers || []).length;
         // The customers API returns at most 250 rows.
         setCustomerCount({ value: n, capped: n >= 250 });
       })
-      .catch((e) => {
-        if (!(e instanceof DOMException && e.name === "AbortError")) setCustomerCount("error");
+      .catch(() => {
+        if (active) setCustomerCount("error");
       });
 
     void load();
-    return () => ac.abort();
+    return () => {
+      active = false;
+    };
   }, [admin, router]);
 
   const now = useMemo(() => new Date(), []);

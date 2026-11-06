@@ -46,14 +46,23 @@ type VendorDataResponse = {
     ownerName: string;
     shopName: string;
     email: string;
-    status: "pending" | "approved" | "rejected" | "suspended";
+    status: "onboarding" | "pending" | "approved" | "rejected" | "suspended";
     createdAt: string;
     suspensionCount: number;
     suspendedAt: string | null;
     suspensionReason: string | null;
     suspendedBy: string | null;
+    suspensionType: "temporary" | "permanent" | null;
     suspensionUntil: string | null;
   };
+  history: Array<{
+    id: string;
+    at: string;
+    reason: string | null;
+    suspensionType: "temporary" | "permanent";
+    suspensionUntil: string | null;
+    suspendedBy: string | null;
+  }>;
   logs: Array<{
     id: string;
     action: string;
@@ -77,7 +86,7 @@ function statusBadge(status: string) {
 function fmtDate(iso?: string | null) {
   if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleString();
+    return new Date(iso).toLocaleString("en-GB", { timeZone: "Asia/Karachi", dateStyle: "medium", timeStyle: "short" });
   } catch {
     return iso;
   }
@@ -178,6 +187,11 @@ export default function AdminVendorSuspensionPage() {
             <p className="text-sm text-darkText/70">
               Last Suspended: {fmtDate(v.suspendedAt)}
             </p>
+            {v.status === "suspended" ? (
+              <p className="text-sm font-semibold text-red-700">
+                {v.suspensionType === "temporary" ? `Temporary, until ${fmtDate(v.suspensionUntil)}` : "Permanent Suspension"}
+              </p>
+            ) : null}
           </div>
         </div>
       </section>
@@ -210,12 +224,16 @@ export default function AdminVendorSuspensionPage() {
                   l.details && typeof l.details === "object"
                     ? (l.details as Record<string, unknown>)
                     : {};
+                const payload =
+                  details.payload && typeof details.payload === "object"
+                    ? (details.payload as Record<string, unknown>)
+                    : {};
                 return (
                   <tr key={l.id} className="border-b border-borderGray">
                     <td className="px-3 py-2">{fmtDate(l.createdAt)}</td>
                     <td className="px-3 py-2 font-semibold">{l.action}</td>
                     <td className="px-3 py-2">
-                      {String(details.message || details.reason || "—")}
+                      {String(details.message || details.reason || payload.reason || "—")}
                     </td>
                     <td className="px-3 py-2">
                       {String(details.adminEmail || details.resolvedBy || "—")}
@@ -240,6 +258,15 @@ export default function AdminVendorSuspensionPage() {
           <p className="text-sm text-darkText">
             Suspended by: <strong>{v.suspendedBy || "—"}</strong>
           </p>
+          {data.history.length > 0 ? (
+            <ul className="mt-3 space-y-2 border-t border-borderGray pt-3 text-sm text-darkText">
+              {data.history.map((h) => (
+                <li key={h.id}>
+                  <strong>{fmtDate(h.at)}</strong>: {h.suspensionType === "temporary" ? `Temporary, until ${fmtDate(h.suspensionUntil)}` : "Permanent"} — {h.reason || "No reason"}
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </section>
       ) : null}
 
@@ -259,6 +286,9 @@ export default function AdminVendorSuspensionPage() {
               Suspended: {v.suspensionReason || "No reason"}
             </p>
             <p className="text-xs text-red-700/80">At: {fmtDate(v.suspendedAt)}</p>
+            <p className="text-xs text-red-700/80">
+              {v.suspensionType === "temporary" ? `Ends automatically: ${fmtDate(v.suspensionUntil)}` : "Permanent: ends only when an admin unsuspends this vendor."}
+            </p>
             <LoadingButton loadingLabel="Processing…"
               type="button"
 
@@ -272,7 +302,10 @@ export default function AdminVendorSuspensionPage() {
                       body: JSON.stringify({ action: "unsuspend" }),
                     }
                   );
-                  if (!r.ok) throw new Error("Unsuspend failed");
+                  if (!r.ok) {
+                    const body = (await r.json().catch(() => null)) as { error?: string } | null;
+                    throw new Error(body?.error || "Unsuspend failed");
+                  }
                   toast.success("Vendor unsuspended");
                   await load(false);
                 } catch (e) {
@@ -341,7 +374,10 @@ export default function AdminVendorSuspensionPage() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ action: "suspend", ...payload }),
           });
-          if (!r.ok) throw new Error("Suspend failed");
+          if (!r.ok) {
+            const body = (await r.json().catch(() => null)) as { error?: string } | null;
+            throw new Error(body?.error || `Suspend failed (error ${r.status})`);
+          }
           toast.success("Vendor suspended");
           setSuspendOpen(false);
           await load(false);

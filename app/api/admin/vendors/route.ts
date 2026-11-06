@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { VendorAccountStatus } from "@prisma/client";
 import { requireAdminPermission } from "@/lib/admin-rbac";
 import { prisma } from "@/lib/prisma";
+import { sweepExpiredSuspensions } from "@/lib/vendor-suspension";
 
 const STATUSES: VendorAccountStatus[] = [
   "onboarding",
@@ -24,6 +25,7 @@ export async function GET(req: NextRequest) {
       : undefined;
 
   try {
+    await sweepExpiredSuspensions();
     const page = Math.max(1, Math.min(100000, Number(req.nextUrl.searchParams.get("page")) || 1));
     const pageSize = 20;
     const total = await prisma.vendor.count({where: status ? {status} : undefined});

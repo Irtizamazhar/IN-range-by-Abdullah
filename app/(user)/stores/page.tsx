@@ -1,3 +1,4 @@
+import { sweepExpiredSuspensions } from "@/lib/vendor-suspension";
 import { pageMetadata } from "@/lib/seo";
 export const metadata = pageMetadata("Seller Stores in Pakistan", "Discover approved JORO.PK seller storefronts, their listed products and public store information.", "/stores");
 import { prisma } from "@/lib/prisma";
@@ -8,6 +9,7 @@ import { getCustomerSession } from "@/lib/sessions";
 export const dynamic = "force-dynamic";
 
 export default async function StoresPage() {
+  await sweepExpiredSuspensions();
   const vendors = await prisma.vendor.findMany({
     where: { status: "approved" },
     orderBy: [{ followers: { _count: "desc" } }, { createdAt: "desc" }],

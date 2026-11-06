@@ -17,8 +17,12 @@ export function VendorSuspendModal({ open, onClose, onConfirm }: Props) {
   const [reason, setReason] = useState("");
   const [type, setType] = useState<"permanent" | "temporary">("permanent");
   const [until, setUntil] = useState("");
+  const [error, setError] = useState("");
 
   if (!open) return null;
+
+  // datetime-local has no timezone; these values are always Pakistan time.
+  const nowInKarachi = new Date(Date.now() + 5 * 60 * 60 * 1000).toISOString().slice(0, 16);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -32,7 +36,7 @@ export function VendorSuspendModal({ open, onClose, onConfirm }: Props) {
           className="mt-4 min-h-[110px] w-full rounded-lg border border-borderGray p-3 text-sm"
           placeholder="Suspension reason"
           value={reason}
-          onChange={(e) => setReason(e.target.value)}
+          onChange={(e) => { setReason(e.target.value); setError(""); }}
         />
 
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -55,13 +59,19 @@ export function VendorSuspendModal({ open, onClose, onConfirm }: Props) {
         </div>
 
         {type === "temporary" ? (
-          <input
-            type="datetime-local"
-            className="mt-3 w-full rounded-lg border border-borderGray px-3 py-2.5 text-sm"
-            value={until}
-            onChange={(e) => setUntil(e.target.value)}
-          />
+          <label className="mt-3 block text-sm font-semibold text-darkText">
+            Suspension ends (Pakistan time)
+            <input
+              type="datetime-local"
+              min={nowInKarachi}
+              className="mt-1 w-full rounded-lg border border-borderGray px-3 py-2.5 text-sm font-normal"
+              value={until}
+              onChange={(e) => { setUntil(e.target.value); setError(""); }}
+            />
+          </label>
         ) : null}
+
+        {error ? <p role="alert" className="mt-3 text-sm font-semibold text-red-700">{error}</p> : null}
 
         <div className="mt-5 flex justify-end gap-2">
           <button
@@ -75,17 +85,21 @@ export function VendorSuspendModal({ open, onClose, onConfirm }: Props) {
             type="button"
 
             onClick={async () => {
-              if (!reason.trim()) return;
-
+              if (!reason.trim()) { setError("Enter a suspension reason."); return; }
+              if (type === "temporary" && !until) { setError("Choose when the suspension should end."); return; }
+              setError("");
+              try {
                 await onConfirm({
                   reason: reason.trim(),
                   suspensionType: type,
-                  suspensionUntil: type === "temporary" && until ? until : undefined,
+                  suspensionUntil: type === "temporary" ? until : undefined,
                 });
                 setReason("");
                 setType("permanent");
                 setUntil("");
-
+              } catch (e) {
+                setError(e instanceof Error ? e.message : "Could not suspend this vendor. Please try again.");
+              }
             }}
             className="rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
           >

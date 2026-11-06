@@ -2,12 +2,14 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { safeAccountLink } from "@/lib/customer-account-policy";
 import { PROMOTION_PLACEMENTS } from "@/lib/promotion-service";
+import { sweepExpiredSuspensions } from "@/lib/vendor-suspension";
 export const publicStoreSelect = {
   id: true, shopName: true, storeSlug: true, shopLogo: true, storeBanner: true,
   primaryCategory: true, shopDescription: true, storePolicies: true, serviceCities: true,
   _count: { select: { followers: true } },
 } satisfies Prisma.VendorSelect;
 export async function publicStores() {
+  await sweepExpiredSuspensions();
   return prisma.vendor.findMany({ where: { status: "approved" }, select: publicStoreSelect, orderBy: [{ followers: { _count: "desc" } }, { id: "asc" }], take: 60 });
 }
 export function storeHref(store: { id: string; storeSlug?: string | null }) { return `/stores/${encodeURIComponent(store.storeSlug || store.id)}`; }
@@ -24,6 +26,7 @@ export async function activePromotions(now = new Date()) {
 }
 /** Admin-curated "Top Vendors" -- independent of VendorPromotion; disappears automatically once the vendor is no longer approved. */
 export async function topVendors(take = 4) {
+  await sweepExpiredSuspensions();
   const rows = await prisma.topVendor.findMany({
     where: { enabled: true, vendor: { status: "approved" } },
     select: { id: true, label: true, priority: true, vendor: { select: publicStoreSelect } },

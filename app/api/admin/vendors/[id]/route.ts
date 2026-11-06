@@ -8,6 +8,8 @@ import { prisma } from "@/lib/prisma";
 import { sanitizePlainText } from "@/lib/security/sanitize";
 import { sendVendorApprovedEmail, sendVendorRejectedEmail } from "@/lib/vendor-mail";
 import { generateUniqueStoreSlug } from "@/lib/store-slug";
+import { ApiError } from "@/lib/marketplace-api";
+import { suspendVendor, unsuspendVendor } from "@/lib/vendor-suspension";
 
 const patchSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("approve") }),
@@ -52,7 +54,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   const parsed = patchSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Invalid body", details: parsed.error.flatten() },
+      { error: "Please check the suspension details and try again.", details: parsed.error.flatten() },
       { status: 400 }
     );
   }
@@ -65,11 +67,29 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
   }
 
-  if (vendor.status === "onboarding") return NextResponse.json({ error: "Seller setup must be completed and submitted before review." }, { status: 409 });
+  // Review and commission need a submitted seller; suspending stays available for any account.
+  if (vendor.status === "onboarding" && parsed.data.action !== "suspend") return NextResponse.json({ error: "Seller setup must be completed and submitted before review." }, { status: 409 });
+  if (vendor.status === "suspended" && parsed.data.action === "reject") return NextResponse.json({ error: "Unsuspend this vendor before rejecting them." }, { status: 409 });
   const wasAlreadyApproved = vendor.status === "approved";
   const adminActorId = auth.admin.id;
 
   try {
+    if (parsed.data.action === "suspend") {
+      const result = await suspendVendor({
+        vendorId: id,
+        adminId: adminActorId,
+        adminEmail: auth.admin.email,
+        reason: parsed.data.reason,
+        type: parsed.data.suspensionType,
+        until: parsed.data.suspensionUntil,
+      });
+      return NextResponse.json({ ok: true, suspensionType: result.type, suspensionUntil: result.until?.toISOString() ?? null });
+    }
+    if (parsed.data.action === "unsuspend") {
+      const result = await unsuspendVendor({ vendorId: id, adminId: adminActorId, adminEmail: auth.admin.email });
+      return NextResponse.json({ ok: true, status: result.status });
+    }
+
     if (parsed.data.action === "approve") {
       const storeSlug = vendor.storeSlug || (await generateUniqueStoreSlug(prisma, vendor.shopName, vendor.id));
       await prisma.vendor.update({
@@ -80,6 +100,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
           isEmailVerified: true,
           emailVerifyToken: null,
           ...(vendor.storeSlug ? {} : { storeSlug }),
+          ...(vendor.status === "suspended" ? { suspendedAt: null, suspensionReason: null, suspendedBy: null, suspensionUntil: null } : {}),
         },
       });
       // Once vendor is approved again, clear pending appeal notifications.
@@ -130,60 +151,6 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
         try { await sendVendorRejectedEmail(vendor.email, parsed.data.rejectionReason); }
         catch (mailError) { console.error("vendor rejection email", mailError instanceof Error ? mailError.name : "Unknown error"); }
       }
-    } else if (parsed.data.action === "suspend") {
-      const until =
-        parsed.data.suspensionType === "temporary" &&
-        parsed.data.suspensionUntil
-          ? new Date(parsed.data.suspensionUntil)
-          : null;
-      if (parsed.data.suspensionType === "temporary" &&
-          (!until || Number.isNaN(until.getTime()) || until.getTime() <= Date.now())) {
-        return NextResponse.json(
-          { error: "Temporary suspension requires a future end date" },
-          { status: 400 }
-        );
-      }
-      try {
-        await prisma.vendor.update({
-          where: { id },
-          data: {
-            status: "suspended",
-            suspendedAt: new Date(),
-            suspensionReason: sanitizePlainText(
-              parsed.data.reason || "Suspended by admin",
-              2000
-            ),
-            suspendedBy: adminActorId,
-            suspensionUntil: until,
-            suspensionCount: { increment: 1 },
-          } as never,
-        });
-      } catch {
-        // Backward compatibility until DB migration is applied.
-        await prisma.vendor.update({
-          where: { id },
-          data: { status: "suspended" },
-        });
-      }
-    } else if (parsed.data.action === "unsuspend") {
-      try {
-        await prisma.vendor.update({
-          where: { id },
-          data: {
-            status: "approved",
-            suspendedAt: null,
-            suspensionReason: null,
-            suspendedBy: null,
-            suspensionUntil: null,
-          } as never,
-        });
-      } catch {
-        // Backward compatibility until DB migration is applied.
-        await prisma.vendor.update({
-          where: { id },
-          data: { status: "approved" },
-        });
-      }
     } else {
       await prisma.vendor.update({
         where: { id },
@@ -221,7 +188,8 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
     return NextResponse.json({ ok: true });
   } catch (e) {
+    if (e instanceof ApiError) return NextResponse.json({ error: e.message }, { status: e.status });
     console.error("admin vendor PATCH", e);
-    return NextResponse.json({ error: "Update failed" }, { status: 500 });
+    return NextResponse.json({ error: "The update could not be saved. Nothing was changed." }, { status: 500 });
   }
 }

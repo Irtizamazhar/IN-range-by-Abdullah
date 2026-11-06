@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { sanitizePlainText } from "@/lib/security/sanitize";
 import { consumeOrReject, createLoginRateLimiter } from "@/lib/security/rate-limit";
+import { formatKarachi, reactivateIfExpired } from "@/lib/vendor-suspension";
 import { vendorLoginBodySchema } from "@/lib/vendor-auth-schemas";
 import { signVendorJwt } from "@/lib/vendor-jwt";
 import {
@@ -112,6 +113,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
   }
 
+  await reactivateIfExpired(vendor.id);
+
   /** Fresh row: admin may have approved while this form was open (avoids stale `pending`). */
   const live = await prisma.vendor.findUnique({
     where: { id: vendor.id },
@@ -123,6 +126,7 @@ export async function POST(req: NextRequest) {
       status: true,
       isEmailVerified: true,
       rejectionReason: true,
+      suspensionUntil: true,
     },
   });
   if (!live) {
@@ -150,7 +154,7 @@ export async function POST(req: NextRequest) {
 
   if (live.status === "suspended") {
     const res = NextResponse.json(
-      { code: "suspended", error: "Account suspended" },
+      { code: "suspended", error: live.suspensionUntil ? `Account suspended until ${formatKarachi(live.suspensionUntil)}` : "Account suspended" },
       { status: 403 }
     );
     res.cookies.set(VENDOR_APPEAL_COOKIE, await signVendorAppealToken(live.id), {

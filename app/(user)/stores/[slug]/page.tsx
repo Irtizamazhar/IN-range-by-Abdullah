@@ -15,6 +15,7 @@ import { serializeProduct } from "@/lib/serialize";
 import { getCustomerSession } from "@/lib/sessions";
 import { pickReviewStat, reviewStatsForProductIds } from "@/lib/review-stats";
 import { vendorReviewStatsService } from "@/lib/vendor-review-stats-service";
+import { sweepExpiredSuspensions } from "@/lib/vendor-suspension";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +36,7 @@ const STORE_SELECT = {
 } as const;
 
 async function resolveVendor(param: string) {
+  await sweepExpiredSuspensions();
   // Printed QR URLs use immutable vendor IDs. Resolve these before editable slugs.
   const byId = await prisma.vendor.findUnique({ where: { id: param }, select: { ...STORE_SELECT, status: true } });
   if (byId) return byId.status === "approved" ? byId : null;
