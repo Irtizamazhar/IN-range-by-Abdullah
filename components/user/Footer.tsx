@@ -51,7 +51,7 @@ function SocialLinks() {
 }
 
 function Brand() {
-  return <div className={styles.brand}><LogoMark href="/" /><p>Pakistan&apos;s marketplace for products, services, gifts and home solutions. Post what you need and connect with sellers.</p><span className={styles.badge}><span aria-hidden="true">☪</span> Made for Pakistan</span></div>;
+  return <div className={styles.brand}><LogoMark href="/" priority={false} /><p>Pakistan&apos;s marketplace for products, services, gifts and home solutions. Post what you need and connect with sellers.</p><span className={styles.badge}><span aria-hidden="true">☪</span> Made for Pakistan</span></div>;
 }
 
 export function Footer({ settings }: { settings: Pick<ISettings, "whatsappNumber" | "shopName"> }) {

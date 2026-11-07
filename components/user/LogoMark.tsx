@@ -10,6 +10,7 @@ type LogoMarkProps = {
   inverse?: boolean;
   withText?: boolean; // Kept for compatibility with existing consumers.
   href?: string | null;
+  priority?: boolean;
 };
 
 export function LogoMark({
@@ -17,6 +18,7 @@ export function LogoMark({
   compact = false,
   inverse = false,
   href = "/",
+  priority = true,
 }: LogoMarkProps) {
   const logo = (
     <span
@@ -25,8 +27,8 @@ export function LogoMark({
       <Image
         src={inverse ? inverseLogo : brandLogo}
         alt="JORO.pk — Jo Chahiye, Yahin Mile!"
-        sizes={compact ? "(max-width: 639px) 106px, 116px" : "(max-width: 639px) 118px, 164px"}
-        priority
+        sizes={inverse ? "(max-width: 639px) 150px, 176px" : compact ? "(max-width: 639px) 106px, 116px" : "(max-width: 639px) 118px, 164px"}
+        priority={priority}
         className={styles.image}
       />
     </span>

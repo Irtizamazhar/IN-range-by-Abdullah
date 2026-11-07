@@ -5,7 +5,7 @@ import Link from "@/components/ui/LoadingLink";
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, LayoutGrid } from "lucide-react";
 
-import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
+import { shouldUnoptimizeCategoryImage } from "@/lib/public-category-image-policy";
 
 type CategoryItem = {
   id: string | number;
@@ -47,7 +47,7 @@ function CategoryCircle({ category, hidden = false }: { category: CategoryItem; 
   return <Link href={category.slug ? `/categories/${encodeURIComponent(category.slug)}` : `/products?category=${encodeURIComponent(category.name)}`} title={category.name} tabIndex={hidden ? -1 : undefined} className={item}>
     <span className={`${circle} bg-white ring-green-200 sm:bg-brand-soft group-hover:ring-green-500 group-focus-visible:ring-2 group-focus-visible:ring-green-600`}>
       {src && src !== failedSrc
-        ? <Image src={src} alt="" fill sizes="(min-width: 640px) 76px, 80px" loading="lazy" unoptimized={shouldUnoptimizeImageSrc(src)} onError={() => setFailedSrc(src)} className="object-contain sm:object-cover" />
+        ? <Image src={src} alt="" fill sizes="(min-width: 640px) 76px, 80px" loading="lazy" unoptimized={shouldUnoptimizeCategoryImage(src)} onError={() => setFailedSrc(src)} className="object-contain sm:object-cover" />
         : <span aria-hidden="true" className="text-[24px] font-bold text-brand-dark/70 sm:text-[26px]">{category.name.trim().charAt(0).toUpperCase() || "?"}</span>}
     </span>
     <span className={label}>{category.name}</span>

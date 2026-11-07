@@ -13,7 +13,7 @@ export function GlobalLoaderVisual({ message }: { message: string }) {
         <circle cx="120" cy="120" r="105" fill="none" stroke="url(#joro-loader-green)" strokeWidth="7" strokeLinecap="round" strokeDasharray="205 660" />
         <circle cx="120" cy="15" r="6" fill="#B7E33A" className={styles.spark} />
       </svg>
-      <Image src={logo} alt="JORO.pk" className={styles.logo} priority />
+      <Image src={logo} alt="JORO.pk" sizes="(max-width: 639px) 122.4px, 172.8px" className={styles.logo} priority />
     </div>
     <p className={styles.message}>{message}</p>
   </div>;
