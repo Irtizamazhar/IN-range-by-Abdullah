@@ -44,7 +44,10 @@ try {
     const disabled = () => page.evaluate(() => window['ga-disable-G-BKBH6NHEY4']);
     const disclosure = await context.request.get(base + '/privacy-policy');
     assert.equal(disclosure.status(), 200);
-    assert.ok((await disclosure.text()).includes('Optional Google Analytics'));
+    const policyHTML = await disclosure.text();
+    assert.ok(policyHTML.includes('Optional Google Analytics'));
+    assert.ok(policyHTML.includes('mailto:admin@joro.pk'));
+    assert.doesNotMatch(policyHTML, /OWNER TO CONFIRM|Draft for owner review|Google-verified policy/);
     await page.goto(base, { waitUntil: 'networkidle' });
     assert.equal(await page.getByRole('link', { name: 'Privacy policy', exact: true }).getAttribute('href'), '/privacy-policy');
     await page.getByRole('button', { name: 'Reject optional analytics', exact: true }).click();

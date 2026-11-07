@@ -53,7 +53,7 @@ Emergency disable: unset/set `NEXT_PUBLIC_GA4_ENABLED=false` or `NEXT_PUBLIC_GA4
 
 ## One-release activation checklist (prepared only; no authorization to deploy)
 
-**Atomic release preparation:** the owner now explicitly permits publishing the approved disclosure and activating consent-based analytics in ONE release. This supersedes the earlier publication-before-build sequencing requirement. The local page now includes the disclosure but deliberately retains its draft notices until final owner approval. Do not set production approval flags or release while that review remains outstanding. Include the approved policy and analytics implementation in the SAME source commit/build; ensure no stale CDN copy of the policy is served when activating.
+**Atomic release preparation:** the owner now explicitly permits publishing the approved disclosure and activating consent-based analytics in ONE release. This supersedes the earlier publication-before-build sequencing requirement. The owner has now approved publication subject to removal of unverified claims and placeholders. The local public page has been updated accordingly; no draft notices, invented operator identity, address or retention period are included. Approval to commit, push or deploy has not been given. Include the approved policy and analytics implementation in the SAME source commit/build; ensure no stale CDN copy of the policy is served when activating.
 
 After that prerequisite and release approval:
 
@@ -99,9 +99,16 @@ Hostinger account settings, production build environment and live source SHA sti
 - `docs/GA4_TRACKING_REVIEW.md`
 - `docs/PRIVACY_POLICY_OWNER_REVIEW.md`
 
-Do not stage `.env*`, local build artifacts, unrelated source, or Prisma changes. The policy remains a review candidate until owner approval; no invented privacy contact is included.
+Do not stage `.env*`, local build artifacts, unrelated source, or Prisma changes. The policy wording is owner-approved and applied locally; no deployment has occurred.
 
 
 ## Owner contact clarification
 
 The owner selected `admin@joro.pk` as the public privacy contact, conditional on the mailbox being active and monitored. This condition has not been independently verified; no email was sent or mailbox accessed. JORO.pk is the website/brand name, not a verified registered-company identity. Legal operator name and business address remain pending owner confirmation. The public-page candidate now links directly to this email and preserves signed-in support as an alternative. Final disclosure approval and mailbox-operation confirmation remain prerequisites; analytics flags and production settings remain unchanged.
+
+
+## Latest approval and local application
+
+Owner approved publication with unverified claims and unresolved placeholders removed. The public page now contains the approved customer-facing wording and admin@joro.pk as the privacy contact. Existing Google Sign-In, marketplace, order, sharing, security and support disclosures are preserved; draft/audit-facing notices and unverified bank-transfer/card-storage descriptions were removed. No company registration, operator identity, business address, specific GA retention period or effective date is invented. The public policy retains its existing canonical and robots settings.
+
+Earlier owner-review drafts and prerequisites above are historical preparation notes; this approval supersedes the wording-review hold. Production flags remain unchanged. Mailbox monitoring, actual GA retention/settings, real-tag withdrawal behavior and the current Hostinger production SHA remain operational checks, not claims made by the policy. Do not equate policy approval with a deployment or legal compliance certification.

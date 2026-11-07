@@ -1,99 +1,115 @@
-# Proposed JORO.pk Privacy Policy - OWNER REVIEW, NOT APPROVED
+# JORO.pk Privacy Policy - approved local publication wording
 
-This wording is extracted from the local public-page candidate. It has not been published. Draft notices remain until owner approval.
+Owner approved publication subject to removal of unverified claims and placeholders. This mirrors the local page; no production deployment has occurred.
 
-Draft for owner review. Legal operator and business address, privacy-mailbox availability and monitoring, production service providers and retention practice still need confirmation. This page is not yet an approved or Google-verified policy.
+## About JORO.pk
 
-## Who handles your information
-
-JORO.pk operates a Pakistan-focused marketplace for products, services, gifts and customer requests called Wants. The legal name and registered address of the business responsible for this information are awaiting owner confirmation before publication.
-
-This page is a draft based on the current application code. It needs owner review of operational practices, service providers and contact details before it is presented as a final policy.
+JORO.pk is a Pakistan-focused marketplace for products, services, gifts and customer requests called Wants. This policy explains how information is collected, used, stored and shared when you use the marketplace.
 
 ## Information you provide
 
-Customer registration collects a name, email address and password. A phone number is optional at registration. Customer accounts may later contain a profile image, saved addresses, saved products, store follows and account preferences.
+Customer registration collects your name, email address and password. A phone number is optional at registration. Your account may also contain a profile image, saved addresses, saved products, store follows and account preferences.
 
-Vendor registration and onboarding collect owner and shop details, contact information, business and verification information, payout account details, and supporting documents. The information requested depends on the vendor workflow used.
+Vendor registration and onboarding collect owner and shop details, contact information, business and identity-verification information, payout details and supporting documents. The information requested depends on the vendor workflow.
+
+JORO also stores information you submit through support requests and marketplace interactions.
 
 ## Google Sign-In
 
-If you choose Continue with Google, JORO requests the standard OpenID, email and profile information used for sign-in. The application checks Google's verified-email indicator and uses your Google account identifier to recognize your sign-in. It may save your name, verified email address and profile image in a JORO customer account. The identifier is saved in a linked-account record. On a later sign-in, JORO may update the saved profile image.
+If you choose Continue with Google, JORO requests standard account identification, email and profile information. The application checks Google's verified-email indicator and uses your Google account identifier to recognize your sign-in.
 
-If a JORO customer account already uses that verified email address, the sign-in flow may link the Google identity to that account. Google information is used to create or identify your customer account and show your profile within JORO. The implemented sign-in flow does not request Gmail messages, contacts or Google Drive access.
+JORO may save your name, verified email address and profile image in your customer account. Your Google identifier is stored in a linked-account record, and your profile image may be updated on later sign-ins.
 
-## Marketplace activity and content
+If an existing JORO customer account uses the same verified email address, the sign-in flow may link that Google identity to the account.
 
-JORO stores the listings, Wants, offers, service requests, reviews, reactions, reports and other content you submit, together with related account and activity records. Content you submit for public marketplace features may appear to other visitors or participants after applicable moderation. Avoid placing private information in public descriptions or images.
+The implemented sign-in flow does not request access to Gmail messages, Google contacts or Google Drive files. Google Sign-In is separate from optional analytics; rejecting analytics does not disable Google Sign-In.
 
-Photos and files you upload may be stored with the marketplace record or in file storage. Vendor verification documents and some support attachments use private storage; public listing and review images can be available to marketplace visitors.
+## Marketplace content and activity
+
+JORO stores listings, Wants, offers, service requests, reviews, reactions, reports and other content you submit, together with related account and activity records.
+
+Content submitted to public marketplace features may be visible to visitors or participants after applicable moderation. Avoid including private information in public descriptions, reviews or images.
+
+Uploaded photos and files may be stored with marketplace records or in file storage. Public listing and review images may be available to marketplace visitors. Vendor verification documents and certain support attachments use restricted storage.
 
 ## Orders, delivery and payments
 
-Orders record customer name, phone, email, delivery address, city, items, totals, payment method and order status. Saved delivery addresses may include a recipient name, phone number, address, city and postal code. JORO creates seller-specific order records containing the customer contact and delivery details needed for fulfilment.
+Orders record information needed to process and fulfil purchases, including customer name, phone number, email address, delivery address, city, items, totals, payment method and order status.
 
-Checkout supports payment methods shown at checkout, including cash on delivery and bank transfer where available. Payment status and payment proof may be stored with an order. The current database model can store payment-proof images; it does not describe storage of card numbers in the inspected order flow. Payment options and charges displayed at checkout depend on current settings and the order.
+Saved addresses may contain recipient names, phone numbers, addresses, cities and postal codes. JORO creates seller-specific order records containing the customer and delivery information required for fulfilment.
 
-## Why information is used
+Payment methods and charges are those displayed at checkout. Payment status and payment-proof images may be stored with an order.
 
-JORO uses information to create and secure accounts, present marketplace content, match requests and offers, process orders and services, coordinate delivery, verify payments, review vendor applications, answer support requests, prevent abuse and meet operational or legal requirements.
+## How information is used
 
-Where you choose an available marketing email preference, that preference is recorded separately from transactional account and order messages.
+JORO uses information to create, identify and secure accounts; display marketplace content and connect customers with sellers; process orders, services, gifts and delivery arrangements; verify payments and vendor applications; respond to support requests, reports and disputes; prevent abuse and maintain website security; and meet applicable operational, accounting or legal requirements.
+
+When optional analytics is enabled and accepted, it is used to understand visits to selected public pages.
+
+Available marketing-email preferences are recorded separately from transactional account and order messages.
 
 ## Who receives information
 
-Relevant customer contact and delivery details are made available to the seller responsible for an order. Delivery providers may need the information required to deliver an order. Marketplace content may be visible to other users according to the feature used. Administrators and support staff may review information needed to manage the service, moderation, disputes and security.
+Relevant customer contact and delivery details are provided to the seller responsible for an order. Delivery providers may receive the information needed to deliver it.
 
-The code uses database hosting, email delivery and file or image storage in its operation; the exact production providers and their locations require owner confirmation. JORO also exchanges the limited sign-in information described above with Google when you choose Google Sign-In. This draft does not claim that customer information is never shared.
+Marketplace content may be visible to other users according to the feature involved. Administrators and support staff may access information needed for support, moderation, verification, disputes and security.
 
-## Cookies, sessions and security records
+JORO uses providers for hosting, databases, email delivery and file or image storage. Google receives information when you use Google Sign-In and, separately, when optional Google Analytics is enabled and accepted.
 
-JORO uses cookies and session tokens to keep accounts signed in, remember a selected sign-in preference and protect private preview access. Vendor sessions and security or administrative audit records may include an IP address, browser user agent and action details. Rate limits may use request IP information to help control abuse.
+## Essential cookies, browser storage and security
 
-Account credentials are checked using password hashes. Access to vendor documents and payment-proof routes is restricted in the application. No statement here guarantees that every stored item is encrypted at rest or that every threat can be prevented.
+JORO uses cookies, session tokens and browser storage for functions such as keeping accounts signed in, remembering selected sign-in preferences, maintaining shopping-cart information and protecting private preview access.
+
+Vendor sessions and security or administrative records may include IP addresses, browser information and action details. Rate limiting may use request IP information to help prevent abuse.
+
+Rejecting optional analytics does not disable essential website functions.
+
+Passwords are checked using password hashes. Access to vendor documents and payment-proof routes is restricted by the application. No website can guarantee complete security.
 
 ## Optional Google Analytics
 
-When enabled, JORO offers optional Google Analytics to understand website usage and visits to selected public pages. The Google tag is not loaded until you accept optional analytics. Rejecting analytics does not prevent shopping, sign-in, cart use or checkout.
+When enabled, JORO offers optional Google Analytics to understand website usage and visits to selected public pages. The Google tag is not loaded until you accept optional analytics.
 
-Application-generated page views use generalized public-page locations and static titles. Product, category, service and store detail pages are grouped without sending their raw identifiers or slugs. Query values and URL fragments are discarded. Free-text search, Wants, login, accounts, vendor and admin areas, checkout and private order pages are excluded from page-view tracking.
+Application-generated page views use generalized public-page locations and static titles. Product, category, service and store detail pages are grouped without sending their raw identifiers or slugs. Query values and URL fragments are discarded.
 
-The analytics implementation is designed to exclude names, emails, phone numbers, addresses, passwords, CNICs, account information and private order or payment details from event payloads. No ecommerce purchase or revenue events are implemented. Once you accept, Google may process browser and device information, session information, online identifiers and connection information, including the IP address used to connect to its services. Analytics should not be described as completely anonymous.
+Free-text search, Wants, login, accounts, vendor and admin areas, checkout and private order pages are excluded from application-generated page-view tracking.
 
-Google Analytics is a third-party service. Read [Google's Privacy Policy](https://policies.google.com/privacy) and [how Google uses information from sites using its services](https://policies.google.com/technologies/partner-sites). The owner must confirm the applicable Google processing terms, data-sharing settings and international-transfer information before approving this policy.
+The implementation is designed to exclude names, email addresses, phone numbers, delivery addresses, passwords, CNICs, account information and private order or payment details from analytics event payloads. No ecommerce purchase or revenue events are implemented.
+
+After acceptance, Google may process browser and device information, session information, online identifiers and connection information, including the IP address used to connect to its services. This processing should not be described as completely anonymous.
+
+Google Analytics is a third-party service. Further information is available in [Google's Privacy Policy](https://policies.google.com/privacy) and [how Google uses information from websites using its services](https://policies.google.com/technologies/partner-sites).
 
 ## Accept, reject or withdraw analytics consent
 
-Choose **Accept optional analytics** to allow the prepared tracking on eligible public pages, or **Reject optional analytics** to keep it off. Reopen **Analytics preferences** to change your choice. To withdraw acceptance, select Reject optional analytics.
+You control optional analytics through **Analytics preferences**. Choose **Accept optional analytics** to allow tracking on eligible public pages, or **Reject optional analytics** to keep it off without preventing shopping or sign-in.
 
-Withdrawal disables this GA4 property, sends denied analytics consent to an already-loaded Google tag and attempts to remove this stream's analytics cookies. New application-generated page views stop. Withdrawal cannot recall requests already sent or automatically delete information already received by Google. Essential website cookies remain separate.
+To change your choice, reopen Analytics preferences at any time. To withdraw acceptance, reopen Analytics preferences and select Reject optional analytics.
 
-Analytics preferences link to this policy and Google's privacy information. The browser stores your preference with a 180-day expiry, checked when the saved preference is read on load or a cross-tab storage change. If browser storage is unavailable, the choice is remembered only in the current tab.
+Withdrawal disables this GA4 property, sends denied analytics consent to an already-loaded Google tag and attempts to remove this stream's analytics cookies. New application-generated page views stop. Essential website cookies remain separate.
 
-## Retention and deletion
+Withdrawal cannot recall requests already sent or automatically delete information already received by Google.
 
-Account, order, payment, seller, support and audit records are retained in the application. Some records may need to remain available for fulfilment, disputes, accounting, security or legal purposes. The code review did not establish one fixed retention period for all records or a self-service account deletion flow. The owner must confirm the retention schedule and request-handling process before this draft is published.
+## Cookies and retention
 
-The 180-day analytics-preference expiry is not the retention period for analytics cookies or reporting data. Google Analytics uses cookies such as **_ga** and this stream's **_ga_BKBH6NHEY4** to help distinguish visits and sessions. The application does not override Google's default cookie-expiration settings. Actual cookie lifetimes, GA user/event-data retention, reset-on-activity settings, aggregated-report retention and any exports must be confirmed by the owner. No fixed retention period for those records is promised here.
+Google Analytics uses cookies such as **_ga** and **_ga_BKBH6NHEY4** to help distinguish visits and sessions when analytics is accepted.
 
-## Your questions and requests
+Your browser stores the analytics preference with a **180-day expiry**. Expiry is checked when the saved preference is read on page load or a cross-tab storage change. If browser storage is unavailable, your choice is remembered only in the current tab.
 
-For privacy questions or requests about access, correction or deletion of your information, email [admin@joro.pk](mailto:admin@joro.pk). You do not need to sign in to send an email. The owner has selected this privacy contact, subject to confirming that the mailbox is active and monitored before publication.
+The preference expiry is separate from analytics-cookie lifetimes and Google's reporting-data retention. It does not mean all analytics information is deleted after 180 days.
 
-Signed-in customers and vendors can also use the existing support centre. A request may require identity verification and review of records that must be retained for valid operational or legal reasons. The request-handling process still requires owner confirmation.
+JORO retains account, order, payment, vendor, support and security records. Some information may need to remain available for fulfilment, disputes, accounting, security or applicable legal requirements.
 
-[Open the support centre](/account/help) (sign-in may be required).
+For questions about retention or a request concerning your information, contact us using the details below.
 
-## Changes and legal context
+## Privacy questions and requests
 
-JORO serves users in Pakistan. The owner should review this draft against applicable Pakistani law and actual production operations before publication. If the policy changes, the updated text should be posted here with accurate version or effective-date information approved by the owner.
+For privacy questions or requests concerning access, correction or deletion of your information, email [admin@joro.pk](mailto:admin@joro.pk). You do not need to sign in to send an email.
 
-## Owner confirmations before release
+Signed-in customers and vendors can also use the [support centre](/account/help).
 
-- Legal operator and appropriate address: not verified.
-- Public privacy contact: admin@joro.pk selected by the owner, conditional on confirming that it is active and monitored. Mailbox operation is not independently verified. Existing /account/help support remains an alternative requiring sign-in.
-- Actual retention periods: not verified, including GA cookies, user/event data, reset-on-activity, logs, documents, backups and exports.
-- Google terms, sharing settings, transfers, rights process and effective date: require owner confirmation.
-- Actual production SHA/rollback release: owner must supply from Hostinger.
+We may need to verify your identity before handling a request. Some information may need to be retained for valid operational or legal reasons.
 
-After explicit owner approval, remove draft/audit-facing wording and resolve these confirmations before creating the final atomic release. No compliance certification is implied.
+## Changes to this policy
+
+JORO may update this policy to reflect changes in its services or information-handling practices. Updated wording will be published on this page.

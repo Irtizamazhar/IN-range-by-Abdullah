@@ -46,12 +46,13 @@ test("UI requires both explicit activation and privacy approval; approved-policy
   assert.ok(content.includes('"href":"https://policies.google.com/privacy"'));
 });
 
-test("same-release public policy includes analytics disclosure while retaining owner-review status", () => {
+test("approved public policy includes analytics disclosure and privacy contact without draft notices or invented facts", () => {
   const policy = fs.readFileSync("app/(legal)/privacy-policy/page.tsx", "utf8");
-  for (const text of ['id: "analytics"', 'id: "analytics-choice"', "Accept optional analytics", "Reject optional analytics", "Analytics preferences", "180-day", "Google Analytics", "policies.google.com/privacy", "Draft for owner review"]) assert.ok(policy.includes(text), text);
+  for (const text of ['id: "analytics"', 'id: "analytics-choice"', "Accept optional analytics", "Reject optional analytics", "Analytics preferences", "180-day", "Google Analytics", "policies.google.com/privacy"]) assert.ok(policy.includes(text), text);
   assert.ok(policy.includes('href="/account/help"'), "existing verified support channel remains available");
   assert.ok(policy.includes('href="mailto:admin@joro.pk"'), "owner-selected public privacy contact needs no sign-in");
-  assert.ok(policy.includes("subject to confirming that the mailbox is active and monitored"), "mailbox operation must not be claimed as verified");
+  assert.doesNotMatch(policy, /OWNER TO CONFIRM|draft|owner review|owner confirmation|registered company|active and monitored|Google-verified/i);
+  assert.ok(policy.includes('robots: { index: false, follow: false }'), "preserve existing indexing policy");
 });
 
 test("only approved public routes are eligible; detail identifiers, query values and titles never enter payloads", () => {
