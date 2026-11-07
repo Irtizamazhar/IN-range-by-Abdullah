@@ -7,6 +7,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 import { GlobalNavigationLoader } from "@/components/ui/GlobalNavigationLoader";
 import { PreviewExitControl } from "@/components/coming-soon-gate/PreviewExitControl";
+import { AnalyticsConsent } from "@/components/analytics/AnalyticsConsent";
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -70,6 +71,9 @@ export default function RootLayout({
             <GlobalNavigationLoader />
           </Suspense>
           <PreviewExitControl />
+          <Suspense fallback={null}>
+            <AnalyticsConsent />
+          </Suspense>
         </Providers>
       </body>
     </html>
