@@ -1,10 +1,11 @@
 [CmdletBinding()]
 param(
-    [ValidateSet('Init','Setup','Validate','Connect','StartTunnel','Tunnel','Check','Status','Deploy','Disconnect')]
+    [ValidateSet('Init','Setup','Validate','Connect','StartTunnel','Tunnel','Check','Status','Preflight','Deploy','Disconnect')]
     [string]$Action = 'Connect',
     [string]$SessionToken = '',
     [switch]$KeepOpen,
-    [string]$OnlyMigration = ''
+    [string]$OnlyMigration = '',
+    [string]$BackupPath = ''
 )
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
@@ -125,7 +126,7 @@ try {
         if ($child.ExitCode -ne 0) { Read-Host 'Press Enter to close this SSH terminal' | Out-Null }
         exit $child.ExitCode
     }
-    if ($Action -in @('Connect','Check','Status','Deploy')) {
+    if ($Action -in @('Connect','Check','Status','Preflight','Deploy')) {
         $stage = 'private MySQL password configuration'
         & node $nodeTool credentials-check
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -138,14 +139,17 @@ try {
     if (!(Test-OwnedListener $record)) { throw 'The owned SSH tunnel is not listening.' }
     if ($Action -eq 'StartTunnel') { exit 0 }
     $backup = $null
-    if ($Action -eq 'Deploy') { $backup = (Read-Host 'Full path of the independently verified production backup').Trim('"') }
+    if ($Action -in @('Preflight','Deploy')) {
+        $backup = $BackupPath
+        if (!$backup) { $backup = (Read-Host 'Full path of the independently verified production backup').Trim('"') }
+    }
     $process = $null
     try {
         $start = New-Object System.Diagnostics.ProcessStartInfo
         $start.FileName = (Get-Command node.exe -ErrorAction Stop).Source
-        $verb = if ($Action -eq 'Deploy') { 'deploy' } elseif ($Action -eq 'Status') { 'status' } else { 'check' }
+        $verb = if ($Action -eq 'Deploy') { 'deploy' } elseif ($Action -eq 'Preflight') { 'preflight' } elseif ($Action -eq 'Status') { 'status' } else { 'check' }
         $start.Arguments = '"' + $nodeTool + '" ' + $verb
-        if ($Action -eq 'Deploy') {
+        if ($Action -in @('Preflight','Deploy')) {
             if ($backup.Contains('"')) { throw 'Invalid backup path.' }
             $start.Arguments += ' --backup "' + $backup + '"'
             if ($OnlyMigration) {

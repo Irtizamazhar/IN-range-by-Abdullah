@@ -12,7 +12,7 @@ const action = process.argv[2];
 let stage = 'live profile and repository validation';
 const onStage = value => { stage = value; console.log(`Checking: ${stage}.`); };
 async function main() {
-  ensure(['init','config','validate','credentials-check','check','status','deploy'].includes(action), 'Unsupported live action. Use the documented npm commands.');
+  ensure(['init','config','validate','credentials-check','check','status','preflight','deploy'].includes(action), 'Unsupported live action. Use the documented npm commands.');
   if (action === 'init') { initializeConfig(root); fs.mkdirSync(path.join(root,'.joro-live'),{ recursive:true }); console.log('Private live environment initialized. Existing local environments were not changed.'); return; }
   const config = readConfig(root);
   if (action === 'config') { console.log(JSON.stringify(config)); return; }
@@ -30,7 +30,7 @@ async function main() {
     const display = info => { console.log(`Verified database: ${info.database}; expected user: ${info.user}; tables: ${info.tableCount}.`); console.log('Baseline and recorded migration checksums verified.'); console.log(`Applied migrations:\n${info.applied.map(n => `  ${n}`).join('\n')}`); console.log(info.pending.length ? `Pending migrations:\n${info.pending.map(n => `  ${n}`).join('\n')}` : 'No pending migrations.'); };
     display(before);
     const receipt = () => fs.writeFileSync(path.join(root,'.joro-live','last-check.json'),JSON.stringify({ verifiedAt:new Date().toISOString(), session:process.env.JORO_LIVE_SESSION_ID || null, ...before, action },null,2));
-    if (action !== 'deploy') { receipt(); return; }
+    if (!['deploy','preflight'].includes(action)) { receipt(); return; }
     const onlyIndex = process.argv.indexOf('--only-migration');
     ensure(onlyIndex < 0 || process.argv[onlyIndex + 1], 'Missing --only-migration value. Nothing applied.');
     verifyRequestedMigration(before.pending, onlyIndex >= 0 ? process.argv[onlyIndex + 1] : undefined);
@@ -40,20 +40,28 @@ async function main() {
     ensure(preflight.status === 0,'Existing deployment preflight failed. Nothing applied. Raw child output was withheld to protect credentials.');
     console.log('Existing read-only deployment preflight passed. Intended committed SQL changes:');
     for (const name of before.pending) console.log(`\n--- ${name} ---\n${repo.migrations.find(m => m.name === name).sql}`);
-    ensure(process.stdin.isTTY && process.stdout.isTTY, 'Live deployment requires an interactive terminal. No noninteractive approval is accepted.');
+    stage = 'production backup file validation';
     const index = process.argv.indexOf('--backup'); const backup = verifiedBackup(index >= 0 ? process.argv[index+1] : undefined);
     console.log(`Committed migration revision: ${repo.commit}. Backup SHA256: ${backup.hash}.`);
     console.log('Backup existence/hash is verified automatically; you must independently verify its production origin and restore usability.');
+    if (action === 'preflight') { receipt(); console.log('Read-only preflight and backup file/hash checks passed. Restoration attestation, interactive approval and release readiness remain required. No migration was attempted.'); return; }
+    stage = 'interactive terminal validation';
+    ensure(process.stdin.isTTY && process.stdout.isTTY, 'Live deployment requires an interactive terminal. No noninteractive approval is accepted.');
+    stage = 'backup restoration approval input';
     const io = createInterface({ input:process.stdin, output:process.stdout });
     try {
       ensure((await io.question(`Type BACKUP VERIFIED ${TARGET.DB_NAME} after checking the backup: `)).trim() === `BACKUP VERIFIED ${TARGET.DB_NAME}`, 'Backup attestation was not supplied. Nothing applied.');
       const phrase = `APPLY ${TARGET.DB_NAME} ${before.pending.join(',')} ${repo.commit.slice(0,12)}`;
+      stage = 'exact migration approval input';
       ensure((await io.question(`Review the listed SQL files. To apply ONLY these committed migrations, type:\n${phrase}\n> `)).trim() === phrase, 'Migration confirmation did not match. Nothing applied.');
     } finally { io.close(); }
+    stage = 'approved release and backup revalidation';
     ensure(repositoryState(root,true).commit === repo.commit && repositoryState(root,true).digest === repo.digest && verifiedBackup(backup.file).hash === backup.hash, 'The approved commit/migrations/backup changed. Restart the deployment review.');
+    stage = 'approved pending migration revalidation';
     ensure(JSON.stringify((await inspectDatabase(db,repo.migrations,repo.legacyMigrations)).pending) === JSON.stringify(before.pending), 'Pending migrations changed during approval. Restart the review.');
     // Freeze the approved committed payload; subsequent working-tree edits cannot change deployed SQL.
     const snapshots = path.join(root,'.joro-live','snapshots'); fs.mkdirSync(snapshots,{recursive:true});
+    stage = 'immutable migration snapshot preparation';
     const snapshot = path.join(snapshots,randomUUID()); fs.mkdirSync(snapshot);
     try {
       const files = ['prisma/schema.prisma','prisma/migrations/migration_lock.toml',...repo.migrations.map(m => `prisma/migrations/${m.name}/migration.sql`)];

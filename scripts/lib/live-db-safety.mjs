@@ -56,6 +56,8 @@ export function safeDatabaseFailure(error) {
   const databaseCode = String(error?.meta?.code || '');
   if (['EACCES','EPERM'].includes(code)) return 'Private file access denied. Run the live command from your own Windows terminal and review its NTFS permissions.';
   if (code === 'ENOENT') return 'Required local configuration or tool file is missing. Run db:live:setup and check installed project dependencies.';
+  if (['ERR_USE_AFTER_CLOSE','ABORT_ERR','ERR_STREAM_PREMATURE_CLOSE','EPIPE'].includes(code)) return 'Interactive approval input closed or was interrupted. No approval bypass is permitted; rerun from an interactive PowerShell terminal.';
+  if (['EISDIR','ENOTDIR','EINVAL'].includes(code)) return 'Local file or input validation failed. Check the backup path and terminal input; raw details were withheld.';
   if (code === 'P1000' || databaseCode === '1045') return 'MySQL authentication rejected. Check JORO_LIVE_DB_PASSWORD in .env.live.local.';
   if (code === 'P1001') return 'MySQL endpoint unreachable through the SSH tunnel. Check SSH authentication and forwarding to remote 127.0.0.1:3306.';
   if (code === 'P1002' || code === 'P1008' || code === 'P2024') return 'MySQL connection/query timed out. Check tunnel health and server availability.';
@@ -65,7 +67,7 @@ export function safeDatabaseFailure(error) {
   if (code === 'P1013') return 'Prisma rejected the connection URL format. Password characters must be URL-encoded.';
   if (databaseCode === '1146') return 'Required MySQL migration metadata table is missing.';
   if (databaseCode === '1054') return 'Required MySQL migration metadata column is missing.';
-  return 'Database operation failed with an unclassified driver error. Raw error details were withheld to protect credentials.';
+  return 'Live operation failed with an unclassified error. This does not establish a database-driver failure. Raw details were withheld to protect credentials.';
 }
 
 // Only the 24 recorded migrations documented in DATABASE_MIGRATIONS.md.

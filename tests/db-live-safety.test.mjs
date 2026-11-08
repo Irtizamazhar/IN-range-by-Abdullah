@@ -3,6 +3,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { createRequire } from 'node:module';
+import { pathToFileURL } from 'node:url';
+import { runInNewContext } from 'node:vm';
+import ts from 'typescript';
 import { TARGET, LIVE_SETTINGS, PASSWORD_PLACEHOLDER, initializeConfig, readConfig, readLiveUrl, validateLiveUrl, analyzeHistory, inspectDatabase, repositoryState, verifiedBackup, safeDatabaseFailure, verifyRequestedMigration } from '../scripts/lib/live-db-safety.mjs';
 import { sha256 } from '../scripts/lib/migration-tools.mjs';
 
@@ -209,6 +213,34 @@ test('driver diagnostics report failure classes without exposing driver messages
   }
   assert.match(safeDatabaseFailure({errorCode:'P1000'}),/authentication/);
   assert.match(safeDatabaseFailure({code:'P2010',meta:{code:'1142',message:fixtureSecret}}),/read-only metadata/);
+  for (const code of ['ERR_USE_AFTER_CLOSE','ABORT_ERR','EPIPE']) {
+    const message=safeDatabaseFailure({code,message:fixtureSecret});
+    assert.match(message,/approval input closed/); assert.ok(!message.includes(fixtureSecret));
+  }
+});
+
+test('live preflight cannot migrate and failed approval/backup paths stop before any migrating command', async () => {
+  const require=createRequire(import.meta.url), file='scripts/db-live.mjs', name='20261108000000_product_readable_slug';
+  for(const scenario of ['preflight','bad-backup','no-tty','closed-backup-input','closed-migration-input']) {
+    const commands=[],logs=[]; let questions=0;
+    const state={argv:['node',file,scenario==='preflight'?'preflight':'deploy','--backup','fixture.sql.gz','--only-migration',name],env:{DATABASE_URL:'forbidden-local'},stdin:{isTTY:scenario!=='no-tty'},stdout:{isTTY:true},exitCode:0};
+    const modules={
+      './lib/live-db-safety.mjs':{TARGET,LiveSafetyError: (await import('../scripts/lib/live-db-safety.mjs')).LiveSafetyError,ensure:(ok,msg)=>{if(!ok)throw new (require('../scripts/lib/live-db-safety.mjs').LiveSafetyError)(msg);},readConfig:()=>({}),readLiveUrl:()=> 'mysql://fixture:private-value@127.0.0.1/fixture',repositoryState:()=>({commit:'a'.repeat(40),digest:'digest',migrations:[{name,sql:'reviewed fixture SQL'}],legacyMigrations:[]}),inspectDatabase:async()=>({database:'fixture',user:'fixture',applied:[],pending:[name]}),verifiedBackup:()=>{if(scenario==='bad-backup')throw Object.assign(new Error('private-value'),{code:'ENOENT'});return {file:'fixture.sql.gz',hash:'hash'};},safeDatabaseFailure,verifyRequestedMigration},
+      'node:fs':{existsSync:()=>true,writeFileSync(){}},
+      'node:child_process':{spawnSync:(_bin,args)=>{commands.push(args);assert.equal(args[1],'deploy-preflight','No migrating subprocess is permitted in this test');return {status:0};}},
+      'node:readline/promises':{createInterface:()=>({close(){},question:async()=>{questions++;if(scenario==='closed-migration-input'&&questions===1)return `BACKUP VERIFIED ${TARGET.DB_NAME}`;throw Object.assign(new Error('private-value'),{code:'ERR_USE_AFTER_CLOSE'});}})},
+      '@prisma/client':{PrismaClient:class{async $disconnect(){}}},
+    };
+    let source=fs.readFileSync(file,'utf8').replaceAll('import.meta.url',JSON.stringify(pathToFileURL(path.resolve(file)).href));
+    source=source.replace('main().catch(error => {','await main().catch(error => {');
+    const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText;
+    await runInNewContext('(async()=>{'+js+'})()',{exports:{},require:id=>modules[id]||require(id),process:state,console:{log:value=>logs.push(value),error:value=>logs.push(value)},URL});
+    assert.equal(commands.length,1);
+    assert.equal(state.exitCode,scenario==='preflight'?0:1);
+    assert.ok(!logs.join('\n').includes('private-value'));
+    if(scenario==='preflight'){assert.equal(questions,0);assert.match(logs.join('\n'),/No migration was attempted/);}
+    if(scenario.startsWith('closed-'))assert.match(logs.join('\n'),/approval input closed/);
+  }
 });
 
 test('Next development startup rejects an inherited production URL without connecting', () => {

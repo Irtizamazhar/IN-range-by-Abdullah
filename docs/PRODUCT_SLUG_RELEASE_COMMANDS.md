@@ -14,6 +14,14 @@ No production write or GitHub push was performed while preparing this release. T
 
 ## Exact command sequence
 
+Read-only troubleshooting before a migration (no approvals or migration execution):
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/db-live.ps1 -Action Preflight -OnlyMigration 20261108000000_product_readable_slug -BackupPath 'C:\Users\hamid\Pictures\JORO-DB-Backups\u749284283_inrange.20261108005306.sql.gz'
+```
+
+This verifies identity/history, the existing deployment preflight, the exact pending set and backup file/hash. It does not prove backup freshness, restoration, Hostinger rollback readiness or writer quiescence, and it returns before interactive approvals. Deployment still requires a native interactive terminal, backup-restoration attestation and exact APPLY approval. Closed approval input stops execution; it is reported as an input error rather than assumed to be a database-driver failure. Failure stages distinguish preflight, backup validation and each approval prompt. The historical unclassified-error receipt alone does not identify the underlying exception.
+
 Run from the original project directory and keep the authorized SSH terminal open. These are commands for future approved execution; preparation did not execute them against production.
 
 ### 1. Tunnel and fresh backup
