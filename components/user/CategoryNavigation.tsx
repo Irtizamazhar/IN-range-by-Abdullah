@@ -27,7 +27,7 @@ import { useQuery } from "@tanstack/react-query";
 import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 import styles from "./CategoryNavigation.module.css";
 
-type NavCategory = { id: number; name: string; image?: string | null };
+type NavCategory = { id: number | string; slug?: string; name: string; image?: string | null };
 
 const NAV_ITEMS = [
   { label: "Shop Products", href: "/products", Icon: ShoppingBag },
@@ -42,7 +42,7 @@ export function useNavCategories() {
   return useQuery<NavCategory[]>({
     queryKey: ["nav-categories"],
     queryFn: async () => {
-      const response = await fetch("/api/categories");
+      const response = await fetch("/api/navigation-categories");
       if (!response.ok) throw new Error("Categories unavailable");
       return response.json();
     },
@@ -335,7 +335,7 @@ export function CategoryNavigation() {
                     key={category.id}
                     data-category-link
                     onNavigateComplete={() => setOpen(false)}
-                    href={`/products?category=${encodeURIComponent(category.name)}`}
+                    href={category.slug ? `/categories/${encodeURIComponent(category.slug)}` : `/products?category=${encodeURIComponent(category.name)}`}
                     aria-current={selectedCategory === category.name ? "page" : undefined}
                     className={styles.categoryLink}
                   >

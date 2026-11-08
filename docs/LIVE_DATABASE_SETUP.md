@@ -58,6 +58,13 @@ command. Empty or placeholder passwords stop before SSH startup with:
 `Please configure JORO_LIVE_DB_PASSWORD in .env.live.local.`
 `JORO_LIVE_AUTO_MIGRATE` must remain `false`; only explicitly approved deploy applies SQL.
 
+The three existing application keys `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`
+and `CLOUDINARY_API_SECRET` may also remain in this private file. They are explicitly
+allowlisted as unrelated application configuration, preserved unchanged, and never
+returned in database/tunnel configuration or included in the live connection URL.
+Other unknown keys, duplicate keys and changes to the fixed live settings still fail.
+The key-inspection diagnostic lists these names separately without printing values.
+
 `.gitignore` includes `.env.live.local`, `.env.live.*`, `!.env.live.example` and
 `/.joro-live/`. No real secret is placed in a tracked example file.
 

@@ -12,6 +12,7 @@ export function catalogProductSelect(
 ): Prisma.ProductSelect {
   return {
     id: true,
+    slug: true,
     name: true,
     description: true,
     price: true,

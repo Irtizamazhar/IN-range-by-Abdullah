@@ -22,6 +22,9 @@ export async function POST(request: Request, { params }: Context) { return api(a
     if (action === "removeMember") { await tx.roomMember.updateMany({ where: { id: String(body.memberId), roomId: params.id, role: "MEMBER" }, data: { active: false } }); return { success: true }; }
     if (action === "add") {
       const input = z.object({ productId: z.string().min(1), quantity: z.number().int().min(1).max(1000), variant: z.string().max(200).default("") }).parse(body);
+      const resolved = await tx.product.findFirst({ where: { OR: [{ id: input.productId }, { slug: input.productId }] }, select: { id: true } });
+      if (!resolved) throw new ApiError(404, "Product not found.");
+      input.productId = resolved.id;
       const line = await canonicalCartLine(tx, input.productId, input.quantity, input.variant);
       const existing = await tx.roomItem.findFirst({ where: { roomId: params.id, productId: input.productId, variant: input.variant } });
       if (existing) return { success: true, alreadyShared: true };

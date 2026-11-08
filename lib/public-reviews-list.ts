@@ -1,3 +1,4 @@
+import { productPath } from "@/lib/catalog-urls";
 import { prisma } from "@/lib/prisma";
 import { productReviewStatsService } from "@/lib/product-review-stats-service";
 
@@ -23,9 +24,10 @@ export async function getApprovedPublicReviews(options?: {
 }): Promise<PublicReviewListItem[]> {
   const products = await prisma.product.findMany({
     where: { isActive: true },
-    select: { id: true, name: true },
+    select: { id: true, name: true, slug: true },
   });
   const nameById = new Map(products.map((product) => [product.id, product.name]));
+  const pathById = new Map(products.map(product => [product.id, productPath(product)]));
   const rows = await productReviewStatsService(products.map((product) => product.id));
   const reviews = rows
     .map((review) => ({
@@ -37,7 +39,7 @@ export async function getApprovedPublicReviews(options?: {
       imageUrl: review.imageUrl,
       createdAt: review.createdAt,
       itemName: nameById.get(review.productId) || "Product",
-      itemHref: `/products/${review.productId}`,
+      itemHref: pathById.get(review.productId) || "/products",
       verifiedPurchase: review.verifiedPurchase,
     }))
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());

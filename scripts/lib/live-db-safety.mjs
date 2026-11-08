@@ -8,6 +8,11 @@ import { checkManifest, checkMigrationLayout, sha256 } from './migration-tools.m
 export const TARGET = Object.freeze({ DB_HOST: '127.0.0.1', DB_PORT: '3307', DB_NAME: 'u749284283_inrange', DB_USER: 'u749284283_inrange', SSH_HOST: '145.79.26.151', SSH_PORT: '65002', SSH_USER: 'u749284283', REMOTE_DB_HOST: '127.0.0.1', REMOTE_DB_PORT: '3306' });
 export class LiveSafetyError extends Error {}
 export const ensure = (condition, message) => { if (!condition) throw new LiveSafetyError(message); };
+/** Optional additional restriction; never expands the set accepted by existing history checks. */
+export function verifyRequestedMigration(pending, requested) {
+  if (requested === undefined) return;
+  ensure(/^\d{14}_[a-z0-9_]+$/.test(requested) && pending.length === 1 && pending[0] === requested, 'Requested single-migration restriction does not match the exact pending set. Nothing applied.');
+}
 
 export const LIVE_SETTINGS = Object.freeze({
   JORO_LIVE_DB_HOST:TARGET.DB_HOST, JORO_LIVE_DB_PORT:TARGET.DB_PORT,
@@ -19,6 +24,11 @@ export const LIVE_SETTINGS = Object.freeze({
   JORO_LIVE_EXPECTED_DATABASE:TARGET.DB_NAME, JORO_LIVE_AUTO_MIGRATE:'false',
 });
 export const PASSWORD_PLACEHOLDER = 'ADD_MYSQL_PASSWORD_HERE';
+// Existing application settings may share this private file. Never return them
+// from readConfig or use them to construct the database/tunnel configuration.
+export const UNRELATED_APPLICATION_KEYS = Object.freeze([
+  'CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET',
+]);
 
 function profileValues(file) {
   ensure(!fs.lstatSync(file).isSymbolicLink(),'Private live environment must not be a symbolic link.');
@@ -121,7 +131,7 @@ export function initializeConfig(root) {
 }
 export function readConfig(root) {
   const data = profileValues(path.join(root,'.env.live.local'));
-  ensure(Object.keys(data).every(k => Object.hasOwn(LIVE_SETTINGS,k) || k === 'JORO_LIVE_DB_PASSWORD'),'Unexpected live profile setting. No connection attempted.');
+  ensure(Object.keys(data).every(k => Object.hasOwn(LIVE_SETTINGS,k) || k === 'JORO_LIVE_DB_PASSWORD' || UNRELATED_APPLICATION_KEYS.includes(k)),'Unexpected live profile setting. No connection attempted.');
   ensure(Object.entries(LIVE_SETTINGS).every(([k,v]) => data[k] === v) && Object.hasOwn(data,'JORO_LIVE_DB_PASSWORD'), 'Live profile differs from the approved host/database/tunnel/security settings. Stopped.');
   return {...LIVE_SETTINGS}; // Never return the password to the PowerShell config query.
 }

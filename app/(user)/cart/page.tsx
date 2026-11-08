@@ -1,4 +1,5 @@
 "use client";
+import { useProductLinks } from "@/lib/use-product-links";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import { useEffect, useState } from "react";
@@ -30,6 +31,7 @@ function CartItem({ line }: { line: CartLine }) {
   const { ids, toggle, isSaving, loading } = useSavedProducts();
   const [imageFailed, setImageFailed] = useState(false);
   const [moving, setMoving] = useState(false);
+  const productLinks = useProductLinks([line.productId]);
   const saved = ids.includes(line.productId);
   const atMax = line.quantity >= line.maxStock;
   const lineTotal = (line.price + (line.serviceId ? line.servicePrice || 0 : 0)) * line.quantity;
@@ -50,7 +52,7 @@ function CartItem({ line }: { line: CartLine }) {
   return (
     <article className="flex gap-3 rounded-card border border-borderGray bg-white p-3 shadow-xs sm:gap-5 sm:p-5">
       <Link
-        href={`/products/${line.productId}`}
+        href={productLinks[line.productId] || "/products"}
         className="relative aspect-square w-24 shrink-0 self-start overflow-hidden rounded-xl bg-lightGray sm:w-36"
         aria-label={line.name}
       >
@@ -75,7 +77,7 @@ function CartItem({ line }: { line: CartLine }) {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <Link
-              href={`/products/${line.productId}`}
+              href={productLinks[line.productId] || "/products"}
               className="line-clamp-2 break-words text-md font-bold text-darkText hover:text-admin-primary sm:text-lg"
             >
               {line.name}

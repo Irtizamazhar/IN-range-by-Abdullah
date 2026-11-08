@@ -1,3 +1,4 @@
+import { productPath } from "../lib/catalog-urls";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -13,9 +14,9 @@ const HOUR = 3_600_000;
 const NOW = Date.now();
 const ago = (hours: number) => new Date(NOW - hours * HOUR);
 
-type Row = { id: string; name: string; description: string; category: string; isActive: boolean; stock: number; createdAt: Date; price: number };
+type Row = { id: string; slug: string; name: string; description: string; category: string; isActive: boolean; stock: number; createdAt: Date; price: number };
 const row = (id: string, extra: Partial<Row> = {}): Row =>
-  ({ id, name: id, description: "", category: "Electronics", isActive: true, stock: 5, createdAt: ago(1), price: 100, ...extra });
+  ({ id, slug: id + "-slug", name: id, description: "", category: "Electronics", isActive: true, stock: 5, createdAt: ago(1), price: 100, ...extra });
 
 /** Evaluates the subset of Prisma `where` the listing queries use. */
 function matches(product: Record<string, unknown>, where: Record<string, unknown> | undefined): boolean {
@@ -69,7 +70,7 @@ function load(file: string, modules: Record<string, unknown>, jsx = false) {
   runInNewContext(js, { exports: exported, React, require: (name: string) => (name in modules ? modules[name] : require(name)), console, Date, URL, Response, Request, Map, Set });
   return exported;
 }
-const serialize = { serializeProduct: (product: Row) => ({ ...product, _id: product.id, images: [] }) };
+const serialize = { serializeProduct: (product: Row) => ({ ...product, _id: product.id, href: productPath(product), images: [] }) };
 const common = {
   "@/lib/serialize": serialize,
   "@/lib/review-stats": { reviewStatsForProductIds: async () => new Map(), pickReviewStat: () => ({ reviewCount: 0, ratingAvg: 0 }) },
@@ -146,7 +147,7 @@ test("an admin New Arrival is one product in both New Arrivals and All Products"
   const rows = [row("na-1", { name: "Admin Arrival", createdAt: ago(2) }), row("vendor-new", { createdAt: ago(5) }), row("old", { createdAt: ago(20 * 24) })];
   const arrivals = await newArrivalIds(rows, [{ id: 1, name: "Admin Arrival", category: "Electronics" }]);
   assert.deepEqual(arrivals.map((a) => a.id), ["na-1", "vendor-new"]);
-  assert.equal(arrivals[0].href, "/new-arrivals/1");
+  assert.equal(arrivals[0].href, "/products/na-1-slug");
   const all = await allProductIds(rows);
   assert.deepEqual(ids(all.products), ["na-1", "vendor-new", "old"]);
   assert.ok(all.products.every((p) => p.createdAt), "createdAt reaches the card for the NEW badge");

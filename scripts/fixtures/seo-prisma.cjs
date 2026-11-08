@@ -5,7 +5,7 @@ const vendor = { id: 'seo-store', status: 'approved', shopName: 'Fixture seller'
   city: 'Lahore', createdAt: date, updatedAt: date, shopLogo: '/icon.png', storeBanner: null, storePolicies: null, serviceCities: ['Lahore'], primaryCategory: 'Phones',
   _count: { followers: 0, products: 20 }, vendorShopOrders: [] };
 const publication = { id: 'publication', vendorId: vendor.id, vendor, status: 'active', totalSold: 0, publishedProductId: 'seo-p-01' };
-const products = Array.from({ length: 20 }, (_, i) => ({ id: `seo-p-${String(i + 1).padStart(2, '0')}`, name: `Fixture phone ${i + 1}`, description: 'Original fixture product description.',
+const products = Array.from({ length: 20 }, (_, i) => ({ id: `seo-p-${String(i + 1).padStart(2, '0')}`, slug: `fixture-phone-${i + 1}`, name: `Fixture phone ${i + 1}`, description: 'Original fixture product description.',
   category: 'Phones', categoryRecordId: 'seo-category', price: 1200.5 + i, stock: i === 0 ? 0 : 4, originalPrice: null, discountPercent: 0, warrantyMonths: null, variants: [],
   listingImageUrls: ['/icon.png'], isActive: true, createdAt: date, updatedAt: date, productImages: [], vendorPublication: i === 0 ? publication : null,
   legacyNewArrivalId: i === 0 ? 1 : null, isFeatured: false, _count: {} }));

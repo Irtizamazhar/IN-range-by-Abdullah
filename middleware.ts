@@ -1,4 +1,5 @@
 import { shouldNoindex } from "@/lib/seo-policy";
+import { safeRedirectQuery } from "@/lib/catalog-urls";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
@@ -107,7 +108,7 @@ function notFound(req: NextRequest) {
   return markPrivate(NextResponse.rewrite(new URL("/_admin-not-found", req.url), { status: 404 }));
 }
 
-export async function middleware(req: NextRequest) {
+async function routeMiddleware(req: NextRequest) {
   if ((req.nextUrl.pathname === "/robots.txt" || req.nextUrl.pathname === "/sitemap.xml" || /^\/sitemaps\/[a-z]+-[0-9]+\.xml$/.test(req.nextUrl.pathname)) && ["GET", "HEAD"].includes(req.method)) return NextResponse.next();
   if (!isMaintenanceMode()) {
     const response = await authorizeArea(req);
@@ -118,6 +119,20 @@ export async function middleware(req: NextRequest) {
   const gated = await privateLaunchGate(req);
   if (gated) return gated;
   return markPrivate(await authorizeArea(req));
+}
+
+export async function middleware(req: NextRequest) {
+  const response = await routeMiddleware(req);
+  // Always overwrite incoming context; clients cannot inject a different route into the root guard.
+  const requestHeaders = new Headers(req.headers);
+  const path = req.nextUrl.pathname;
+  requestHeaders.set("x-joro-catalog-route", /^\/(products|categories|category|new-arrivals)\/[^/]+\/?$/.test(path)
+    ? path + safeRedirectQuery(Object.fromEntries(req.nextUrl.searchParams)) : "");
+  const context = NextResponse.next({ request: { headers: requestHeaders } });
+  context.headers.forEach((value, key) => {
+    if (key === "x-middleware-override-headers" || key.startsWith("x-middleware-request-")) response.headers.set(key, value);
+  });
+  return response;
 }
 
 export const config = {

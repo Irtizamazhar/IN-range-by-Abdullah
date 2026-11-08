@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useEffect, useRef, useState } from "react";
+import { productPath } from "@/lib/catalog-urls";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import { ArrowRight, Heart, ImageOff, ShoppingCart, Star } from "lucide-react";
@@ -40,7 +41,7 @@ export const HomeProductCard = memo(function HomeProductCard({ product, showNewT
   const id = String(product._id);
   const saved = ids.includes(id);
   const image = !imageFailed ? product.images?.[0] : undefined;
-  const href = product.href || `/products/${id}`;
+  const href = product.href || productPath({ id, slug: product.slug });
 
   // Worked out from the prices, never the stored discountPercent (which produced "0%" and "-100%" badges).
   const discount = displayDiscount(product.price, product.originalPrice);

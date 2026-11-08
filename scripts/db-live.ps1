@@ -3,7 +3,8 @@ param(
     [ValidateSet('Init','Setup','Validate','Connect','StartTunnel','Tunnel','Check','Status','Deploy','Disconnect')]
     [string]$Action = 'Connect',
     [string]$SessionToken = '',
-    [switch]$KeepOpen
+    [switch]$KeepOpen,
+    [string]$OnlyMigration = ''
 )
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
@@ -147,6 +148,10 @@ try {
         if ($Action -eq 'Deploy') {
             if ($backup.Contains('"')) { throw 'Invalid backup path.' }
             $start.Arguments += ' --backup "' + $backup + '"'
+            if ($OnlyMigration) {
+                if ($OnlyMigration -notmatch '^\d{14}_[a-z0-9_]+$') { throw 'Invalid single-migration restriction.' }
+                $start.Arguments += ' --only-migration ' + $OnlyMigration
+            }
         }
         $start.WorkingDirectory = $projectRoot
         $start.UseShellExecute = $false

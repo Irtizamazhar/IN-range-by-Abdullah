@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { createInterface } from 'node:readline/promises';
-import { TARGET, LiveSafetyError, ensure, initializeConfig, readConfig, readLiveUrl, repositoryState, inspectDatabase, verifiedBackup, safeDatabaseFailure } from './lib/live-db-safety.mjs';
+import { TARGET, LiveSafetyError, ensure, initializeConfig, readConfig, readLiveUrl, repositoryState, inspectDatabase, verifiedBackup, safeDatabaseFailure, verifyRequestedMigration } from './lib/live-db-safety.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const action = process.argv[2];
@@ -31,6 +31,9 @@ async function main() {
     display(before);
     const receipt = () => fs.writeFileSync(path.join(root,'.joro-live','last-check.json'),JSON.stringify({ verifiedAt:new Date().toISOString(), session:process.env.JORO_LIVE_SESSION_ID || null, ...before, action },null,2));
     if (action !== 'deploy') { receipt(); return; }
+    const onlyIndex = process.argv.indexOf('--only-migration');
+    ensure(onlyIndex < 0 || process.argv[onlyIndex + 1], 'Missing --only-migration value. Nothing applied.');
+    verifyRequestedMigration(before.pending, onlyIndex >= 0 ? process.argv[onlyIndex + 1] : undefined);
     if (!before.pending.length) { receipt(); return; }
     stage = 'existing read-only deployment preflight';
     const preflight = spawnSync(process.execPath,[path.join(root,'scripts/db-migrations.mjs'),'deploy-preflight'],{cwd:root,env:{...process.env,DATABASE_URL:raw,JORO_DEPLOY_MIGRATIONS:'false'},windowsHide:true,stdio:['ignore','pipe','pipe']});

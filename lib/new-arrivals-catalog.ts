@@ -53,7 +53,7 @@ export async function loadMergedNewArrivalCards(options: {
   const stats = await reviewStatsForProductIds(prismaRows.map((p) => p.id));
   const cards: NewArrivalMergedCard[] = prismaRows.map((p) => {
     const legacy = legacyById.get(p.id);
-    if (legacy) return { ...storedProductToNewArrivalCard(legacy), createdAtTs: +new Date(p.createdAt) };
+    if (legacy) return { ...storedProductToNewArrivalCard(legacy), href: serializeProduct(p).href, createdAtTs: +new Date(p.createdAt) };
     const base = serializeProduct(p, { forAdmin: false });
     const stat = pickReviewStat(stats, String(base._id));
     return {
@@ -65,7 +65,7 @@ export async function loadMergedNewArrivalCards(options: {
       images: base.images,
       category: base.category,
       stock: base.stock,
-      href: `/products/${base._id}`,
+      href: base.href,
       reviewCount: stat.reviewCount,
       ratingAvg: stat.ratingAvg,
       createdAtTs: +new Date(p.createdAt),

@@ -1,3 +1,4 @@
+import { productPath } from "@/lib/catalog-urls";
 import { prisma } from "@/lib/prisma";
 import { giftCategoryWhere } from "@/lib/gift-products";
 
@@ -23,11 +24,11 @@ export async function searchPublicMarketplace(rawQuery: string, perGroup = 8): P
     { title: { contains: token } }, { category: { contains: token } }, { description: { contains: token } },
   ] }));
   const [products, gifts, services, categories, serviceCategories, wants, stores] = await Promise.all([
-    prisma.product.findMany({ where: { isActive: true, AND: productMatch, NOT: giftCategoryWhere }, select: { id: true, name: true, category: true }, take, orderBy: { createdAt: "desc" } }),
+    prisma.product.findMany({ where: { isActive: true, AND: productMatch, NOT: giftCategoryWhere }, select: { id: true, slug: true, name: true, category: true }, take, orderBy: { createdAt: "desc" } }),
     prisma.product.findMany({ where: { isActive: true, stock: { gt: 0 }, AND: [
       giftCategoryWhere,
       ...productMatch,
-    ] }, select: { id: true, name: true, category: true }, take, orderBy: { createdAt: "desc" } }),
+    ] }, select: { id: true, slug: true, name: true, category: true }, take, orderBy: { createdAt: "desc" } }),
     prisma.serviceOffering.findMany({ where: { active: true, moderationStatus: "APPROVED", vendor: { status: "approved" }, AND: serviceMatch }, select: { id: true, name: true, type: true }, take, orderBy: { createdAt: "desc" } }),
     prisma.category.findMany({ where: { isActive: true, OR: [{ name: { contains: query } }, { slug: { contains: query } }] }, select: { id: true, name: true }, take, orderBy: { sortOrder: "asc" } }),
     prisma.serviceOffering.findMany({ where: { active: true, moderationStatus: "APPROVED", vendor: { status: "approved" }, type: { contains: query } }, select: { type: true }, distinct: ["type"], take }),
@@ -37,8 +38,8 @@ export async function searchPublicMarketplace(rawQuery: string, perGroup = 8): P
   return [
     ...categories.map((row) => ({ id: row.id, kind: "categories" as const, title: row.name, detail: "Product category", href: `/products?category=${encodeURIComponent(row.name)}` })),
     ...serviceCategories.map((row) => ({ id: row.type, kind: "categories" as const, title: row.type, detail: "Service category", href: `/services?category=${encodeURIComponent(row.type)}` })),
-    ...products.map((row) => ({ id: row.id, kind: "products" as const, title: row.name, detail: row.category, href: `/products/${encodeURIComponent(row.id)}` })),
-    ...gifts.map((row) => ({ id: row.id, kind: "gifts" as const, title: row.name, detail: row.category, href: `/products/${encodeURIComponent(row.id)}` })),
+    ...products.map((row) => ({ id: row.id, kind: "products" as const, title: row.name, detail: row.category, href: productPath(row) })),
+    ...gifts.map((row) => ({ id: row.id, kind: "gifts" as const, title: row.name, detail: row.category, href: productPath(row) })),
     ...services.map((row) => ({ id: row.id, kind: "services" as const, title: row.name, detail: row.type, href: `/services/${encodeURIComponent(row.id)}` })),
     ...wants.map((row) => ({ id: row.id, kind: "requests" as const, title: row.title, detail: `${row.requestType} · ${row.category}`, href: `/wants/${encodeURIComponent(row.id)}` })),
     ...stores.map((row) => ({ id: row.id, kind: "stores" as const, title: row.shopName, detail: row.primaryCategory, href: `/stores/${encodeURIComponent(row.storeSlug || row.id)}` })),

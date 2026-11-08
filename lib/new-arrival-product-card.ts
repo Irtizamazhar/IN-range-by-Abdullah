@@ -28,7 +28,7 @@ export function storedProductToNewArrivalCard(p: StoredProduct): ProductCardData
       : undefined,
     images,
     category: p.category || "New Arrivals",
-    href: `/new-arrivals/${id}`,
+    href: p.href || "/products",
     stock: p.stock,
     inStock: p.inStock,
     reviewCount: 0,

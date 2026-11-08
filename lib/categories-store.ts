@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 
 export type ShopCategory = {
   id: number;
+  slug?: string;
   name: string;
   image: string;
   showOnHome?: boolean;
@@ -33,6 +34,7 @@ export async function readCategories(): Promise<ShopCategory[]> {
   });
   return rows.map((row) => ({
     id: row.legacyId!,
+    slug: row.slug,
     name: row.name,
     image: row.image,
     showOnHome: row.showOnHome,

@@ -1,8 +1,11 @@
+import { productPath } from "@/lib/catalog-urls";
+import { newProductSlug } from "@/lib/allocate-product-slug";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export type StoredProduct = {
   id: number;
+  href?: string;
   name: string;
   price: number;
   originalPrice?: number;
@@ -40,6 +43,7 @@ export async function readProducts(): Promise<StoredProduct[]> {
     const images = imagesFromJson(row.listingImageUrls);
     return {
       id: row.legacyNewArrivalId!,
+      href: productPath(row),
       name: row.name,
       price: Number(row.price),
       originalPrice: row.originalPrice == null ? undefined : Number(row.originalPrice),
@@ -113,6 +117,7 @@ export async function writeProducts(products: StoredProduct[]) {
         await tx.product.upsert({
           where: { id: `na-${item.id}` },
           create: {
+            slug: newProductSlug(item.name),
             id: `na-${item.id}`,
             legacyNewArrivalId: item.id,
             createdAt: item.createdAt ? new Date(item.createdAt) : new Date(),

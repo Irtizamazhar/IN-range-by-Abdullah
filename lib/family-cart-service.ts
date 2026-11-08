@@ -4,7 +4,7 @@ import { Prisma } from "@prisma/client";
 import { ApiError } from "@/lib/marketplace-api";
 export const roomCommentText = z.string().max(10000).transform(value => sanitizeHtml(value, { allowedTags: [], allowedAttributes: {} }).trim()).pipe(z.string().min(1).max(2000));
 export const roomProductSelect = {
-  id: true, name: true, price: true, stock: true, variants: true, isActive: true,
+  id: true, slug: true, name: true, price: true, stock: true, variants: true, isActive: true,
   listingImageUrls: true, productImages: { select: { id: true }, orderBy: { sortOrder: "asc" as const }, take: 1 },
   vendorPublication: { select: { stock: true, status: true, vendor: { select: { shopName: true, storeSlug: true, status: true } } } },
 } satisfies Prisma.ProductSelect;

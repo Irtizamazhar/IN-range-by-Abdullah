@@ -2,6 +2,8 @@ import { SITE_URL, HOME_TITLE, HOME_DESCRIPTION } from "@/lib/seo";
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { Suspense } from "react";
+import { headers } from "next/headers";
+import { guardCatalogRoute } from "@/lib/catalog-route-guard";
 
 import "./globals.css";
 import { Providers } from "./providers";
@@ -51,11 +53,12 @@ function AppLoadingFallback() {
   );
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  await guardCatalogRoute(headers().get("x-joro-catalog-route"));
   return (
     <html
       lang="en"

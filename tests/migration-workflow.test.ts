@@ -3,10 +3,17 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync, existsSync, statSync } from "node:fs";
 import {
   analyzeMigrationSql, assertDevelopmentDatabase, buildManifest, checkManifest, checkMigrationLayout,
-  isEmptyMigration, schemaFingerprint, suggestMigrationName,
+  isEmptyMigration, schemaFingerprint, suggestMigrationName, prismaCliEnvironment,
 } from "../scripts/lib/migration-tools.mjs";
 
 const lock = 'provider = "mysql"\n';
+test("Prisma CLI preserves native error decoding despite inherited quiet Rust logging", () => {
+  const parent = { RUST_LOG: "warn", DATABASE_URL: "mysql://fixture@localhost/disposable", OTHER: "preserved" };
+  assert.deepEqual(prismaCliEnvironment(parent), { ...parent, RUST_LOG: "info" });
+  assert.equal(parent.RUST_LOG, "warn");
+  assert.equal(prismaCliEnvironment({ RUST_LOG: "off,schema_engine=error" }).RUST_LOG, "info");
+  assert.equal(prismaCliEnvironment({}).RUST_LOG, "info");
+});
 const levels = (sql: string) => analyzeMigrationSql(sql).map((r: { level: string }) => r.level);
 
 test("schema fingerprint ignores comments and formatting but not database changes", () => {

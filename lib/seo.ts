@@ -1,3 +1,4 @@
+import { productPath } from "@/lib/catalog-urls";
 import type { Metadata } from "next";
 
 export const SITE_URL = "https://joro.pk";
@@ -35,11 +36,11 @@ export function breadcrumbs(items: { name: string; path: string }[]) {
 export function jsonLd(value: unknown): string {
   return JSON.stringify(value).replace(/</g, "\\u003c").replace(/>/g, "\\u003e").replace(/&/g, "\\u0026").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
 }
-export function productSchema(product: { id: string; name: string; description: string; category: string; price: unknown; stock: number; images: string[] }, seller?: { name: string; path: string } | null) {
+export function productSchema(product: { id: string; slug?: string | null; name: string; description: string; category: string; price: unknown; stock: number; images: string[] }, seller?: { name: string; path: string } | null) {
   const price = Number(product.price);
   return { "@context": "https://schema.org", "@type": "Product", name: product.name, description: seoText(product.description, 5000), category: product.category,
-    url: absoluteUrl(`/products/${encodeURIComponent(product.id)}`), image: product.images.map(publicImageUrl).filter(Boolean),
-    ...(Number.isFinite(price) && price >= 0 ? { offers: { "@type": "Offer", url: absoluteUrl(`/products/${encodeURIComponent(product.id)}`), price, priceCurrency: "PKR",
+    url: absoluteUrl(productPath(product)), image: product.images.map(publicImageUrl).filter(Boolean),
+    ...(Number.isFinite(price) && price >= 0 ? { offers: { "@type": "Offer", url: absoluteUrl(productPath(product)), price, priceCurrency: "PKR",
       availability: `https://schema.org/${product.stock > 0 ? "InStock" : "OutOfStock"}`,
       ...(seller ? { seller: { "@type": "Organization", name: seller.name, url: absoluteUrl(seller.path) } } : {}),
     } } : {}),

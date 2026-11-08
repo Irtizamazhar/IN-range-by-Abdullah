@@ -3,10 +3,17 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { TARGET, LIVE_SETTINGS, PASSWORD_PLACEHOLDER, initializeConfig, readConfig, readLiveUrl, validateLiveUrl, analyzeHistory, inspectDatabase, repositoryState, verifiedBackup, safeDatabaseFailure } from '../scripts/lib/live-db-safety.mjs';
+import { TARGET, LIVE_SETTINGS, PASSWORD_PLACEHOLDER, initializeConfig, readConfig, readLiveUrl, validateLiveUrl, analyzeHistory, inspectDatabase, repositoryState, verifiedBackup, safeDatabaseFailure, verifyRequestedMigration } from '../scripts/lib/live-db-safety.mjs';
 import { sha256 } from '../scripts/lib/migration-tools.mjs';
 
 const migrations = [{name:'0_baseline',sql:'baseline fixture'}, {name:'20261025000000_standalone_quote_service_booking',sql:'nullable fixture'}];
+test('single-migration option narrows deployment to the exact reviewed pending name', () => {
+  const slug = '20261108000000_product_readable_slug';
+  assert.doesNotThrow(() => verifyRequestedMigration([slug], slug));
+  assert.doesNotThrow(() => verifyRequestedMigration(['other'], undefined));
+  for (const pending of [[], ['other'], [slug, 'other']]) assert.throws(() => verifyRequestedMigration(pending, slug), /single-migration restriction/);
+  assert.throws(() => verifyRequestedMigration([slug], '--unsafe'), /single-migration restriction/);
+});
 const applied = name => ({ migration_name:name, checksum:sha256(migrations.find(m=>m.name===name).sql), finished_at:new Date(), rolled_back_at:null });
 function fixtureDirectory(work) {
   const parent = path.resolve('node_modules/.cache'); fs.mkdirSync(parent,{recursive:true}); const directory=fs.mkdtempSync(path.join(parent,'joro-live-test-'));
@@ -58,6 +65,34 @@ test('private-file passwords load automatically, round trip special characters a
   }
   fs.writeFileSync(file,template.replace('JORO_LIVE_AUTO_MIGRATE=false','JORO_LIVE_AUTO_MIGRATE=true'));
   assert.throws(()=>readConfig(root),/security settings/);
+}));
+
+test('explicit Cloudinary application keys are preserved but excluded from live connection configuration', () => fixtureDirectory(root => {
+  initializeConfig(root);
+  const file = path.join(root, '.env.live.local');
+  const source = fs.readFileSync(file, 'utf8').replace(PASSWORD_PLACEHOLDER, 'fixture-db-password') +
+    '\n# unrelated application settings\nCLOUDINARY_CLOUD_NAME="fixture-cloud"\nCLOUDINARY_API_KEY="fixture-key"\nCLOUDINARY_API_SECRET="fixture-secret # with spaces"\n';
+  fs.writeFileSync(file, source);
+  assert.deepEqual(readConfig(root), LIVE_SETTINGS);
+  const url = readLiveUrl(root);
+  assert.equal(decodeURIComponent(validateLiveUrl(url).password), 'fixture-db-password');
+  for (const value of ['fixture-cloud', 'fixture-key', 'fixture-secret']) {
+    assert.ok(!url.includes(value));
+    assert.ok(!JSON.stringify(readConfig(root)).includes(value));
+  }
+  initializeConfig(root);
+  assert.equal(fs.readFileSync(file, 'utf8'), source);
+  for (const key of ['CLOUDINARY_URL', 'CLOUDINARY_OTHER', 'DATABASE_URL', 'JORO_LIVE_DB_OVERRIDE']) {
+    fs.writeFileSync(file, source + `${key}=fixture\n`);
+    assert.throws(() => readConfig(root), /Unexpected/);
+    assert.equal(fs.readFileSync(file, 'utf8'), source + `${key}=fixture\n`);
+  }
+  for (const [key, value] of Object.entries(LIVE_SETTINGS)) {
+    fs.writeFileSync(file, source.replace(`${key}=${value}`, `${key}=unsafe-fixture`));
+    assert.throws(() => readConfig(root), /security settings/);
+  }
+  fs.writeFileSync(file, source + 'CLOUDINARY_API_SECRET=duplicate\n');
+  assert.throws(() => readConfig(root), /duplicate/);
 }));
 
 test('legacy fixed profile upgrades automatically without losing an existing password', () => fixtureDirectory(root => {

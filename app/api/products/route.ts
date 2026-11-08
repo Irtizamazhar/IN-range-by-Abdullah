@@ -1,3 +1,4 @@
+import { newProductSlug } from "@/lib/allocate-product-slug";
 import { indexableProductWhere } from "@/lib/seo-data";
 export const dynamic = "force-dynamic";
 
@@ -149,6 +150,7 @@ export async function POST(req: NextRequest) {
     product = await prisma.$transaction(async (tx) => {
     const created = await tx.product.create({
       data: {
+        slug: newProductSlug(String(body.name)),
         name: body.name,
         description: body.description ?? "",
         price,

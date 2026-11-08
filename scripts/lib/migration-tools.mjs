@@ -4,6 +4,15 @@ import { createHash } from "node:crypto";
 
 export const MIGRATION_NAME = /^(0_baseline|\d{14}_[a-z0-9_]+)$/;
 
+/** Prisma 6's CLI skips stderr's first line when decoding native CLI errors.
+ * With inherited RUST_LOG=warn the sole P1003 error is that first line, so
+ * migrate deploy cannot recognize a missing disposable database and create it.
+ * Keep the startup INFO line for this protocol; do not change the parent env.
+ */
+export function prismaCliEnvironment(env) {
+  return { ...env, RUST_LOG: "info" };
+}
+
 export function sha256(content) {
   return createHash("sha256").update(content).digest("hex");
 }

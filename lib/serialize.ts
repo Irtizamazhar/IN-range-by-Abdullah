@@ -1,3 +1,4 @@
+import { productPath } from "@/lib/catalog-urls";
 import type {
   Order,
   OrderItem,
@@ -26,6 +27,7 @@ export type ProductSerializeInput = Pick<
   | "createdAt"
   | "updatedAt"
 > & {
+  slug?: string | null;
   productImages?: Pick<ProductImage, "id" | "sortOrder">[] | ProductImage[];
 };
 
@@ -65,6 +67,8 @@ export function serializeProduct(
   const images = productImagesForProduct(p);
   return {
     _id: p.id,
+    href: productPath(p),
+    slug: p.slug,
     id: p.id,
     name: p.name,
     description: p.description,

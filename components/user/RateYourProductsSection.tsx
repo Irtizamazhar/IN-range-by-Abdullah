@@ -1,4 +1,5 @@
 "use client";
+import { useProductLinks } from "@/lib/use-product-links";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import Image from "next/image";
@@ -33,6 +34,7 @@ export function RateYourProductsSection({
     [lines]
   );
 
+  const productLinks = useProductLinks(withPid.map(line => String(line.productId)));
   const [reviewedMap, setReviewedMap] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -82,7 +84,7 @@ export function RateYourProductsSection({
       <div className="space-y-3">
         {withPid.map((line) => {
           const pid = String(line.productId);
-          const href = `/products/${encodeURIComponent(pid)}?orderId=${encodeURIComponent(parentOrderId)}#review`;
+          const href = (productLinks[pid] || "/products") + `?orderId=${encodeURIComponent(parentOrderId)}#review`;
           const reviewed = reviewedMap[pid] === true;
 
           return (

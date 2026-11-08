@@ -1,4 +1,5 @@
-import { notFound } from "next/navigation";
+import { safeRedirectQuery } from "@/lib/catalog-urls";
+import { notFound, permanentRedirect } from "next/navigation";
 import Link from "@/components/ui/LoadingLink";
 import { ProductCard } from "@/components/user/ProductCard";
 import { JsonLd } from "@/components/seo/JsonLd";
@@ -15,6 +16,7 @@ export async function generateMetadata({ params, searchParams }: Props) {
 }
 export default async function CategoryPage({ params, searchParams }: Props) {
   const category = await seoCategory(params.slug); if (!category) notFound();
+  if (params.slug !== category.slug) permanentRedirect("/categories/" + encodeURIComponent(category.slug) + safeRedirectQuery(searchParams));
   const data = await readSeoCatalog(new URLSearchParams({ category: category.name, page: searchParams?.page || "1" }).toString()); if (!data) notFound();
   const href = (page: number) => `/categories/${encodeURIComponent(category.slug)}${page > 1 ? `?page=${page}` : ""}`;
   return <main className="mx-auto max-w-site px-4 py-8 sm:px-6">

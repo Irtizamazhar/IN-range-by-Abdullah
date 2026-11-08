@@ -1,4 +1,5 @@
 "use client";
+import { productPath } from "@/lib/catalog-urls";
 import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { LoadingForm } from "@/components/ui/LoadingForm";
@@ -8,7 +9,7 @@ import { useCustomerAuth } from "@/context/CustomerAuthContext";
 import { useCart, type CartLine } from "@/context/CartContext";
 type Member = { id: string; customer: { name: string } };
 type Comment = { id: string; memberId: string; text: string; createdAt: string; member: { customer: { name: string } } };
-type Item = { id: string; productId: string; quantity: number; variant: string; product: { name: string; image: string; price: string; stock: number; variants: string[]; isActive: boolean; vendorPublication: { status: string; stock: number; vendor: { shopName: string; storeSlug: string | null; status: string } } | null }; comments: Comment[] };
+type Item = { id: string; productId: string; quantity: number; variant: string; product: { id: string; slug?: string | null; name: string; image: string; price: string; stock: number; variants: string[]; isActive: boolean; vendorPublication: { status: string; stock: number; vendor: { shopName: string; storeSlug: string | null; status: string } } | null }; comments: Comment[] };
 type Room = { name: string; archived: boolean; members: Member[]; items: Item[] };
 const button = "rounded-xl border px-3 py-2 text-sm font-semibold disabled:opacity-50";
 export default function RoomPage({ params }: { params: { id: string } }) {
@@ -78,7 +79,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
           <p className="break-words text-sm">{vp?.vendor.shopName || "JORO"}{item.variant && ` · ${item.variant}`} · Quantity {item.quantity}</p>
           <p className={`mt-2 text-sm ${available ? "text-green-700" : "text-red-700"}`}>{available ? "Available" : "Currently unavailable"}</p>
           <div className="my-4 flex flex-wrap gap-2">
-            <Link href={`/products/${item.productId}`} className={button}>View Product</Link>
+            <Link href={productPath(p)} className={button}>View Product</Link>
             {vp?.vendor.storeSlug && <Link href={`/stores/${vp.vendor.storeSlug}`} className={button}>View Store</Link>}
             <LoadingButton disabled={!available || room.archived} className={`${button} bg-brand-primary`} onClick={() => {
               const existing = cartItems.find(line => line.productId === item.productId && (line.variant || "") === item.variant);

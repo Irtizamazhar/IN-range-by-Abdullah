@@ -1,6 +1,7 @@
 "use client";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 
+import { productPath } from "@/lib/catalog-urls";
 import Image from "next/image";
 import Link from "@/components/ui/LoadingLink";
 import { memo, useEffect, useRef, useState, type CSSProperties } from "react";
@@ -24,6 +25,7 @@ export type ProductCardData = {
   images: string[];
   category: string;
   href?: string;
+  slug?: string | null;
   ratingAvg?: number;
   reviewCount?: number;
   stock?: number;
@@ -90,7 +92,7 @@ export const ProductCard = memo(function ProductCard({
   const saved = ids.includes(String(product._id));
   const image = product.images?.[0];
   const available = product.available !== false;
-  const detailHref = product.href || `/products/${product._id}`;
+  const detailHref = product.href || productPath({ id: String(product._id), slug: product.slug });
   const discount = displayDiscount(product.price, product.originalPrice);
   const originalPrice = Number(product.originalPrice);
   const hasOriginalPrice = Number.isFinite(originalPrice) && product.price > 0 && originalPrice > product.price;

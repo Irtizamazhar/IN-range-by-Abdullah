@@ -1,3 +1,4 @@
+import { productPath } from "@/lib/catalog-urls";
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { SITE_URL, absoluteUrl } from "@/lib/seo";
@@ -37,7 +38,7 @@ export const loadSitemapIndex = async () => sitemapIndex(await cachedCounts());
 
 export async function sitemapRows(kind: SitemapKind, page: number) {
   const paging = { skip: page * SITEMAP_PAGE_SIZE, take: SITEMAP_PAGE_SIZE, orderBy: { id: "asc" as const } };
-  if (kind === "products") return (await prisma.product.findMany({ ...paging, where: indexableProductWhere, select: { id: true, updatedAt: true } })).map(row => ({ url: absoluteUrl(`/products/${encodeURIComponent(row.id)}`), updatedAt: row.updatedAt }));
+  if (kind === "products") return (await prisma.product.findMany({ ...paging, where: indexableProductWhere, select: { id: true, slug: true, updatedAt: true } })).map(row => ({ url: absoluteUrl(productPath(row)), updatedAt: row.updatedAt }));
   if (kind === "categories") return (await prisma.category.findMany({ ...paging, where: { isActive: true, products: { some: indexableProductWhere } }, select: { slug: true, updatedAt: true } })).map(row => ({ url: absoluteUrl(`/categories/${encodeURIComponent(row.slug)}`), updatedAt: row.updatedAt }));
   if (kind === "services") return (await prisma.serviceOffering.findMany({ ...paging, where: indexableServiceWhere, select: { id: true, updatedAt: true } })).map(row => ({ url: absoluteUrl(`/services/${encodeURIComponent(row.id)}`), updatedAt: row.updatedAt }));
   if (kind === "stores") return (await prisma.vendor.findMany({ ...paging, where: indexableStoreWhere, select: { id: true, storeSlug: true, updatedAt: true } })).map(row => ({ url: absoluteUrl(`/stores/${encodeURIComponent(row.storeSlug || row.id)}`), updatedAt: row.updatedAt }));

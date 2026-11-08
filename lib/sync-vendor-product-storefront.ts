@@ -1,3 +1,4 @@
+import { newProductSlug } from "@/lib/allocate-product-slug";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { computeDiscountPercent } from "@/lib/product-discount";
@@ -57,7 +58,7 @@ export async function syncVendorProductStorefront(
     if (!isActive) return;
     const publishedAt = new Date();
     const created = await db.product.create({
-      data: { ...baseData, createdAt: publishedAt },
+      data: { ...baseData, slug: newProductSlug(vp.productName), createdAt: publishedAt },
     });
     await db.vendorProduct.update({
       where: { id: vp.id },

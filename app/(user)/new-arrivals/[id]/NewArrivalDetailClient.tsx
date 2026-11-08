@@ -12,6 +12,7 @@ import type { ProductCardData } from "@/components/user/ProductCard";
 
 type NewArrival = {
   id: number;
+  href?: string;
   name: string;
   price: number;
   originalPrice?: number;
@@ -70,7 +71,7 @@ function rowToCard(p: StoreRow): ProductCardData {
         : undefined,
     images,
     category: p.category,
-    href: `/new-arrivals/${p.id}`,
+    href: p.href || "/products",
     stock,
     inStock: p.inStock,
   };

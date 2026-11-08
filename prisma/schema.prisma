@@ -55,6 +55,7 @@ model Customer {
 }
 
 model Product {
+  slug String? @unique @db.VarChar(191)
   id                 String                @id @default(cuid())
   name               String
   description        String                @db.Text

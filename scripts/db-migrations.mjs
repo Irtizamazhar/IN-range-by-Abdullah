@@ -21,7 +21,7 @@ import { fileURLToPath } from "node:url";
 import dotenv from "dotenv";
 import {
   analyzeMigrationSql, assertDevelopmentDatabase, buildManifest, checkManifest, checkMigrationLayout,
-  isEmptyMigration, schemaFingerprint, sha256, suggestMigrationName,
+  isEmptyMigration, schemaFingerprint, sha256, suggestMigrationName, prismaCliEnvironment,
 } from "./lib/migration-tools.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -53,7 +53,7 @@ const printOutput = (text) => {
 function prisma(args, { env = process.env, input, withSchema = true } = {}) {
   const full = withSchema ? [...args, "--schema", SCHEMA] : args;
   const res = spawnSync(process.execPath, [PRISMA_CLI, ...full], {
-    cwd: ROOT, env, encoding: "utf8", input,
+    cwd: ROOT, env: prismaCliEnvironment(env), encoding: "utf8", input,
     // stdin is never a terminal, so Prisma can never ask to reset a database.
     stdio: [input === undefined ? "ignore" : "pipe", "pipe", "pipe"],
   });
@@ -118,6 +118,7 @@ function writeManifest() {
 }
 
 function gitAdd(paths) {
+  if (flag("--no-stage")) return;
   if (!inGitRepo()) return;
   const inside = paths.filter((p) => !relative(ROOT, p).startsWith(".."));
   if (inside.length && git(["add", "--", ...inside.map(repoPath)]).code === 0)
