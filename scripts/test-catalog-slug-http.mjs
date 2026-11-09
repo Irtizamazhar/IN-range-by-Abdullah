@@ -21,6 +21,18 @@ try {
     await new Promise(resolve => setTimeout(resolve, 100));
   }
   for (const ua of ['Mozilla/5.0', 'Googlebot']) {
+    const returnHtml = await (await fetch(origin + '/return-policy', { headers: { 'user-agent': ua } })).text();
+    const nodes = [...returnHtml.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map(match => JSON.parse(match[1]));
+    const organization = nodes.find(node => node['@id'] === 'https://joro.pk/#organization');
+    assert.equal(organization.hasMerchantReturnPolicy.merchantReturnLink, 'https://joro.pk/return-policy');
+    assert.equal('merchantReturnDays' in organization.hasMerchantReturnPolicy, false);
+    assert.equal('hasShippingService' in organization, false);
+    const shippingResponse = await fetch(origin + '/shipping-policy', { headers: { 'user-agent': ua } });
+    assert.equal(shippingResponse.status, 200);
+    const shippingHtml = await shippingResponse.text();
+    assert.match(shippingHtml, /PKR <!-- -->150\.00/);
+    assert.match(shippingHtml, /no cities currently configured/);
+    assert.doesNotMatch(shippingHtml, /shippingDetails|hasShippingService|merchantReturnDays/);
     for (const [old, canonical] of [['/products/seo-p-01', '/products/fixture-phone-1'], ['/categories/seo-category', '/categories/phones'], ['/category/seo-category', '/categories/phones'], ['/new-arrivals/1', '/products/fixture-phone-1']]) {
       const response = await fetch(origin + old + '?page=2&token=private', { redirect: 'manual', headers: { 'user-agent': ua } });
       console.log(JSON.stringify({ ua, path: old, status: response.status, location: response.headers.get('location') }));

@@ -1,4 +1,4 @@
-import { pageMetadata, HOME_TITLE, HOME_DESCRIPTION, SITE_URL } from "@/lib/seo";
+import { pageMetadata, HOME_TITLE, HOME_DESCRIPTION, SITE_URL, organizationSchema } from "@/lib/seo";
 import { JsonLd } from "@/components/seo/JsonLd";
 export const metadata = pageMetadata(HOME_TITLE, HOME_DESCRIPTION, "/");
 import Link from "@/components/ui/LoadingLink";
@@ -357,7 +357,7 @@ async function HomePageContent() {
 
 
 
-      <JsonLd data={{ "@context": "https://schema.org", "@graph": [{ "@type": "Organization", "@id": `${SITE_URL}/#organization`, name: "JORO.PK", url: SITE_URL, logo: `${SITE_URL}/icon.png` }, { "@type": "WebSite", "@id": `${SITE_URL}/#website`, name: "JORO.PK", url: SITE_URL, publisher: { "@id": `${SITE_URL}/#organization` } }] }} /><HeroSection sellNowHref="/sell" />
+      <JsonLd data={{ "@context": "https://schema.org", "@graph": [organizationSchema(), { "@type": "WebSite", "@id": `${SITE_URL}/#website`, name: "JORO.PK", url: SITE_URL, publisher: { "@id": `${SITE_URL}/#organization` } }] }} /><HeroSection sellNowHref="/sell" />
 
 
 

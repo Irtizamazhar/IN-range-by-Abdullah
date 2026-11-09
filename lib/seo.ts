@@ -36,6 +36,16 @@ export function breadcrumbs(items: { name: string; path: string }[]) {
 export function jsonLd(value: unknown): string {
   return JSON.stringify(value).replace(/</g, "\\u003c").replace(/>/g, "\\u003e").replace(/&/g, "\\u0026").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
 }
+/** Google supports merchantReturnLink alone; do not turn a notification deadline into a return window. */
+export function organizationSchema() {
+  return {
+    "@context": "https://schema.org", "@type": "Organization", "@id": `${SITE_URL}/#organization`,
+    name: "JORO.PK", url: SITE_URL, logo: `${SITE_URL}/icon.png`,
+    hasMerchantReturnPolicy: {
+      "@type": "MerchantReturnPolicy", merchantReturnLink: absoluteUrl("/return-policy"),
+    },
+  };
+}
 export function productSchema(product: { id: string; slug?: string | null; name: string; description: string; category: string; price: unknown; stock: number; images: string[] }, seller?: { name: string; path: string } | null) {
   const price = Number(product.price);
   return { "@context": "https://schema.org", "@type": "Product", name: product.name, description: seoText(product.description, 5000), category: product.category,

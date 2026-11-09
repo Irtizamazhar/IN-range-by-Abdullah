@@ -4,7 +4,7 @@ import fs from "node:fs";
 import { createRequire } from "node:module";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
-import { pageMetadata, productSchema, breadcrumbs, jsonLd, publicImageUrl } from "../lib/seo";
+import { pageMetadata, productSchema, breadcrumbs, jsonLd, publicImageUrl, organizationSchema } from "../lib/seo";
 import { shouldNoindex, ROBOTS_DISALLOW } from "../lib/seo-policy";
 import { indexableProductWhere, indexableServiceWhere, indexableWantWhere, indexableStoreWhere } from "../lib/seo-data";
 
@@ -50,6 +50,31 @@ test("Product/Offer JSON-LD mirrors real PKR price and stock, escapes script inj
   assert.ok(!jsonLd(schema).includes("</script>"));
   assert.equal(JSON.parse(jsonLd(schema)).name, schema.name);
   assert.equal(breadcrumbs([{ name: "Home", path: "/" }, { name: "Phones", path: "/categories/phones" }]).itemListElement[1].position, 2);
+});
+
+test("shared return policy uses Google's organization-level link option without inventing return terms", () => {
+  const org = JSON.parse(jsonLd(organizationSchema()));
+  assert.equal(org["@id"], "https://joro.pk/#organization");
+  assert.deepEqual(org.hasMerchantReturnPolicy, { "@type": "MerchantReturnPolicy", merchantReturnLink: "https://joro.pk/return-policy" });
+  for (const key of ["merchantReturnDays", "returnPolicyCategory", "refundType", "returnShippingFeesAmount"]) assert.equal(key in org.hasMerchantReturnPolicy, false);
+  assert.equal("hasShippingService" in org, false, "city-only PK coverage must not become nationwide delivery");
+  const product = productSchema({ id: "vendor-product", name: "Real name", description: "Real description", category: "Phones", price: 200, stock: 1, images: [] }, { name: "Seller shop", path: "/stores/seller" });
+  assert.equal(product.offers?.seller?.name, "Seller shop");
+  for (const key of ["brand", "gtin", "gtin13", "review", "aggregateRating"]) assert.equal(key in product, false);
+  assert.equal("hasMerchantReturnPolicy" in product.offers!, false, "marketplace terms must not overwrite seller exceptions");
+});
+
+test("merchant shipping reads only persisted checkout fields; missing/invalid data never produces fallback charges", async () => {
+  let row: Modules | null = { codCharges: "237.50", codAvailableCities: ["Karachi", "Lahore"] };
+  let failed = false;
+  const reads: Modules[] = [];
+  const shipping = load("lib/merchant-shipping.ts", { "@/lib/prisma": { prisma: { settings: { findFirst: async (query: Modules) => { reads.push(query); if (failed) throw new Error("private driver diagnostics"); return row; } } } } });
+  assert.deepEqual(JSON.parse(JSON.stringify(await shipping.readMerchantShipping())), { fee: 237.5, cities: ["Karachi", "Lahore"] });
+  row = { codCharges: 0, codAvailableCities: [] };
+  assert.equal((await shipping.readMerchantShipping()).fee, 0);
+  for (row of [null, { codCharges: null, codAvailableCities: [] }, { codCharges: -1, codAvailableCities: [] }, { codCharges: "invalid", codAvailableCities: [] }, { codCharges: 100, codAvailableCities: [null] }]) assert.equal(await shipping.readMerchantShipping(), null);
+  failed = true; assert.equal(await shipping.readMerchantShipping(), null);
+  for (const query of reads) assert.deepEqual(JSON.parse(JSON.stringify(query)), { select: { codCharges: true, codAvailableCities: true } });
 });
 
 test("sitemap index splits catalogs, escapes XML, uses real dates and excludes protected/draft/redirect URLs", () => {

@@ -1,10 +1,12 @@
-import { pageMetadata } from "@/lib/seo";
+import { organizationSchema, pageMetadata } from "@/lib/seo";
+import { JsonLd } from "@/components/seo/JsonLd";
 export const metadata = pageMetadata("Return Policy","Read JORO.PK?s published return and exchange guidelines, requirements and support process.","/return-policy");
 import Link from "@/components/ui/LoadingLink";
 
 export default function ReturnPolicyPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
+      <JsonLd data={organizationSchema()} />
       <h1 className="text-3xl font-extrabold text-yellow-400">Return Policy</h1>
       <p className="mt-2 text-sm text-darkText/60">
         Returns aur exchanges ke liye yeh guidelines follow karein taake aapka case jald resolve ho
@@ -93,6 +95,7 @@ export default function ReturnPolicyPage() {
             <Link href="/faq" className="font-semibold text-brand-dark underline-offset-2 hover:underline">
               FAQ
             </Link>
+            {" · "}<Link href="/shipping-policy" className="font-semibold text-brand-dark underline-offset-2 hover:underline">Shipping information</Link>
           </p>
         </section>
       </div>

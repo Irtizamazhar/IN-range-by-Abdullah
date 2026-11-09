@@ -7,7 +7,7 @@ import { indexableProductWhere, indexableServiceWhere, indexableStoreWhere, inde
 export const SITEMAP_PAGE_SIZE = 5000;
 export const SITEMAP_KINDS = ["products", "categories", "services", "stores", "wants"] as const;
 export type SitemapKind = typeof SITEMAP_KINDS[number];
-export const STATIC_SEO_PATHS = ["/", "/products", "/categories", "/services", "/stores", "/wants", "/gifts", "/about", "/faq", "/reviews", "/return-policy"];
+export const STATIC_SEO_PATHS = ["/", "/products", "/categories", "/services", "/stores", "/wants", "/gifts", "/about", "/faq", "/reviews", "/return-policy", "/shipping-policy"];
 export const xmlEscape = (text: string) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 export function sitemapUrls(rows: { url: string; updatedAt?: Date | string }[]) {
   return `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${rows.map(row => {
