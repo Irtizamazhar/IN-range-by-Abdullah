@@ -776,9 +776,6 @@
   position: relative;
   width: 100%;
   background-color: #032317;
-  background-image:
-    linear-gradient(90deg, rgba(3,35,23,.95) 0%, rgba(3,35,23,.83) 38%, rgba(3,35,23,.36) 72%, rgba(3,35,23,.16) 100%),
-    url("/branding/hero/joro-premium-hero-bg.png");
   background-size: cover;
   background-position: right center;
   background-repeat: no-repeat;
@@ -789,9 +786,6 @@
      so the darkening needs to run top-to-bottom -- not left-to-right -- everywhere the layout
      is still stacked, not just on phones. */
   .joro-v4-hero {
-    background-image:
-      linear-gradient(180deg, rgba(3,35,23,.94) 0%, rgba(3,35,23,.88) 44%, rgba(3,35,23,.48) 100%),
-      url("/branding/hero/joro-premium-hero-bg.png");
     background-position: 78% center;
   }
 }

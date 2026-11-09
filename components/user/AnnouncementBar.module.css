@@ -41,7 +41,7 @@
 @keyframes blink{0%,43%,47%,100%{transform:scaleY(1)}45%{transform:scaleY(.13)}}
 @keyframes draw{to{stroke-dashoffset:0}}
 @keyframes twinkle{0%,100%{opacity:.25;transform:scale(.7)}50%{opacity:1;transform:scale(1.25)}}
-@keyframes flow{to{background-position:200px 0}}
+@keyframes flow{to{transform:translateX(200px)}}
 @keyframes orbit{to{transform:rotate(360deg)}}
 @keyframes joy-pop{0%{opacity:0;transform:translateY(12px) scale(.3)}25%{opacity:1;transform:translateY(-4px) scale(1.2)}80%{opacity:1}100%{opacity:0;transform:translateY(-23px) scale(.6)}}
 @keyframes burst{0%{opacity:1;transform:translate(0,0) rotate(0) scale(.75)}65%{opacity:1}100%{opacity:0;transform:translate(var(--x),var(--y)) rotate(var(--r)) scale(.3)}}
@@ -51,6 +51,7 @@
 
 /* Fit the reference into the existing 32px strip, including animation headroom. */
 .bar { position: fixed; inset: 0 0 auto; z-index: 50; }
+.bar .texture { inset: 0 -200px; }
 .bar .character { width: 23px; height: 25px; }
 .bar .words { font-size: clamp(14px, 2vw, 19px); }
 .bar .brand { font-size: clamp(21px, 2.8vw, 25px); line-height: 1; }

@@ -80,7 +80,7 @@ export const HomeProductCard = memo(function HomeProductCard({ product, showNewT
   const reviewLine = <div className={featured ? "flex h-4 items-center gap-1 text-[10.5px] sm:text-[11px]" : "flex h-4 items-center gap-1 text-[11px]"}>
     {reviews > 0
       ? <span className="flex items-center gap-1 text-neutral-700" title={`${rating.toFixed(1)} out of 5 from ${reviews} reviews`}><Star className="h-3 w-3 fill-amber-400 text-amber-400" aria-hidden="true" />{rating.toFixed(1)}<span className="text-neutral-400">({reviews.toLocaleString("en-PK")})</span></span>
-      : <span className="text-neutral-400">No reviews yet</span>}
+      : <span className="text-neutral-600">No reviews yet</span>}
   </div>;
   return <article data-product-card={id} className={`group ${featured ? featuredCard : card} transition duration-200 active:scale-[0.99] ${hoverLift}`}>
     <div className={featured ? "relative p-2.5 pb-0" : "relative p-2 pb-0"}>

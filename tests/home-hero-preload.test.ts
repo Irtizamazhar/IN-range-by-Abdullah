@@ -18,6 +18,9 @@ runInNewContext(fs.readFileSync(require.resolve("next/dist/compiled/react-dom/cj
 });
 const { renderToReadableStream } = serverExports;
 const url = "/branding/hero/joro-premium-hero-bg.png";
+const image = require("next/image");
+const sizes = "(max-width: 639px) calc(100vw - 24px), (max-width: 1328px) calc(100vw - 48px), 1280px";
+const expected = image.getImageProps({ src: url, alt: "", fill: true, sizes, priority: true }).props;
 
 function component() {
   const exports: Record<string, () => null> = {};
@@ -25,8 +28,10 @@ function component() {
     compilerOptions: { module: ts.ModuleKind.CommonJS },
   }).outputText;
   runInNewContext(code, { exports, require: (name: string) => {
-    assert.equal(name, "react-dom");
-    return ReactDOM;
+    if (name === "react-dom") return ReactDOM;
+    if (name === "next/image") return image;
+    if (name === "@/lib/hero-image") return { heroBackground: url, heroBackgroundSizes: sizes };
+    throw new Error("Unexpected import");
   } });
   return exports.HomeHeroPreload;
 }
@@ -45,20 +50,24 @@ test("hero preload reaches the early shell before suspended content; repeated re
   let html = new TextDecoder().decode((await reader.read()).value);
   try {
     assert.match(html, /<link rel="preload"[^>]*as="image"[^>]*fetchPriority="high"/i);
-    assert.ok(html.includes(url));
+    assert.ok(html.includes("/_next/image?"));
+    assert.ok(html.includes('imageSrcSet=') || html.includes('imagesrcset='));
     assert.ok(!html.includes("Hero content"), "preload must not wait for homepage data");
   } finally { release(); }
   for (;;) { const part = await reader.read(); if (part.done) break; html += new TextDecoder().decode(part.value); }
-  assert.equal(html.split(`href="${url}"`).length - 1, 1);
+  assert.equal((html.match(/rel="preload"/g) || []).length, 1);
+  assert.ok(html.includes(expected.srcSet.replace(/&/g, "&amp;")));
   assert.ok(html.includes("Hero content"));
 });
 
-test("unrelated render has no hero hint; CSS uses the exact same request URL", async () => {
+test("unrelated render has no hero hint; displayed image shares the responsive preload source", async () => {
   const stream = await renderToReadableStream(React.createElement("html", null,
     React.createElement("head"), React.createElement("body", null, "Other route")));
   assert.ok(!(await new Response(stream).text()).includes(url));
   const css = fs.readFileSync("app/globals.css", "utf8");
-  assert.equal(css.split(`url("${url}")`).length - 1, 2);
+  assert.equal(css.includes(`url("${url}")`), false, "Do not download the original PNG alongside optimized variants");
+  const hero = fs.readFileSync("components/user/HeroSection.tsx", "utf8");
+  assert.match(hero, /src=\{heroBackground\} alt="" fill priority sizes=\{heroBackgroundSizes\}/);
   const page = fs.readFileSync("app/(user)/page.tsx", "utf8");
   assert.match(page, /<HomeHeroPreload\s*\/>/);
   assert.ok(!fs.readFileSync("app/layout.tsx", "utf8").includes("HomeHeroPreload"));

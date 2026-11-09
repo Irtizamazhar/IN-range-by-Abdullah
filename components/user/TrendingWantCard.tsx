@@ -105,7 +105,7 @@ export function TrendingWantCard({ want }: { want: TrendingWant }) {
     </div>
     <div className="shrink-0 px-3 pb-3">
       <span className="flex min-h-[52px] items-center gap-2 rounded-2xl xl:gap-1.5 bg-gradient-to-r from-[#00483B] via-[#08784B] to-[#9BD83A] py-2 pl-2 pr-2 text-white shadow-[0_6px_14px_rgba(0,98,65,0.2)] transition duration-200 group-hover:shadow-[0_8px_18px_rgba(0,98,65,0.3)] group-active:scale-[0.98]">
-        <span className="flex shrink-0 items-center" aria-label={`${want.joined} joined`}>
+        <span className="flex shrink-0 items-center" role="group" aria-label={`${want.joined} joined`}>
           {joiners.length
             ? <span className="flex -space-x-2">{joiners.map((joiner, index) => <Avatar key={index} joiner={joiner} index={index} />)}</span>
             : <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/70"><UserPlus className="h-3.5 w-3.5" aria-hidden="true" /></span>}

@@ -12,6 +12,14 @@
 .layout { position: relative; }
 .copy { min-width: 0; }
 .visual { min-width: 0; }
+.background { position: absolute; inset: 0; pointer-events: none; }
+.backgroundImage { object-fit: cover; object-position: right center; }
+.backgroundShade { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(3,35,23,.95) 0%, rgba(3,35,23,.83) 38%, rgba(3,35,23,.36) 72%, rgba(3,35,23,.16) 100%); }
+
+@media (max-width: 1023px) {
+  .backgroundImage { object-position: 78% center; }
+  .backgroundShade { background: linear-gradient(180deg, rgba(3,35,23,.94) 0%, rgba(3,35,23,.88) 44%, rgba(3,35,23,.48) 100%); }
+}
 
 @media (max-width: 639px) {
   .section { padding-inline: 12px; }
@@ -22,7 +30,7 @@
   .subheading { font-size: 19px; line-height: 1.12; }
   .description { max-width: 310px; margin-top: 10px; font-size: 13px; line-height: 1.5; }
   .actions { gap: 8px; margin-top: 16px; }
-  .actions > :global(*) { min-height: 42px; height: auto; padding: 8px 12px; font-size: 11px; line-height: 1.25; }
+  .actions > :global(*) { min-height: 44px; height: auto; padding: 8px 12px; font-size: 11px; line-height: 1.25; }
   .primaryAction { background: rgb(var(--brand-primary-rgb)); }
   .secondaryAction { border-color: rgb(255 255 255 / 52%); }
   .tertiaryAction { border-color: rgb(255 255 255 / 30%); }

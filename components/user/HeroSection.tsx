@@ -1,5 +1,6 @@
 
 import Image from "next/image";
+import { heroBackground, heroBackgroundSizes } from "@/lib/hero-image";
 import { PostWantButton } from "@/components/user/PostWantButton";
 import Link from "@/components/ui/LoadingLink";
 import { HeroHeadline } from "./HeroHeadline";
@@ -19,6 +20,10 @@ export function HeroSection({
   return (
     <section className={`${styles.section} relative isolate overflow-hidden`}>
       <div className={`${styles.card} joro-v4-hero relative isolate mx-auto max-w-site overflow-hidden text-white`}>
+      <div className={styles.background} aria-hidden="true">
+        <Image src={heroBackground} alt="" fill priority sizes={heroBackgroundSizes} className={styles.backgroundImage} />
+        <div className={styles.backgroundShade} />
+      </div>
       <div className="joro-v4-grid pointer-events-none absolute inset-0" />
       <div className="joro-v4-glow pointer-events-none absolute inset-0" />
 
@@ -89,7 +94,7 @@ export function HeroSection({
               alt="JORO Wants marketplace: customer requests, joining a request, vendor offers and private offers"
               width={1200}
               height={600}
-              sizes="(max-width: 639px) 100vw, (max-width: 1023px) 90vw, 52vw"
+              sizes="(max-width: 639px) calc(100vw - 66px), (max-width: 1023px) calc(100vw - 100px), (max-width: 1328px) 50vw, 640px"
               className="block h-auto w-full object-contain"
               priority
             />
