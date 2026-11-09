@@ -139,3 +139,18 @@ export function campaignEmail(subject: string, preview: string, bodyHtml: string
   const text = safeHtml.replace(/<br\s*\/?\s*>/gi, "\n").replace(/<\/p>/gi, "\n\n").replace(/<[^>]*>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
   return brand({ subject, preview, greeting: "Hello,", bodyHtml: safeHtml, bodyText: text, footer: unsubscribeUrl ? `Marketing email. Unsubscribe: ${unsubscribeUrl}` : "Campaign preview sent only to a JORO administrator." });
 }
+
+/** Security alert: payout details changed. Shows only masked account numbers. */
+export function vendorBankChangedEmail(input: { maskedAccount: string; bankName: string; pendingReview: boolean }): JoroEmail {
+  const status = input.pendingReview
+    ? "Withdrawals will continue to use your previously verified account until our team verifies the new details."
+    : "Your payout details are verified.";
+  return brand({
+    subject: "Your JORO payout details were changed",
+    preview: "Payout details changed on your seller account",
+    greeting: "Hello seller,",
+    bodyHtml: `<p>The bank details on your JORO seller account were changed to <strong>${escapeEmailHtml(input.bankName)}</strong> account <strong>${escapeEmailHtml(input.maskedAccount)}</strong>.</p><p>${escapeEmailHtml(status)}</p><p>If you did not make this change, change your password immediately and contact JORO support.</p>`,
+    bodyText: `The bank details on your JORO seller account were changed to ${input.bankName} account ${input.maskedAccount}.\n${status}\nIf you did not make this change, change your password immediately and contact JORO support.\n`,
+    action: { label: "Review Payout Settings", url: `${appOrigin()}/vendor/dashboard/settings` },
+  });
+}

@@ -15,12 +15,17 @@ function routeFixture() {
   let saveError: Error | null = null;
   const imports: Record<string, unknown> = {
     "@/lib/vendor-mail": { sendVendorVerificationEmail: async () => {} },
-    "@/lib/prisma": { prisma: { vendorDocument: { findMany: async () => [] } } },
+    "@/lib/prisma": { prisma: { vendorDocument: { findMany: async () => [{ id: "f", documentType: "cnic_front" }, { id: "b", documentType: "cnic_back" }] } } },
     "@/lib/marketplace-api": { api, ApiError, sameOrigin },
     "@/lib/vendor-auth-server": { getVendorFromSession: async () => vendor ? { vendor } : null },
-    "@/lib/vendor-onboarding": { vendorSetupDraftSchema, vendorSetupSchema, saveVendorSetup: async (_id: string, data: unknown) => { if (saveError) throw saveError; saved.push(data); } },
+    "@/lib/vendor-onboarding": {
+      vendorSetupDraftSchema, vendorSetupSchema,
+      saveVendorSetup: async (_id: string, data: unknown) => { if (saveError) throw saveError; saved.push(data); },
+      submitVendorSetup: async () => ({ ok: true, status: "pending", next: "/vendor/status" }),
+      currentSetupCnic: () => "",
+    },
     "@/lib/vendor-onboarding-schema": { setupStepErrors },
-    "@/lib/vendor-doc-upload": { saveVendorDocumentBuffer: async () => {} },
+    "@/lib/vendor-doc-upload": { saveVendorDocumentBuffer: async (_vendorId: string, type: string) => ({ id: `${type}-doc`, documentType: type, sha256: "0".repeat(64) }) },
     "@/lib/security/image-signature": { imageExtension: () => "png" },
     "next/server": { NextResponse },
     "@prisma/client": { Prisma },

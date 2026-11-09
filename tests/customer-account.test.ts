@@ -9,7 +9,8 @@ test("notification destinations reject external and encoded redirect tricks", ()
   assert.equal(safeAccountLink("/account/orders/own?from=notice#details"), "/account/orders/own?from=notice#details");
 });
 test("profile sanitization rejects blank markup and cannot accept auth fields", () => {
-  assert.deepEqual(profileSchema.parse({ name: "<b>Customer</b>", phone: "+92 300 1234567", customerId: "other", passwordHash: "bad", isActive: false }), { name: "Customer", phone: "+92 300 1234567" });
+  // Phones are normalised to the same 03XX-XXXXXXX storage format used by signup and checkout.
+  assert.deepEqual(profileSchema.parse({ name: "<b>Customer</b>", phone: "+92 300 1234567", customerId: "other", passwordHash: "bad", isActive: false }), { name: "Customer", phone: "0300-1234567" });
   for (const name of ["", "<script>x</script>", "a".repeat(201)]) assert.equal(profileSchema.safeParse({ name, phone: "" }).success, false);
   assert.equal(profileSchema.safeParse({ name: "Customer", phone: "letters" }).success, false);
 });

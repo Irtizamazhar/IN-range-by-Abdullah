@@ -40,7 +40,12 @@ test("Save Progress accepts incomplete fields; private progress merges without l
   assert.equal((second.onboardingData as Record<string, unknown>).postalCode, "54000");
   assert.equal((second.onboardingData as Record<string, unknown>).pickupCity, "Karachi");
   assert.equal((second.onboardingData as Record<string, unknown>).step, 2);
-  assert.equal(vendorSetupData({ cnic: "", iban: "" }).cnic, null);
+  // Drafts never write the unique CNIC column (no reservation of someone else's CNIC); submission does.
+  const draftData = vendorSetupData({ cnic: "35202-1234567-1", iban: "" });
+  assert.equal("cnic" in draftData, false);
+  assert.equal((draftData.onboardingData as Record<string, unknown>).draftCnic, "35202-1234567-1");
+  assert.equal(vendorSetupData({ cnic: "", iban: "" }, null, "submit").cnic, null);
+  assert.equal((vendorSetupData({ cnic: "35202-1234567-1" }, { draftCnic: "x" }, "submit").onboardingData as Record<string, unknown>).draftCnic, undefined);
 });
 
 test("save persists current progress and respects application status; failures reject", async () => {

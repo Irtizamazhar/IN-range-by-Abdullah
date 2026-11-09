@@ -31,6 +31,7 @@ import { setCustomerOAuthRememberChoice } from "@/lib/customer-remember-policy";
 import { afterGoogleSignInUrl } from "@/lib/customer-welcome-policy";
 import { PakistanMobileInput } from "@/components/ui/PakistanMobileInput";
 import { normalizePakistanMobile, PAKISTAN_MOBILE_ERROR } from "@/lib/pakistan-phone";
+import { personNameError } from "@/lib/validation/person-name";
 
 export type AuthModalView = "login" | "signup" | "forgot";
 
@@ -226,7 +227,8 @@ export function AuthModal({ isOpen, onClose, initialTab = "login" }: AuthModalPr
     e.preventDefault();
     clearErrors();
     const next: Errors = {};
-    if (!suName.trim()) next.suName = "Full name is required";
+    const nameError = personNameError(suName, "Full name");
+    if (nameError) next.suName = nameError;
     const normalizedPhone = suPhone.trim() ? normalizePakistanMobile(suPhone) : "";
     if (suPhone.trim() && !normalizedPhone) next.suPhone = PAKISTAN_MOBILE_ERROR;
     const em = suEmail.trim();

@@ -1,5 +1,6 @@
 "use client";
 import { blockNonDigitKeys, wholeNumber } from "@/lib/whole-number-input";
+import { productPricingError } from "@/lib/product-pricing";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { LoadingForm } from "@/components/ui/LoadingForm";
 
@@ -197,6 +198,11 @@ export function VendorProductForm({
     const origParsed = parseOptionalOriginal();
     if (origParsed !== undefined && origParsed !== null && Number.isNaN(origParsed)) {
       toast.error("Enter a valid original price or leave it empty");
+      return;
+    }
+    const pricingError = productPricingError(priceNum, origParsed ?? null);
+    if (pricingError) {
+      toast.error(pricingError);
       return;
     }
     if (!Number.isFinite(stockNum) || stockNum < 0) {

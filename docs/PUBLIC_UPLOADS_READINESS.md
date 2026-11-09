@@ -24,7 +24,7 @@ No new Cloudinary credentials are required for filesystem uploads. Existing Clou
 - Wants now use `/uploads/wants/<customerId>/want-...` and validate owner and stored-file existence. Legacy flat Want paths remain accepted when the original file exists. Review URLs retain their existing customer-scoped pattern. Existing Cloudinary references retain their account/ownership validation.
 - Category, vendor/store, Want, review and promotion records use the existing URL fields. Admin product editors retain their existing image ID/attachment checks. New ProductImage rows store UTF-8 `/uploads/...` reference text in the existing data field with discriminator `application/x-joro-public-upload-reference`; no new image binary is stored there. `/api/image/<id>` preserves access checks and redirects these rows to the stable URL. Historical binary images and earlier Cloudinary reference rows remain readable.
 - Replacement creates a new filename. Logical removal does not delete old filesystem or Cloudinary assets; physical orphan cleanup is separately approved work. Failed form saves may leave retained orphan uploads.
-- Private payment proofs, vendor identity/appeal documents and support attachments retain their existing private storage and authorization. This change does not claim to fix durability of private local files.
+- Private payment proofs, vendor identity/appeal documents and support attachments retain their existing private storage and authorization. This change does not claim to fix durability of private local files. Private-file durability is handled separately by `PRIVATE_STORAGE_DIR`; see [PRIVATE_STORAGE_AND_VERIFICATION.md](PRIVATE_STORAGE_AND_VERIFICATION.md).
 
 ## Configuration and runtime verification
 

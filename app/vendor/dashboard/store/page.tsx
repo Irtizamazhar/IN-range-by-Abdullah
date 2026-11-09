@@ -26,15 +26,17 @@ function initialValues(store: Store): FormValues {
 
 export default function StoreEditor() {
   const [store, setStore] = useState<Store | null>(null); const [values, setValues] = useState<FormValues | null>(null); const [publicUrl, setPublicUrl] = useState<string | null>(null); const [publicUrlMessage, setPublicUrlMessage] = useState(""); const [message, setMessage] = useState("Loading store settings..."); const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
-  const load = useCallback(async (signal?: AbortSignal) => {
+  const load = useCallback(async (signal?: { aborted: boolean }) => {
     try {
-      const response = await fetch("/api/vendor/store", { signal, cache: "no-store" });
+      const response = await fetch("/api/vendor/store", { cache: "no-store" });
       const data = await response.json() as StoreResponse & { error?: string };
       if (!response.ok || !data.store) throw new Error(data.error || "Could not load store settings.");
       setStore(data.store); setValues(initialValues(data.store)); setPublicUrl(data.publicStoreUrl); setPublicUrlMessage(data.publicUrlMessage || ""); setMessage(""); setError("");
     } catch (error) { if (!signal?.aborted) setError(error instanceof Error ? error.message : "Could not load store settings."); }
   }, []);
-  useEffect(() => { const controller = new AbortController(); void load(controller.signal); return () => controller.abort(); }, [load]);
+  // A plain "cancelled" flag instead of AbortController: aborting the request on unmount (React Strict
+  // Mode runs effects twice in development) surfaced "AbortError: signal is aborted without reason".
+  useEffect(() => { const status = { aborted: false }; void load(status); return () => { status.aborted = true; }; }, [load]);
   const qrUrl = publicUrl;
   function change(key: keyof FormValues, value: string) { setValues(current => current ? { ...current, [key]: value } : current); }
   async function save(event: React.FormEvent<HTMLFormElement>) { event.preventDefault(); if (!values) return; setBusy(true); setError(""); setMessage(""); try { const response = await fetch("/api/vendor/store", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...values, serviceCities: values.serviceCities.split(",").map(city => city.trim()).filter(Boolean) }) }); const data = await response.json() as { error?: string; success?: boolean }; if (!response.ok) throw new Error(data.error || "Could not save store."); setStore(current => current ? { ...current, ...values, serviceCities: values.serviceCities.split(",").map(city => city.trim()).filter(Boolean), primaryCategory: decodeCategory(values.primaryCategory) } : current); setMessage("Store changes saved. Your QR link stays the same."); } catch (e) { setError(e instanceof Error ? e.message : "Could not save store."); } finally { setBusy(false); } }

@@ -1,13 +1,11 @@
 export const dynamic = "force-dynamic";
 
-import { promises as fs } from "fs";
-import path from "path";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAdminSession, getCustomerSession } from "@/lib/sessions";
 import { requireAdminPermission } from "@/lib/admin-rbac";
 import { getVendorFromSession } from "@/lib/vendor-auth-server";
-import { supportAttachmentStoragePath } from "@/lib/support-attachment";
+import { normalizePrivatePath, privateImageMime, readPrivateFile } from "@/lib/private-storage";
 
 type Ctx = { params: { messageId: string } };
 
@@ -35,16 +33,11 @@ export async function GET(_request: Request, context: Ctx) {
     }
   }
 
-  const filePath = supportAttachmentStoragePath(message.attachmentUrl);
-  if (!filePath) return NextResponse.json({ error: "Invalid file record" }, { status: 500 });
-  try {
-    const data = await fs.readFile(filePath);
-    const extension = path.extname(filePath).toLowerCase();
-    const mime = extension === ".png" ? "image/png" : extension === ".webp" ? "image/webp" : "image/jpeg";
-    return new NextResponse(data, {
-      headers: { "Content-Type": mime, "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" },
-    });
-  } catch {
-    return NextResponse.json({ error: "File not found" }, { status: 404 });
-  }
+  const relative = normalizePrivatePath(message.attachmentUrl);
+  if (!relative || !relative.startsWith("support/")) return NextResponse.json({ error: "Invalid file record" }, { status: 500 });
+  const data = await readPrivateFile(relative);
+  if (!data) return NextResponse.json({ error: "File not found" }, { status: 404 });
+  return new NextResponse(new Uint8Array(data), {
+    headers: { "Content-Type": privateImageMime(relative), "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" },
+  });
 }

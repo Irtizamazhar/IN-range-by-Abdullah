@@ -2,7 +2,7 @@ import { sendVendorVerificationEmail } from "@/lib/vendor-mail";
 import { prisma } from "@/lib/prisma";
 import { api, ApiError, sameOrigin } from "@/lib/marketplace-api";
 import { getVendorFromSession } from "@/lib/vendor-auth-server";
-import { vendorSetupSchema, vendorSetupDraftSchema, saveVendorSetup, submitVendorSetup } from "@/lib/vendor-onboarding";
+import { vendorSetupSchema, vendorSetupDraftSchema, saveVendorSetup, submitVendorSetup, currentSetupCnic } from "@/lib/vendor-onboarding";
 import { saveVendorDocumentBuffer } from "@/lib/vendor-doc-upload";
 import { imageExtension } from "@/lib/security/image-signature";
 import { setupStepErrors } from "@/lib/vendor-onboarding-schema";
@@ -57,13 +57,15 @@ async function setupRequest(request: Request) {
 export async function GET() {
   return onboardingApi("load", async () => {
     const vendor = await actor();
-    return { vendor: await prisma.vendor.findUnique({
+    const row = await prisma.vendor.findUnique({
       where: { id: vendor.id },
       select: { ownerName: true, email: true, phone: true, city: true, address: true, shopName: true,
         businessType: true, businessRegNo: true, cnic: true, primaryCategory: true, bankName: true,
         accountTitle: true, accountNumber: true, iban: true, storeSlug: true, shopDescription: true, onboardingData: true, rejectionReason: true, status: true, isEmailVerified: true,
-        documents: { select: { id: true, documentType: true } } },
-    }) };
+        documents: { orderBy: [{ uploadedAt: "asc" }, { id: "asc" }], select: { id: true, documentType: true } } },
+    });
+    if (!row) return { vendor: null };
+    return { vendor: { ...row, cnic: currentSetupCnic(row) } };
   });
 }
 
@@ -93,7 +95,7 @@ export async function PATCH(request: Request) {
       await saveVendorDocumentBuffer(vendor.id, type, Buffer.from(await file.arrayBuffer()), file.type);
     }
     await saveVendorSetup(vendor.id, parsed.data);
-    return { ok: true, uploaded: files.map(file => file.type), documents: await prisma.vendorDocument.findMany({ where: { vendorId: vendor.id }, select: { id: true, documentType: true } }) };
+    return { ok: true, uploaded: files.map(file => file.type), documents: await prisma.vendorDocument.findMany({ where: { vendorId: vendor.id }, orderBy: [{ uploadedAt: "asc" }, { id: "asc" }], select: { id: true, documentType: true } }) };
   });
 }
 

@@ -43,7 +43,13 @@ export async function api(work: () => Promise<unknown>) {
   try { const result = await work(); return result instanceof NextResponse ? result : NextResponse.json(result, { headers: { "Cache-Control": "no-store" } }); }
   catch (error) {
     if (error instanceof ApiError) return NextResponse.json({ error: error.message, ...(error.fieldErrors ? { fieldErrors: error.fieldErrors } : {}) }, { status: error.status });
-    if (error instanceof ZodError || error instanceof SyntaxError) return NextResponse.json({ error: "Please check the supplied fields." }, { status: 400 });
+    if (error instanceof ZodError) {
+      // Rules written for people (custom issues) are shown as-is; zod's technical defaults stay generic.
+      const custom = error.issues.filter(issue => issue.code === "custom");
+      const fieldErrors = Object.fromEntries(custom.map(issue => [String(issue.path[0] ?? "form"), issue.message]));
+      return NextResponse.json({ error: custom[0]?.message || "Please check the supplied fields.", ...(custom.length ? { fieldErrors } : {}) }, { status: 400 });
+    }
+    if (error instanceof SyntaxError) return NextResponse.json({ error: "Please check the supplied fields." }, { status: 400 });
     if (error instanceof Prisma.PrismaClientKnownRequestError && ["P2002", "P2034"].includes(error.code)) return NextResponse.json({ error: "This record changed. Refresh and try again." }, { status: 409 });
     console.error("Marketplace request failed", error instanceof Error ? error.name : "Unknown error");
     return NextResponse.json({ error: "This feature is temporarily unavailable. Please try again later." }, { status: 503 });

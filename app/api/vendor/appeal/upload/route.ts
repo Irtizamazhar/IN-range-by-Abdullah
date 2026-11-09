@@ -2,12 +2,11 @@ import {imageExtension} from "@/lib/security/image-signature";
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-import { promises as fs } from "fs";
-import path from "path";
 import { prisma } from "@/lib/prisma";
 import { sanitizePlainText } from "@/lib/security/sanitize";
 import { getAppealVendorId } from "@/lib/vendor-appeal-auth";
 import { consumeOrReject, createUploadRateLimiter } from "@/lib/security/rate-limit";
+import { privatePath, writePrivateFile } from "@/lib/private-storage";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const uploadLimiter = createUploadRateLimiter();
@@ -67,13 +66,11 @@ export async function POST(req: NextRequest) {
       ? crypto.randomUUID().slice(0, 8)
       : Math.random().toString(36).slice(2, 10);
   const fileName = `appeal-${Date.now()}-${random}.${ext}`;
-  const uploadDir = path.join(process.cwd(), "storage", "private", "vendor-appeals", vendor.id);
 
   try {
-    await fs.mkdir(uploadDir, { recursive: true });
     const buf = Buffer.from(await file.arrayBuffer());
     if (!imageExtension(buf,mime)) return NextResponse.json({error:"Image bytes do not match the declared type."},{status:400});
-    await fs.writeFile(path.join(uploadDir, fileName), buf);
+    await writePrivateFile(privatePath("vendor-appeals", vendor.id, fileName), buf);
     return NextResponse.json({
       url: `/api/private/vendor-appeals/${vendor.id}/${fileName}`,
     });

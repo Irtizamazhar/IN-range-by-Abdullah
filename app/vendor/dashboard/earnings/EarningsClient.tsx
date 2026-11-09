@@ -60,6 +60,7 @@ export function EarningsClient({
     accountNumber: string;
     iban?: string | null;
   } | null>(null);
+  const [bankPending, setBankPending] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -83,20 +84,13 @@ export function EarningsClient({
       setEarnings(data.earnings || []);
       setPendingWd(data.pendingWithdrawals || []);
       if (bk.ok) {
+        // Show the account withdrawals are actually paid to (admin-verified), never unverified edits.
         const b = (await bk.json()) as {
-          bankName?: string;
-          accountTitle?: string;
-          accountNumber?: string;
-          iban?: string | null;
+          verification?: { status?: string; payoutAccount?: { bankName: string; accountTitle: string; accountNumber: string } | null };
         };
-        if (b.bankName && b.accountTitle && b.accountNumber) {
-          setBank({
-            bankName: b.bankName,
-            accountTitle: b.accountTitle,
-            accountNumber: b.accountNumber,
-            iban: b.iban?.trim() || null,
-          });
-        }
+        const payout = b.verification?.payoutAccount;
+        setBankPending(b.verification?.status === "pending_review");
+        setBank(payout ? { bankName: payout.bankName, accountTitle: payout.accountTitle, accountNumber: payout.accountNumber, iban: null } : null);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Could not load earnings";
@@ -244,7 +238,13 @@ export function EarningsClient({
           </LoadingButton>
           {!bank ? (
             <p className="text-sm text-amber-700">
-              Add bank details in Settings before withdrawing.
+              {bankPending
+                ? "Your bank details are waiting for JORO verification. Withdrawals open once they are verified."
+                : "Add bank details in Settings before withdrawing."}
+            </p>
+          ) : bankPending ? (
+            <p className="text-sm text-sky-800">
+              A bank change is waiting for verification. Withdrawals are paid to your verified account {bank.bankName} {bank.accountNumber} until then.
             </p>
           ) : null}
           {summary && summary.availableBalance < MIN_W ? (

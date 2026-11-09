@@ -527,7 +527,7 @@ Status is based on source, not runtime certification. “Fully implemented” id
 |---|---|---|---|---|---|
 | Customer authentication | `/login`, `/login?mode=signup`; `components/auth/LoginExperience.tsx` | `/api/auth/[...nextauth]`, `/api/customer/register`; `Customer` | Guest/customer | Fully implemented | Google conditional |
 | Customer recovery/security | `/reset-password`, `/account`; account UI | `/api/customer/*`; `CustomerPasswordResetToken` | Customer | Fully implemented | Email delivery needs SMTP |
-| Vendor authentication | `/vendor/login`, `/vendor/register`; `VendorRegisterWizard` | `/api/vendor/login`, `/api/vendor/register`; `Vendor`, `VendorSession` | Vendor | Fully implemented | Approval before selling |
+| Vendor authentication | `/vendor/login`, `/vendor/register` (redirects to signup); `LoginExperience`, `VendorOnboardingForm` | `/api/vendor/login`, `/api/vendor/signup`, `/api/vendor/onboarding` (`/api/vendor/register` retired, 410); `Vendor`, `VendorSession` | Vendor | Fully implemented | Approval before selling |
 | Vendor onboarding | `/vendor/onboarding`; `VendorOnboardingForm` | `/api/vendor/onboarding`; `Vendor` | Vendor | Fully implemented | Human approval |
 | Admin authentication/RBAC | `/admin/login`; admin layout | admin NextAuth, `/api/admin/*`; `AdminUser` | Admin | Fully implemented | Env fallback noted §24 |
 | Homepage | `/`; home sections and `HomePersonalization` | public catalog/Wants APIs; `Product`, `Want` | All | Fully implemented | Data depends on DB |

@@ -10,12 +10,14 @@ export function PreviewExitControl() {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    const controller = new AbortController();
-    fetch("/api/preview-access/session", { cache: "no-store", credentials: "same-origin", signal: controller.signal })
+    // A "cancelled" flag instead of AbortController: aborting on unmount (e.g. React Strict Mode's
+    // double effect run in development) surfaced "AbortError: signal is aborted without reason".
+    let cancelled = false;
+    fetch("/api/preview-access/session", { cache: "no-store", credentials: "same-origin" })
       .then(response => response.ok ? response.json() : { active: false })
-      .then(data => { if (!controller.signal.aborted) setActive(data.active === true); })
+      .then(data => { if (!cancelled) setActive(data.active === true); })
       .catch(() => {});
-    return () => controller.abort();
+    return () => { cancelled = true; };
   }, []);
 
   if (!active) return null;

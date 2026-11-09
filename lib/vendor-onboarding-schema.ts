@@ -3,6 +3,7 @@ import { isReservedOrInvalidSlug } from "@/lib/store-slug";
 import { sanitizePlainText } from "@/lib/security/sanitize";
 import { PAKISTAN_MOBILE_ERROR } from "@/lib/pakistan-phone";
 import { optionalPakistanMobileSchema, pakistanMobileSchema } from "@/lib/pakistan-phone-schema";
+import { accountNumberSchema, accountTitleSchema, bankNameSchema, optionalIbanSchema, optionalPersonNameSchema, pakistanCnicSchema, personNameSchema } from "@/lib/validation/schemas";
 
 const text = (max: number) => z.string().trim().max(max).transform(value => sanitizePlainText(value, max));
 const phone = pakistanMobileSchema;
@@ -10,21 +11,21 @@ const required = (max: number, min = 1) => text(max).pipe(z.string().min(min, "T
 const bool = z.preprocess(v => v === "true" ? true : v === "false" ? false : v, z.boolean());
 const step = z.coerce.number().int().min(0).max(4);
 export const vendorSetupFields = {
-  name: required(200), phone, shopName: required(160),
+  name: personNameSchema("Full name"), phone, shopName: required(160),
   // The server assigns the slug from the store name; a supplied one must still be valid.
   storeSlug: text(80).pipe(z.string().refine(v => !v || !isReservedOrInvalidSlug(v), "Use a unique 3–80 character store slug with lowercase letters, numbers and hyphens.")).optional().default(""),
   shopDescription: text(5000).optional().default(""), businessType: z.enum(["individual", "company"]),
   businessRegNo: text(120).optional().default(""), businessLegalName: text(200).optional().default(""),
   taxNumber: text(32).optional().default(""), category: required(100),
   address: required(2000, 5), city: required(120), province: required(120), postalCode: text(20).optional().default(""),
-  cnic: text(20).pipe(z.string().regex(/^\d{5}-\d{7}-\d$/, "Use 00000-0000000-0.")),
+  cnic: pakistanCnicSchema,
   pickupAddress: required(2000, 5), pickupCity: required(120), pickupProvince: required(120),
-  pickupPostalCode: text(20).optional().default(""), pickupContactName: required(200), pickupPhone: phone,
+  pickupPostalCode: text(20).optional().default(""), pickupContactName: personNameSchema("Contact name"), pickupPhone: phone,
   returnSameAsPickup: bool.default(true), returnAddress: text(2000).optional().default(""),
   returnCity: text(120).optional().default(""), returnProvince: text(120).optional().default(""),
-  returnPostalCode: text(20).optional().default(""), returnContactName: text(200).optional().default(""),
-  returnPhone: optionalPakistanMobileSchema, bankName: required(120), accountTitle: required(200),
-  accountNumber: required(40, 5), iban: text(34).refine(v => !v || /^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/.test(v), "Enter an IBAN without spaces, or leave it blank.").optional().default(""),
+  returnPostalCode: text(20).optional().default(""), returnContactName: optionalPersonNameSchema("Contact name").optional().default(""),
+  returnPhone: optionalPakistanMobileSchema, bankName: bankNameSchema, accountTitle: accountTitleSchema,
+  accountNumber: accountNumberSchema, iban: optionalIbanSchema.optional().default(""),
   step: step.default(0), declarationAccepted: bool.default(false),
 };
 export const vendorSetupSchema = z.object(vendorSetupFields).superRefine((input, ctx) => {

@@ -44,6 +44,8 @@ yarn-error.log*
 /public/uploads/vendor-docs/
 /public/uploads/vendor-appeals/
 /storage/private/
+# Live uploads (lib/public-uploads.ts) belong to the server, not the repo.
+/storage/uploads/
 
 # vercel
 .vercel

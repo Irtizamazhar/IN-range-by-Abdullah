@@ -8,6 +8,7 @@ import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { shouldUnoptimizeImageSrc } from "@/lib/should-unoptimize-next-image";
 import toast from "react-hot-toast";
+import { VendorVerificationPanel } from "@/components/admin/VendorVerificationPanel";
 
 type VendorStatus = "pending" | "approved" | "rejected" | "suspended";
 
@@ -46,6 +47,7 @@ type AdminVendorRow = {
   } | null;
   createdAt: string;
   documents: VendorDoc[];
+  bankVerificationStatus?: "verified" | "pending_review" | null;
 };
 
 type RiskMini = { riskLevel: "GREEN" | "YELLOW" | "RED"; riskScore: number };
@@ -146,7 +148,7 @@ export default function AdminVendorsPage() {
 
   async function patch(
     id: string,
-    body: { action: "approve" | "reject" | "suspend"; rejectionReason?: string }
+    body: { action: "reject" | "suspend"; rejectionReason?: string }
   ) {
     try {
       const r = await fetch(`/api/admin/vendors/${encodeURIComponent(id)}`, {
@@ -185,9 +187,9 @@ export default function AdminVendorsPage() {
         <div>
           <h1 className="text-2xl font-black text-darkText">Vendors</h1>
           <p className="text-sm text-darkText/70 mt-1">
-            Approve or reject pending sellers anytime. Approving also marks email
-            verified so they can sign in immediately. Rejected vendors see your
-            reason on login.
+            Review each pending seller under &ldquo;Details &amp; documents&rdquo;: compare the
+            CNIC images with the entered details; approval checks the documents and bank details. Rejected
+            vendors see your reason on login and must resubmit.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -237,6 +239,9 @@ export default function AdminVendorsPage() {
                       >
                         {v.status}
                       </span>
+                      {v.bankVerificationStatus === "pending_review" ? (
+                        <span className="rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-bold text-sky-900">Bank change pending</span>
+                      ) : null}
                       {!v.isEmailVerified ? (
                         <span className="text-xs font-semibold text-amber-700">
                           Email not verified
@@ -287,14 +292,12 @@ export default function AdminVendorsPage() {
                     </LoadingButton>
                     {v.status === "pending" ? (
                       <>
-                        <LoadingButton loadingLabel="Processing…"
+                        <LoadingButton loadingLabel="Loading…"
                           type="button"
-                          onClick={() =>
-                            patch(v.id, { action: "approve" })
-                          }
+                          onClick={() => (open ? undefined : toggleDetails(v))}
                           className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
                         >
-                          Approve
+                          Review &amp; approve
                         </LoadingButton>
                         <button
                           type="button"
@@ -319,29 +322,29 @@ export default function AdminVendorsPage() {
                         Suspend
                       </LoadingButton>
                     ) : null}
-                    {(v.status === "rejected" || v.status === "suspended") ? (
-                      <LoadingButton loadingLabel="Processing…"
-                        type="button"
-                        onClick={() =>
-                          patch(v.id, { action: "approve" })
-                        }
-                        className="rounded-lg bg-brand-primary px-3 py-2 text-sm font-bold text-brand-dark hover:bg-brand-hover disabled:opacity-50"
+                    {v.status === "suspended" ? (
+                      <Link
+                        href={admin.href(`/vendors/${encodeURIComponent(v.id)}/suspension`)}
+                        className="rounded-lg bg-brand-primary px-3 py-2 text-sm font-bold text-brand-dark hover:bg-brand-hover"
                       >
-                        Approve again
-                      </LoadingButton>
+                        Manage suspension
+                      </Link>
+                    ) : null}
+                    {v.status === "rejected" ? (
+                      <span className="self-center text-xs text-darkText/60">Waiting for the seller to resubmit</span>
                     ) : null}
                   </div>
                 </div>
 
                 {v.status === "pending" && !v.isEmailVerified ? (
                   <div className="px-4 pb-4 text-sm text-amber-800 bg-amber-50/80 border-t border-amber-100">
-                    Email not verified yet — you can still use{" "}
-                    <strong>Approve</strong> or <strong>Reject</strong>. Approval also marks this account verified and grants dashboard access.
+                    Email not verified yet. Approval no longer marks the email as verified; the seller must confirm it before signing in when email verification is required.
                   </div>
                 ) : null}
 
                 {open ? (
                   <div className="border-t border-borderGray bg-brand-background p-4 space-y-4 text-sm">
+                    <VendorVerificationPanel vendorId={v.id} onChanged={() => load(false)} />
                     <div className="grid gap-3 md:grid-cols-2">
                       <div>
                         <p className="font-bold text-darkText">Address</p>

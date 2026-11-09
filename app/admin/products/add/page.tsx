@@ -1,6 +1,7 @@
 "use client";
 import { useAdminPath } from "@/components/admin/AdminPathContext";
 import { blockNonDigitKeys, wholeNumber } from "@/lib/whole-number-input";
+import { productPricingError } from "@/lib/product-pricing";
 import { LoadingForm } from "@/components/ui/LoadingForm";
 
 import { LoadingButton } from "@/components/ui/LoadingButton";
@@ -164,8 +165,10 @@ export default function AddProductPage() {
       return;
     }
     const priceN = parseFloat(price);
-    if (Number.isNaN(priceN) || priceN < 0) {
-      toast.error("Enter a valid price");
+    const originalN = originalPrice.trim() ? parseFloat(originalPrice) : null;
+    const pricingError = productPricingError(priceN, originalN);
+    if (pricingError) {
+      toast.error(pricingError);
       return;
     }
     if (!images.length) {
@@ -183,7 +186,7 @@ export default function AddProductPage() {
           name: name.trim(),
           description,
           price: priceN,
-          originalPrice: originalPrice ? parseFloat(originalPrice) : undefined,
+          originalPrice: originalN,
           category,
           stock: parseInt(stock, 10) || 0,
           warrantyMonths: warrantyMonths ? parseInt(warrantyMonths, 10) : null,

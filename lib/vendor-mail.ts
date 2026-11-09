@@ -1,7 +1,7 @@
 import { appOrigin } from "@/lib/app-url";
 import { isMailConfigured, sendMail } from "@/lib/mailer";
 import { sanitizePlainText } from "@/lib/security/sanitize";
-import { vendorApprovalEmail, vendorPasswordResetEmail, vendorVerificationEmail, vendorRejectionEmail, type JoroEmail } from "@/lib/joro-email-templates";
+import { vendorApprovalEmail, vendorPasswordResetEmail, vendorVerificationEmail, vendorRejectionEmail, vendorBankChangedEmail, type JoroEmail } from "@/lib/joro-email-templates";
 
 export function vendorAppBaseUrl(): string { return appOrigin(); }
 export function vendorMailConfigured(): boolean { return isMailConfigured(); }
@@ -44,4 +44,8 @@ export async function sendVendorWithdrawalRejectedEmail(to: string, amountPkr: n
   const safeReason = sanitizePlainText(reason, 2000);
   const escapedReason = safeReason.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   await deliver(to, { subject: "JORO withdrawal request update", text: `Your withdrawal request of Rs. ${amount} could not be completed. Reason: ${safeReason}. Your available balance remains unchanged.`, html: `<p>Your withdrawal request of <strong>Rs. ${amount}</strong> could not be completed.</p><p><strong>Reason:</strong> ${escapedReason}</p><p>Your available balance remains unchanged.</p>` });
+}
+
+export async function sendVendorBankChangedEmail(to: string, input: { maskedAccount: string; bankName: string; pendingReview: boolean }): Promise<void> {
+  await deliver(to, vendorBankChangedEmail({ ...input, bankName: sanitizePlainText(input.bankName, 120) }));
 }

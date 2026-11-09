@@ -10,9 +10,21 @@ import { sendVendorApprovedEmail, sendVendorRejectedEmail } from "@/lib/vendor-m
 import { generateUniqueStoreSlug } from "@/lib/store-slug";
 import { ApiError } from "@/lib/marketplace-api";
 import { suspendVendor, unsuspendVendor } from "@/lib/vendor-suspension";
+import { approvalReadiness, OVERRIDE_REASON_MIN } from "@/lib/vendor-approval";
+import { maskedBank, verifiedBankSnapshot } from "@/lib/vendor-bank-security";
+import { accountTitleError } from "@/lib/validation/person-name";
+import { normalizeAccountNumber } from "@/lib/validation/bank";
+import { createVendorNotification } from "@/lib/vendor-notifications";
 
 const patchSchema = z.discriminatedUnion("action", [
-  z.object({ action: z.literal("approve") }),
+  z.object({
+    action: z.literal("approve"),
+    /** The admin confirms they compared the CNIC images with the entered CNIC/name and reviewed the bank details. */
+    reviewConfirmed: z.literal(true, { error: "Confirm that you reviewed the documents and bank details." }),
+    overrideReason: z.string().trim().max(1000).optional(),
+  }),
+  z.object({ action: z.literal("verify_bank") }),
+  z.object({ action: z.literal("reject_bank_change"), reason: z.string().trim().min(5).max(1000) }),
   z.object({
     action: z.literal("reject"),
     rejectionReason: z.string().min(1).max(2000),
@@ -54,14 +66,15 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   const parsed = patchSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Please check the suspension details and try again.", details: parsed.error.flatten() },
+      { error: parsed.error.issues[0]?.message || "Please check the details and try again.", details: parsed.error.flatten() },
       { status: 400 }
     );
   }
 
   const vendor = await prisma.vendor.findUnique({
     where: { id },
-    select: { id: true, email: true, shopName: true, status: true, storeSlug: true },
+    select: { id: true, email: true, shopName: true, status: true, storeSlug: true, bankName: true, accountTitle: true, accountNumber: true, iban: true,
+      bankVerificationStatus: true, verifiedBankName: true, verifiedAccountTitle: true, verifiedAccountNumber: true, verifiedIban: true },
   });
   if (!vendor) {
     return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
@@ -90,45 +103,32 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ ok: true, status: result.status });
     }
 
+    let auditExtra: Record<string, unknown> = {};
     if (parsed.data.action === "approve") {
+      // Every rule is enforced here, not only in the admin UI.
+      const readiness = await approvalReadiness(id);
+      if (!readiness) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
+      if (!readiness.canApprove) return NextResponse.json({ error: readiness.blockers[0], blockers: readiness.blockers, reviewItems: readiness.reviewItems }, { status: 409 });
+      const overrideReason = parsed.data.overrideReason || "";
+      if (readiness.reviewItems.length && overrideReason.length < OVERRIDE_REASON_MIN) {
+        return NextResponse.json({ error: `Manual review required: give an override reason of at least ${OVERRIDE_REASON_MIN} characters.`, reviewItems: readiness.reviewItems }, { status: 409 });
+      }
       const storeSlug = vendor.storeSlug || (await generateUniqueStoreSlug(prisma, vendor.shopName, vendor.id));
-      await prisma.vendor.update({
-        where: { id },
+      const now = new Date();
+      // Only a pending application can move to approved, even under concurrent requests.
+      const updated = await prisma.vendor.updateMany({
+        where: { id, status: "pending" },
         data: {
           status: "approved",
           rejectionReason: null,
-          isEmailVerified: true,
-          emailVerifyToken: null,
+          approvedAt: now,
+          approvedBy: adminActorId,
           ...(vendor.storeSlug ? {} : { storeSlug }),
-          ...(vendor.status === "suspended" ? { suspendedAt: null, suspensionReason: null, suspendedBy: null, suspensionUntil: null } : {}),
-        },
+          ...verifiedBankSnapshot({ bankName: vendor.bankName, accountTitle: vendor.accountTitle, accountNumber: vendor.accountNumber, iban: vendor.iban }, adminActorId, now),
+        } as Prisma.VendorUpdateManyMutationInput,
       });
-      // Once vendor is approved again, clear pending appeal notifications.
-      const unresolvedAppeals = await prisma.vendorAuditLog.findMany({
-        where: { vendorId: id, action: "vendor_appeal" },
-        select: { id: true, details: true },
-      });
-      await Promise.all(
-        unresolvedAppeals.map(async (appeal) => {
-          const details =
-            appeal.details && typeof appeal.details === "object"
-              ? (appeal.details as Record<string, unknown>)
-              : {};
-          if (details.resolved === true) return;
-          await prisma.vendorAuditLog.update({
-            where: { id: appeal.id },
-            data: {
-              details: {
-                ...details,
-                resolved: true,
-                resolvedAt: new Date().toISOString(),
-                resolvedBy: auth.admin.email,
-                resolutionNote: "Auto-resolved after vendor approval",
-              },
-            },
-          });
-        })
-      );
+      if (!updated.count) return NextResponse.json({ error: "This application is no longer waiting for review." }, { status: 409 });
+      auditExtra = { reviewItems: readiness.reviewItems, cnicReviewedManually: true, overrideReason: readiness.reviewItems.length ? sanitizePlainText(overrideReason, 1000) : null, bank: maskedBank(vendor) };
       if (!wasAlreadyApproved) {
         try {
           await sendVendorApprovedEmail(vendor.email, vendor.shopName);
@@ -136,6 +136,29 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
           console.error("vendor approval email", mailErr);
         }
       }
+    } else if (parsed.data.action === "verify_bank") {
+      if (vendor.status !== "approved") return NextResponse.json({ error: "Bank details are verified as part of approval for sellers who are not yet approved." }, { status: 409 });
+      if (vendor.bankVerificationStatus !== "pending_review") return NextResponse.json({ error: "There is no bank change waiting for verification." }, { status: 409 });
+      if (!vendor.bankName.trim() || accountTitleError(vendor.accountTitle) || !normalizeAccountNumber(vendor.accountNumber)) {
+        return NextResponse.json({ error: "The new bank details are incomplete or invalid. Reject the change instead." }, { status: 409 });
+      }
+      await prisma.vendor.update({ where: { id }, data: verifiedBankSnapshot({ bankName: vendor.bankName, accountTitle: vendor.accountTitle, accountNumber: vendor.accountNumber, iban: vendor.iban }, adminActorId) });
+      auditExtra = { before: maskedBank(vendor.verifiedAccountNumber ? { bankName: vendor.verifiedBankName ?? "", accountTitle: vendor.verifiedAccountTitle ?? "", accountNumber: vendor.verifiedAccountNumber, iban: vendor.verifiedIban } : null), after: maskedBank(vendor) };
+      try { await createVendorNotification({ vendorId: id, type: "bank_details_verified", title: "Payout details verified", message: "JORO verified your new bank details. Future withdrawals will be paid to this account." }); }
+      catch (error) { console.error("bank verified notification", error instanceof Error ? error.name : "Unknown"); }
+    } else if (parsed.data.action === "reject_bank_change") {
+      if (vendor.bankVerificationStatus !== "pending_review") return NextResponse.json({ error: "There is no bank change waiting for verification." }, { status: 409 });
+      // Restore the last verified details; the rejected change is kept only in the masked audit log.
+      await prisma.vendor.update({
+        where: { id },
+        data: {
+          bankVerificationStatus: "verified", bankChangeRequestedAt: null,
+          ...(vendor.verifiedAccountNumber ? { bankName: vendor.verifiedBankName ?? "", accountTitle: vendor.verifiedAccountTitle ?? "", accountNumber: vendor.verifiedAccountNumber, iban: vendor.verifiedIban } : {}),
+        },
+      });
+      auditExtra = { rejected: maskedBank(vendor), reason: sanitizePlainText(parsed.data.reason, 1000) };
+      try { await createVendorNotification({ vendorId: id, type: "bank_details_rejected", title: "Payout details change not approved", message: `JORO could not verify your new bank details: ${sanitizePlainText(parsed.data.reason, 500)}. Your previously verified account remains in use.` }); }
+      catch (error) { console.error("bank rejected notification", error instanceof Error ? error.name : "Unknown"); }
     } else if (parsed.data.action === "reject") {
       await prisma.vendor.update({
         where: { id },
@@ -173,7 +196,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
           adminEmail: auth.admin.email,
           adminId: adminActorId,
           payload: JSON.parse(
-            JSON.stringify(parsed.data)
+            JSON.stringify({ ...parsed.data, ...auditExtra })
           ) as Prisma.InputJsonValue,
         },
       },
@@ -183,7 +206,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       action: `vendor_${parsed.data.action}`,
       entityType: "Vendor",
       entityId: id,
-      details: { previousStatus: vendor.status },
+      details: JSON.parse(JSON.stringify({ previousStatus: vendor.status, ...auditExtra })) as Prisma.InputJsonValue,
     });
 
     return NextResponse.json({ ok: true });

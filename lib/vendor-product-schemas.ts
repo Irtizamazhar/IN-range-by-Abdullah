@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ORIGINAL_BELOW_SALE_ERROR, PRICE_ERROR, productPricingError } from "@/lib/product-pricing";
 
 export const vendorProductCreateSchema = z.object({
   productName: z.string().min(1).max(200),
@@ -9,6 +10,9 @@ export const vendorProductCreateSchema = z.object({
   stock: z.number().int().min(0).max(9_999_999),
   warrantyMonths: z.number().int().min(1).max(120).nullable().optional(),
   images: z.array(z.string().min(1).max(500)).min(1).max(8),
+}).superRefine((input, ctx) => {
+  const error = productPricingError(input.price, input.originalPrice);
+  if (error) ctx.addIssue({ code: "custom", path: [error === PRICE_ERROR ? "price" : "originalPrice"], message: error });
 });
 
 export const vendorProductUpdateSchema = z
@@ -31,7 +35,26 @@ export const vendorProductUpdateSchema = z
   .strict()
   .refine((o) => Object.keys(o).length > 0, {
     message: "At least one field is required",
+  })
+  .superRefine((input, ctx) => {
+    // When both prices arrive together they can be checked here; partial updates are checked
+    // against the stored values in the route (see mergedPricingError).
+    if (input.price !== undefined && input.originalPrice != null && input.originalPrice < input.price) {
+      ctx.addIssue({ code: "custom", path: ["originalPrice"], message: ORIGINAL_BELOW_SALE_ERROR });
+    }
   });
+
+/** Re-check pricing after merging a partial update onto the stored product. */
+export function mergedPricingError(
+  stored: { price: unknown; originalPrice: unknown },
+  update: { price?: number; originalPrice?: number | null }
+): string | null {
+  const price = update.price ?? Number(stored.price);
+  const original = update.originalPrice !== undefined
+    ? update.originalPrice
+    : stored.originalPrice == null ? null : Number(stored.originalPrice);
+  return productPricingError(price, original);
+}
 
 export function parseImagesJson(raw: unknown): string[] {
   if (!Array.isArray(raw)) return [];

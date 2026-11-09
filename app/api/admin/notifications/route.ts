@@ -8,7 +8,7 @@ import { adminBasePath } from "@/lib/admin-path";
 import { formatTicketNumber } from "@/lib/support-service";
 import { LOCATION_REQUEST_RESOURCE } from "@/lib/vendor-location-request";
 
-export type AdminNotificationKind = "appeal" | "want" | "gift" | "service" | "order" | "payout" | "location";
+export type AdminNotificationKind = "appeal" | "want" | "gift" | "service" | "order" | "payout" | "location" | "bank";
 
 export type AdminNotification = {
   id: string;
@@ -73,11 +73,12 @@ export async function GET() {
   const auth = await requireAdminPermission("dashboard.view");
   if ("response" in auth) return auth.response;
   const canSeeAppeals = hasAdminPermission([...auth.admin.permissions], "moderation.manage");
+  const canSeeVendors = hasAdminPermission([...auth.admin.permissions], "vendors.manage");
   const canSeeLocationRequests = hasAdminPermission([...auth.admin.permissions], "support.manage");
   const adminBase = adminBasePath() ?? "";
 
   try {
-    const [seenAt, appeals, wants, orders, payouts, services, locationTickets] = await Promise.all([
+    const [seenAt, appeals, wants, orders, payouts, services, locationTickets, bankChanges] = await Promise.all([
       readWatermark(auth.admin.id),
       canSeeAppeals
         ? prisma.vendorAuditLog.findMany({
@@ -153,9 +154,31 @@ export async function GET() {
             select: { id: true, sequence: true, status: true, createdAt: true, vendor: { select: { shopName: true, city: true } } },
           })
         : Promise.resolve([]),
+      canSeeVendors
+        ? prisma.vendor.findMany({
+            where: { bankVerificationStatus: "pending_review" },
+            orderBy: { bankChangeRequestedAt: "desc" },
+            take: PER_SOURCE,
+            select: { id: true, shopName: true, ownerName: true, bankChangeRequestedAt: true, updatedAt: true },
+          })
+        : Promise.resolve([]),
     ]);
 
     const items: Omit<AdminNotification, "unread">[] = [];
+
+    // Sensitive payout change: shown until an admin verifies or rejects it. Never includes account numbers.
+    for (const v of bankChanges) {
+      items.push({
+        id: `bank:${v.id}:${(v.bankChangeRequestedAt ?? v.updatedAt).getTime()}`,
+        kind: "bank",
+        createdAt: (v.bankChangeRequestedAt ?? v.updatedAt).toISOString(),
+        title: `Payout bank details changed: ${v.shopName}`,
+        body: `${v.ownerName} changed their payout account. Verify or reject the change before it is used for withdrawals.`,
+        href: `${adminBase}/vendors`,
+        needsAction: true,
+        status: "Pending review",
+      });
+    }
 
     for (const t of locationTickets) {
       const open = t.status !== "RESOLVED" && t.status !== "CLOSED";

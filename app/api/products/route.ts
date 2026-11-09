@@ -8,6 +8,7 @@ import { getAdminSession } from "@/lib/sessions";
 import { requireAdminPermission } from "@/lib/admin-rbac";
 import { prisma } from "@/lib/prisma";
 import { computeDiscountPercent } from "@/lib/product-discount";
+import { adminProductCreateSchema, firstIssueMessage } from "@/lib/admin-product-schema";
 import { catalogProductSelect } from "@/lib/catalog-product-select";
 import { serializeProduct } from "@/lib/serialize";
 import { pickReviewStat, reviewStatsForProductIds } from "@/lib/review-stats";
@@ -135,15 +136,16 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const auth = await requireAdminPermission("catalog.manage");
   if ("response" in auth) return auth.response;
-  const body = await req.json();
-  const price = Number(body.price);
-  const originalPrice =
-    body.originalPrice != null ? Number(body.originalPrice) : null;
+  let raw: unknown;
+  try { raw = await req.json(); }
+  catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
+  const parsed = adminProductCreateSchema.safeParse(raw);
+  if (!parsed.success) return NextResponse.json({ error: firstIssueMessage(parsed.error) }, { status: 400 });
+  const body = parsed.data;
+  const price = body.price;
+  const originalPrice = body.originalPrice;
   const discountPercent = computeDiscountPercent(price, originalPrice);
-
-  const imageIds: string[] = Array.isArray(body.imageIds)
-    ? body.imageIds.map((x: unknown) => String(x))
-    : [];
+  const imageIds = body.imageIds;
 
   let product;
   try {
@@ -152,18 +154,15 @@ export async function POST(req: NextRequest) {
       data: {
         slug: newProductSlug(String(body.name)),
         name: body.name,
-        description: body.description ?? "",
+        description: body.description,
         price,
         originalPrice: originalPrice ?? undefined,
         discountPercent,
         category: body.category,
-        stock: Number(body.stock ?? 0),
-        warrantyMonths:
-          Number.isInteger(Number(body.warrantyMonths)) && Number(body.warrantyMonths) > 0
-            ? Math.min(120, Number(body.warrantyMonths))
-            : null,
-        variants: body.variants ?? [],
-        isActive: body.isActive ?? true,
+        stock: body.stock,
+        warrantyMonths: body.warrantyMonths,
+        variants: body.variants,
+        isActive: body.isActive,
       },
     });
 

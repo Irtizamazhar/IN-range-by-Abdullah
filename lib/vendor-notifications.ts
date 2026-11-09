@@ -7,7 +7,10 @@ export type VendorNotificationType =
   | "delivered_payout"
   | "withdrawal_approved"
   | "withdrawal_paid"
-  | "withdrawal_rejected";
+  | "withdrawal_rejected"
+  | "bank_details_changed"
+  | "bank_details_verified"
+  | "bank_details_rejected";
 
 export async function createVendorNotification(params: {
   vendorId: string;

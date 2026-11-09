@@ -1,11 +1,10 @@
 export const dynamic = "force-dynamic";
 
-import { promises as fs } from "fs";
-import path from "path";
 import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/sessions";
 import { requireAdminPermission } from "@/lib/admin-rbac";
 import { getAppealVendorId } from "@/lib/vendor-appeal-auth";
+import { normalizePrivatePath, privateImageMime, readPrivateFile } from "@/lib/private-storage";
 
 type Ctx = { params: { vendorId: string; fileName: string } };
 
@@ -25,23 +24,11 @@ export async function GET(_request: Request, context: Ctx) {
     }
   }
 
-  const base = path.resolve(process.cwd(), "storage", "private", "vendor-appeals");
-  const filePath = path.resolve(base, vendorId, fileName);
-  if (!filePath.startsWith(`${base}${path.sep}`)) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
-  try {
-    const data = await fs.readFile(filePath);
-    const extension = path.extname(fileName).toLowerCase();
-    const mime = extension === ".png" ? "image/png" : extension === ".webp" ? "image/webp" : "image/jpeg";
-    return new NextResponse(data, {
-      headers: {
-        "Content-Type": mime,
-        "Cache-Control": "private, no-store",
-        "X-Content-Type-Options": "nosniff",
-      },
-    });
-  } catch {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
+  const relative = normalizePrivatePath(`vendor-appeals/${vendorId}/${fileName}`);
+  if (!relative) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const data = await readPrivateFile(relative);
+  if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  return new NextResponse(new Uint8Array(data), {
+    headers: { "Content-Type": privateImageMime(relative), "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" },
+  });
 }

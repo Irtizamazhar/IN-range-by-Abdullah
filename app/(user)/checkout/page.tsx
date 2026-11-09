@@ -13,6 +13,7 @@ import { useCustomerAuth } from "@/context/CustomerAuthContext";
 import { formatPKR } from "@/lib/format";
 import { OrderConfirmedModal } from "./OrderConfirmedModal";
 import { normalizePakistanMobile, pakistanMobileLocalDigits } from "@/lib/pakistan-phone";
+import { personNameError } from "@/lib/validation/person-name";
 import { PakistanCitySelect } from "@/components/ui/PakistanCitySelect";
 import type { ISettings } from "@/types/settings";
 import {
@@ -22,9 +23,9 @@ import {
 import { readCheckoutReceipt, checkoutAttemptKey, clearCheckoutAttempt } from "@/lib/checkout-response";
 type PaymentMethod = "cod";
 
-type FieldKey = "email" | "firstName" | "address" | "city" | "phone" | "billingFirstName" | "billingAddress" | "billingCity";
+type FieldKey = "email" | "firstName" | "address" | "city" | "phone" | "billingFirstName" | "billingAddress" | "billingCity" | "billingPhone";
 // Top-to-bottom order, so the first invalid field gets focus.
-const FIELD_ORDER: FieldKey[] = ["email", "firstName", "address", "city", "phone", "billingFirstName", "billingAddress", "billingCity"];
+const FIELD_ORDER: FieldKey[] = ["email", "firstName", "address", "city", "phone", "billingFirstName", "billingAddress", "billingCity", "billingPhone"];
 const fieldId = (key: FieldKey) => `checkout-${key}`;
 
 const inputClass = (error?: string, extra = "") =>
@@ -296,6 +297,7 @@ function CheckoutForm() {
     if (!email.trim()) errors.email = "Enter your email address.";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errors.email = "Enter a valid email address.";
     if (!firstName.trim()) errors.firstName = "Enter your first name.";
+    else { const nameError = personNameError(`${firstName} ${lastName}`, "Name"); if (nameError) errors.firstName = nameError; }
     if (!address.trim()) errors.address = "Enter your street address.";
     if (!city.trim()) errors.city = "Select your city or town.";
     else if (!codAllowed) errors.city = `Cash on Delivery isn't available in ${city.trim()} yet. Please choose another city.`;
@@ -303,11 +305,13 @@ function CheckoutForm() {
     else if (!normalizePakistanMobile(`+92${phone}`)) errors.phone = "Enter 10 mobile digits starting with 3, e.g. 300 1234567.";
     if (!sameBillingAddress) {
       if (!billingFirstName.trim()) errors.billingFirstName = "Enter the billing first name.";
+      else { const nameError = personNameError(`${billingFirstName} ${billingLastName}`, "Billing name"); if (nameError) errors.billingFirstName = nameError; }
+      if (billingPhone.trim() && !normalizePakistanMobile(billingPhone)) errors.billingPhone = "Enter a Pakistani mobile number, e.g. 0300 1234567.";
       if (!billingAddress.trim()) errors.billingAddress = "Enter the billing street address.";
       if (!billingCity.trim()) errors.billingCity = "Select the billing city or town.";
     }
     return errors;
-  }, [email, firstName, address, city, codAllowed, phone, sameBillingAddress, billingFirstName, billingAddress, billingCity]);
+  }, [email, firstName, lastName, address, city, codAllowed, phone, sameBillingAddress, billingFirstName, billingLastName, billingAddress, billingCity, billingPhone]);
   const touch = (key: FieldKey) => setTouched((prev) => (prev[key] ? prev : { ...prev, [key]: true }));
   const errorFor = (key: FieldKey) => (submitAttempted || touched[key] ? fieldErrors[key] : undefined);
   const describe = (key: FieldKey) => {
@@ -344,7 +348,7 @@ function CheckoutForm() {
           customerAddress: [address, apartment].filter(Boolean).join(", "),
           city,
           country, postalCode, sameBillingAddress,
-          billingAddress: sameBillingAddress ? undefined : { name: [billingFirstName, billingLastName].filter(Boolean).join(" "), address: [billingAddress, billingApartment].filter(Boolean).join(", "), city: billingCity, country: billingCountry, postalCode: billingPostalCode, phone: billingPhone },
+          billingAddress: sameBillingAddress ? undefined : { name: [billingFirstName, billingLastName].filter(Boolean).join(" "), address: [billingAddress, billingApartment].filter(Boolean).join(", "), city: billingCity, country: billingCountry, postalCode: billingPostalCode, phone: billingPhone.trim() ? normalizePakistanMobile(billingPhone) ?? billingPhone : "" },
           paymentMethod,
           couponCode: appliedCoupon?.code,
           expectedHandlingFee: handlingFee ?? undefined,
@@ -900,9 +904,9 @@ function CheckoutForm() {
                       />
                     </Field>
                   </div>
-                  <Field id="checkout-billingPhone" label="Phone" optional>
+                  <Field id={fieldId("billingPhone")} label="Phone" optional error={errorFor("billingPhone")}>
                     <input
-                      id="checkout-billingPhone"
+                      {...describe("billingPhone")}
                       type="tel"
                       inputMode="tel"
                       aria-label="Billing phone number"

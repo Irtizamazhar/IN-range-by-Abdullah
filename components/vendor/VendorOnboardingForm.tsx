@@ -83,9 +83,9 @@ export function VendorOnboardingForm() {
   const pendingErrorFocus = useRef<string | null>(null);
   const pickupChosen = useRef(false);
 
-  const load = useCallback(async (signal?: AbortSignal) => {
+  const load = useCallback(async (signal?: { aborted: boolean }) => {
     try {
-      const r = await fetch("/api/vendor/onboarding", { cache: "no-store", signal });
+      const r = await fetch("/api/vendor/onboarding", { cache: "no-store" });
       const data = await r.json();
       if (!r.ok) throw Error(data.error || "Could not load setup.");
       const v = data.vendor;
@@ -120,7 +120,9 @@ export function VendorOnboardingForm() {
     }
   }, []);
 
-  useEffect(() => { const controller = new AbortController(); void load(controller.signal); return () => controller.abort(); }, [load]);
+  // A plain "cancelled" flag instead of AbortController: aborting the request on unmount (React Strict
+  // Mode runs effects twice in development) surfaced "AbortError: signal is aborted without reason".
+  useEffect(() => { const status = { aborted: false }; void load(status); return () => { status.aborted = true; }; }, [load]);
   useEffect(() => { void fetchShopCategoryNameList().then(setCategories); }, []);
   useEffect(() => {
     const key = pendingErrorFocus.current;

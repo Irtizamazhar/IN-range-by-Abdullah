@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireApprovedVendorApi } from "@/lib/vendor-api-auth";
 import { prisma } from "@/lib/prisma";
+import { payoutBankDetails } from "@/lib/vendor-bank-security";
 import {
   createWithdrawalWithAllocations,
   hasOpenWithdrawalRequest,
@@ -91,14 +92,17 @@ export async function POST(req: NextRequest) {
   const v = await prisma.vendor.findUnique({
     where: { id: auth.vendor.id },
     select: {
-      bankName: true,
-      accountTitle: true,
-      accountNumber: true,
+      status: true, bankName: true, accountTitle: true, accountNumber: true, iban: true, bankVerificationStatus: true,
+      verifiedBankName: true, verifiedAccountTitle: true, verifiedAccountNumber: true, verifiedIban: true,
     },
   });
-  if (!v?.bankName || !v.accountTitle || !v.accountNumber) {
+  // Only admin-verified payout details are used; a recent unverified change never receives money.
+  const payout = v ? payoutBankDetails(v) : null;
+  if (!payout) {
     return NextResponse.json(
-      { error: "Complete your bank details in Settings before requesting a withdrawal" },
+      { error: v?.bankVerificationStatus === "pending_review"
+          ? "Your new bank details are waiting for JORO verification. Withdrawals are available once they are verified."
+          : "Complete your bank details in Settings before requesting a withdrawal" },
       { status: 400 }
     );
   }
@@ -108,9 +112,9 @@ export async function POST(req: NextRequest) {
       vendorId: auth.vendor.id,
       requestedAmount: amount,
       bank: {
-        bankName: v.bankName,
-        accountTitle: v.accountTitle,
-        accountNumber: v.accountNumber,
+        bankName: payout.bankName,
+        accountTitle: payout.accountTitle,
+        accountNumber: payout.accountNumber,
       },
       notes: parsed.data.notes?.trim() || null,
     });

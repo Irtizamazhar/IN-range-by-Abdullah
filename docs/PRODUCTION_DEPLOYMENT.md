@@ -194,11 +194,13 @@ against production data.
   backups for at least 14 days, plus at least one pre-migration snapshot kept until the next
   migration is confirmed healthy, is a reasonable minimum; tighten or loosen based on your
   actual write volume and compliance needs.
-- **Private uploads**: `storage/private/` (vendor KYC documents, support ticket
-  attachments) is local disk, gitignored, and holds data with no other copy — back it up
-  alongside the database, on the same schedule. It is not covered by any database dump.
+- **Private uploads**: vendor KYC documents, support ticket attachments and appeal evidence
+  are stored in `PRIVATE_STORAGE_DIR` (outside the release; older files may still be in the
+  release's `storage/private/`, which is read as a fallback). They hold data with no other
+  copy — back the directory up alongside the database, on the same schedule. It is not covered
+  by any database dump. See `docs/PRIVATE_STORAGE_AND_VERIFICATION.md`.
 - **Restore**: stop the app, restore the database dump into a fresh database first (never
-  directly overwrite the live one blind), restore `storage/private/` from its backup,
+  directly overwrite the live one blind), restore `PRIVATE_STORAGE_DIR` (and any legacy `storage/private/`) from its backup,
   point a staging `DATABASE_URL` at the restored database and verify the app behaves
   correctly, then switch production traffic over.
 

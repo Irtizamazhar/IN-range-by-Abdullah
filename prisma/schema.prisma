@@ -607,6 +607,11 @@ model Settings {
 
 // ─── Multi-vendor (additive; does not alter existing shop tables) ───
 
+enum VendorBankVerificationStatus {
+  verified
+  pending_review
+}
+
 enum VendorAccountStatus {
   onboarding
   pending
@@ -718,6 +723,18 @@ model Vendor {
   /// Private, schema-validated setup progress, legal business/tax and pickup/return details.
   onboardingData        Json?
   onboardingSubmittedAt DateTime?
+  approvedAt            DateTime?
+  approvedBy            String?             @db.VarChar(191)
+  /// null = legacy details accepted before bank verification existed; see lib/vendor-bank-security.ts.
+  bankVerificationStatus VendorBankVerificationStatus?
+  bankChangeRequestedAt DateTime?
+  bankVerifiedAt        DateTime?
+  bankVerifiedBy        String?             @db.VarChar(191)
+  /// Snapshot used for withdrawals; only an admin verification copies new details here.
+  verifiedBankName      String?             @db.VarChar(120)
+  verifiedAccountTitle  String?             @db.VarChar(200)
+  verifiedAccountNumber String?             @db.VarChar(64)
+  verifiedIban          String?             @db.VarChar(34)
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
 
@@ -773,6 +790,7 @@ model VendorDocument {
 
   @@map("vendordocument")
 }
+
 
 model VendorProduct {
   id                 String              @id @default(cuid())

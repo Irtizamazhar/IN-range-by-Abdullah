@@ -7,6 +7,8 @@ import { requireAdminPermission } from "@/lib/admin-rbac";
 import { prisma } from "@/lib/prisma";
 import { catalogProductSelect } from "@/lib/catalog-product-select";
 import { computeDiscountPercent } from "@/lib/product-discount";
+import { adminProductUpdateSchema, firstIssueMessage } from "@/lib/admin-product-schema";
+import { productPricingError } from "@/lib/product-pricing";
 import { serializeProduct } from "@/lib/serialize";
 
 type Ctx = { params: { id: string } };
@@ -33,7 +35,12 @@ export async function PUT(req: NextRequest, context: Ctx) {
   const auth = await requireAdminPermission("catalog.manage");
   if ("response" in auth) return auth.response;
   const { id } = context.params;
-  const body = await req.json();
+  let raw: unknown;
+  try { raw = await req.json(); }
+  catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
+  const parsed = adminProductUpdateSchema.safeParse(raw);
+  if (!parsed.success) return NextResponse.json({ error: firstIssueMessage(parsed.error) }, { status: 400 });
+  const body = parsed.data;
   const existing = await prisma.product.findUnique({
     where: { id },
     select: { id: true, price: true, originalPrice: true },
@@ -42,16 +49,18 @@ export async function PUT(req: NextRequest, context: Ctx) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const price =
-    body.price !== undefined ? Number(body.price) : Number(existing.price);
+  const price = body.price !== undefined ? body.price : Number(existing.price);
   const originalPrice =
     body.originalPrice !== undefined
-      ? body.originalPrice != null
-        ? Number(body.originalPrice)
-        : null
+      ? body.originalPrice
       : existing.originalPrice != null
         ? Number(existing.originalPrice)
         : null;
+  const pricingError = productPricingError(price, originalPrice);
+  // Only block when this request touches pricing, so legacy rows can still be hidden or renamed.
+  if (pricingError && (body.price !== undefined || body.originalPrice !== undefined)) {
+    return NextResponse.json({ error: pricingError }, { status: 400 });
+  }
   const discountPercent = computeDiscountPercent(price, originalPrice);
 
   const data: Prisma.ProductUpdateInput = {
@@ -62,21 +71,14 @@ export async function PUT(req: NextRequest, context: Ctx) {
   if (body.name !== undefined) data.name = body.name;
   if (body.description !== undefined) data.description = body.description;
   if (body.category !== undefined) data.category = body.category;
-  if (body.stock !== undefined) data.stock = Number(body.stock);
-  if (body.warrantyMonths !== undefined) {
-    const months = Number(body.warrantyMonths);
-    data.warrantyMonths = Number.isInteger(months) && months > 0
-      ? Math.min(120, months)
-      : null;
-  }
+  if (body.stock !== undefined) data.stock = body.stock;
+  if (body.warrantyMonths !== undefined) data.warrantyMonths = body.warrantyMonths;
   if (body.isActive !== undefined) data.isActive = body.isActive;
   if (body.variants !== undefined) data.variants = body.variants;
 
   let imageIds: string[] | undefined;
   if (body.imageIds !== undefined) {
-    const ids = Array.isArray(body.imageIds)
-      ? body.imageIds.map((x: unknown) => String(x))
-      : [];
+    const ids = body.imageIds;
     const rows = await prisma.productImage.findMany({
       where: { id: { in: ids } },
     });

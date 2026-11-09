@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { requireApprovedVendorApi } from "@/lib/vendor-api-auth";
-import { vendorProductUpdateSchema } from "@/lib/vendor-product-schemas";
+import { mergedPricingError, vendorProductUpdateSchema } from "@/lib/vendor-product-schemas";
 import { sanitizePlainText, sanitizeDescriptionHtml } from "@/lib/security/sanitize";
 import { prisma } from "@/lib/prisma";
 import {
@@ -70,6 +70,10 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   }
 
   const d = parsed.data;
+  if (d.price !== undefined || d.originalPrice !== undefined) {
+    const pricingError = mergedPricingError(existing, d);
+    if (pricingError) return NextResponse.json({ error: pricingError }, { status: 400 });
+  }
   const data: Prisma.VendorProductUpdateInput = {};
 
   if (d.productName != null) {

@@ -80,16 +80,18 @@ export default function VendorProfilePage() {
   const fileInputs = useRef<Record<ImageKind, HTMLInputElement | null>>({ shopLogo: null, storeBanner: null });
   const saveLock = useRef(false);
 
-  const load = useCallback(async (signal?: AbortSignal) => {
+  const load = useCallback(async (signal?: { aborted: boolean }) => {
     try {
-      const response = await fetch("/api/vendor/profile", { cache: "no-store", signal });
+      const response = await fetch("/api/vendor/profile", { cache: "no-store" });
       const data = await response.json().catch(() => ({})) as { profile?: Profile; locationRequest?: LocationRequest | null; error?: string };
       if (response.status === 401) throw new Error("Sign in with an approved seller account to edit your profile.");
       if (!response.ok || !data.profile) throw new Error(data.error || "Could not load your profile.");
       setProfile(data.profile); setValues(toValues(data.profile)); setLocationRequest(data.locationRequest || null); setLoadError("");
     } catch (error) { if (!signal?.aborted) setLoadError(error instanceof Error ? error.message : "Could not load your profile."); }
   }, []);
-  useEffect(() => { const controller = new AbortController(); void load(controller.signal); return () => controller.abort(); }, [load]);
+  // A plain "cancelled" flag instead of AbortController: aborting the request on unmount (React Strict
+  // Mode runs effects twice in development) surfaced "AbortError: signal is aborted without reason".
+  useEffect(() => { const status = { aborted: false }; void load(status); return () => { status.aborted = true; }; }, [load]);
   useEffect(() => { void fetchShopCategoryNameList().then(setCategories); }, []);
 
   const dirty = useMemo(() => Boolean(profile && values && JSON.stringify(values) !== JSON.stringify(toValues(profile))), [profile, values]);

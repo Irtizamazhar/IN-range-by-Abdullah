@@ -35,6 +35,7 @@ import { afterGoogleSignInUrl } from "@/lib/customer-welcome-policy";
 import { setCustomerOAuthRememberChoice } from "@/lib/customer-remember-policy";
 
 import { normalizePakistanMobile, PAKISTAN_MOBILE_ERROR } from "@/lib/pakistan-phone";
+import { personNameError } from "@/lib/validation/person-name";
 
 
 
@@ -130,7 +131,7 @@ function AuthForm({role,mode,callback,google,development,setBusy}:{role:Role;mod
 
  useEffect(()=>()=>setBusy(false),[setBusy]);
 
- async function submit(e:React.FormEvent){e.preventDefault();setErrors({});setMessage("");const normalizedPhone=normalizePakistanMobile(values.phone);const issues:Record<string,string>={};if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim()))issues.email="Enter a valid email address.";if(signup&&vendor&&!normalizedPhone)issues.phone=PAKISTAN_MOBILE_ERROR;if(signup&&!vendor&&values.phone.trim()&&!normalizedPhone)issues.phone=PAKISTAN_MOBILE_ERROR;if(signup&&!values.name.trim())issues.name="Full name is required.";if(!values.password)issues.password="Password is required.";if(signup&&values.password.length<(vendor?8:6))issues.password=`Use at least ${vendor?8:6} characters.`;if(signup&&values.confirm!==values.password)issues.confirm="Passwords do not match.";if(Object.keys(issues).length){setErrors(issues);return;}setPending(true);setBusy(true);
+ async function submit(e:React.FormEvent){e.preventDefault();setErrors({});setMessage("");const normalizedPhone=normalizePakistanMobile(values.phone);const issues:Record<string,string>={};if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim()))issues.email="Enter a valid email address.";if(signup&&vendor&&!normalizedPhone)issues.phone=PAKISTAN_MOBILE_ERROR;if(signup&&!vendor&&values.phone.trim()&&!normalizedPhone)issues.phone=PAKISTAN_MOBILE_ERROR;if(signup){const nameError=personNameError(values.name,"Full name");if(nameError)issues.name=nameError;}if(!values.password)issues.password="Password is required.";if(signup&&values.password.length<(vendor?8:6))issues.password=`Use at least ${vendor?8:6} characters.`;if(signup&&values.confirm!==values.password)issues.confirm="Passwords do not match.";if(Object.keys(issues).length){setErrors(issues);return;}setPending(true);setBusy(true);
 
  try{
 

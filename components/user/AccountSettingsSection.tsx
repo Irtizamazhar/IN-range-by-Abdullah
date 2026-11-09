@@ -30,7 +30,7 @@ export function AccountSettingsSection({ profile, onSave }: { profile: Profile; 
       </div>
       <LoadingForm onSubmit={onSave} className="mt-5 space-y-4">
         <label className={label}>Name<span className="relative mt-1.5 block"><User className={icon} aria-hidden="true" /><input className={input} name="name" defaultValue={profile.name} maxLength={200} required autoComplete="name" /></span></label>
-        <label className={label}>Phone<span className="relative mt-1.5 block"><Phone className={icon} aria-hidden="true" /><input className={input} name="phone" type="tel" defaultValue={profile.phone} maxLength={40} placeholder="Enter your phone number" autoComplete="tel" /></span></label>
+        <label className={label}>Phone<span className="relative mt-1.5 block"><Phone className={icon} aria-hidden="true" /><input className={input} name="phone" type="tel" defaultValue={profile.phone} maxLength={40} placeholder="0300-1234567" inputMode="tel" autoComplete="tel" /></span></label>
         <div>
           <label className={label}>Email<span className="relative mt-1.5 block"><Mail className={icon} aria-hidden="true" /><input className={`${input} cursor-not-allowed bg-[#F4F7F5] text-darkText/70`} type="email" value={profile.email} readOnly aria-describedby="email-help" /></span></label>
           <p id="email-help" className="mt-1 text-xs text-darkText/50">Email cannot be changed from here.</p>

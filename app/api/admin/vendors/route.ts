@@ -58,6 +58,7 @@ export async function GET(req: NextRequest) {
         specialCommissionRate: true,
         status: true,
         isEmailVerified: true,
+        bankVerificationStatus: true,
         rejectionReason: true,
         createdAt: true,
         auditLogs: {
