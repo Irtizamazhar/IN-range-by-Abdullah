@@ -165,22 +165,24 @@ function CheckoutForm() {
   } | null>(null);
 
 
-  const loadSettings = useCallback(async (signal?: AbortSignal) => {
+  // Stale responses are ignored instead of aborting the request: an aborted fetch can surface
+  // as an "Unhandled Runtime Error" (AbortError) when a browser extension wraps fetch.
+  const loadSettings = useCallback(async (isStale: () => boolean = () => false) => {
     setSettingsLoading(true);
     try {
-      const response = await fetch("/api/settings", { signal });
+      const response = await fetch("/api/settings");
       if (!response.ok) throw new Error("Could not load checkout options. Please try again.");
       const data = await response.json();
-      if (!signal?.aborted) { setSettings(data); setSettingsError(""); }
+      if (!isStale()) { setSettings(data); setSettingsError(""); }
     } catch (error) {
-      if (!signal?.aborted) setSettingsError(error instanceof Error ? error.message : "Could not load checkout options. Please try again.");
-    } finally { if (!signal?.aborted) setSettingsLoading(false); }
+      if (!isStale()) setSettingsError(error instanceof Error ? error.message : "Could not load checkout options. Please try again.");
+    } finally { if (!isStale()) setSettingsLoading(false); }
   }, []);
-  useEffect(() => { const controller = new AbortController(); void loadSettings(controller.signal); return () => controller.abort(); }, [loadSettings]);
+  useEffect(() => { let stale = false; void loadSettings(() => stale); return () => { stale = true; }; }, [loadSettings]);
 
   useEffect(() => {
     if (session?.user?.role !== "customer") return;
-    const controller = new AbortController();
+    let stale = false;
     const fill = (id: string, set: (value: string) => void, value: string) => {
       if (!editedAddressFields.current.has(id)) set(value);
     };
@@ -195,12 +197,12 @@ function CheckoutForm() {
     setAddressLoading(true); setAddressError("");
     void (async () => {
       const [profileResponse, addressResponse] = await Promise.all([
-        fetch("/api/customer/profile", { signal: controller.signal, cache: "no-store" }),
-        fetch("/api/customer/addresses", { signal: controller.signal, cache: "no-store" }),
+        fetch("/api/customer/profile", { cache: "no-store" }),
+        fetch("/api/customer/addresses", { cache: "no-store" }),
       ]);
       if (!profileResponse.ok || !addressResponse.ok) throw new Error("Your saved information could not be loaded. You can enter it manually or retry.");
       const [profile, data] = await Promise.all([profileResponse.json(), addressResponse.json()]);
-      if (controller.signal.aborted) return;
+      if (stale) return;
       const saved = data.addresses?.find((row: { isDefault: boolean }) => row.isDefault);
       fillContact(saved?.recipientName || profile.name || session.user.name || "", profile.email || session.user.email || "", saved?.phone || profile.phone || session.user.phone || "");
       if (saved) {
@@ -208,9 +210,9 @@ function CheckoutForm() {
         fill("checkout-city", setCity, saved.city || "");
         fill("checkout-postalCode", setPostalCode, saved.postalCode || "");
       }
-    })().catch(error => { if (!controller.signal.aborted) setAddressError(error instanceof Error ? error.message : "Your saved information could not be loaded."); })
-      .finally(() => { if (!controller.signal.aborted) setAddressLoading(false); });
-    return () => controller.abort();
+    })().catch(error => { if (!stale) setAddressError(error instanceof Error ? error.message : "Your saved information could not be loaded."); })
+      .finally(() => { if (!stale) setAddressLoading(false); });
+    return () => { stale = true; };
     // Account changes remount this form; typing must never trigger another prefill.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id, addressVersion]);
@@ -248,7 +250,7 @@ function CheckoutForm() {
   // Server-calculated preview; POST /api/orders recalculates and rejects a mismatch.
   useEffect(() => {
     if (!isCustomer || items.length === 0) return;
-    const controller = new AbortController();
+    let stale = false;
     setHandlingFee(null);
     setQuotePricing(null);
     setHandlingFeeError("");
@@ -257,21 +259,21 @@ function CheckoutForm() {
         const response = await fetch("/api/checkout/handling-fee", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          signal: controller.signal,
           body: JSON.stringify({
             quoteId: items.find(i => i.quoteId)?.quoteId,
             products: items.map(i => ({ productId: i.productId, quantity: i.quantity, serviceId: i.serviceId, variant: i.variant })),
           }),
         });
         const data = await response.json().catch(() => ({}));
+        if (stale) return;
         if (!response.ok || typeof data.handlingFee !== "number") throw new Error(data.error || "Could not calculate the handling fee.");
         setQuotePricing(data.quotePricing ?? null);
         setHandlingFee(data.handlingFee);
       } catch (error) {
-        if (!controller.signal.aborted) setHandlingFeeError(error instanceof Error ? error.message : "Could not calculate the handling fee.");
+        if (!stale) setHandlingFeeError(error instanceof Error ? error.message : "Could not calculate the handling fee.");
       }
     }, 250);
-    return () => { controller.abort(); clearTimeout(timer); };
+    return () => { stale = true; clearTimeout(timer); };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- cartSignature captures the relevant item fields.
   }, [cartSignature, isCustomer, handlingFeeVersion]);
 
