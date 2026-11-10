@@ -49,7 +49,7 @@ function toCsv(rows: ShopOrderListRow[]): string {
         esc(r.shopOrderNumber),
         esc(r.parentOrderNumber),
         esc(vendorName),
-        esc(r.customerName),
+        esc(r.customerName ?? ""),
         esc(r.city),
         r.totalAmount,
         r.commissionAmount,

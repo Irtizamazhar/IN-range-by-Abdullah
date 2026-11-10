@@ -275,6 +275,8 @@ enum InventoryReservationState {
   reserved
   released
   consumed
+  /// Seller line not yet confirmed: stock is checked at checkout but only deducted when the seller confirms.
+  awaiting_confirmation
 }
 
 model OrderInventoryLine {

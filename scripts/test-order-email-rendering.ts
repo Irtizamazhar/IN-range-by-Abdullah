@@ -7,7 +7,7 @@ import { orderConfirmationEmail, vendorOrderEmail } from "../lib/joro-email-temp
 async function main() {
   process.env.NEXT_PUBLIC_APP_URL = "https://joro.pk";
   const order = { id: "order-test", orderNumber: "JORO-123456", customerName: "Test Customer", createdAt: new Date("2026-10-16T12:00:00Z"), customerAddress: "A long delivery address in Pakistan", city: "Lahore", paymentMethod: "cod", paymentStatus: "pending", totalAmount: 2100, orderItems: [{ name: "Product " + "LongName".repeat(20), quantity: 2, price: 1000, image: "https://joro.pk/product.png" }] };
-  const shop = { id: "shop-test", placedAt: order.createdAt, totalAmount: 2000, customerName: order.customerName, customerPhone: "03001234567", customerAddress: order.customerAddress, city: order.city, vendor: { shopName: "Test Store", ownerName: "Test Owner" }, items: [{ productName: order.orderItems[0].name, quantity: 2, price: 1000, subtotal: 2000, image: "https://joro.pk/product.png" }] };
+  const shop = { id: "shop-test", shopOrderNumber: "IRV-TEST", placedAt: order.createdAt, totalAmount: 2000, vendor: { shopName: "Test Store", ownerName: "Test Owner" }, items: [{ productName: order.orderItems[0].name, quantity: 2, price: 1000, subtotal: 2000, image: "https://joro.pk/product.png" }] };
   const emails = [orderConfirmationEmail(order), vendorOrderEmail(order, shop)];
   const executablePath = process.env.JORO_TEST_BROWSER || ["C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe", "C:/Program Files/Google/Chrome/Application/chrome.exe"].find(existsSync);
   const browser = await chromium.launch({ executablePath, headless: true });

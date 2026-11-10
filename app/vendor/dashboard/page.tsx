@@ -37,7 +37,6 @@ const LOW_STOCK_UNITS = 5;
 type RecentRow = {
   id: string;
   orderNumber: string;
-  customerName: string;
   city: string;
   productName: string;
   extraItems: number;
@@ -171,7 +170,6 @@ export default async function VendorDashboardPage({
         select: {
           id: true,
           shopOrderNumber: true,
-          customerName: true,
           city: true,
           items: true,
           totalAmount: true,
@@ -239,7 +237,6 @@ export default async function VendorDashboardPage({
     recent = recentShops.map((r, i) => ({
       id: r.id,
       orderNumber: r.shopOrderNumber,
-      customerName: r.customerName,
       city: r.city,
       productName: heads[i].name,
       extraItems: Math.max(0, heads[i].count - 1),
@@ -435,7 +432,7 @@ export default async function VendorDashboardPage({
                   <tr>
                     <th className="px-5 py-3">Order#</th>
                     <th className="px-4 py-3">Product</th>
-                    <th className="px-4 py-3">Customer</th>
+                    <th className="px-4 py-3">City</th>
                     <th className="px-4 py-3 text-right">Amount</th>
                     <th className="px-4 py-3">Status</th>
                     <th className="px-5 py-3 text-right">Action</th>
@@ -469,8 +466,7 @@ export default async function VendorDashboardPage({
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <p className="max-w-[10rem] truncate font-medium text-admin-ink" title={r.customerName}>{r.customerName}</p>
-                          <p className="text-xs text-admin-muted">{r.city}</p>
+                          <p className="max-w-[10rem] truncate font-medium text-admin-ink">{r.city || "—"}</p>
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 text-right font-semibold tabular-nums text-admin-ink">{formatPKR(r.amount)}</td>
                         <td className="whitespace-nowrap px-4 py-3">

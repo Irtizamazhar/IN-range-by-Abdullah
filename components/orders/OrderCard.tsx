@@ -30,7 +30,7 @@ export function OrderCard({ rows, getDetailHref, showVendor }: Props) {
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
               <p className="font-mono text-sm text-brand-dark">{r.shopOrderNumber}</p>
-              <p className="font-semibold text-darkText">{r.customerName}</p>
+              {r.customerName ? <p className="font-semibold text-darkText">{r.customerName}</p> : null}
             <p className="text-xs text-darkText/50">{r.city}</p>
             {showVendor && r.vendor ? (
               <p className="text-xs font-medium text-darkText/70">

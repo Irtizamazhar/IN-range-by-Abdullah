@@ -15,6 +15,7 @@ import { OrderConfirmedModal } from "./OrderConfirmedModal";
 import { normalizePakistanMobile, pakistanMobileLocalDigits } from "@/lib/pakistan-phone";
 import { personNameError } from "@/lib/validation/person-name";
 import { PakistanCitySelect } from "@/components/ui/PakistanCitySelect";
+import { codCityOptions, isCodCity } from "@/lib/cod-cities";
 import type { ISettings } from "@/types/settings";
 import {
   ArrowRight, Banknote, Building2, Check, ChevronDown, CircleAlert, CreditCard, FileText,
@@ -235,9 +236,8 @@ function CheckoutForm() {
   );
 
   const codAllowed = quotePricing?.requestType === "SERVICE" ? city.trim().toLowerCase() === quotePricing.city.trim().toLowerCase() :
-    settings?.codAvailableCities?.some(
-      (c) => c.toLowerCase() === city.trim().toLowerCase()
-    ) ?? false;
+    isCodCity(city, settings?.codAvailableCities ?? []);
+  const deliveryCities = useMemo(() => codCityOptions(settings?.codAvailableCities ?? []), [settings?.codAvailableCities]);
   const deliveryCharge = quotePricing ? quotePricing.shipping : items.length === 1 && items[0].quoteId ? Number(items[0].quoteShipping || 0) : Number(settings?.codCharges ?? 0);
   const productSubtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const serviceSubtotal = subtotal - productSubtotal;
@@ -595,6 +595,8 @@ function CheckoutForm() {
                         aria-label="Delivery city"
                         placeholder="Select city"
                         className={cityClass(errorFor("city"))}
+                        cities={deliveryCities}
+                        allowCustom={false}
                         value={city}
                         onValueChange={value => { editedAddressFields.current.add("checkout-city"); setCity(value); }}
                         maxLength={120}

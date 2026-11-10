@@ -69,7 +69,11 @@ test("merchant shipping reads only persisted checkout fields; missing/invalid da
   let failed = false;
   const reads: Modules[] = [];
   const shipping = load("lib/merchant-shipping.ts", { "@/lib/prisma": { prisma: { settings: { findFirst: async (query: Modules) => { reads.push(query); if (failed) throw new Error("private driver diagnostics"); return row; } } } } });
-  assert.deepEqual(JSON.parse(JSON.stringify(await shipping.readMerchantShipping())), { fee: 237.5, cities: ["Karachi", "Lahore"] });
+  row = { codCharges: "237.50", codAvailableCities: ["Karachi", "Lahore", "Admin Town"] };
+  const read = JSON.parse(JSON.stringify(await shipping.readMerchantShipping()));
+  // The 95 built-in COD cities plus the admin's extra city, without duplicates.
+  assert.equal(read.fee, 237.5); assert.equal(read.cities.length, 96);
+  for (const city of ["Karachi", "Lahore", "Ahmadpur East", "Admin Town"]) assert.ok(read.cities.includes(city), city);
   row = { codCharges: 0, codAvailableCities: [] };
   assert.equal((await shipping.readMerchantShipping()).fee, 0);
   for (row of [null, { codCharges: null, codAvailableCities: [] }, { codCharges: -1, codAvailableCities: [] }, { codCharges: "invalid", codAvailableCities: [] }, { codCharges: 100, codAvailableCities: [null] }]) assert.equal(await shipping.readMerchantShipping(), null);

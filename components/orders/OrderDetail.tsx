@@ -2,10 +2,11 @@
 
 import Image from "next/image";
 import { formatPKR } from "@/lib/format";
-import type { ShopOrderJson } from "@/lib/vendor-shop-order-helpers";
+import type { VendorShopOrderView } from "@/lib/vendor-shop-order-helpers";
+import type { ShopOrderPrivateDetails } from "./shop-order-types";
 import { StatusTimeline } from "./StatusTimeline";
 
-export type OrderDetailModel = ShopOrderJson & {
+export type OrderDetailModel = VendorShopOrderView & ShopOrderPrivateDetails & {
   paymentMethodLabel: string;
   deliveryCharge?: string;
   checkoutTotalAmount?: string;
@@ -43,17 +44,31 @@ export function OrderDetail({ order, showVendorBlock }: Props) {
         </section>
       ) : null}
 
-      <section>
-        <h2 className="text-xs font-bold uppercase text-darkText/50">
-          Customer
-        </h2>
-        <p className="mt-1 font-semibold text-darkText">{order.customerName}</p>
-        <p className="text-sm text-darkText/80">{order.customerPhone}</p>
-        <p className="text-sm text-darkText/80">{order.customerEmail}</p>
-        <p className="mt-2 text-sm text-darkText/90">
-          {order.customerAddress}, {order.city}
-        </p>
-      </section>
+      {order.customerName ? (
+        <section>
+          <h2 className="text-xs font-bold uppercase text-darkText/50">
+            Customer
+          </h2>
+          <p className="mt-1 font-semibold text-darkText">{order.customerName}</p>
+          <p className="text-sm text-darkText/80">{order.customerPhone}</p>
+          <p className="text-sm text-darkText/80">{order.customerEmail}</p>
+          <p className="mt-2 text-sm text-darkText/90">
+            {order.customerAddress}, {order.city}
+          </p>
+        </section>
+      ) : (
+        <section>
+          <h2 className="text-xs font-bold uppercase text-darkText/50">
+            Order
+          </h2>
+          <p className="mt-1 text-sm text-darkText/80">
+            Placed {new Date(order.placedAt).toLocaleString()}
+          </p>
+          <p className="mt-1 text-sm text-darkText/60">
+            JORO arranges pickup and delivers this order to the customer.
+          </p>
+        </section>
+      )}
 
       <section>
         <h2 className="mb-3 text-xs font-bold uppercase text-darkText/50">
@@ -91,6 +106,11 @@ export function OrderDetail({ order, showVendorBlock }: Props) {
                     <span className="text-darkText/60"> · {it.variant}</span>
                   ) : null}
                   <span className="text-darkText/60"> × {it.quantity}</span>
+                  {it.description ? (
+                    <p className="mt-1 max-w-md whitespace-pre-line text-xs text-darkText/70 line-clamp-4">
+                      {it.description}
+                    </p>
+                  ) : null}
                 </div>
               </div>
               <div className="text-right">

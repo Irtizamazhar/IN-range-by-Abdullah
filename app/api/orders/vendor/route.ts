@@ -8,6 +8,7 @@ import {
   buildShopOrderStatusCounts,
   paymentMethodLabel,
   serializeVendorShopOrder,
+  vendorShopOrderView,
 } from "@/lib/vendor-shop-order-helpers";
 
 async function shopOrderCountsForVendor(vendorId: string) {
@@ -57,7 +58,7 @@ export async function GET(req: NextRequest) {
   if (q) {
     where.OR = [
       { shopOrderNumber: { contains: q } },
-      { customerName: { contains: q } },
+      { order: { orderNumber: { contains: q } } },
     ];
   }
 
@@ -75,7 +76,7 @@ export async function GET(req: NextRequest) {
   ]);
 
   const orders = rows.map((r) => {
-    const s = serializeVendorShopOrder(r);
+    const s = vendorShopOrderView(serializeVendorShopOrder(r));
     const itemCount = s.items.reduce((n, i) => n + i.quantity, 0);
     return {
       ...s,

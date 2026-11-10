@@ -7,6 +7,7 @@ import { catalogProductSelect } from "@/lib/catalog-product-select";
 import { prisma } from "@/lib/prisma";
 import { serializeProduct } from "@/lib/serialize";
 import { readPublicSettings } from "@/lib/settings-db";
+import { codCityOptions } from "@/lib/cod-cities";
 import { ProductDetailClient, type ProductDeliveryInfo } from "./ProductDetailClient";
 import type { ProductCardData } from "@/components/user/ProductCard";
 import {
@@ -91,7 +92,7 @@ export default async function ProductDetailPage({ params, searchParams }: PagePr
     let delivery: ProductDeliveryInfo | null = null;
     try {
       const settings = await readPublicSettings();
-      delivery = { fee: Number(settings.codCharges ?? 0), codCities: settings.codAvailableCities ?? [] };
+      delivery = { fee: Number(settings.codCharges ?? 0), codCities: codCityOptions(settings.codAvailableCities ?? []) };
     } catch {
       delivery = null;
     }

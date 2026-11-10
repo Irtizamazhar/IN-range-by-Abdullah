@@ -8,7 +8,8 @@ import { prisma } from "@/lib/prisma";
 import { sanitizePlainText } from "@/lib/security/sanitize";
 import { sendVendorApprovedEmail, sendVendorRejectedEmail } from "@/lib/vendor-mail";
 import { generateUniqueStoreSlug } from "@/lib/store-slug";
-import { ApiError } from "@/lib/marketplace-api";
+import { ApiError, sameOrigin } from "@/lib/marketplace-api";
+import { deleteVendorAccount } from "@/lib/vendor-deletion";
 import { suspendVendor, unsuspendVendor } from "@/lib/vendor-suspension";
 import { approvalReadiness, OVERRIDE_REASON_MIN } from "@/lib/vendor-approval";
 import { maskedBank, verifiedBankSnapshot } from "@/lib/vendor-bank-security";
@@ -214,5 +215,39 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     if (e instanceof ApiError) return NextResponse.json({ error: e.message }, { status: e.status });
     console.error("admin vendor PATCH", e);
     return NextResponse.json({ error: "The update could not be saved. Nothing was changed." }, { status: 500 });
+  }
+}
+
+const deleteSchema = z.object({ confirmEmail: z.string().trim().min(1, "Type the seller's email to confirm.").max(255) });
+
+/** Permanently deletes a seller that has no orders, payouts or offers (DELETE /api/admin/vendors/:id). */
+export async function DELETE(req: NextRequest, ctx: Ctx) {
+  try {
+    sameOrigin(req);
+    const auth = await requireAdminPermission("vendors.manage");
+    if ("response" in auth) return auth.response;
+
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
+    const parsed = deleteSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0]?.message || "Type the seller's email to confirm." }, { status: 400 });
+    }
+
+    await deleteVendorAccount({
+      vendorId: ctx.params.id,
+      confirmEmail: parsed.data.confirmEmail,
+      adminId: auth.admin.id,
+      adminEmail: auth.admin.email,
+    });
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    if (e instanceof ApiError) return NextResponse.json({ error: e.message }, { status: e.status });
+    console.error("admin vendor DELETE", e instanceof Error ? e.name : "Unknown error");
+    return NextResponse.json({ error: "The seller could not be deleted. Nothing was changed." }, { status: 500 });
   }
 }

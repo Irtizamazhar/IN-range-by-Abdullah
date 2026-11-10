@@ -118,6 +118,17 @@ export async function privateFileExists(storedPath: string): Promise<boolean> {
   return false;
 }
 
+/** Deletes every private file for one owner (e.g. `vendor-docs/<vendorId>`) from all storage roots. */
+export async function removePrivateOwnerFolder(namespace: PrivateNamespace, owner: string): Promise<void> {
+  if (!(PRIVATE_NAMESPACES as readonly string[]).includes(namespace) || !SEGMENT.test(owner)) {
+    throw new Error("Invalid private folder.");
+  }
+  for (const root of readRoots()) {
+    const full = resolveWithin(root, `${namespace}/${owner}`);
+    if (full) await fs.rm(full, { recursive: true, force: true });
+  }
+}
+
 export function privateImageMime(storedPath: string): string {
   const extension = path.extname(storedPath).toLowerCase();
   return extension === ".png" ? "image/png" : extension === ".webp" ? "image/webp" : "image/jpeg";

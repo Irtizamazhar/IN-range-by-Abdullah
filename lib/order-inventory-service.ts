@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { ApiError } from "@/lib/marketplace-api";
 
 type ReleaseScope =
   | { orderId: string; vendorShopOrderId?: never }
@@ -22,6 +23,18 @@ export async function releaseReservedInventory(
         : {}),
     },
     orderBy: { createdAt: "asc" },
+  });
+
+  // Seller lines that were never confirmed never took stock: close them without restoring anything.
+  await tx.orderInventoryLine.updateMany({
+    where: {
+      state: "awaiting_confirmation",
+      ...(scope.orderId ? { orderId: scope.orderId } : {}),
+      ...(scope.vendorShopOrderId
+        ? { vendorShopOrderId: scope.vendorShopOrderId }
+        : {}),
+    },
+    data: { state: "released", releasedAt: new Date(), releaseReason: reason },
   });
 
   let released = 0;
@@ -53,6 +66,50 @@ export async function releaseReservedInventory(
     released += 1;
   }
   return released;
+}
+
+/**
+ * Seller confirmation: deduct the stock for the seller's lines (e.g. 10 → 9) and mark them
+ * reserved, so a later cancellation restores it. Throws 409 when the stock is no longer
+ * enough; the caller's transaction then rolls back and the order stays pending.
+ */
+export async function deductSellerInventoryOnConfirm(
+  tx: Prisma.TransactionClient,
+  vendorShopOrderId: string
+): Promise<number> {
+  const rows = await tx.orderInventoryLine.findMany({
+    where: { vendorShopOrderId, state: "awaiting_confirmation" },
+    include: { orderItem: { select: { name: true } } },
+    orderBy: { createdAt: "asc" },
+  });
+
+  let deducted = 0;
+  for (const row of rows) {
+    const gate = await tx.orderInventoryLine.updateMany({
+      where: { id: row.id, state: "awaiting_confirmation" },
+      data: { state: "reserved" },
+    });
+    if (gate.count !== 1) continue;
+
+    const outOfStock = () =>
+      new ApiError(409, `Not enough stock to confirm "${row.orderItem.name}" (needs ${row.quantity}). Add stock or cancel this order.`);
+    if (row.vendorProductId) {
+      const listing = await tx.vendorProduct.updateMany({
+        where: { id: row.vendorProductId, stock: { gte: row.quantity } },
+        data: { stock: { decrement: row.quantity }, totalSold: { increment: row.quantity } },
+      });
+      if (listing.count !== 1) throw outOfStock();
+    }
+    if (row.productId) {
+      const storefront = await tx.product.updateMany({
+        where: { id: row.productId, stock: { gte: row.quantity } },
+        data: { stock: { decrement: row.quantity } },
+      });
+      if (storefront.count !== 1) throw outOfStock();
+    }
+    deducted += 1;
+  }
+  return deducted;
 }
 
 /** Delivered inventory is consumed and can no longer be restored by cancel. */

@@ -8,7 +8,6 @@ import { useParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { Download, Printer, X } from "lucide-react";
 import { CancelModal } from "@/components/orders/CancelModal";
-import { formatPKR } from "@/lib/format";
 import {
   OrderDetail,
   type OrderDetailModel,
@@ -91,7 +90,6 @@ export default function VendorShopOrderDetailPage() {
 
   const canAct =
     data.orderStatus !== "delivered" && data.orderStatus !== "cancelled";
-  const grandTotal = Number(data.checkoutTotalAmount || data.totalAmount || 0);
 
   function printShippingLabel() {
     window.print();
@@ -165,7 +163,7 @@ export default function VendorShopOrderDetailPage() {
 
       const a = document.createElement("a");
       a.href = canvas.toDataURL("image/png");
-      a.download = `shipping-label-${data.parentOrderNumber}.png`;
+      a.download = `packing-slip-${data.shopOrderNumber}.png`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -209,7 +207,7 @@ export default function VendorShopOrderDetailPage() {
         <div className="mt-8 rounded-xl border border-borderGray bg-white p-4">
           <div className="mb-3 flex items-center justify-between border-b border-borderGray pb-3">
             <h2 className="text-sm font-bold uppercase tracking-wide text-primaryBlue">
-              Shipping Label
+              Packing slip
             </h2>
             <LoadingButton
               type="button"
@@ -217,22 +215,18 @@ export default function VendorShopOrderDetailPage() {
               className="inline-flex items-center gap-2 rounded-lg bg-brand-primary px-3 py-2 text-xs font-semibold text-brand-dark transition hover:bg-brand-hover"
             >
               <Printer className="h-4 w-4" />
-              Open label
+              Open slip
             </LoadingButton>
           </div>
           <div className="space-y-2 rounded-lg border border-dashed border-borderGray p-3 text-sm">
-            <p className="font-bold text-darkText">{data.customerName}</p>
-            <p className="text-darkText/90">{data.customerPhone}</p>
-            <p className="whitespace-pre-wrap text-darkText/90">
-              {data.customerAddress}
+            <p className="text-darkText/90">
+              <span className="font-semibold">Seller order:</span> {data.shopOrderNumber}
             </p>
-            <p className="text-darkText/90">{data.city}</p>
-            <p className="border-t border-borderGray pt-2 text-darkText/90">
-              <span className="font-semibold">Order ID:</span>{" "}
-              {data.parentOrderNumber}
+            <p className="text-darkText/90">
+              <span className="font-semibold">Order ID:</span> {data.parentOrderNumber}
             </p>
-            <p className="text-darkText/90 font-semibold">
-              <span className="font-semibold">Grand Total:</span> {formatPKR(grandTotal)}
+            <p className="text-darkText/70">
+              Put this slip inside the parcel. JORO adds the delivery label at pickup.
             </p>
           </div>
         </div>
@@ -269,12 +263,12 @@ export default function VendorShopOrderDetailPage() {
             type="button"
             onClick={() => setShowShippingLabel(false)}
             className="absolute inset-0 bg-black/35"
-            aria-label="Close shipping label panel"
+            aria-label="Close packing slip panel"
           />
           <aside className="absolute right-0 top-0 h-full w-full max-w-[560px] overflow-y-auto bg-white p-5 shadow-2xl sm:p-6">
             <div className="mb-4 flex items-center justify-between border-b border-borderGray pb-3">
               <h3 className="text-base font-bold text-darkText">
-                Shipping Label
+                Packing slip
               </h3>
               <LoadingButton
                 type="button"
@@ -291,28 +285,26 @@ export default function VendorShopOrderDetailPage() {
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <div>
                     <p className="text-[11px] font-bold uppercase tracking-wide text-darkText/50">
-                      Courier Label
+                      Packing slip
                     </p>
                     <p className="text-lg font-extrabold">JORO</p>
                   </div>
-                  <p className="text-xs font-semibold text-darkText/70">
-                    Order ID: {data.parentOrderNumber}
-                  </p>
+                  <div className="text-right text-xs font-semibold text-darkText/70">
+                    <p className="text-base font-extrabold text-darkText">{data.shopOrderNumber}</p>
+                    <p>Order ID: {data.parentOrderNumber}</p>
+                  </div>
                 </div>
-                <div className="space-y-1 border-t border-dashed border-borderGray pt-3">
-                  <p className="text-[11px] font-bold uppercase tracking-wide text-darkText/50">
-                    Ship To
-                  </p>
-                  <p className="text-xl font-extrabold">{data.customerName}</p>
-                  <p className="text-lg font-bold">{data.customerPhone}</p>
-                  <p className="pt-1 text-sm font-medium leading-6">
-                    {data.customerAddress}
-                  </p>
-                  <p className="text-sm font-medium">{data.city}</p>
-                  <p className="border-t border-dashed border-borderGray pt-2 text-sm font-extrabold">
-                    Grand Total: {formatPKR(grandTotal)}
-                  </p>
-                </div>
+                <ul className="space-y-1 border-t border-dashed border-borderGray pt-3 text-sm">
+                  {data.items.map((item, index) => (
+                    <li key={`${item.productId}-${index}`} className="flex justify-between gap-3">
+                      <span className="font-medium">
+                        {item.productName}
+                        {item.variant ? ` · ${item.variant}` : ""}
+                      </span>
+                      <span className="font-bold">× {item.quantity}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             </div>
 

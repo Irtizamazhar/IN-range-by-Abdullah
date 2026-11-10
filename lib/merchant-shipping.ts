@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { codCityOptions } from "@/lib/cod-cities";
 
 export type MerchantShipping = { fee: number; cities: string[] };
 
@@ -10,7 +11,7 @@ export async function readMerchantShipping(): Promise<MerchantShipping | null> {
     const fee = Number(row.codCharges);
     if (!Number.isFinite(fee) || fee < 0 || !Array.isArray(row.codAvailableCities) ||
       !row.codAvailableCities.every(city => typeof city === "string" && city.trim().length > 0)) return null;
-    return { fee, cities: Array.from(new Set((row.codAvailableCities as string[]).map(city => city.trim()))) };
+    return { fee, cities: codCityOptions(row.codAvailableCities as string[]) };
   } catch { return null; }
 }
 

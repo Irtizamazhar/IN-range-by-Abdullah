@@ -108,6 +108,8 @@ export type ShopOrderJson = {
     subtotal: number;
     vendorProductId?: string | null;
     variant?: string | null;
+    /** Seller's current listing description (vendor views only). */
+    description?: string | null;
   }>;
   totalAmount: string;
   commissionAmount: string;
@@ -197,6 +199,23 @@ export function serializeVendorShopOrder(
     updatedAt: row.updatedAt.toISOString(),
     vendor: row.vendor,
   };
+}
+
+/** Customer identity fields that sellers never receive; JORO handles pickup and delivery. */
+type CustomerPrivateField =
+  | "customerId"
+  | "customerName"
+  | "customerPhone"
+  | "customerEmail"
+  | "customerAddress";
+
+export type VendorShopOrderView = Omit<ShopOrderJson, CustomerPrivateField | "vendor">;
+
+/** Seller-facing shop order: order numbers, products, amounts and status, without customer identity. */
+export function vendorShopOrderView(order: ShopOrderJson): VendorShopOrderView {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- picked out so they are never sent to sellers
+  const { customerId, customerName, customerPhone, customerEmail, customerAddress, vendor, ...rest } = order;
+  return rest;
 }
 
 /** Friendly payment label for tables. */

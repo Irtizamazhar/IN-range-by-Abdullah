@@ -13,6 +13,7 @@ import { requireAdminPermission } from "@/lib/admin-rbac";
 import { autoCancelStaleBankOrders } from "@/lib/auto-cancel-orders";
 import { generateOrderNumber } from "@/lib/order-number";
 import { getOrCreateSettings } from "@/lib/settings-db";
+import { isCodCity } from "@/lib/cod-cities";
 import { catalogProductSelect } from "@/lib/catalog-product-select";
 import {
   ORDER_INCLUDE_SERIALIZE,
@@ -144,6 +145,17 @@ async function createCheckoutOrder(req: NextRequest, requestId: string) {
   if (!customer) {
     return NextResponse.json({ error: "Customer account not found" }, { status: 401 });
   }
+  // A seller email cannot also buy as a customer (blocks self-orders, fake sales and reviews).
+  const sellerWithSameEmail = await prisma.vendor.findUnique({
+    where: { email: customer.email.trim().toLowerCase() },
+    select: { id: true },
+  });
+  if (sellerWithSameEmail) {
+    return NextResponse.json(
+      { error: "This email is registered as a seller account. Please use a different email to place orders as a customer." },
+      { status: 422 }
+    );
+  }
 
   const existingOrder = await prisma.order.findUnique({
     where: { checkoutKey },
@@ -204,10 +216,7 @@ async function createCheckoutOrder(req: NextRequest, requestId: string) {
   const quote = quoteId ? await checkoutQuote(prisma, quoteId, session.user.id, String(city)) : null;
   const settings = await getOrCreateSettings();
   const effectivePaymentMethod = "cod";
-  const allowed = settings.codAvailableCities.some(
-    (cityName: string) =>
-      cityName.toLowerCase() === String(city).trim().toLowerCase()
-  );
+  const allowed = isCodCity(String(city), settings.codAvailableCities);
   if (!allowed && quote?.want.requestType !== "SERVICE") {
     return NextResponse.json(
       { error: "COD is not available in this city" },
@@ -589,15 +598,13 @@ async function createCheckoutOrder(req: NextRequest, requestId: string) {
         });
         vendorOrderByLine.set(line, vendorOrder.id);
 
+        // Seller stock is only checked here; it is deducted when the seller confirms
+        // (deductSellerInventoryOnConfirm in lib/order-inventory-service.ts).
         if (vs.vendorProductId) {
-          const vendorStock = await tx.vendorProduct.updateMany({
+          const available = await tx.vendorProduct.count({
             where: { id: vs.vendorProductId, stock: { gte: line.quantity } },
-            data: {
-              stock: { decrement: line.quantity },
-              totalSold: { increment: line.quantity },
-            },
           });
-          if (vendorStock.count !== 1) throw new Error("Insufficient stock");
+          if (available !== 1) throw new Error("Insufficient stock");
         }
 
         await mp.vendor.update({
@@ -614,6 +621,11 @@ async function createCheckoutOrder(req: NextRequest, requestId: string) {
 
     for (const line of resolvedProducts) {
       if (!line.decrementFromPrisma) continue;
+      if (line.vendorSlice) {
+        const available = await tx.product.count({ where: { id: line.productId, stock: { gte: line.quantity } } });
+        if (available !== 1) throw new Error("Insufficient stock");
+        continue;
+      }
       const productStock = await tx.product.updateMany({
         where: { id: line.productId, stock: { gte: line.quantity } },
         data: { stock: { decrement: line.quantity } },
@@ -658,7 +670,8 @@ async function createCheckoutOrder(req: NextRequest, requestId: string) {
             ? shopOrderByVendor.get(line.vendorSlice.vendorId) ?? null
             : null,
           quantity: line.quantity,
-          state: "reserved",
+          // Seller lines take stock only when the seller confirms; JORO's own lines take it now.
+          state: line.vendorSlice ? "awaiting_confirmation" : "reserved",
         },
       });
     }

@@ -6,7 +6,7 @@ import {
   syncLineOrdersToShopStatus,
 } from "@/lib/vendor-shop-order-helpers";
 import { cancelSellerOrder } from "@/lib/order-cancellation-service";
-import { consumeReservedInventory } from "@/lib/order-inventory-service";
+import { consumeReservedInventory, deductSellerInventoryOnConfirm } from "@/lib/order-inventory-service";
 import { writeAdminAudit } from "@/lib/admin-rbac";
 import { ApiError } from "@/lib/marketplace-api";
 
@@ -89,30 +89,39 @@ export async function advanceVendorShopOrderStatus(params: {
         : trackingNumber.trim();
   }
 
-  await prisma.$transaction(async (tx) => {
-    const gate = await tx.vendorShopOrder.updateMany({
-      where: { id: shopOrderId, status: row.status },
-      data,
-    });
-    if (gate.count !== 1) {
-      throw new Error("Order status changed; refresh and try again");
-    }
-    await syncLineOrdersToShopStatus(
-      tx,
-      shopOrderId,
-      next,
-      next === "shipped" ? trackingNumber : undefined
-    );
-    if (next === "delivered") {
-      await consumeReservedInventory(tx, { vendorShopOrderId: shopOrderId });
-      if (row.paymentMethod === "cod") {
-        await tx.vendorShopOrder.update({
-          where: { id: shopOrderId },
-          data: { paymentStatus: "received" },
-        });
+  try {
+    await prisma.$transaction(async (tx) => {
+      const gate = await tx.vendorShopOrder.updateMany({
+        where: { id: shopOrderId, status: row.status },
+        data,
+      });
+      if (gate.count !== 1) {
+        throw new ApiError(409, "Order status changed; refresh and try again");
       }
-    }
-  });
+      if (next === "confirmed") {
+        // Seller stock is deducted on confirmation, not at checkout.
+        await deductSellerInventoryOnConfirm(tx, shopOrderId);
+      }
+      await syncLineOrdersToShopStatus(
+        tx,
+        shopOrderId,
+        next,
+        next === "shipped" ? trackingNumber : undefined
+      );
+      if (next === "delivered") {
+        await consumeReservedInventory(tx, { vendorShopOrderId: shopOrderId });
+        if (row.paymentMethod === "cod") {
+          await tx.vendorShopOrder.update({
+            where: { id: shopOrderId },
+            data: { paymentStatus: "received" },
+          });
+        }
+      }
+    });
+  } catch (error) {
+    if (error instanceof ApiError) return { ok: false, error: error.message };
+    throw error;
+  }
 
   return { ok: true, newStatus: next };
 }

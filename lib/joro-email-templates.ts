@@ -52,8 +52,7 @@ export function vendorServiceBookingEmail(order: Pick<ConfirmedEmailOrder, "orde
 }
 
 export function vendorOrderEmail(order: Pick<ConfirmedEmailOrder, "orderNumber" | "paymentMethod" | "paymentStatus">, shop: {
-  id: string; placedAt: Date; items: unknown; totalAmount: unknown;
-  customerName: string; customerPhone: string; customerAddress: string; city: string;
+  id: string; shopOrderNumber: string; placedAt: Date; items: unknown; totalAmount: unknown;
   vendor: { shopName: string; ownerName: string };
 }): JoroEmail {
   if (!Array.isArray(shop.items) || !shop.items.length) throw new Error("Vendor item snapshot missing");
@@ -62,7 +61,8 @@ export function vendorOrderEmail(order: Pick<ConfirmedEmailOrder, "orderNumber" 
     if (!item || typeof item.productName !== "string" || !Number.isInteger(item.quantity) || Number(item.quantity) < 1 || !Number.isFinite(Number(item.price)) || !Number.isFinite(Number(item.subtotal))) throw new Error("Invalid vendor item snapshot");
     return { name: item.productName, quantity: Number(item.quantity), price: item.price, subtotal: item.subtotal, image: typeof item.image === "string" ? item.image : null };
   }));
-  const details = [`Order Number: ${order.orderNumber}`, `Order Date: ${emailDate(shop.placedAt)}`, `Your items amount: ${emailMoney(shop.totalAmount)}`, ...paymentDetails(order), `Fulfillment recipient: ${shop.customerName}`, `Delivery Address: ${[shop.customerAddress, shop.city].filter(Boolean).join(", ")}`, `Fulfillment phone: ${shop.customerPhone}`];
+  // Sellers never receive customer identity; JORO arranges pickup and delivery.
+  const details = [`Seller Order: ${shop.shopOrderNumber}`, `Order Number: ${order.orderNumber}`, `Order Date: ${emailDate(shop.placedAt)}`, `Your items amount: ${emailMoney(shop.totalAmount)}`, ...paymentDetails(order)];
   return brand({ subject: `JORO | New Order Received - #${order.orderNumber}`, preview: "You have received a new order on JORO.", greeting: `Hello ${shop.vendor.shopName || shop.vendor.ownerName},`, bodyHtml: `<p>You have received a new order on JORO.</p><p>Please review the order details and prepare it for processing.</p><h2 style="font-size:19px">Your order items</h2>${items.html}${detailHtml(details)}<p>Review the order in your dashboard for fulfillment instructions and current status. Item amounts reflect applicable seller-funded discounts.</p>`, bodyText: `You have received a new order on JORO.\nPlease review the order details and prepare it for processing.\n${items.text}\n${details.join("\n")}\nReview the order in your dashboard for fulfillment instructions and current status. Item amounts reflect applicable seller-funded discounts.`, action: { label: "View Order", url: `${appOrigin()}/vendor/dashboard/orders/${encodeURIComponent(shop.id)}` }, footer: orderClosing });
 }
 

@@ -14,14 +14,15 @@ import { resolveServiceAddon } from "../lib/service-checkout-service";
 import { calculateHandlingFee } from "../lib/handling-fee";
 import { queueOrderConfirmation } from "../lib/order-confirmation-delivery";
 import * as couponService from "../lib/coupon-service";
+import { isCodCity } from "../lib/cod-cities";
 
 const payload = { customerName: "Ali Khan", customerPhone: "03001234567", customerAddress: "12 Street, Apartment 2", city: "Lahore", paymentMethod: "cod", products: [{ productId: "cream", quantity: 1 }], expectedHandlingFee: 0 };
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Partial Prisma delegates intentionally use flexible isolated fixtures.
 type Row = Record<string, any>;
 function fixture() {
-  const state = { orders: [] as Row[], items: [] as Row[], bundles: [] as Row[], vendorOrders: [] as Row[], events: [] as Row[], services: [] as Row[], jobs: [] as Row[], stocks: { cream: 5, soap: 5 } as Record<string, number> };
+  const state = { orders: [] as Row[], items: [] as Row[], bundles: [] as Row[], vendorOrders: [] as Row[], events: [] as Row[], services: [] as Row[], jobs: [] as Row[], inventory: [] as Row[], vendorStockWrites: 0, stocks: { cream: 5, soap: 5 } as Record<string, number> };
   const logs: unknown[] = [];
-  const options = { signedIn: true, failAt: "", smtpFails: false, failReceipt: false, foreignOwner: false, coupon: false, vendorFundedCoupon: false, quote: false, quoteType: "PRODUCT", productlessQuote: false, quoteShipping: 75, outboxMissing: false, transactionStockRace: false, deliveryCharge: 100 };
+  const options = { signedIn: true, failAt: "", smtpFails: false, failReceipt: false, foreignOwner: false, coupon: false, vendorFundedCoupon: false, quote: false, quoteType: "PRODUCT", productlessQuote: false, quoteShipping: 75, outboxMissing: false, transactionStockRace: false, deliveryCharge: 100, sellerEmail: "" };
   const products: Record<string, Row> = { cream: { id: "cream", name: "cream", price: new Prisma.Decimal(2000), stock: 5, isActive: true, variants: [], category: "Skin", categoryRecordId: null, originalPrice: null }, soap: { id: "soap", name: "soap", price: new Prisma.Decimal(500), stock: 5, isActive: true, variants: [], category: "Skin", categoryRecordId: null, originalPrice: null } };
   const owners = new Map<string, string>();
   const error = (code: string, column?: string) => Object.assign(new Error("PRIVATE SQL password=secret"), { code, meta: { modelName: "OrderConfirmationEmail", column } });
@@ -31,17 +32,17 @@ function fixture() {
       findUnique: async ({ where }: Row) => { if (where.id && options.failReceipt) throw error("P2022", "order.missing"); return state.orders.find(o => where.checkoutKey ? o.checkoutKey === where.checkoutKey : o.id === where.id) || null; },
       create: async ({ data }: Row) => { if (state.orders.some(o => o.checkoutKey === data.checkoutKey)) throw error("P2002"); const row = { ...data, id: "order-" + (state.orders.length + 1) }; state.orders.push(row); return row; },
     },
-    product: { findUnique: async ({ where }: Row) => products[where.id] || null, findFirst: async ({ where }: Row) => products[where.id] || null, updateMany: async ({ where, data }: Row) => { if (options.transactionStockRace || state.stocks[where.id] < where.stock.gte) return { count: 0 }; state.stocks[where.id] -= data.stock.decrement; return { count: 1 }; } },
-    vendorProduct: { findFirst: async ({ where }: Row) => { const vendorId = owners.get(where.publishedProductId); return vendorId ? { id: "vp-" + where.publishedProductId, vendorId, stock: 5, category: "Skin", vendor: { id: vendorId, status: "approved", specialCommissionRate: null } } : null; }, updateMany: async () => ({ count: 1 }) },
+    product: { findUnique: async ({ where }: Row) => products[where.id] || null, findFirst: async ({ where }: Row) => products[where.id] || null, count: async ({ where }: Row) => (state.stocks[where.id] >= where.stock.gte ? 1 : 0), updateMany: async ({ where, data }: Row) => { if (options.transactionStockRace || state.stocks[where.id] < where.stock.gte) return { count: 0 }; state.stocks[where.id] -= data.stock.decrement; return { count: 1 }; } },
+    vendorProduct: { findFirst: async ({ where }: Row) => { const vendorId = owners.get(where.publishedProductId); return vendorId ? { id: "vp-" + where.publishedProductId, vendorId, stock: 5, category: "Skin", vendor: { id: vendorId, status: "approved", specialCommissionRate: null } } : null; }, count: async () => 1, updateMany: async () => { state.vendorStockWrites++; return { count: 1 }; } },
     vendorShopOrder: { create: async ({ data }: Row) => { const row = { ...data, id: "bundle-" + data.vendorId }; state.bundles.push(row); return row; }, findMany: async ({ where }: Row) => state.bundles.filter(b => b.orderId === where.orderId) },
-    vendorOrder: { create: async ({ data }: Row) => { const row={id:"vendor-line-"+state.vendorOrders.length,...data}; state.vendorOrders.push(row); return row; } }, vendor: { update: async () => ({}) },
+    vendorOrder: { create: async ({ data }: Row) => { const row={id:"vendor-line-"+state.vendorOrders.length,...data}; state.vendorOrders.push(row); return row; } }, vendor: { update: async () => ({}), findUnique: async ({ where }: Row) => options.sellerEmail === where.email ? { id: "vendor-a" } : null },
     offerQuote: { updateMany: async () => ({ count: 1 }) }, want: { update: async () => ({}) },
     productServiceAddon: { findUnique: async () => ({ active: true, product: { isActive: true, vendorPublication: { vendorId: "vendor-a", status: "active" } }, service: { active: true, moderationStatus: "APPROVED", vendor: { status: "approved" }, vendorId: "vendor-a", price: new Prisma.Decimal(500), cities: ["Lahore"], name: "Assembly", description: "Fixture", warranty: "", cancellationTerms: "", durationMinutes: 30, leadDays: 1 } }) },
     serviceCommissionRange: { findMany: async () => [{ minAmount: new Prisma.Decimal(0), maxAmount: new Prisma.Decimal(10000), isActive: true, commissionPercentage: new Prisma.Decimal(10) }] },
     vendorNotification: { create: async () => ({}) },
     orderService: { create: async ({ data }: Row) => { const row={id:"service-booking-"+state.services.length,...data};state.services.push(row); return row; } },
     orderItem: { create: async ({ data }: Row) => { const row = { ...data, id: "item-" + state.items.length }; state.items.push(row); return row; } },
-    orderInventoryLine: { create: async () => ({}) },
+    orderInventoryLine: { create: async ({ data }: Row) => { state.inventory.push(data); return data; } },
     orderStatusEvent: { create: async ({ data }: Row) => { state.events.push(data); return data; } },
     commissionSetting: { findUnique: async () => ({ commissionPercentage: 10 }) },
     orderConfirmationEmail: { upsert: async ({ create }: Row) => { if (options.outboxMissing) throw error("P2022", "OrderConfirmationEmail.recipientKey"); if (!state.jobs.some(j => j.orderId === create.orderId && j.recipientKey === create.recipientKey)) state.jobs.push(create); return create; } },
@@ -58,6 +59,7 @@ function fixture() {
     "@/lib/checkout-addresses": { checkoutAddresses }, "@/lib/checkout-diagnostics": { checkoutDiagnostic, checkoutFailure },
     "@/lib/sessions": { getCustomerSession: async () => options.signedIn ? { user: { id: "customer-a", email: "owner@example.invalid", role: "customer" } } : null },
     "@/lib/admin-rbac": {}, "@/lib/auto-cancel-orders": {},
+    "@/lib/cod-cities": { isCodCity },
     "@/lib/settings-db": { getOrCreateSettings: async () => ({ codAvailableCities: ["Lahore"], codCharges: options.deliveryCharge }) },
     "@/lib/order-number": { generateOrderNumber: async () => "IRB-001" },
     "@/lib/catalog-product-select": { catalogProductSelect: () => ({ id: true }) },
@@ -86,6 +88,28 @@ test("COD checkout records correct totals/status/addresses/outbox and replays th
   assert.equal(f.state.events[0].details.addresses.billing.address, payload.customerAddress);
   assert.equal(f.state.stocks.cream, 4); assert.equal(f.state.jobs.length, 1);
   assert.equal((await f.post()).headers.get("X-Idempotent-Replay"), "true"); assert.equal(f.state.orders.length, 1); assert.equal(f.state.stocks.cream, 4);
+});
+test("seller stock is only checked at checkout; it is deducted when the seller confirms", async () => {
+  const f = fixture(); f.owners.set("cream", "vendor-a");
+  const response = await f.post({ ...payload, products: [...payload.products, { productId: "soap", quantity: 2 }] });
+  assert.equal(response.status, 200);
+  assert.equal(f.state.stocks.cream, 5); assert.equal(f.state.vendorStockWrites, 0);
+  assert.equal(f.state.stocks.soap, 3);
+  assert.deepEqual(f.state.inventory.map(l => [l.productId, l.state]), [["cream", "awaiting_confirmation"], ["soap", "reserved"]]);
+  const short = fixture(); short.owners.set("cream", "vendor-a"); short.state.stocks.cream = 0;
+  assert.equal((await short.post()).status, 409); assert.equal(short.state.orders.length, 0);
+});
+test("every built-in delivery city has Cash on Delivery even when admin settings omit it", async () => {
+  const f = fixture();
+  assert.equal((await f.post({ ...payload, city: "Ahmadpur East" })).status, 200);
+  assert.equal((await fixture().post({ ...payload, city: "Atlantis" }, "checkout-request-unknown-city")).status, 400);
+});
+test("an email that is also a seller account cannot place customer orders", async () => {
+  const f = fixture(); f.options.sellerEmail = "owner@example.invalid";
+  const response = await f.post();
+  assert.equal(response.status, 422);
+  assert.match((await response.json()).error, /registered as a seller account/);
+  assert.equal(f.state.orders.length, 0); assert.equal(f.state.stocks.cream, 5);
 });
 test("different billing address is preserved in the existing order-created event", async () => {
   const f = fixture(); const response = await f.post({ ...payload, sameBillingAddress: false, billingAddress: { name: "Company", address: "20 Billing Street", city: "Karachi", country: "Pakistan", postalCode: "74000" } });
@@ -162,7 +186,7 @@ test("vendor-funded coupon reduces seller item payout without adding a fee", asy
   assert.equal(Number(f.state.vendorOrders[0].vendorAmount), 1900);
 });
 test("validation, session expiry, unimplemented payments and insufficient stock cannot create orders", async () => {
-  for (const change of [{ customerAddress: " " }, { city: "Karachi" }, { paymentMethod: "card" }, { products: [{ productId: "cream", quantity: 99 }] }, { sameBillingAddress: false, billingAddress: {} }]) {
+  for (const change of [{ customerAddress: " " }, { city: "Atlantis" }, { paymentMethod: "card" }, { products: [{ productId: "cream", quantity: 99 }] }, { sameBillingAddress: false, billingAddress: {} }]) {
     const f = fixture(); assert.equal((await f.post({ ...payload, ...change })).status, 400); assert.equal(f.state.orders.length, 0);
   }
   const f = fixture(); f.options.signedIn = false; assert.equal((await f.post()).status, 401);
@@ -227,7 +251,7 @@ test("product with service add-on retains product delivery and stores separate s
  assert.equal(Number(f.state.services[0].price),500);
  assert.equal(Number(f.state.services[0].commissionAmount),50);
  assert.equal(Number(f.state.services[0].vendorPayable),450);
- assert.equal(f.state.stocks.cream,4);
+ assert.equal(f.state.stocks.cream,5); // seller stock is deducted when the seller confirms
 });
 
 test("release blocker: service quote creates a booking instead of a parcel", async () => {

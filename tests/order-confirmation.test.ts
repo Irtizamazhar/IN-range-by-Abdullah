@@ -12,7 +12,7 @@ import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
 import { NextResponse } from "next/server";
-import { paymentMethodLabel, serializeVendorShopOrder } from "../lib/vendor-shop-order-helpers";
+import { paymentMethodLabel, serializeVendorShopOrder, vendorShopOrderView } from "../lib/vendor-shop-order-helpers";
 import { api, ApiError } from "../lib/marketplace-api";
 
 const order = { id: "order-123", orderNumber: "JORO-123", orderStatus: "confirmed", paymentMethod: "cod", paymentStatus: "pending", customerName: "Ali <script>", customerEmail: "checkout-untrusted@example.invalid", customerAddress: "12 <b>Street</b>", city: "Lahore", createdAt: new Date("2026-10-15T12:00:00Z"), totalAmount: 2500, customer: { email: "owner@example.invalid", isActive: true }, orderItems: [{ name: "Shirt <img src=x>", quantity: 2, price: 1000 }] };
@@ -36,7 +36,7 @@ test("transactional enqueue uses the order's unique key and cannot reset deliver
   assert.deepEqual(calls, Array(2).fill({ where: { orderId_recipientKey: { orderId: order.id, recipientKey: "customer" } }, create: { orderId: order.id, recipientKey: "customer" }, update: {} }));
 });
 
-const shop = { id: "shop-a", orderId: order.id, placedAt: order.createdAt, status: "pending", totalAmount: 1900, customerName: "Ali", customerPhone: "03001234567", customerAddress: "12 Street", city: "Lahore", vendor: { email: "seller-a@example.invalid", shopName: "Store A", ownerName: "Owner A", status: "approved" }, items: [{ productName: "Shirt", quantity: 2, price: 1000, subtotal: 1900, image: "https://joro.pk/shirt.png" }] };
+const shop = { id: "shop-a", shopOrderNumber: "IRV-0001", orderId: order.id, placedAt: order.createdAt, status: "pending", totalAmount: 1900, customerName: "Ali", customerPhone: "03001234567", customerAddress: "12 Street", city: "Lahore", vendor: { email: "seller-a@example.invalid", shopName: "Store A", ownerName: "Owner A", status: "approved" }, items: [{ productName: "Shirt", quantity: 2, price: 1000, subtotal: 1900, image: "https://joro.pk/shirt.png" }] };
 
 function fixture(initialAttempts = 0, value: typeof order | null = order, bundle: (typeof shop & { pickupRequest?: { status: string; trackingNumber: string }; trackingNumber?: string; shopOrderNumber?: string }) | null = shop) {
   const job = { id: "job-1", orderId: order.id, recipientKey: "customer", status: "pending", attempts: initialAttempts, availableAt: new Date(0), claimedAt: null as Date | null, acceptedAt: null as Date | null, lastError: null as string | null };
@@ -153,6 +153,9 @@ test("each vendor gets only its own snapshot and amount, never parent totals or 
   assert.match(a.text, /Your items amount: PKR 1,900.00/);
   assert.match(b.text, /Private B product x 3 - PKR 250.00 each; PKR 750.00/);
   assert.doesNotMatch(a.text + a.html, /Private B product|Store B|98,765|unrelated@example|commission|netAmount/);
+  assert.match(a.text, /Seller Order: IRV-0001/);
+  // Sellers never receive customer identity: name, phone or address.
+  assert.doesNotMatch(a.text + a.html, /Ali|03001234567|12 Street/);
   assert.doesNotMatch(b.text + b.html, /Shirt|Store A|javascript:/);
   assert.match(a.html, /\/vendor\/dashboard\/orders\/shop-a/);
   assert.match(b.html, /\/vendor\/dashboard\/orders\/shop-b/);
@@ -219,17 +222,20 @@ test("vendor retries use the same identifier and ambiguous SMTP outcomes are hel
   await deliverOrderConfirmation(db, async () => { assert.fail("Uncertain vendor mail cannot auto-retry"); });
 });
 
-test("linked vendor order API enforces ownership and exposes only its own label items and totals", async () => {
+test("linked vendor order API enforces ownership, exposes only its own items and totals, and never customer identity", async () => {
   let vendor: string | null = "vendor-a";
-  const own = { ...shop, vendorId: "vendor-a", shopOrderNumber: "SHOP-A", paymentMethod: "cod", paymentStatus: "pending", commissionAmount: 100, netAmount: 1800, updatedAt: order.createdAt, statusHistory: [], order: { orderNumber: order.orderNumber, totalAmount: 98765, handlingFee: 456, orderItems: [{ name: "SECRET OTHER VENDOR", quantity: 1, price: 98765 }] } };
+  const own = { ...shop, items: [{ ...shop.items[0], vendorProductId: "vp-a" }], customerId: "customer-a", customerEmail: "buyer@example.invalid", vendorId: "vendor-a", shopOrderNumber: "SHOP-A", paymentMethod: "cod", paymentStatus: "pending", commissionAmount: 100, netAmount: 1800, updatedAt: order.createdAt, statusHistory: [], order: { orderNumber: order.orderNumber, totalAmount: 98765, handlingFee: 456, orderItems: [{ name: "SECRET OTHER VENDOR", quantity: 1, price: 98765 }] } };
   const imports: Record<string, unknown> = {
     "next/server": { NextResponse },
     "@/lib/vendor-api-auth": { requireVendorSessionApi: async () => vendor ? { vendor: { id: vendor } } : { response: NextResponse.json({}, { status: 401 }) } },
     "@/lib/prisma": { prisma: { vendorShopOrder: { findFirst: async ({ where, include }: { where: { id: string; vendorId: string }; include: { order: { select: Record<string, boolean> } } }) => {
       assert.deepEqual(Object.keys(include.order.select), ["orderNumber"]);
       return where.id === own.id && where.vendorId === own.vendorId ? own : null;
+    } }, vendorProduct: { findMany: async ({ where }: { where: { id: { in: string[] }; vendorId: string } }) => {
+      assert.equal(where.vendorId, "vendor-a");
+      return where.id.in.includes("vp-a") ? [{ id: "vp-a", description: "Cotton shirt, machine washable" }] : [];
     } } } },
-    "@/lib/vendor-shop-order-helpers": { paymentMethodLabel, serializeVendorShopOrder },
+    "@/lib/vendor-shop-order-helpers": { paymentMethodLabel, serializeVendorShopOrder, vendorShopOrderView },
   };
   const exported = {} as { GET: (request: Request, ctx: { params: Promise<{ id: string }> }) => Promise<Response> };
   runInNewContext(ts.transpileModule(readFileSync("app/api/orders/vendor/[id]/route.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, { exports: exported, require: (name: string) => { assert.ok(name in imports); return imports[name]; } });
@@ -237,8 +243,11 @@ test("linked vendor order API enforces ownership and exposes only its own label 
   const response = await request(); assert.equal(response.status, 200);
   const body = await response.json();
   assert.equal(body.order.totalAmount, "1900");
-  assert.deepEqual(body.order.labelItems.map((item: { name: string }) => item.name), ["Shirt"]);
+  assert.deepEqual(body.order.items.map((item: { productName: string }) => item.productName), ["Shirt"]);
+  assert.equal(body.order.items[0].description, "Cotton shirt, machine washable");
+  assert.equal(body.order.shopOrderNumber, "SHOP-A"); assert.equal(body.order.parentOrderNumber, order.orderNumber);
   assert.doesNotMatch(JSON.stringify(body), /SECRET OTHER VENDOR|98765|checkoutTotalAmount|handlingFee|deliveryCharge/);
+  assert.doesNotMatch(JSON.stringify(body), /customerName|customerPhone|customerEmail|customerAddress|customerId|"Ali"|03001234567|12 Street|buyer@example/);
   vendor = "vendor-b"; assert.equal((await request()).status, 404);
   vendor = null; assert.equal((await request()).status, 401);
 });

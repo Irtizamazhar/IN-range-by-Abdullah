@@ -11,6 +11,8 @@ type Props = {
   getDetailHref: (id: string) => string;
   /** When true, adds a Vendor column (admin list). */
   showVendorColumn?: boolean;
+  /** Admin only. Seller views never receive customer identity. */
+  showCustomer?: boolean;
 };
 
 /** Desktop table: Order ID, customer, items count, total, status, date, action. */
@@ -18,6 +20,7 @@ export function OrderTable({
   rows,
   getDetailHref,
   showVendorColumn = false,
+  showCustomer = true,
 }: Props) {
   return (
     <div className="hidden overflow-x-auto rounded-card border border-borderGray bg-white shadow-card md:block">
@@ -28,7 +31,7 @@ export function OrderTable({
             {showVendorColumn ? (
               <th className="p-3">Vendor</th>
             ) : null}
-            <th className="p-3">Customer</th>
+            <th className="p-3">{showCustomer ? "Customer" : "City"}</th>
             <th className="p-3">Items</th>
             <th className="p-3">Total</th>
             <th className="p-3">Status</th>
@@ -59,8 +62,8 @@ export function OrderTable({
                   </td>
                 ) : null}
                 <td className="p-3">
-                  <div className="font-medium">{r.customerName}</div>
-                  <div className="text-xs text-darkText/50">{r.city}</div>
+                  {showCustomer ? <div className="font-medium">{r.customerName}</div> : null}
+                  <div className={showCustomer ? "text-xs text-darkText/50" : "font-medium"}>{r.city}</div>
                 </td>
                 <td className="p-3">{r.itemCount}</td>
                 <td className="p-3 font-semibold">

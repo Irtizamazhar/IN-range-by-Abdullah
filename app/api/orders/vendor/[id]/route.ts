@@ -6,11 +6,12 @@ import { prisma } from "@/lib/prisma";
 import {
   paymentMethodLabel,
   serializeVendorShopOrder,
+  vendorShopOrderView,
 } from "@/lib/vendor-shop-order-helpers";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-/** Vendor: single bundled order (GET /api/orders/vendor/:id). */
+/** Vendor: single bundled order (GET /api/orders/vendor/:id). Customer identity is never included. */
 export async function GET(_req: NextRequest, ctx: Ctx) {
   const auth = await requireVendorSessionApi();
   if ("response" in auth) return auth.response;
@@ -32,16 +33,24 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const order = serializeVendorShopOrder(row);
+  const order = vendorShopOrderView(serializeVendorShopOrder(row));
+  const listingIds = order.items.flatMap((item) => (item.vendorProductId ? [item.vendorProductId] : []));
+  const listings = listingIds.length
+    ? await prisma.vendorProduct.findMany({
+        where: { id: { in: listingIds }, vendorId: auth.vendor.id },
+        select: { id: true, description: true },
+      })
+    : [];
+  const descriptionById = new Map(listings.map((listing) => [listing.id, listing.description]));
+
   return NextResponse.json({
     order: {
       ...order,
-      paymentMethodLabel: paymentMethodLabel(order.paymentMethod),
-      labelItems: order.items.slice(0, 4).map((item) => ({
-        name: item.productName,
-        image: item.image ? String(item.image) : null,
-        quantity: Number(item.quantity || 0),
+      items: order.items.map((item) => ({
+        ...item,
+        description: item.vendorProductId ? descriptionById.get(item.vendorProductId) ?? null : null,
       })),
+      paymentMethodLabel: paymentMethodLabel(order.paymentMethod),
     },
   });
 }

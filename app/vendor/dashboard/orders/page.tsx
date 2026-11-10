@@ -108,7 +108,7 @@ function VendorOrdersPageInner() {
           type="search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search by shop order # or customer name…"
+          placeholder="Search by order #…"
           className="w-full max-w-md rounded-lg border border-borderGray px-3 py-2 text-sm sm:w-auto"
         />
       </div>
@@ -151,6 +151,7 @@ function VendorOrdersPageInner() {
         <>
           <OrderTable
             rows={rows}
+            showCustomer={false}
             getDetailHref={(id) => `/vendor/dashboard/orders/${id}`}
           />
           <OrderCard

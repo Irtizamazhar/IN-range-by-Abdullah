@@ -95,6 +95,9 @@ export default function AdminVendorsPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [rejectFor, setRejectFor] = useState<AdminVendorRow | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [deleteFor, setDeleteFor] = useState<AdminVendorRow | null>(null);
+  const [deleteEmail, setDeleteEmail] = useState("");
+  const [deleteError, setDeleteError] = useState("");
   const [riskByVendor, setRiskByVendor] = useState<Record<string, RiskMini>>({});
 
   const load = useCallback(async (showLoading = true, requestedPage = pageRef.current) => {
@@ -179,6 +182,41 @@ export default function AdminVendorsPage() {
       return;
     }
     await patch(rejectFor.id, { action: "reject", rejectionReason: reason });
+  }
+
+  function openDelete(vendor: AdminVendorRow) {
+    setDeleteFor(vendor);
+    setDeleteEmail("");
+    setDeleteError("");
+  }
+
+  function closeDelete() {
+    setDeleteFor(null);
+    setDeleteEmail("");
+    setDeleteError("");
+  }
+
+  async function submitDelete() {
+    if (!deleteFor) return;
+    setDeleteError("");
+    try {
+      const r = await fetch(`/api/admin/vendors/${encodeURIComponent(deleteFor.id)}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ confirmEmail: deleteEmail }),
+      });
+      const data = (await r.json().catch(() => ({}))) as { error?: string };
+      if (!r.ok) {
+        setDeleteError(data.error || "The seller could not be deleted.");
+        return;
+      }
+      toast.success(`${deleteFor.shopName || deleteFor.email} was deleted`);
+      closeDelete();
+      await load(false);
+    } catch {
+      setDeleteError("Network error. Nothing was deleted.");
+    }
   }
 
   return (
@@ -333,6 +371,13 @@ export default function AdminVendorsPage() {
                     {v.status === "rejected" ? (
                       <span className="self-center text-xs text-darkText/60">Waiting for the seller to resubmit</span>
                     ) : null}
+                    <button
+                      type="button"
+                      onClick={() => openDelete(v)}
+                      className="rounded-lg border border-red-600 px-3 py-2 text-sm font-bold text-red-700 hover:bg-red-50"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </div>
 
@@ -495,6 +540,54 @@ export default function AdminVendorsPage() {
                 className="rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
               >
                 Reject vendor
+              </LoadingButton>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {deleteFor ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div role="dialog" aria-modal="true" aria-labelledby="delete-vendor-title" className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <h2 id="delete-vendor-title" className="text-lg font-black text-darkText">
+              Delete {deleteFor.shopName || deleteFor.ownerName} permanently?
+            </h2>
+            <p className="mt-2 text-sm text-darkText/70">
+              This removes the seller account, its products, services, documents and sign-in. It cannot be undone.
+            </p>
+            <p className="mt-2 text-sm text-darkText/70">
+              Sellers with orders, payouts or offers cannot be deleted, because that would erase customer records. Suspend those accounts instead.
+            </p>
+            <label htmlFor="delete-vendor-email" className="mt-4 block text-sm font-semibold text-darkText">
+              Type <span className="font-mono">{deleteFor.email}</span> to confirm
+            </label>
+            <input
+              id="delete-vendor-email"
+              type="email"
+              autoComplete="off"
+              value={deleteEmail}
+              onChange={(e) => setDeleteEmail(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-borderGray p-3 text-sm"
+            />
+            {deleteError ? (
+              <p role="alert" className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-800">
+                {deleteError}
+              </p>
+            ) : null}
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeDelete}
+                className="rounded-lg border border-borderGray px-4 py-2 text-sm font-semibold"
+              >
+                Cancel
+              </button>
+              <LoadingButton loadingLabel="Deleting..."
+                type="button"
+                disabled={deleteEmail.trim().toLowerCase() !== deleteFor.email.toLowerCase()}
+                onClick={() => submitDelete()}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+              >
+                Delete permanently
               </LoadingButton>
             </div>
           </div>
