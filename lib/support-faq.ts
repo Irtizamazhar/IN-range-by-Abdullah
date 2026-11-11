@@ -3,7 +3,7 @@ export type Faq = { category: string; question: string; answer: string };
 /** Static, server-rendered FAQ content -- never fetched from an API. */
 export const CUSTOMER_FAQS: Faq[] = [
   { category: "ORDERS_DELIVERY", question: "Where is my order?", answer: "Open Account → Orders and select the order to see its live status and delivery estimate. Cash on Delivery orders show tracking once the seller ships them." },
-  { category: "ORDERS_DELIVERY", question: "Can I cancel an order?", answer: "You can cancel from the order detail page while it is still pending, confirmed, or processing. Once an item has shipped, cancellation is no longer available there — create a ticket instead." },
+  { category: "ORDERS_DELIVERY", question: "Can I cancel an order?", answer: "You can cancel from the order detail page until the seller confirms your order. Once it is confirmed, cancellation is no longer available — create a ticket instead." },
   { category: "PAYMENT", question: "What payment methods are supported?", answer: "JORO currently supports Cash on Delivery (COD) in the cities listed at checkout." },
   { category: "RETURN_REFUND", question: "How do I request a return or refund?", answer: "Open the order, choose the item, and start a return request with a reason. The seller reviews it and a refund is issued once the return is accepted." },
   { category: "PRODUCT_ISSUE", question: "I received the wrong or a damaged product.", answer: "Start a return request from the order with the reason \"Damaged\" or \"Wrong item\", and attach a photo if you have one. If you need more help, create a ticket and reference the order." },

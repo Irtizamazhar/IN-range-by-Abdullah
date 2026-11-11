@@ -22,7 +22,7 @@ const FAQS = [
   },
   {
     q: "Order cancel kab tak ho sakta hai?",
-    a: "Order pending/confirmed/processing status mein ho to cancel ho sakta hai. Packing ya shipped ke baad cancellation allowed nahi hoti.",
+    a: "Jab tak seller aap ka order confirm na kare, aap use cancel kar sakte hain. Seller ke confirm karne ke baad cancellation allowed nahi hoti; madad ke liye support se rabta karein.",
   },
   {
     q: "Product return/exchange policy kya hai?",

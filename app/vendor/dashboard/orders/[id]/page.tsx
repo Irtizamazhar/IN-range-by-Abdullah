@@ -24,6 +24,7 @@ export default function VendorShopOrderDetailPage() {
   const [data, setData] = useState<OrderDetailModel | null>(null);
   const [loading, setLoading] = useState(true);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [showShippingLabel, setShowShippingLabel] = useState(false);
 
   const load = useCallback(async () => {
@@ -75,11 +76,6 @@ export default function VendorShopOrderDetailPage() {
 
   async function deleteOrder() {
     if (!id || !data) return;
-    const active = data.orderStatus !== "delivered" && data.orderStatus !== "cancelled";
-    const message = active
-      ? `Delete order ${data.shopOrderNumber}?\n\nIt will be cancelled first (the customer is notified and stock is restored), then removed from your orders. This cannot be undone.`
-      : `Delete order ${data.shopOrderNumber} from your orders? This cannot be undone.`;
-    if (!window.confirm(message)) return;
     try {
       const r = await fetch(`/api/orders/vendor/${encodeURIComponent(id)}`, {
         method: "DELETE",
@@ -93,6 +89,7 @@ export default function VendorShopOrderDetailPage() {
         return;
       }
       toast.success("Order deleted");
+      setDeleteOpen(false);
       router.push("/vendor/dashboard/orders");
     } catch {
       toast.error("Network error. Nothing was deleted.");
@@ -274,27 +271,25 @@ export default function VendorShopOrderDetailPage() {
                 Cancel order
               </LoadingButton>
               {data.orderStatus !== "shipped" ? (
-                <LoadingButton
+                <button
                   type="button"
-                  loadingLabel="Deleting…"
-                  onClick={deleteOrder}
+                  onClick={() => setDeleteOpen(true)}
                   className="rounded-xl bg-red-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-red-700"
                 >
                   Delete order
-                </LoadingButton>
+                </button>
               ) : null}
             </div>
           </div>
         ) : (
           <div className="mt-8 border-t border-borderGray pt-6">
-            <LoadingButton
+            <button
               type="button"
-              loadingLabel="Deleting…"
-              onClick={deleteOrder}
+              onClick={() => setDeleteOpen(true)}
               className="rounded-xl bg-red-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-red-700"
             >
               Delete order
-            </LoadingButton>
+            </button>
           </div>
         )}
       </div>
@@ -304,6 +299,49 @@ export default function VendorShopOrderDetailPage() {
         onClose={() => setCancelOpen(false)}
         onConfirm={cancel}
       />
+
+      {deleteOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div
+            className="w-full max-w-md rounded-card border border-borderGray bg-white p-6 shadow-xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-order-title"
+          >
+            <h2 id="delete-order-title" className="text-lg font-bold text-darkText">
+              Delete order {data.shopOrderNumber}?
+            </h2>
+            {data.orderStatus !== "delivered" && data.orderStatus !== "cancelled" ? (
+              <p className="mt-2 text-sm text-darkText/70">
+                This order will be <strong>cancelled first</strong>: the customer is notified and the stock is
+                restored. Then it is removed from your orders.
+              </p>
+            ) : (
+              <p className="mt-2 text-sm text-darkText/70">
+                This order will be removed from your orders.
+              </p>
+            )}
+            <p className="mt-2 text-sm font-semibold text-red-700">This cannot be undone.</p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setDeleteOpen(false)}
+                className="rounded-lg border border-borderGray px-4 py-2 text-sm font-semibold text-darkText hover:bg-lightGray/40"
+              >
+                Back
+              </button>
+              <LoadingButton
+                type="button"
+                loadingLabel="Deleting…"
+                onClick={deleteOrder}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                Delete order
+              </LoadingButton>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {showShippingLabel ? (
         <div className="fixed inset-0 z-50">

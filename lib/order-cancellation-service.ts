@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { appendStatusHistory, syncLineOrdersToShopStatus } from "@/lib/vendor-shop-order-helpers";
 import { releaseReservedInventory } from "@/lib/order-inventory-service";
 import { createCustomerNotification } from "@/lib/customer-notifications";
+import { canCustomerCancelOrder, CUSTOMER_CANCEL_BLOCKED_MESSAGE } from "@/lib/customer-account-policy";
 
 const CANCELLABLE = ["pending", "confirmed", "processing", "packed"];
 
@@ -135,6 +136,11 @@ export async function cancelParentOrder(params: {
   }
   if (order.vendorShopOrders.some((shop) => !CANCELLABLE.includes(shop.status))) {
     return { ok: false, error: "A seller has already shipped this order" };
+  }
+  // Customers may cancel only before the seller confirms. A seller confirming at the same moment
+  // is caught by the status check-and-set inside the transaction below.
+  if (params.actorType === "customer" && !canCustomerCancelOrder(order)) {
+    return { ok: false, error: CUSTOMER_CANCEL_BLOCKED_MESSAGE };
   }
 
   try {

@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
 import { z } from "zod";
+import * as customerAccountPolicy from "../lib/customer-account-policy";
 
 type Row = Record<string, any>;
 function loadService(path: string, modules: Row): Row {
@@ -28,7 +29,7 @@ test("a collected parcel cannot use ordinary cancellation or release inventory",
     "@/lib/prisma": { prisma: db },
     "@/lib/vendor-shop-order-helpers": { appendStatusHistory: () => [], syncLineOrdersToShopStatus: async () => ({}) },
     "@/lib/order-inventory-service": { releaseReservedInventory: async () => { releases++; } },
-    "@/lib/customer-notifications": { createCustomerNotification: async () => ({}) },
+    "@/lib/customer-notifications": { createCustomerNotification: async () => ({}) }, "@/lib/customer-account-policy": customerAccountPolicy,
   });
   const result = await service.cancelSellerOrder({ shopOrderId: shop.id, reason: "Customer request", actorType: "admin" });
   assert.equal(result.ok, false);
@@ -49,7 +50,7 @@ test("collection winning the pickup compare-and-swap aborts cancellation before 
     "@/lib/prisma": { prisma: { vendorShopOrder: { findFirst: async () => shop }, $transaction: async (fn: (tx: Row) => Promise<unknown>) => fn(tx) } },
     "@/lib/vendor-shop-order-helpers": { appendStatusHistory: () => [], syncLineOrdersToShopStatus: async () => ({}) },
     "@/lib/order-inventory-service": { releaseReservedInventory: async () => { releases++; } },
-    "@/lib/customer-notifications": { createCustomerNotification: async () => ({}) },
+    "@/lib/customer-notifications": { createCustomerNotification: async () => ({}) }, "@/lib/customer-account-policy": customerAccountPolicy,
   });
   const result = await service.cancelSellerOrder({ shopOrderId: shop.id, reason: "Customer request", actorType: "admin" });
   assert.equal(result.ok, false);
@@ -72,7 +73,7 @@ test("cancellation reads a request created while waiting for the shop lock", asy
     "@/lib/prisma": { prisma: { vendorShopOrder: { findFirst: async () => shop }, $transaction: async (fn: (tx: Row) => Promise<unknown>) => fn(tx) } },
     "@/lib/vendor-shop-order-helpers": { appendStatusHistory: () => [], syncLineOrdersToShopStatus: async () => ({}) },
     "@/lib/order-inventory-service": { releaseReservedInventory: async () => { releases++; } },
-    "@/lib/customer-notifications": { createCustomerNotification: async () => ({}) },
+    "@/lib/customer-notifications": { createCustomerNotification: async () => ({}) }, "@/lib/customer-account-policy": customerAccountPolicy,
   });
   const result = await service.cancelSellerOrder({ shopOrderId: shop.id, reason: "Customer request", actorType: "admin" });
   assert.equal(result.ok, false);
@@ -96,7 +97,7 @@ test("pre-collection cancellation still cancels pickup and releases inventory on
     "@/lib/prisma": { prisma: { vendorShopOrder: { findFirst: async () => shop }, $transaction: async (fn: (tx: Row) => Promise<unknown>) => fn(tx) } },
     "@/lib/vendor-shop-order-helpers": { appendStatusHistory: () => [], syncLineOrdersToShopStatus: async () => ({}) },
     "@/lib/order-inventory-service": { releaseReservedInventory: async () => { releases++; } },
-    "@/lib/customer-notifications": { createCustomerNotification: async () => ({}) },
+    "@/lib/customer-notifications": { createCustomerNotification: async () => ({}) }, "@/lib/customer-account-policy": customerAccountPolicy,
   });
   const result = await service.cancelSellerOrder({ shopOrderId: shop.id, reason: "Customer request", actorType: "admin" });
   assert.equal(result.ok, true);

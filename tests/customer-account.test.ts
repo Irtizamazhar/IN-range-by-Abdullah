@@ -18,12 +18,19 @@ test("partial address updates preserve an omitted default flag", () => {
   assert.deepEqual(addressSchema.partial().parse({ city: "Lahore", customerId: "other" }), { city: "Lahore" });
   assert.deepEqual(addressSchema.partial().parse({ isDefault: false }), { isDefault: false });
 });
-test("cancellation link excludes paid, closed and partly shipped orders", () => {
-  const order = { orderStatus: "pending", paymentStatus: "pending", vendorShopOrders: [{ status: "packed" }] };
+test("customers can cancel only until the seller confirms; paid and closed orders are excluded", () => {
+  // Checkout creates the parent order as "confirmed"; the seller part starts as "pending".
+  const order = { orderStatus: "confirmed", paymentStatus: "pending", vendorShopOrders: [{ status: "pending" }] };
   assert.equal(canCustomerCancelOrder(order), true);
+  assert.equal(canCustomerCancelOrder({ ...order, orderStatus: "pending" }), true);
+  assert.equal(canCustomerCancelOrder({ ...order, vendorShopOrders: [] }), true);
+  assert.equal(canCustomerCancelOrder({ ...order, vendorShopOrders: [{ status: "pending" }, { status: "cancelled" }] }), true);
+  for (const status of ["confirmed", "packed", "shipped", "delivered"]) {
+    assert.equal(canCustomerCancelOrder({ ...order, vendorShopOrders: [{ status }] }), false, status);
+    assert.equal(canCustomerCancelOrder({ ...order, vendorShopOrders: [{ status: "pending" }, { status }] }), false, `mixed ${status}`);
+  }
   for (const paymentStatus of ["received", "partially_refunded", "refunded"]) assert.equal(canCustomerCancelOrder({ ...order, paymentStatus }), false);
-  for (const orderStatus of ["shipped", "delivered", "cancelled"]) assert.equal(canCustomerCancelOrder({ ...order, orderStatus }), false);
-  assert.equal(canCustomerCancelOrder({ ...order, vendorShopOrders: [{ status: "shipped" }] }), false);
+  for (const orderStatus of ["processing", "packed", "shipped", "delivered", "cancelled"]) assert.equal(canCustomerCancelOrder({ ...order, orderStatus }), false);
 });
 test("customer service terms exclude commissions and internal snapshot values", () => {
   const result = customerServiceSnapshot({ name: "Assembly", total: "500", commissionRate: "20", vendorPayable: "400", adminNote: "private", warranty: { secret: true } });
