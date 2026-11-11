@@ -227,7 +227,9 @@ test("linked vendor order API enforces ownership, exposes only its own items and
   const own = { ...shop, items: [{ ...shop.items[0], vendorProductId: "vp-a" }], customerId: "customer-a", customerEmail: "buyer@example.invalid", vendorId: "vendor-a", shopOrderNumber: "SHOP-A", paymentMethod: "cod", paymentStatus: "pending", commissionAmount: 100, netAmount: 1800, updatedAt: order.createdAt, statusHistory: [], order: { orderNumber: order.orderNumber, totalAmount: 98765, handlingFee: 456, orderItems: [{ name: "SECRET OTHER VENDOR", quantity: 1, price: 98765 }] } };
   const imports: Record<string, unknown> = {
     "next/server": { NextResponse },
-    "@/lib/vendor-api-auth": { requireVendorSessionApi: async () => vendor ? { vendor: { id: vendor } } : { response: NextResponse.json({}, { status: 401 }) } },
+    "@/lib/vendor-api-auth": { requireVendorSessionApi: async () => vendor ? { vendor: { id: vendor } } : { response: NextResponse.json({}, { status: 401 }) }, requireApprovedVendorApi: async () => ({ response: NextResponse.json({}, { status: 401 }) }) },
+    "@/lib/marketplace-api": { ApiError, sameOrigin: () => {} },
+    "@/lib/vendor-shop-order-service": { deleteShopOrderForVendor: async () => ({ ok: true }) },
     "@/lib/prisma": { prisma: { vendorShopOrder: { findFirst: async ({ where, include }: { where: { id: string; vendorId: string }; include: { order: { select: Record<string, boolean> } } }) => {
       assert.deepEqual(Object.keys(include.order.select), ["orderNumber"]);
       return where.id === own.id && where.vendorId === own.vendorId ? own : null;

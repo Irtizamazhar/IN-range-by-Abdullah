@@ -4,7 +4,7 @@ import { LoadingButton } from "@/components/ui/LoadingButton";
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "@/components/ui/LoadingLink";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { Download, Printer, X } from "lucide-react";
 import { CancelModal } from "@/components/orders/CancelModal";
@@ -19,6 +19,7 @@ import { NeedHelpButton } from "@/components/support/NeedHelpButton";
 
 export default function VendorShopOrderDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = typeof params?.id === "string" ? params.id : "";
   const [data, setData] = useState<OrderDetailModel | null>(null);
   const [loading, setLoading] = useState(true);
@@ -70,6 +71,32 @@ export default function VendorShopOrderDetailPage() {
     }
     toast.success("Order cancelled");
     await load();
+  }
+
+  async function deleteOrder() {
+    if (!id || !data) return;
+    const active = data.orderStatus !== "delivered" && data.orderStatus !== "cancelled";
+    const message = active
+      ? `Delete order ${data.shopOrderNumber}?\n\nIt will be cancelled first (the customer is notified and stock is restored), then removed from your orders. This cannot be undone.`
+      : `Delete order ${data.shopOrderNumber} from your orders? This cannot be undone.`;
+    if (!window.confirm(message)) return;
+    try {
+      const r = await fetch(`/api/orders/vendor/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({}),
+      });
+      const j = (await r.json().catch(() => ({}))) as { error?: string };
+      if (!r.ok) {
+        toast.error(j.error || "Delete failed. Please try again.");
+        return;
+      }
+      toast.success("Order deleted");
+      router.push("/vendor/dashboard/orders");
+    } catch {
+      toast.error("Network error. Nothing was deleted.");
+    }
   }
 
   if (loading && !data) {
@@ -238,7 +265,7 @@ export default function VendorShopOrderDetailPage() {
               statusUrl={`/api/orders/vendor/${encodeURIComponent(id)}/status`}
               onSuccess={() => load()}
             />
-            <div>
+            <div className="flex flex-wrap gap-3">
               <LoadingButton
                 type="button"
                 onClick={() => setCancelOpen(true)}
@@ -246,9 +273,30 @@ export default function VendorShopOrderDetailPage() {
               >
                 Cancel order
               </LoadingButton>
+              {data.orderStatus !== "shipped" ? (
+                <LoadingButton
+                  type="button"
+                  loadingLabel="Deleting…"
+                  onClick={deleteOrder}
+                  className="rounded-xl bg-red-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-red-700"
+                >
+                  Delete order
+                </LoadingButton>
+              ) : null}
             </div>
           </div>
-        ) : null}
+        ) : (
+          <div className="mt-8 border-t border-borderGray pt-6">
+            <LoadingButton
+              type="button"
+              loadingLabel="Deleting…"
+              onClick={deleteOrder}
+              className="rounded-xl bg-red-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-red-700"
+            >
+              Delete order
+            </LoadingButton>
+          </div>
+        )}
       </div>
 
       <CancelModal

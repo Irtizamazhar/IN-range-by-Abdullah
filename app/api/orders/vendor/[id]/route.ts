@@ -1,7 +1,9 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-import { requireVendorSessionApi } from "@/lib/vendor-api-auth";
+import { requireApprovedVendorApi, requireVendorSessionApi } from "@/lib/vendor-api-auth";
+import { sameOrigin, ApiError } from "@/lib/marketplace-api";
+import { deleteShopOrderForVendor } from "@/lib/vendor-shop-order-service";
 import { prisma } from "@/lib/prisma";
 import {
   paymentMethodLabel,
@@ -18,7 +20,7 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
 
   const { id } = await ctx.params;
   const row = await prisma.vendorShopOrder.findFirst({
-    where: { id, vendorId: auth.vendor.id },
+    where: { id, vendorId: auth.vendor.id, vendorDeletedAt: null },
     include: {
       order: {
         select: {
@@ -53,4 +55,23 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
       paymentMethodLabel: paymentMethodLabel(order.paymentMethod),
     },
   });
+}
+
+/** Vendor: delete an order from the dashboard; active orders are cancelled first (DELETE /api/orders/vendor/:id). */
+export async function DELETE(req: NextRequest, ctx: Ctx) {
+  try {
+    sameOrigin(req);
+    const auth = await requireApprovedVendorApi();
+    if ("response" in auth) return auth.response;
+    const { id } = await ctx.params;
+    const body = (await req.json().catch(() => ({}))) as { reason?: unknown };
+    const reason = typeof body.reason === "string" ? body.reason.slice(0, 2000) : undefined;
+    const result = await deleteShopOrderForVendor({ shopOrderId: id, vendorId: auth.vendor.id, reason });
+    if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    if (e instanceof ApiError) return NextResponse.json({ error: e.message }, { status: e.status });
+    console.error("DELETE /api/orders/vendor/[id]", e instanceof Error ? e.name : "Unknown error");
+    return NextResponse.json({ error: "The order could not be deleted. Nothing was changed." }, { status: 500 });
+  }
 }

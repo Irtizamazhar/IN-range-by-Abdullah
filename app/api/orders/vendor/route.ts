@@ -14,7 +14,7 @@ import {
 async function shopOrderCountsForVendor(vendorId: string) {
   const groups = await prisma.vendorShopOrder.groupBy({
     by: ["status"],
-    where: { vendorId },
+    where: { vendorId, vendorDeletedAt: null },
     _count: { _all: true },
   });
   return buildShopOrderStatusCounts(groups);
@@ -37,6 +37,7 @@ export async function GET(req: NextRequest) {
 
   const where: Prisma.VendorShopOrderWhereInput = {
     vendorId: auth.vendor.id,
+    vendorDeletedAt: null,
   };
 
   const shopStatuses: VendorShopOrderStatus[] = [

@@ -164,7 +164,7 @@ export default async function VendorDashboardPage({
         select: { vendorAmount: true },
       }),
       prisma.vendorShopOrder.findMany({
-        where: { vendorId: v.id },
+        where: { vendorId: v.id, vendorDeletedAt: null },
         orderBy: { placedAt: "desc" },
         take: 5,
         select: {

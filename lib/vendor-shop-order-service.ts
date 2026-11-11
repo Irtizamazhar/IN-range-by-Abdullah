@@ -192,6 +192,41 @@ export async function updateShippedTrackingOnly(params: {
   return { ok: true };
 }
 
+const SELLER_DELETE_REASON = "Order deleted by the seller.";
+
+/**
+ * Seller "Delete": removes the order from the seller's dashboard only. Active orders
+ * (pending/confirmed/packed) are cancelled first, so the customer is notified and stock is
+ * restored. Shipped orders cannot be deleted. Customer, admin and payout records are kept.
+ */
+export async function deleteShopOrderForVendor(params: {
+  shopOrderId: string;
+  vendorId: string;
+  reason?: string;
+}): Promise<{ ok: true } | { ok: false; error: string; status: number }> {
+  const shop = await prisma.vendorShopOrder.findFirst({
+    where: { id: params.shopOrderId, vendorId: params.vendorId, vendorDeletedAt: null },
+    select: { id: true, status: true },
+  });
+  if (!shop) return { ok: false, error: "Not found", status: 404 };
+  if (shop.status === "shipped") {
+    return { ok: false, error: "This order is with the courier and cannot be deleted. Contact support if needed.", status: 409 };
+  }
+  if (shop.status !== "delivered" && shop.status !== "cancelled") {
+    const cancelled = await cancelVendorShopOrder({
+      shopOrderId: shop.id,
+      reason: params.reason?.trim() || SELLER_DELETE_REASON,
+      vendorId: params.vendorId,
+    });
+    if (!cancelled.ok) return { ok: false, error: cancelled.error, status: 409 };
+  }
+  await prisma.vendorShopOrder.updateMany({
+    where: { id: shop.id, vendorId: params.vendorId, vendorDeletedAt: null },
+    data: { vendorDeletedAt: new Date() },
+  });
+  return { ok: true };
+}
+
 /** Cancel a shop bundle (vendor or admin). Delivered orders cannot be cancelled. */
 export async function cancelVendorShopOrder(params: {
   shopOrderId: string;

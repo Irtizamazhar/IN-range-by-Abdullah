@@ -888,6 +888,8 @@ model VendorShopOrder {
   statusHistory  Json                  @default("[]")
   cancelReason   String?               @db.Text
   trackingNumber String?               @db.VarChar(255)
+  /// Seller removed this order from their dashboard. Customer, admin and payout records are kept.
+  vendorDeletedAt DateTime?
 
   placedAt  DateTime @default(now())
   updatedAt DateTime @updatedAt
