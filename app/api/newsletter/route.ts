@@ -1,0 +1,10 @@
+import { api, ApiError } from "@/lib/marketplace-api";
+import { prisma } from "@/lib/prisma";
+import { incrementalFeatures } from "@/lib/incremental-features";
+import { featureRate, featureWrite, requestAddress } from "@/lib/public-feature-security";
+import { newsletterCustomer, newsletterToken, subscribeNewsletter } from "@/lib/newsletter-service";
+export const dynamic = "force-dynamic";
+function enabled() { if (!incrementalFeatures().newsletter) throw new ApiError(404, "Newsletter is not available yet."); }
+export async function GET() { return api(async () => { enabled(); const customer = await newsletterCustomer(); if (!customer) return { status: "GUEST" }; const row = await prisma.newsletterSubscription.findFirst({ where: { customerId: customer.id, email: customer.email }, select: { status: true } }); return { status: row?.status || "NONE" }; }); }
+export async function POST(request: Request) { return api(async () => { enabled(); featureWrite(request); const body = await request.json(); if (body.action === "confirm" || body.action === "unsubscribe") { await featureRate("newsletter-token", requestAddress(request), 60, 60); return newsletterToken(body.action, String(body.token || "")); } await featureRate("newsletter", requestAddress(request), 5, 3600); await subscribeNewsletter(body); return { ok: true, message: "If eligible, check your email and confirm your subscription. No subscription is activated without confirmation." }; }); }
+export async function DELETE(request: Request) { return api(async () => { enabled(); featureWrite(request); const customer = await newsletterCustomer(); if (!customer) throw new ApiError(401, "Please sign in."); await prisma.$transaction(async tx => { await tx.newsletterSubscription.updateMany({ where: { customerId: customer.id, email: customer.email }, data: { status: "UNSUBSCRIBED", unsubscribedAt: new Date(), confirmationHash: null } }); await tx.customer.update({ where: { id: customer.id }, data: { marketingEmailConsentAt: null, marketingEmailUnsubscribedAt: new Date() } }); }); return { ok: true }; }); }

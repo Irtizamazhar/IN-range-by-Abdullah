@@ -65,6 +65,29 @@ test("concurrent workers send once, only to the persisted owner; SMTP acceptance
   await deliverOrderConfirmation(db, async () => { assert.fail("Accepted mail must not send twice"); });
 });
 
+test("guest confirmation uses the persisted optional email only when guest checkout is enabled", async () => {
+  const previous = process.env.JORO_GUEST_CHECKOUT;
+  const guest = { ...order, customerId: null, customer: null } as unknown as typeof order;
+  try {
+    process.env.JORO_GUEST_CHECKOUT = "false";
+    const disabled = fixture(0, guest);
+    await deliverOrderConfirmation(disabled.db, async () => { assert.fail("Disabled guest mail must not send"); });
+    assert.equal(disabled.job.status, "skipped");
+    process.env.JORO_GUEST_CHECKOUT = "true";
+    const enabled = fixture(0, guest);
+    const recipients: string[] = [];
+    await deliverOrderConfirmation(enabled.db, async message => { recipients.push(message.to); return "accepted"; });
+    assert.deepEqual(recipients, [order.customerEmail]);
+    assert.equal(enabled.job.status, "accepted");
+    const noEmail = fixture(0, { ...guest, customerEmail: "" });
+    await deliverOrderConfirmation(noEmail.db, async () => { assert.fail("Guest without email must not send"); });
+    assert.equal(noEmail.job.status, "skipped");
+  } finally {
+    if (previous === undefined) delete process.env.JORO_GUEST_CHECKOUT;
+    else process.env.JORO_GUEST_CHECKOUT = previous;
+  }
+});
+
 test("definite SMTP failures retry with backoff and never mark acceptance", async () => {
   const { job, db } = fixture();
   await deliverOrderConfirmation(db, async () => "retry");

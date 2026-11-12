@@ -94,6 +94,7 @@ export const ADMIN_NAV_LINKS = [
   { href: "/vendors", label: "Vendors", icon: Store, dividerBefore: true },
   { href: "/vendors/top-vendors", label: "Top Vendors", icon: Trophy },
   { href: "/vendor-promotions", label: "Vendor Promotions", icon: Megaphone },
+  { href: "/homepage-promotions", label: "Homepage Promotions", icon: Megaphone },
   { href: "/marketing/coupons", label: "Coupons", icon: TicketPercent },
   { href: "/marketing/email-campaigns", label: "Email Campaigns", icon: Mail },
   { href: "/customers", label: "Customers", icon: Users },
@@ -111,6 +112,8 @@ export const ADMIN_NAV_LINKS = [
   },
   { href: "/notifications", label: "Notifications", icon: Bell },
   { href: "/support", label: "Support", icon: LifeBuoy },
+  { href: "/live-chat", label: "Customer Live Chat", icon: LifeBuoy },
+  { href: "/newsletter", label: "Newsletter Subscribers", icon: Mail },
   { href: "/dashboard/team", label: "Admin Team", icon: ShieldCheck, dividerBefore: true },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

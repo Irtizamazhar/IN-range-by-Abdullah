@@ -54,6 +54,8 @@ function fixture() {
     catch (e) { Object.assign(state, saved); throw e; }
   };
   const modules: Row = {
+    "@/lib/incremental-features": { incrementalFeatures: () => ({ guestCheckout: false }) },
+    "@/lib/guest-checkout": {}, "@/lib/public-feature-security": {}, "@/lib/vendor-auth-server": {},
     "next/server": { NextResponse }, "node:crypto": { randomUUID }, "@prisma/client": { Prisma },
     "@/lib/prisma": { prisma: db }, "@/lib/marketplace-api": { ApiError },
     "@/lib/checkout-addresses": { checkoutAddresses }, "@/lib/checkout-diagnostics": { checkoutDiagnostic, checkoutFailure },

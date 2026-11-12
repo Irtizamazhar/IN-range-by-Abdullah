@@ -1,6 +1,8 @@
 "use client";
 
 import { Suspense } from "react";
+import dynamic from "next/dynamic";
+const LiveChat = dynamic(() => import("@/components/user/LiveChat").then(module => module.LiveChat), { ssr: false });
 import { usePathname } from "next/navigation";
 import { AnnouncementBar } from "@/components/user/AnnouncementBar";
 import { Navbar } from "@/components/user/Navbar";
@@ -17,13 +19,19 @@ export function UserRouteShell({
   whatsappNumber,
   footerSettings,
   children,
+  chatEnabled = false,
+  newsletterEnabled = false,
 }: {
   whatsappNumber: string;
   footerSettings: FooterSettings;
   children: React.ReactNode;
+  chatEnabled?: boolean;
+  newsletterEnabled?: boolean;
 }) {
   // Order tracking is a standalone courier-style page without the shop chrome.
-  const standalone = usePathname() === "/track-order";
+  const pathname = usePathname();
+  const standalone = pathname === "/track-order";
+  const checkout = pathname === "/checkout" || pathname === "/cart";
   return (
     <CartProvider>
       <CustomerAuthProvider>
@@ -41,11 +49,12 @@ export function UserRouteShell({
               />
             }
           >
-            <Navbar whatsappNumber={whatsappNumber} />
+            <Navbar whatsappNumber={whatsappNumber} newsletterEnabled={newsletterEnabled} />
           </Suspense>
           <main className="min-w-0 flex-1">{children}</main>
           <Footer settings={footerSettings} />
           <WhatsAppFloat number={whatsappNumber} />
+          {chatEnabled && !checkout && <LiveChat />}
         </div>
         )}
         </PostWantProvider>

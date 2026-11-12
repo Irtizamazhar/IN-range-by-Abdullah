@@ -73,5 +73,6 @@ export function Footer({ settings }: { settings: Pick<ISettings, "whatsappNumber
       <div className={styles.skyline} aria-hidden="true"><Image src="/branding/footer/pakistan-skyline.png" alt="" fill sizes="(max-width: 639px) 390px, (max-width: 1024px) 768px, 1280px" className={styles.skylineImage} /></div>
       <div className={styles.bottom}><span className={styles.copyright}>© {new Date().getFullYear()} JORO.pk. All rights reserved.</span><SocialLinks /><nav aria-label="Footer shortcuts" className={styles.motto}><Link href="/products">Shop</Link><b aria-hidden="true">·</b><PostWantButton className={styles.shortcutRequest}>Request a Want</PostWantButton><b aria-hidden="true">·</b><Link href="/wants">Wants</Link></nav></div>
     </div>
+    {process.env.NEXT_PUBLIC_GA4_ENABLED === "true" && process.env.NEXT_PUBLIC_GA4_PRIVACY_APPROVED === "true" && <button type="button" onClick={() => window.dispatchEvent(new Event("joro:open-analytics"))} className="min-h-11 rounded-lg px-3 py-2 text-xs underline underline-offset-4" aria-controls="joro-analytics-preferences">Analytics preferences</button>}
   </footer>;
 }

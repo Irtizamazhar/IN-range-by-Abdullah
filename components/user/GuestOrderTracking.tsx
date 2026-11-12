@@ -1,0 +1,8 @@
+"use client";
+import { useEffect, useState } from "react";
+type Order = { orderNumber: string; orderStatus: string; paymentMethod: string; totalAmount: number; customerAddress: string; city: string; products?: { name: string; quantity: number; price: number }[] };
+export function GuestOrderTracking({ id }: { id: string }) {
+  const [order, setOrder] = useState<Order | null>(null), [error, setError] = useState("");
+  useEffect(() => { const controller = new AbortController(); fetch(`/api/guest-orders/${encodeURIComponent(id)}`, { signal: controller.signal, cache: "no-store" }).then(async r => { const data = await r.json(); if (!r.ok) throw Error(data.error || "Order unavailable."); setOrder(data); }).catch(e => { if (!controller.signal.aborted) setError(e instanceof Error ? e.message : "Please try again."); }); return () => controller.abort(); }, [id]);
+  return <main className="mx-auto max-w-2xl space-y-4 px-4 py-10"><h1 className="text-2xl font-bold">Guest order tracking</h1><p className="text-sm">Access is private to this browser session for 30 days. Keep this link and contact support if access is lost. An order number alone does not grant access.</p>{error && <p role="alert">{error}</p>}{order ? <><h2 className="font-bold">Order {order.orderNumber}</h2><p>Status: {order.orderStatus}</p><p>Total: PKR {Number(order.totalAmount).toLocaleString("en-PK")}</p><p>Payment: {order.paymentMethod}</p><p>{order.customerAddress}, {order.city}</p><ul>{order.products?.map((p, i) => <li key={i}>{p.name} × {p.quantity}</li>)}</ul></> : !error && <p role="status">Loading your order…</p>}</main>;
+}

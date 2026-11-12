@@ -2,6 +2,10 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
+import { incrementalFeatures } from "@/lib/incremental-features";
+import { guestOwnerHash, guestEmail, ownsGuestOrder, guestCouponAllowed } from "@/lib/guest-checkout";
+import { featureWrite, featureRate, requestAddress } from "@/lib/public-feature-security";
+import { getVendorFromSession } from "@/lib/vendor-auth-server";
 import { checkoutAddresses } from "@/lib/checkout-addresses";
 import { checkoutDiagnostic, checkoutFailure } from "@/lib/checkout-diagnostics";
 import { Prisma } from "@prisma/client";
@@ -103,11 +107,19 @@ export async function POST(req: NextRequest) {
 
 async function createCheckoutOrder(req: NextRequest, requestId: string) {
   const session = await getCustomerSession();
-  if (session?.user?.role !== "customer" || !session.user.id) {
+  const guest = !session?.user;
+  if ((!guest && (session?.user?.role !== "customer" || !session.user.id)) || (guest && !incrementalFeatures().guestCheckout)) {
     return NextResponse.json(
       { error: "Please sign in with a customer account to place an order" },
       { status: 401 }
     );
+  }
+  let guestOwner: string | null = null;
+  if (guest) {
+    featureWrite(req); guestOwner = guestOwnerHash();
+    if ((await getVendorFromSession({ allowUnapproved: true }))?.vendor) throw new ApiError(403, "Seller accounts cannot place guest orders.");
+    await featureRate("guest-order", requestAddress(req), 10, 3600);
+    await featureRate("guest-owner-order", guestOwner, 10, 3600);
   }
 
   let body: Record<string, unknown>;
@@ -138,8 +150,8 @@ async function createCheckoutOrder(req: NextRequest, requestId: string) {
       ? body.expectedHandlingFee
       : null;
 
-  const customer = await prisma.customer.findUnique({
-    where: { id: session.user.id },
+  const customer = guest ? { id: null, email: guestEmail(body.customerEmail), name: "", phone: "" } : await prisma.customer.findUnique({
+    where: { id: session!.user.id },
     select: { id: true, email: true, name: true, phone: true },
   });
   if (!customer) {
@@ -162,7 +174,7 @@ async function createCheckoutOrder(req: NextRequest, requestId: string) {
     include: ORDER_INCLUDE_SERIALIZE,
   });
   if (existingOrder) {
-    if (existingOrder.customerId !== customer.id) {
+    if (existingOrder.customerId !== customer.id || (guest && !await ownsGuestOrder(existingOrder.id, guestOwner!))) {
       return NextResponse.json({ error: "Checkout key conflict" }, { status: 409 });
     }
     return NextResponse.json(serializeOrder(existingOrder), {
@@ -213,7 +225,8 @@ async function createCheckoutOrder(req: NextRequest, requestId: string) {
 
   try {
   const quoteId = typeof body.quoteId === "string" && body.quoteId ? body.quoteId : null;
-  const quote = quoteId ? await checkoutQuote(prisma, quoteId, session.user.id, String(city)) : null;
+  if (guest && quoteId) throw new ApiError(401, "Sign in to check out a private accepted quote. Your cart is preserved.");
+  const quote = quoteId ? await checkoutQuote(prisma, quoteId, customer.id!, String(city)) : null;
   const settings = await getOrCreateSettings();
   const effectivePaymentMethod = "cod";
   const allowed = isCodCity(String(city), settings.codAvailableCities);
@@ -394,7 +407,8 @@ async function createCheckoutOrder(req: NextRequest, requestId: string) {
         if ((currentVendor?.id || null) !== (line.vendorSlice?.vendorProductId || null) || (currentVendor?.vendorId || null) !== (line.vendorSlice?.vendorId || null)) throw new ApiError(409, "Product ownership changed. Refresh checkout and apply the coupon again.");
         currentLines.push({ productId: line.productId, vendorId: line.vendorSlice?.vendorId, category: current.category, categoryRecordId: current.categoryRecordId, price: line.price, originalPrice: current.originalPrice == null ? null : Number(current.originalPrice), quantity: line.quantity });
       }
-      couponResult = calculateCoupon(coupon, currentLines, customer.id);
+      if (guest) guestCouponAllowed(coupon);
+      couponResult = calculateCoupon(coupon, currentLines, customer.id || `guest:${guestOwner}`);
       if (coupon.perCustomerLimit != null) {
         const count = await tx.couponRedemption.count({ where: { couponId: coupon.id, customerId: customer.id, status: "redeemed" } });
         if (count >= coupon.perCustomerLimit) throw new ApiError(400, "You have reached this coupon's usage limit.");
@@ -406,7 +420,7 @@ async function createCheckoutOrder(req: NextRequest, requestId: string) {
       if (gate.count !== 1) throw new ApiError(409, "Coupon limit or budget was reached. Please try another code.");
     }
 
-    if (quoteId) { const currentQuote = await checkoutQuote(tx, quoteId, session.user.id, String(city)); if (currentQuote.orderId) throw new ApiError(409, "Quote already checked out. Refresh your orders."); }
+    if (quoteId) { const currentQuote = await checkoutQuote(tx, quoteId, customer.id!, String(city)); if (currentQuote.orderId) throw new ApiError(409, "Quote already checked out. Refresh your orders."); }
     for (const service of services) {
       const current = await resolveServiceAddon(tx, service.productId, service.serviceId, service.quantity, String(city));
       if (!current.price.equals(service.price) || !current.commissionAmount.equals(service.commissionAmount)) throw new ApiError(409, "Service terms changed. Refresh checkout before ordering.");
@@ -424,6 +438,7 @@ async function createCheckoutOrder(req: NextRequest, requestId: string) {
         orderNumber,
         customerId: customer.id,
         checkoutKey,
+        ...(guest ? { guestAccess: { create: { ownerHash: guestOwner!, expiresAt: new Date(Date.now() + 30 * 86400000) } } } : {}),
         customerName: addresses.shipping.name,
         customerPhone: addresses.shipping.phone,
         customerEmail: customer.email,
@@ -634,7 +649,7 @@ async function createCheckoutOrder(req: NextRequest, requestId: string) {
     }
 
     for (const service of services) {
-      await tx.orderService.create({ data: { ...service, orderId: o.id, events: { create: { actor: `customer:${session.user.email}`, status: "PENDING", note: "Service booked with product checkout." } } } });
+      await tx.orderService.create({ data: { ...service, orderId: o.id, events: { create: { actor: guest ? "guest" : `customer:${customer.email}`, status: "PENDING", note: "Service booked with product checkout." } } } });
     }
     if (standaloneService && quote) {
       const rate = await resolveCommissionPercent(mp, quote.want.category, quote.revision.offer.vendor.specialCommissionRate);
@@ -679,7 +694,7 @@ async function createCheckoutOrder(req: NextRequest, requestId: string) {
     await tx.orderStatusEvent.create({
       data: {
         orderId: o.id,
-        actorType: "customer",
+        actorType: guest ? "guest" : "customer",
         actorId: customer.id,
         eventType: "order_created",
         toStatus: "confirmed",
@@ -758,7 +773,7 @@ async function createCheckoutOrder(req: NextRequest, requestId: string) {
         where: { checkoutKey },
         include: ORDER_INCLUDE_SERIALIZE,
       });
-      if (replay?.customerId === customer.id) {
+      if (replay?.customerId === customer.id && (!guest || await ownsGuestOrder(replay.id, guestOwner!))) {
         return NextResponse.json(serializeOrder(replay), {
           headers: { "X-Idempotent-Replay": "true" },
         });

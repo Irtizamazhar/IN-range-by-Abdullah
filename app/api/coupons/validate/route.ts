@@ -1,9 +1,10 @@
 import { NextRequest } from "next/server";
 import { RateLimiterMemory } from "rate-limiter-flexible";
-import { api, ApiError, customerActor, sameOrigin } from "@/lib/marketplace-api";
+import { api, ApiError, sameOrigin } from "@/lib/marketplace-api";
 import { consumeOrReject } from "@/lib/security/rate-limit";
 import { prisma } from "@/lib/prisma";
 import { calculateCoupon, findCoupon, normalizeCouponCode, type CouponLine } from "@/lib/coupon-service";
+import { checkoutPreviewActor, guestCouponAllowed } from "@/lib/guest-checkout";
 
 export const dynamic = "force-dynamic";
 const limiter = new RateLimiterMemory({ points: 8, duration: 60 });
@@ -11,8 +12,8 @@ const limiter = new RateLimiterMemory({ points: 8, duration: 60 });
 export async function POST(request: NextRequest) {
   return api(async () => {
     sameOrigin(request);
-    const customer = await customerActor();
-    const gate = await consumeOrReject(limiter, customer.id);
+    const customer = await checkoutPreviewActor();
+    const gate = await consumeOrReject(limiter, customer.couponIdentity);
     if (!gate.ok) throw new ApiError(429, "Too many coupon attempts. Please wait a minute.");
     const body = await request.json();
     const code = normalizeCouponCode(body.code);
@@ -26,9 +27,10 @@ export async function POST(request: NextRequest) {
       lines.push({ productId: product.id, vendorId: vendor?.vendorId, category: product.category, categoryRecordId: product.categoryRecordId, price: Number(product.price), originalPrice: Number(product.originalPrice), quantity: entry.quantity });
     }
     const coupon = await findCoupon(prisma, code);
+    if (customer.guest) guestCouponAllowed(coupon);
     if (coupon.maxUses != null && coupon.usedCount >= coupon.maxUses) throw new ApiError(400, "Coupon usage limit has been reached.");
     if (coupon.perCustomerLimit != null && await prisma.couponRedemption.count({ where: { couponId: coupon.id, customerId: customer.id, status: "redeemed" } }) >= coupon.perCustomerLimit) throw new ApiError(400, "You have reached this coupon's usage limit.");
-    const result = calculateCoupon(coupon, lines, customer.id);
+    const result = calculateCoupon(coupon, lines, customer.couponIdentity);
     if (coupon.budget != null && Number(coupon.spent) + result.discount / 100 > Number(coupon.budget)) throw new ApiError(400, "Coupon budget has been reached.");
     return { code, discount: result.discount / 100, eligibleProductIds: result.allocations.map(a => a.productId) };
   });

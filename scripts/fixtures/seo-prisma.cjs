@@ -33,7 +33,12 @@ const service = { id: 'public-service', name: 'Fixture repair', description: 'Pu
 const want = { id: 'public-want', title: 'Public camera request', description: 'Public request details.', category: 'Phones', city: 'Lahore', requestType: 'PRODUCT', budgetMin: null, budgetMax: null,
   budgetFlexible: true, quantity: 1, condition: 'Any', photo: null, photos: [], needBy: null, createdAt: date, updatedAt: date, expiresAt: new Date('2099-01-01'), status: 'OPEN',
   customerId: 'fixture-customer', customer: { isActive: true, name: 'Fixture Customer', image: null }, interests: [], _count: { interests: 0, offers: 0 } };
+if (process.env?.JORO_FIXTURE_CAMPAIGNS === 'true') products.find(product => product.stock > 0 && product.isActive).isFeatured = true;
 const tables = {
+  homepagePromotion: process.env?.JORO_FIXTURE_CAMPAIGNS === 'true' ? [
+    { id: 'fixture-strip', title: 'Fixture catalog', subtitle: '', href: '/products', image: null, placement: 'STRIP', enabled: true, position: 0, startAt: null, endAt: null },
+    { id: 'fixture-banner', title: 'Fixture product collection', subtitle: 'Local verification data', href: '/products/fixture-phone-1', image: null, placement: 'BANNER', enabled: true, position: 1, startAt: null, endAt: null },
+  ] : [],
   product: products, category: [category, ...extraCategories, ...categoryCases], vendor: [vendor, { ...vendor, id: 'pending-store', storeSlug: 'pending-store', status: 'pending' }], vendorProduct: [publication],
   serviceOffering: [service, { ...service, id: 'pending-service', moderationStatus: 'PENDING_APPROVAL' }],
   want: [want, { ...want, id: 'private-want', title: 'PRIVATE REQUEST MUST NOT LEAK', status: 'PENDING_MODERATION' }, { ...want, id: 'expired-want', expiresAt: date }],

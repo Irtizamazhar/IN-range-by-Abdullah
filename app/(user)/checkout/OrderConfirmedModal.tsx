@@ -8,12 +8,12 @@ import { formatPKR } from "@/lib/format";
 import type { CheckoutReceipt } from "@/lib/checkout-response";
 import styles from "./Confirmation.module.css";
 
-export function OrderConfirmedModal({ order }: { order: CheckoutReceipt }) {
+export function OrderConfirmedModal({ order, guest = false }: { order: CheckoutReceipt; guest?: boolean }) {
   const router = useLoadingRouter();
   const dialog = useRef<HTMLDialogElement>(null);
   const navigating = useRef(false);
   const [error, setError] = useState("");
-  const destination = `/account/orders/${encodeURIComponent(order._id)}`;
+  const destination = `${guest ? "/guest-order" : "/account/orders"}/${encodeURIComponent(order._id)}`;
 
   const done = useCallback(async () => {
     if (navigating.current) return;

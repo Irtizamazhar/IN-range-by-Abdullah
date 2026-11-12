@@ -1,5 +1,8 @@
 import { pageMetadata, HOME_TITLE, HOME_DESCRIPTION, SITE_URL, organizationSchema } from "@/lib/seo";
 import { JsonLd } from "@/components/seo/JsonLd";
+import { HomepageAdditions } from "@/components/user/HomepageAdditions";
+import { NewsletterSignup } from "@/components/user/NewsletterSignup";
+import { incrementalFeatures } from "@/lib/incremental-features";
 export const metadata = pageMetadata(HOME_TITLE, HOME_DESCRIPTION, "/");
 import Link from "@/components/ui/LoadingLink";
 
@@ -362,6 +365,7 @@ async function HomePageContent() {
 
 
       <main className="bg-brand-background">
+        <HomepageAdditions placement="STRIP" />
 
         {/* =================================================
 
@@ -387,6 +391,7 @@ async function HomePageContent() {
           {/* Handles its own empty state. */}
           <CategoryAutoScroll categories={categories} />
         </section>
+        <HomepageAdditions placement="BANNER" />
 
 
 
@@ -599,6 +604,7 @@ async function HomePageContent() {
         ================================================= */}
 
         <HomeAllProducts products={homepageProducts} />
+        <HomepageAdditions placement="MID" />
 
 
 
@@ -695,6 +701,8 @@ async function HomePageContent() {
         </section>
 
       </main>
+      <HomepageAdditions placement="LOWER" />
+      {incrementalFeatures().newsletter && <div className="px-4 sm:px-6"><NewsletterSignup /></div>}
 
 
 

@@ -1,0 +1,11 @@
+.row { scroll-snap-type: x mandatory; }
+@media (min-width: 1024px) {
+  .row { gap: 0; justify-content: space-between; }
+  .row > div { width: 20%; justify-content: center; }
+  .row > div:nth-child(n + 6) { display: none; }
+  .row a > span:first-child { animation: category-float 5s ease-in-out infinite; }
+  .row > div:nth-child(even) a > span:first-child { animation-delay: -2.5s; }
+  .row a:hover > span:first-child, .row a:focus-visible > span:first-child { animation-play-state: paused; }
+}
+@keyframes category-float { 50% { transform: translateY(-2px); } }
+@media (prefers-reduced-motion: reduce) { .row a > span:first-child { animation: none; } }

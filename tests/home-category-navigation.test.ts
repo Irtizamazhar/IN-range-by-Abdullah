@@ -28,10 +28,10 @@ function readers() {
 test("homepage includes only eligible populated categories, preserving configured order and images", async () => {
   const { home, queries } = readers();
   const rows = await home();
-  assert.deepEqual(Array.from(rows, row => row.slug), ["phones", ...Array.from({ length: 6 }, (_, i) => `public-category-${i}`), "hidden-category"]);
+  assert.deepEqual(Array.from(rows, row => row.slug), ["phones", ...Array.from({ length: 6 }, (_, i) => `public-category-${i}`)]);
   assert.ok(rows.every(row => row.image === "/icon.png"));
   assert.equal(queries.length, 1);
-  assert.equal(queries[0].args.where.showOnHome, undefined);
+  assert.equal(queries[0].args.where.showOnHome, true);
   assert.equal(JSON.stringify(queries[0].args.orderBy), JSON.stringify([{ showOnHome: "desc" }, { sortOrder: "asc" }, { name: "asc" }]));
   assert.equal(queries[0].args.where.isActive, true);
   assert.ok(queries[0].args.orderBy);
@@ -56,9 +56,9 @@ test("empty, inactive, pending-vendor, suspended-vendor and private-only categor
   }
 });
 
-test("showOnHome prioritizes navigation without excluding other eligible categories", async () => {
+test("showOnHome controls homepage visibility without hiding the public category landing page", async () => {
   const { home, category } = readers();
-  assert.equal((await home()).some(row => row.slug === "hidden-category"), true);
+  assert.equal((await home()).some(row => row.slug === "hidden-category"), false);
   assert.equal((await category("hidden-category"))?.slug, "hidden-category");
 });
 

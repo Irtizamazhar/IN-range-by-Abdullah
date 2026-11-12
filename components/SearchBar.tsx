@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useLoadingRouter } from "@/hooks/useLoadingRouter";
-import { LoaderCircle, Mic, Search } from "lucide-react";
-import type { SearchItem } from "@/lib/public-search";
+import { LoaderCircle, Mic, Search, X } from "lucide-react";
+import type { SearchSuggestion } from "@/lib/search-suggestions";
 import type { ProductCardData } from "@/components/user/ProductCard";
 import Image from "next/image";
 import Link from "@/components/ui/LoadingLink";
@@ -20,7 +20,7 @@ type BrowserRecognition = {
 };
 type SpeechWindow = Window & { SpeechRecognition?: new () => BrowserRecognition; webkitSpeechRecognition?: new () => BrowserRecognition };
 
-const labels: Record<SearchItem["kind"], string> = {
+const labels: Record<SearchSuggestion["kind"], string> = {
   products: "Product", services: "Service", gifts: "Gift", requests: "Public request", stores: "Store", categories: "Category",
 };
 
@@ -30,7 +30,7 @@ export function SearchBar() {
   const params = useSearchParams();
   const routeQuery = pathname?.startsWith("/search") ? params?.get("q") || "" : pathname?.startsWith("/products") ? params?.get("search") || "" : "";
   const [query, setQuery] = useState("");
-  const [items, setItems] = useState<SearchItem[]>([]);
+  const [items, setItems] = useState<SearchSuggestion[]>([]);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [suggestionError, setSuggestionError] = useState(false);
@@ -52,6 +52,7 @@ export function SearchBar() {
   const voicePending = useRef(false);
   const voiceTranscript = useRef("");
   const voiceProductRequest = useRef<AbortController | null>(null);
+  const defaults = useRef<{ at: number; items: SearchSuggestion[] } | null>(null);
 
   function releaseVoice() {
     voiceAttempt.current += 1;
@@ -77,31 +78,37 @@ export function SearchBar() {
   useEffect(() => {
     const speech = window as SpeechWindow;
     setVoiceSupported(Boolean(speech.SpeechRecognition || speech.webkitSpeechRecognition));
-    const saved = sessionStorage.getItem("joro:voice-language");
+    let saved: string | null = null;
+    try { saved = sessionStorage.getItem("joro:voice-language"); } catch { /* Storage may be blocked. */ }
     if (saved === "en-PK" || saved === "ur-PK") setLanguage(saved);
     return () => { voiceAttempt.current += 1; cancelled.current = true; voiceProductRequest.current?.abort(); try { recognition.current?.stop(); } catch { /* Already stopped. */ } recognition.current = null; };
   }, []);
 
   useEffect(() => {
-    const onOutside = (event: PointerEvent) => { if (!root.current?.contains(event.target as Node)) setOpen(false); };
+    const onOutside = (event: PointerEvent) => { if (!root.current?.contains(event.target as Node)) { setOpen(false); setShowVoiceProducts(false); setActiveIndex(-1); } };
     document.addEventListener("pointerdown", onOutside);
     return () => document.removeEventListener("pointerdown", onOutside);
   }, []);
 
+  useEffect(() => { if (activeIndex >= 0) root.current?.querySelector(`[id="joro-search-option-${activeIndex}"]`)?.scrollIntoView({ block: "nearest" }); }, [activeIndex]);
+
   useEffect(() => {
     const q = query.trim();
-    if (!open || q.length < 2) { setItems([]); setBusy(false); setSuggestionError(false); return; }
+    setItems([]); setActiveIndex(-1); setSuggestionError(false);
+    if (!open) { setBusy(false); return; }
+    if (!q && defaults.current && Date.now() - defaults.current.at < 60000) { setItems(defaults.current.items); setBusy(false); return; }
+    setBusy(true);
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       setBusy(true);
       try {
         const response = await fetch(`/api/search/suggestions?q=${encodeURIComponent(q)}`, { signal: controller.signal, cache: "no-store" });
         if (!response.ok) throw new Error("Suggestions unavailable");
-        const data = await response.json() as { items: SearchItem[] };
-        if (!controller.signal.aborted) { setItems(data.items); setSuggestionError(false); }
+        const data = await response.json() as { items: SearchSuggestion[] };
+        if (!controller.signal.aborted) { setItems(data.items); setSuggestionError(false); if (!q) defaults.current = { at: Date.now(), items: data.items }; }
       } catch { if (!controller.signal.aborted) { setItems([]); setSuggestionError(true); } }
       finally { if (!controller.signal.aborted) setBusy(false); }
-    }, 300);
+    }, q ? 250 : 0);
     return () => { window.clearTimeout(timer); controller.abort(); };
   }, [query, open]);
 
@@ -217,15 +224,16 @@ export function SearchBar() {
     }
   }
 
-  const suggestions = open && query.trim().length >= 2;
-  return <div ref={root} className="relative z-[1000] w-full min-w-0">
+  const suggestions = open && !showVoiceProducts;
+  return <div ref={root} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) { setOpen(false); setActiveIndex(-1); } }} className="relative z-[1000] w-full min-w-0">
     <form role="search" onSubmit={(event) => { event.preventDefault(); navigate(); }} className="flex h-12 min-w-0 overflow-hidden rounded-2xl border border-[#dce7da] bg-white shadow-[0_2px_8px_rgba(5,57,35,0.04)] transition-colors focus-within:border-emerald-600 focus-within:ring-2 focus-within:ring-emerald-100">
       <input ref={input} type="search" value={query} onChange={(event) => { if (listening || voicePending.current) releaseVoice(); voiceProductRequest.current?.abort(); setShowVoiceProducts(false); setQuery(event.target.value); setVoiceStatus(""); setOpen(true); setActiveIndex(-1); }} onFocus={() => { if (!showVoiceProducts) setOpen(true); }} onKeyDown={(event) => {
-        if (event.key === "Escape") { setOpen(false); setShowVoiceProducts(false); setActiveIndex(-1); return; }
+        if (event.key === "Escape") { event.preventDefault(); setOpen(false); setShowVoiceProducts(false); setActiveIndex(-1); return; }
         if ((event.key === "ArrowDown" || event.key === "ArrowUp") && !showVoiceProducts) { event.preventDefault(); setOpen(true); setActiveIndex((index) => event.key === "ArrowDown" ? Math.min(items.length - 1, index + 1) : Math.max(-1, index - 1)); }
         if (event.key === "Enter" && activeIndex >= 0 && items[activeIndex]) { event.preventDefault(); setOpen(false); void router.push(items[activeIndex].href); }
       }} role="combobox" aria-autocomplete="list" aria-expanded={suggestions} aria-controls="joro-search-options" aria-activedescendant={activeIndex >= 0 ? `joro-search-option-${activeIndex}` : undefined} aria-label="Search JORO marketplace" maxLength={100} autoComplete="off" placeholder="Search products, services & more" className="h-full min-w-0 flex-1 border-0 bg-transparent px-3 text-[13px] text-neutral-900 outline-none placeholder:text-neutral-500 sm:px-4 sm:text-sm" />
-      {voiceSupported && <select value={language} onChange={(event) => { setLanguage(event.target.value); sessionStorage.setItem("joro:voice-language", event.target.value); }} aria-label="Voice search language" className="w-9 shrink-0 appearance-none border-l border-[#e4ebe2] bg-white text-center text-[10px] font-bold text-emerald-900 outline-none sm:w-11"><option value="en-PK">EN</option><option value="ur-PK">UR</option></select>}
+      {query && <button type="button" aria-label="Clear search" onClick={() => { releaseVoice(); voiceProductRequest.current?.abort(); setShowVoiceProducts(false); setQuery(""); setActiveIndex(-1); setOpen(true); input.current?.focus(); }} className="flex w-8 shrink-0 items-center justify-center text-neutral-600"><X aria-hidden="true" className="h-4 w-4" /></button>}
+      {voiceSupported && <select value={language} onChange={(event) => { setLanguage(event.target.value); try { sessionStorage.setItem("joro:voice-language", event.target.value); } catch { /* Storage is optional. */ } }} aria-label="Voice search language" className="w-9 shrink-0 appearance-none border-l border-[#e4ebe2] bg-white text-center text-[10px] font-bold text-emerald-900 outline-none sm:w-11"><option value="en-PK">EN</option><option value="ur-PK">UR</option></select>}
       <button type="button" onClick={startVoice} aria-label={!voiceSupported ? "Voice search unavailable in this browser" : listening || startingVoice ? "Stop voice search" : "Start voice search"} aria-pressed={listening} title={!voiceSupported ? "Voice search is not supported in this browser" : listening || startingVoice ? "Tap to stop" : "Search by voice"} className={`flex w-9 shrink-0 items-center justify-center ${listening ? "bg-emerald-100 text-emerald-800" : "text-brand-link hover:text-emerald-800"}`}><Mic className="h-[18px] w-[18px]" /></button>
       <button type="submit" aria-label="Search marketplace" className="m-1 flex w-10 shrink-0 items-center justify-center rounded-xl bg-brand-primary text-brand-dark transition-colors hover:bg-brand-hover md:w-[74px]"><Search className="h-5 w-5 md:hidden" /><span className="hidden text-xs font-bold md:inline">SEARCH</span></button>
     </form>
@@ -236,11 +244,18 @@ export function SearchBar() {
         <span className="min-w-0"><span className="block truncate text-sm font-semibold text-emerald-950">{product.name}</span><span className="block text-sm font-bold text-emerald-800">{formatPKR(Number(product.price))}</span></span>
       </Link>)}
     </div>}
-    {suggestions && <div id="joro-search-options" role="listbox" aria-label="Search suggestions" className="absolute left-0 top-[44px] max-h-96 w-full overflow-y-auto rounded-xl border border-emerald-100 bg-white p-2 shadow-xl">
+    {suggestions && <div className="absolute left-0 top-full mt-1 max-h-[min(55dvh,28rem)] w-full overflow-y-auto overscroll-contain rounded-xl border border-emerald-100 bg-white p-2 shadow-xl">
+      <p className="px-3 py-2 text-xs font-bold text-emerald-800">{query.trim() ? "Matching products and categories" : "Suggested products and categories"}</p>
+      <div role="status" aria-live="polite" className="sr-only">{busy ? "Finding suggestions" : suggestionError ? "Suggestions unavailable" : `${items.length} suggestions`}</div>
       {busy && <p className="flex items-center gap-2 px-3 py-2 text-xs text-neutral-500"><LoaderCircle className="h-4 w-4 animate-spin" /> Finding matches...</p>}
-      {!busy && items.length === 0 && <p className="px-3 py-2 text-xs text-neutral-500">{suggestionError ? "Suggestions unavailable. Press Enter to search." : "No matching public listings yet."}</p>}
-      {items.map((item, index) => <button id={`joro-search-option-${index}`} role="option" aria-selected={activeIndex === index} type="button" key={`${item.kind}-${item.id}`} onMouseDown={(event) => event.preventDefault()} onClick={() => { setOpen(false); void router.push(item.href); }} className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm ${activeIndex === index ? "bg-lime-100" : "hover:bg-emerald-50"}`}><span className="min-w-0 truncate font-medium text-emerald-950">{item.title}</span><span className="shrink-0 text-xs text-neutral-500">{labels[item.kind]}</span></button>)}
-      <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => navigate()} className="mt-1 w-full rounded-lg border-t px-3 py-2 text-left text-xs font-bold text-emerald-800 hover:bg-emerald-50">See all results for “{query.trim()}” →</button>
+      {!busy && items.length === 0 && <p className="px-3 py-2 text-xs text-neutral-600">{suggestionError ? "Suggestions unavailable. Press Enter to search." : query.trim() ? "No matching products. Try another name or category." : "No public suggestions available yet."}</p>}
+      <div id="joro-search-options" role="listbox" aria-label="Search suggestions" aria-busy={busy}>
+      {items.map((item, index) => <button id={`joro-search-option-${index}`} role="option" aria-selected={activeIndex === index} type="button" key={`${item.kind}-${item.id}`} onMouseDown={(event) => event.preventDefault()} onClick={() => { setOpen(false); setActiveIndex(-1); void router.push(item.href); }} className={`flex min-h-12 w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm ${activeIndex === index ? "bg-lime-100" : "hover:bg-emerald-50"}`}>
+        {item.image && <Image src={item.image} alt="" width={44} height={44} sizes="44px" className="h-11 w-11 shrink-0 rounded-lg bg-neutral-50 object-contain" />}
+        <span className="min-w-0 flex-1"><span className="block truncate font-medium text-emerald-950">{item.title}</span><span className="block truncate text-xs text-neutral-600">{labels[item.kind]} · {item.detail}</span>{item.price != null && <span className="block text-xs font-bold text-emerald-800">{formatPKR(item.price)}{item.originalPrice != null && item.originalPrice > item.price && <del className="ml-2 font-normal text-neutral-500">{formatPKR(item.originalPrice)}</del>}</span>}</span>
+      </button>)}
+      </div>
+      <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => { if (query.trim()) navigate(); else { setOpen(false); void router.push("/products"); } }} className="mt-1 min-h-11 w-full rounded-lg border-t px-3 py-2 text-left text-xs font-bold text-emerald-800 hover:bg-emerald-50">{query.trim() ? `View all results for “${query.trim()}” →` : "Browse all products →"}</button>
     </div>}
   </div>;
 }

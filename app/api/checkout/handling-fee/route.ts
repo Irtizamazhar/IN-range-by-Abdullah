@@ -1,10 +1,11 @@
 import { NextRequest } from "next/server";
 import { RateLimiterMemory } from "rate-limiter-flexible";
-import { api, ApiError, customerActor, sameOrigin } from "@/lib/marketplace-api";
+import { api, ApiError, sameOrigin } from "@/lib/marketplace-api";
 import { consumeOrReject } from "@/lib/security/rate-limit";
 import { prisma } from "@/lib/prisma";
 import { calculateHandlingFee } from "@/lib/handling-fee";
 import { checkoutQuote } from "@/lib/offer-checkout-service";
+import { checkoutPreviewActor } from "@/lib/guest-checkout";
 
 export const dynamic = "force-dynamic";
 const limiter = new RateLimiterMemory({ points: 60, duration: 60 });
@@ -16,14 +17,15 @@ const limiter = new RateLimiterMemory({ points: 60, duration: 60 });
 export async function POST(request: NextRequest) {
   return api(async () => {
     sameOrigin(request);
-    const customer = await customerActor();
-    const gate = await consumeOrReject(limiter, customer.id);
+    const customer = await checkoutPreviewActor();
+    const gate = await consumeOrReject(limiter, customer.couponIdentity);
     if (!gate.ok) throw new ApiError(429, "Too many requests. Please wait a minute.");
     const body = await request.json();
     if (!Array.isArray(body.products) || !body.products.length || body.products.length > 50) throw new ApiError(400, "Check your cart.");
     if (body.quoteId) {
+      if (customer.guest) throw new ApiError(401, "Sign in to check out a private accepted quote.");
       if (typeof body.quoteId !== "string") throw new ApiError(400, "Invalid accepted quote.");
-      const quote = await checkoutQuote(prisma, body.quoteId, customer.id);
+      const quote = await checkoutQuote(prisma, body.quoteId, customer.id!);
       const line = body.products[0];
       if (body.products.length !== 1 || !line || ![quote.revision.productId, `quote:${quote.id}`].includes(line.productId) || line.quantity !== quote.revision.quantity || line.serviceId || line.variant) throw new ApiError(400, "Checkout the accepted quote on its own with the agreed quantity.");
       if (quote.orderId) throw new ApiError(409, "This quote has already been ordered. Please check My Orders.");

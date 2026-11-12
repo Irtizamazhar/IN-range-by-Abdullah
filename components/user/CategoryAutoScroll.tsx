@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "@/components/ui/LoadingLink";
 import { useState } from "react";
+import styles from "./CategoryAutoScroll.module.css";
 
 
 import { shouldUnoptimizeCategoryImage } from "@/lib/public-category-image-policy";
@@ -51,5 +52,5 @@ function CategoryCircle({ category, hidden = false }: { category: CategoryItem; 
 }
 
 export function CategoryAutoScroll({ categories }: { categories: CategoryItem[] }) {
- return <div role="list" aria-label="Product categories" className="flex w-full min-w-0 flex-nowrap gap-3 overflow-x-auto px-1 pb-3 pt-1">{categories.map(category => <div key={category.id} role="listitem" className="flex shrink-0"><CategoryCircle category={category} /></div>)}</div>;
+ return <div role="list" aria-label="Product categories" className={`${styles.row} flex w-full min-w-0 flex-nowrap gap-3 overflow-x-auto px-1 pb-3 pt-1`}>{categories.map(category => <div key={category.id} role="listitem" className="flex shrink-0"><CategoryCircle category={category} /></div>)}</div>;
 }

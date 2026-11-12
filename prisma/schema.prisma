@@ -183,6 +183,7 @@ model PaymentProofStaging {
 }
 
 model Order {
+  guestAccess           GuestOrderAccess?
   id                    String               @id @default(cuid())
   orderNumber           String               @unique
   customerName          String
@@ -1172,8 +1173,8 @@ model CouponRedemption {
   coupon        VendorCoupon @relation(fields: [couponId], references: [id], onDelete: Restrict)
   orderId       String       @unique
   order         Order        @relation(fields: [orderId], references: [id], onDelete: Restrict)
-  customerId    String
-  customer      Customer     @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  customerId    String?
+  customer      Customer?    @relation(fields: [customerId], references: [id], onDelete: Restrict)
   snapshot      Json
   discount      Decimal      @db.Decimal(12, 2)
   platformFunded Decimal     @default(0) @db.Decimal(12, 2)
@@ -1654,6 +1655,7 @@ model StoreSlugAlias {
 /// Help & Support ticket. Owner is exactly one of customer/vendor, matching actorType.
 /// `sequence` drives the friendly "JORO-10000+sequence" ticket number computed at read time.
 model SupportTicket {
+  liveAccess LiveChatAccess?
   id       String @id @default(cuid())
   sequence Int    @unique @default(autoincrement())
 
@@ -1695,6 +1697,7 @@ model SupportTicket {
 /// One row per public message or internal note. isInternalNote rows must never reach
 /// customer/vendor-facing APIs -- enforced in the service layer, not just the UI.
 model SupportMessage {
+  deliveryReceipt LiveChatReceipt?
   id       String        @id @default(cuid())
   ticketId String
   ticket   SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
@@ -1801,4 +1804,91 @@ model WantReport {
   @@index([vendorId])
 
   @@map("wantreport")
+}
+
+/// Platform-authored campaigns; no fabricated vendor attribution.
+model HomepagePromotion {
+  id String @id @default(cuid())
+  title String @db.VarChar(160)
+  subtitle String @default("") @db.VarChar(300)
+  image String? @db.Text
+  href String @db.VarChar(500)
+  placement String @default("BANNER") @db.VarChar(24)
+  enabled Boolean @default(false)
+  position Int @default(0)
+  startAt DateTime?
+  endAt DateTime?
+  createdBy String @db.VarChar(191)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([enabled, placement, position])
+  @@map("homepagepromotion")
+}
+
+/// Credentials are stored only as hashes. Contact data is never returned by public lists.
+model LiveChatAccess {
+  id String @id @default(cuid())
+  tokenHash String @unique @db.Char(64)
+  ticketId String @unique
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  customerId String? @db.VarChar(191)
+  name String @db.VarChar(120)
+  email String @db.VarChar(254)
+  phone String? @db.VarChar(40)
+  expiresAt DateTime
+  visitorReadAt DateTime @default(now())
+  adminReadAt DateTime @default(now())
+  createdAt DateTime @default(now())
+  @@index([customerId])
+  @@map("livechataccess")
+}
+
+model LiveChatReceipt {
+  key String @id @db.Char(64)
+  messageId String @unique
+  message SupportMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  @@map("livechatreceipt")
+}
+
+/// Availability requires an explicit agent heartbeat; an abandoned tab expires.
+model LiveChatPresence {
+  adminId String @id @db.VarChar(191)
+  available Boolean @default(false)
+  expiresAt DateTime
+  @@map("livechatpresence")
+}
+
+model NewsletterSubscription {
+  id String @id @default(cuid())
+  email String @unique @db.VarChar(254)
+  status String @default("PENDING") @db.VarChar(16)
+  customerId String? @db.VarChar(191)
+  confirmationHash String? @unique @db.Char(64)
+  confirmationExpiresAt DateTime?
+  unsubscribeHash String @unique @db.Char(64)
+  consentAt DateTime @default(now())
+  confirmedAt DateTime?
+  unsubscribedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([status, createdAt])
+  @@map("newslettersubscription")
+}
+
+model GuestOrderAccess {
+  orderId String @id
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  ownerHash String @db.Char(64)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  @@index([ownerHash, expiresAt])
+  @@map("guestorderaccess")
+}
+
+model PublicFeatureRate {
+  key String @id @db.Char(64)
+  count Int @default(1)
+  expiresAt DateTime
+  @@index([expiresAt])
+  @@map("publicfeaturerate")
 }

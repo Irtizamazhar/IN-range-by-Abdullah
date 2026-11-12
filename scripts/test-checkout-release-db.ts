@@ -69,10 +69,13 @@ async function main() {
   const otherVendor = await db.vendor.create({ data: { shopName: "Other Provider", ownerName: "Fixture", email: "v2@example.invalid", passwordHash: fixturePassword, address: "Fixture", status: "approved" } });
   const product = await db.product.create({ data: { id: "cream", name: "Fixture product", description: "Isolated test", price: 2000, stock: 50, variants: [], category: "Home" } });
   await db.vendorProduct.create({ data: { vendorId: vendor.id, productName: product.name, description: "Fixture", price: product.price, stock: 50, category: "Home", images: [], status: "active", publishedProductId: product.id } });
-  const service = await db.serviceOffering.create({ data: { vendorId: vendor.id, name: "Assembly", description: "Fixture", type: "Installation", price: 500, cities: ["Lahore"], durationMinutes: 30, leadDays: 1, warranty: "", cancellationTerms: "Review required" } });
+  const service = await db.serviceOffering.create({ data: { vendorId: vendor.id, name: "Assembly", description: "Fixture", type: "Installation", price: 500, cities: ["Lahore"], moderationStatus: "APPROVED", durationMinutes: 30, leadDays: 1, warranty: "", cancellationTerms: "Review required" } });
   await db.productServiceAddon.create({ data: { productId: product.id, serviceId: service.id } });
   let customer = a, providerId = vendor.id;
   const modules: Record<string, unknown> = {
+    "@/lib/incremental-features": { incrementalFeatures: () => ({ guestCheckout: false }) },
+    "@/lib/guest-checkout": {}, "@/lib/public-feature-security": {},
+    "@/lib/cod-cities": await import("../lib/cod-cities"),
     "next/server": { NextResponse }, "node:crypto": { randomUUID }, "@prisma/client": { Prisma }, zod: requireLocal("zod"),
     "@/lib/prisma": { prisma: db }, "@/lib/marketplace-api": { ...marketplace, sameOrigin: () => {}, customerActor: async () => ({ id: customer.id, name: customer.name, email: customer.email }), adminActor: async () => "test-admin" },
     "@/lib/sessions": { getAdminSession: async () => ({ user: { role: "admin" } }), getCustomerSession: async () => ({ user: { id: customer.id, role: "customer", email: customer.email } }) },
@@ -184,9 +187,10 @@ async function main() {
   const debit = await db.vendorLedgerEntry.findUniqueOrThrow({ where: { idempotencyKey: `refund:${refund.id}` } }); assert.equal(debit.vendorId, vendor.id); assert.equal(Number(debit.amount), -810);
   pass("real bespoke gift return retains seller, ignores supplied vendor ID, notifies seller; simulated manual refund debits correct net once and refuses missing attribution");
   const linked = await quote("GIFT", true); const stockBefore = (await db.product.findUniqueOrThrow({ where: { id: product.id } })).stock;
-  assert.equal((await orders.POST(request("/api/orders", { ...giftPayload, quoteId: linked.id, products: [{ productId: product.id, quantity: 2 }] }))).status, 200);
-  assert.equal((await db.product.findUniqueOrThrow({ where: { id: product.id } })).stock, stockBefore - 2);
-  pass("catalog-linked gifts keep inventory deductions and negotiated pricing");
+  const linkedResponse = await orders.POST(request("/api/orders", { ...giftPayload, quoteId: linked.id, products: [{ productId: product.id, quantity: 2 }] })); assert.equal(linkedResponse.status, 200); const linkedReceipt = await linkedResponse.json();
+  assert.equal((await db.product.findUniqueOrThrow({ where: { id: product.id } })).stock, stockBefore);
+  assert.equal(await db.orderInventoryLine.count({ where: { orderId: linkedReceipt._id, state: "awaiting_confirmation" } }), 1);
+  pass("catalog-linked gifts preserve negotiated pricing and defer seller inventory deduction until confirmation");
   const secondProduct = await db.product.create({ data: { name: "Other seller product", description: "Fixture", price: 300, stock: 5, variants: [], category: "Home" } });
   await db.vendorProduct.create({ data: { vendorId: otherVendor.id, productName: secondProduct.name, description: "Fixture", price: 300, stock: 5, category: "Home", images: [], status: "active", publishedProductId: secondProduct.id } });
   const multiResponse = await orders.POST(request("/api/orders", { ...payload, products: [{ productId: product.id, quantity: 1 }, { productId: secondProduct.id, quantity: 1 }], expectedSubtotal: 2300 })); assert.equal(multiResponse.status, 200);

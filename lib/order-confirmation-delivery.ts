@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { sendMailOutcome } from "@/lib/mailer";
+import { incrementalFeatures } from "@/lib/incremental-features";
 import { orderConfirmationEmail, sellerShippedEmail, vendorOrderEmail, vendorServiceBookingEmail } from "@/lib/joro-email-templates";
 import { orderConfirmationEligible, confirmationRetry } from "@/lib/order-confirmation-policy";
 
@@ -45,6 +46,9 @@ export async function deliverOrderConfirmation(db = prisma, send = sendMailOutco
         if (booking?.vendor.status === "approved") { recipient = booking.vendor.email; email = vendorServiceBookingEmail(order, booking); }
       } else if (job.recipientKey === "customer" && order.customer?.isActive) {
         recipient = order.customer.email;
+        email = orderConfirmationEmail(order);
+      } else if (job.recipientKey === "customer" && !order.customerId && incrementalFeatures().guestCheckout && order.customerEmail) {
+        recipient = order.customerEmail;
         email = orderConfirmationEmail(order);
       }
     }

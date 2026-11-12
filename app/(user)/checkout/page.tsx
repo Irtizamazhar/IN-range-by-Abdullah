@@ -107,9 +107,12 @@ export default function CheckoutPage() {
 }
 
 function CheckoutForm() {
+  const [guestEnabled, setGuestEnabled] = useState(false), [asGuest, setAsGuest] = useState(false);
   const { items, subtotal, clear } = useCart();
   const { isCustomer, authLoading, openAuthModal } = useCustomerAuth();
   const { data: session } = useSession();
+  const guestMode = asGuest && !isCustomer;
+  useEffect(() => { const controller = new AbortController(); fetch("/api/checkout/guest-session", { cache: "no-store", signal: controller.signal }).then(r => r.json()).then(row => { setGuestEnabled(row.enabled === true); setAsGuest(row.active === true); }).catch(() => {}); return () => controller.abort(); }, []);
   const [settings, setSettings] = useState<ISettings | null>(null);
   const [settingsLoading, setSettingsLoading] = useState(true);
   const [settingsError, setSettingsError] = useState("");
@@ -249,7 +252,7 @@ function CheckoutForm() {
 
   // Server-calculated preview; POST /api/orders recalculates and rejects a mismatch.
   useEffect(() => {
-    if (!isCustomer || items.length === 0) return;
+    if ((!isCustomer && !guestMode) || items.length === 0) return;
     let stale = false;
     setHandlingFee(null);
     setQuotePricing(null);
@@ -275,7 +278,7 @@ function CheckoutForm() {
     }, 250);
     return () => { stale = true; clearTimeout(timer); };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- cartSignature captures the relevant item fields.
-  }, [cartSignature, isCustomer, handlingFeeVersion]);
+  }, [cartSignature, isCustomer, guestMode, handlingFeeVersion]);
 
   async function applyCoupon() {
     setCouponBusy(true);
@@ -296,8 +299,8 @@ function CheckoutForm() {
 
   const fieldErrors = useMemo(() => {
     const errors: Partial<Record<FieldKey, string>> = {};
-    if (!email.trim()) errors.email = "Enter your email address.";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errors.email = "Enter a valid email address.";
+    if (!email.trim() && !guestMode) errors.email = "Enter your email address.";
+    else if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errors.email = "Enter a valid email address.";
     if (!firstName.trim()) errors.firstName = "Enter your first name.";
     else { const nameError = personNameError(`${firstName} ${lastName}`, "Name"); if (nameError) errors.firstName = nameError; }
     if (!address.trim()) errors.address = "Enter your street address.";
@@ -313,7 +316,7 @@ function CheckoutForm() {
       if (!billingCity.trim()) errors.billingCity = "Select the billing city or town.";
     }
     return errors;
-  }, [email, firstName, lastName, address, city, codAllowed, phone, sameBillingAddress, billingFirstName, billingLastName, billingAddress, billingCity, billingPhone]);
+  }, [email, firstName, lastName, address, city, codAllowed, phone, sameBillingAddress, billingFirstName, billingLastName, billingAddress, billingCity, billingPhone, guestMode]);
   const touch = (key: FieldKey) => setTouched((prev) => (prev[key] ? prev : { ...prev, [key]: true }));
   const errorFor = (key: FieldKey) => (submitAttempted || touched[key] ? fieldErrors[key] : undefined);
   const describe = (key: FieldKey) => {
@@ -326,13 +329,13 @@ function CheckoutForm() {
     orderInFlight.current = true;
     try {
       const s = await getSession();
-      if (s?.user?.role !== "customer") {
+      if (!guestMode && s?.user?.role !== "customer") {
         toast.error("Please sign in or create an account first");
         return openAuthModal("signup");
       }
-      if (s.user.id !== session?.user?.id) throw new Error("Your account changed. Please reload checkout before placing your order.");
+      if (guestMode ? Boolean(s?.user) : s?.user?.id !== session?.user?.id) throw new Error("Your account changed. Please reload checkout before placing your order.");
       setLoading(true);
-      const signature = JSON.stringify([s.user.id, cartSignature]);
+      const signature = JSON.stringify([guestMode ? "guest" : s?.user?.id, cartSignature]);
       let storage: Storage | undefined;
       try { storage = window.sessionStorage; } catch { /* Private browsing may disable storage. */ }
       if (checkoutAttempt.current?.signature !== signature) checkoutAttempt.current = { signature, key: checkoutAttemptKey(signature, storage) };
@@ -368,7 +371,7 @@ function CheckoutForm() {
       let receipt;
       try { receipt = await readCheckoutReceipt(res); }
       catch (error) { if (res.status === 409) setHandlingFeeVersion(v => v + 1); throw error; }
-      if (saveInfoNextTime) {
+      if (saveInfoNextTime && !guestMode) {
         try {
           const saved = await fetch("/api/customer/addresses", { method: "POST", headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(10000), body: JSON.stringify({ orderId: receipt._id }) });
           const data = await saved.json();
@@ -412,16 +415,17 @@ function CheckoutForm() {
 
   if (authLoading) return <PageSkeleton label="Loading checkout…" />;
 
-  if (!isCustomer && !doneOrder) {
+  if (!isCustomer && !guestMode && !doneOrder) {
     return (
       <div className="mx-auto max-w-lg px-4 py-16 text-center">
         <div className="rounded-card border border-borderGray bg-white p-8 shadow-card">
           <p className="text-darkText mb-2 font-semibold">
-            An account is required to check out
+            {guestEnabled ? "Choose how to check out" : "An account is required to check out"}
           </p>
           <p className="text-sm text-darkText/70 mb-6">
-            Sign up or log in, then complete your order.
+            {guestEnabled ? "Continue as a guest, or sign in to use your account. Your cart stays saved." : "Sign up or log in, then complete your order."}
           </p>
+          {guestEnabled && <LoadingButton type="button" className="mb-3 min-h-11 w-full rounded-xl bg-emerald-950 px-4 py-3 font-bold text-white" onClick={async () => { try { const r = await fetch("/api/checkout/guest-session", { method: "POST" }); const data = await r.json(); if (!r.ok) throw Error(data.error); setAsGuest(true); } catch (e) { toast.error(e instanceof Error ? e.message : "Guest checkout is unavailable."); } }}>Continue as Guest</LoadingButton>}
           <LoadingButton
             type="button"
             onClick={() => openAuthModal("signup")}
@@ -451,7 +455,7 @@ function CheckoutForm() {
     );
   }
 
-  if (doneOrder) return <OrderConfirmedModal order={doneOrder} />;
+  if (doneOrder) return <OrderConfirmedModal order={doneOrder} guest={guestMode} />;
 
   const itemCountLabel = `${items.length} item${items.length === 1 ? "" : "s"} in your cart`;
   const formattedTotal = handlingFee === null ? null : formatPKR(totalAmount);
@@ -490,7 +494,7 @@ function CheckoutForm() {
             <section className={cardClass}>
               <SectionHeader step={1} title="Contact Information" subtitle="We'll use this email to send you order updates" />
               <div className="space-y-4">
-                <Field id={fieldId("email")} label="Email Address" error={errorFor("email")}>
+                <Field id={fieldId("email")} label={guestMode ? "Email address (optional)" : "Email Address"} error={errorFor("email")}>
                   <IconBox icon={<Mail className="h-4 w-4" />}>
                     <input
                       {...describe("email")}
@@ -651,6 +655,7 @@ function CheckoutForm() {
                     type="checkbox"
                     className="h-[18px] w-[18px] shrink-0 cursor-pointer accent-[#00543D]"
                     checked={saveInfoNextTime}
+                      disabled={guestMode}
                     onChange={(e) => setSaveInfoNextTime(e.target.checked)}
                   />
                   Save this information for next time

@@ -31,7 +31,10 @@ try {
     assert.equal(shippingResponse.status, 200);
     const shippingHtml = await shippingResponse.text();
     assert.match(shippingHtml, /PKR <!-- -->150\.00/);
-    assert.match(shippingHtml, /no cities currently configured/);
+    // Checkout now includes the committed built-in COD city list even when
+    // settings.codAvailableCities is empty; the policy must mirror that list.
+    assert.match(shippingHtml, /Cash on Delivery is available in:[\s\S]*Lahore/);
+    assert.doesNotMatch(shippingHtml, /no cities currently configured/);
     assert.doesNotMatch(shippingHtml, /shippingDetails|hasShippingService|merchantReturnDays/);
     for (const [old, canonical] of [['/products/seo-p-01', '/products/fixture-phone-1'], ['/categories/seo-category', '/categories/phones'], ['/category/seo-category', '/categories/phones'], ['/new-arrivals/1', '/products/fixture-phone-1']]) {
       const response = await fetch(origin + old + '?page=2&token=private', { redirect: 'manual', headers: { 'user-agent': ua } });

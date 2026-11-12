@@ -4,6 +4,7 @@ import { LoadingButton } from "@/components/ui/LoadingButton";
 import Image from "next/image";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { CategoryImage, CategoryNavigation, useNavCategories } from "./CategoryNavigation";
+import { NewsletterSignup } from "./NewsletterSignup";
 import { MarketplaceNav } from "./MarketplaceNav";
 import styles from "./Navbar.module.css";
 import { PostWantButton } from "./PostWantButton";
@@ -60,8 +61,10 @@ import { SearchBar } from "@/components/SearchBar";
 
 export function Navbar({
   whatsappNumber,
+  newsletterEnabled = false,
 }: {
   whatsappNumber: string;
+  newsletterEnabled?: boolean;
 }) {
   const { data: categoryRows = [] } = useNavCategories();
   const reduceMotion = useReducedMotion();
@@ -489,18 +492,19 @@ export function Navbar({
             </div>
             <Link href="/stores" onNavigateComplete={() => setMobileOpen(false)} className={`${styles.rowCard} ${styles.storesCard}`}><Store aria-hidden="true" /><span>Stores</span><ChevronRight aria-hidden="true" /></Link>
             <div className={styles.categoryHeading}><h2>Categories</h2><Link href="/products" onNavigateComplete={() => setMobileOpen(false)} className={styles.viewAll}>View All <ChevronRight aria-hidden="true" className="h-3 w-3" /></Link></div>
-            <nav aria-label="Product categories" className={styles.categoryGrid}>
+            <details open><summary className="min-h-11 cursor-pointer py-3 font-bold">Browse categories</summary><nav aria-label="Product categories" className={styles.categoryGrid}>
               {categoryRows.map(category => (
-                <Link key={category.id} href={`/products?category=${encodeURIComponent(category.name)}`} onNavigateComplete={() => setMobileOpen(false)} className={styles.categoryCard}>
+                <Link key={category.id} href={category.slug ? `/categories/${encodeURIComponent(category.slug)}` : `/products?category=${encodeURIComponent(category.name)}`} onNavigateComplete={() => setMobileOpen(false)} className={styles.categoryCard}>
                   <CategoryImage category={category} /><span>{category.name}</span>
                 </Link>
               ))}
-            </nav>
+            </nav></details>
             <Link href="/products" onNavigateComplete={() => setMobileOpen(false)} className={styles.discoveryCard}><ShoppingBag aria-hidden="true" /><span><strong>Discover more categories</strong><small>Everything you need in one place</small></span><ChevronRight aria-hidden="true" /></Link>
 
             {/* HELP */}
 
             <div className="my-5 h-px bg-black/[0.07]" />
+            {newsletterEnabled && <NewsletterSignup compact />}
 
             <div className="space-y-1">
               <Link

@@ -200,6 +200,8 @@ function Recommendations({ excludeIds }: { excludeIds: string[] }) {
 }
 
 export default function CartPage() {
+  const [guestEnabled, setGuestEnabled] = useState(false);
+  useEffect(() => { const controller = new AbortController(); fetch("/api/checkout/guest-session", { signal: controller.signal, cache: "no-store" }).then(r => r.json()).then(row => setGuestEnabled(row.enabled === true)).catch(() => {}); return () => controller.abort(); }, []);
   const router = useRouter();
   const { items, subtotal, totalQty } = useCart();
   const { requireCustomer } = useCustomerAuth();
@@ -258,7 +260,7 @@ export default function CartPage() {
           <LoadingButton
             type="button"
             disabled={empty}
-            onClick={() => requireCustomer(() => router.push("/checkout"), "signup")}
+            onClick={() => guestEnabled ? router.push("/checkout") : requireCustomer(() => router.push("/checkout"), "signup")}
             className={`mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl text-md font-bold transition-colors ${
               empty
                 ? "cursor-not-allowed bg-darkText/10 text-darkText/40"

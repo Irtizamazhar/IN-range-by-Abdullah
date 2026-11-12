@@ -9,6 +9,7 @@ import { Prisma } from "@prisma/client";
 test("fee preview never adds a separate customer charge", async () => {
   const products = new Set(["one", "two"]);
   const modules: Record<string, unknown> = {
+    "@/lib/guest-checkout": { checkoutPreviewActor: async () => ({ id: "customer-1", couponIdentity: "customer-1", guest: false }) },
     "rate-limiter-flexible": { RateLimiterMemory: class {} },
     "@/lib/marketplace-api": {
       api: async (fn: () => Promise<unknown>) => Response.json(await fn()),

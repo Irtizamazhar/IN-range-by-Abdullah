@@ -1,6 +1,7 @@
 import { productPath } from "@/lib/catalog-urls";
 import { prisma } from "@/lib/prisma";
 import { giftCategoryWhere } from "@/lib/gift-products";
+import { indexableProductWhere } from "@/lib/seo-data";
 
 export type SearchKind = "products" | "services" | "gifts" | "requests" | "stores" | "categories";
 export type SearchItem = { id: string; kind: SearchKind; title: string; detail: string; href: string };
@@ -24,9 +25,10 @@ export async function searchPublicMarketplace(rawQuery: string, perGroup = 8): P
     { title: { contains: token } }, { category: { contains: token } }, { description: { contains: token } },
   ] }));
   const [products, gifts, services, categories, serviceCategories, wants, stores] = await Promise.all([
-    prisma.product.findMany({ where: { isActive: true, AND: productMatch, NOT: giftCategoryWhere }, select: { id: true, slug: true, name: true, category: true }, take, orderBy: { createdAt: "desc" } }),
+    prisma.product.findMany({ where: { AND: [indexableProductWhere, ...productMatch], NOT: giftCategoryWhere }, select: { id: true, slug: true, name: true, category: true }, take, orderBy: { createdAt: "desc" } }),
     prisma.product.findMany({ where: { isActive: true, stock: { gt: 0 }, AND: [
       giftCategoryWhere,
+      indexableProductWhere,
       ...productMatch,
     ] }, select: { id: true, slug: true, name: true, category: true }, take, orderBy: { createdAt: "desc" } }),
     prisma.serviceOffering.findMany({ where: { active: true, moderationStatus: "APPROVED", vendor: { status: "approved" }, AND: serviceMatch }, select: { id: true, name: true, type: true }, take, orderBy: { createdAt: "desc" } }),
