@@ -11,7 +11,7 @@ const products = Array.from({ length: 20 }, (_, i) => ({ id: `seo-p-${String(i +
   legacyNewArrivalId: i === 0 ? 1 : null, isFeatured: false, _count: {} }));
 products.push({ ...products[0], id: 'inactive-product', isActive: false }, { ...products[0], id: 'unapproved-product', vendorPublication: { ...publication, vendor: { ...vendor, status: 'pending' } } });
 const category = { id: 'seo-category', name: 'Phones', slug: 'phones', image: '/icon.png', isActive: true, createdAt: date, updatedAt: date, products, sortOrder: 0, showOnHome: true, legacyId: 1 };
-const extraCategories = Array.from({ length: 6 }, (_, i) => {
+const extraCategories = Array.from({ length: process.env?.JORO_FIXTURE_TEN_CATEGORIES === 'true' ? 9 : 6 }, (_, i) => {
   const id = `public-category-${i}`, name = `Fixture category ${i}`;
   const product = { ...products[1], id: `category-product-${i}`, name: `Category item ${i}`, category: name, categoryRecordId: id, stock: i === 0 ? 0 : 3 };
   products.push(product);

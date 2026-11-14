@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "@/components/ui/LoadingLink";
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import styles from "./CategoryAutoScroll.module.css";
 
 
@@ -36,7 +36,7 @@ function categoryImage(category: CategoryItem) {
 // Every item shares these exact sizes.
 const item = "group flex w-[92px] shrink-0 snap-start flex-col items-center text-center outline-none sm:w-[96px]";
 const circle = "relative flex h-[80px] w-[80px] items-center justify-center overflow-hidden rounded-full border-2 border-white ring-1 transition duration-200 group-hover:-translate-y-0.5 group-focus-visible:-translate-y-0.5 sm:h-[76px] sm:w-[76px]";
-const label = "mt-1.5 line-clamp-2 w-full break-normal text-xs leading-tight text-brand-dark [hyphens:none] [overflow-wrap:normal] sm:text-sm";
+const label = "mt-1.5 line-clamp-2 w-full text-xs leading-tight text-brand-dark [hyphens:none] [overflow-wrap:anywhere] sm:text-sm";
 function CategoryCircle({ category, hidden = false }: { category: CategoryItem; hidden?: boolean }) {
   const src = categoryImage(category);
   // An image that cannot load (e.g. an external host the optimizer rejects, or a missing file) shows the initial instead.
@@ -44,7 +44,7 @@ function CategoryCircle({ category, hidden = false }: { category: CategoryItem; 
   return <Link href={category.slug ? `/categories/${encodeURIComponent(category.slug)}` : `/products?category=${encodeURIComponent(category.name)}`} title={category.name} tabIndex={hidden ? -1 : undefined} className={item}>
     <span className={`${circle} bg-white ring-green-200 sm:bg-brand-soft group-hover:ring-green-500 group-focus-visible:ring-2 group-focus-visible:ring-green-600`}>
       {src && src !== failedSrc
-        ? <Image src={src} alt="" fill sizes="(min-width: 640px) 76px, 80px" loading="lazy" unoptimized={shouldUnoptimizeCategoryImage(src)} onError={() => setFailedSrc(src)} className="object-contain sm:object-cover" />
+        ? <Image src={src} alt="" fill sizes="(min-width: 640px) 76px, 80px" loading="lazy" unoptimized={shouldUnoptimizeCategoryImage(src)} onError={() => setFailedSrc(src)} className="object-contain" />
         : <span aria-hidden="true" className="text-[24px] font-bold text-brand-dark/70 sm:text-[26px]">{category.name.trim().charAt(0).toUpperCase() || "?"}</span>}
     </span>
     <span className={label}>{category.name}</span>
@@ -52,5 +52,6 @@ function CategoryCircle({ category, hidden = false }: { category: CategoryItem; 
 }
 
 export function CategoryAutoScroll({ categories }: { categories: CategoryItem[] }) {
- return <div role="list" aria-label="Product categories" className={`${styles.row} flex w-full min-w-0 flex-nowrap gap-3 overflow-x-auto px-1 pb-3 pt-1`}>{categories.map(category => <div key={category.id} role="listitem" className="flex shrink-0"><CategoryCircle category={category} /></div>)}</div>;
+ const visible = categories.slice(0, 10);
+ return <div role="list" aria-label="Product categories" style={{ "--category-count": Math.max(1, visible.length) } as CSSProperties} className={`${styles.row} flex w-full min-w-0 flex-nowrap gap-3 overflow-x-auto px-1 pb-3 pt-1`}>{visible.map(category => <div key={category.id} role="listitem" className="flex shrink-0"><CategoryCircle category={category} /></div>)}</div>;
 }

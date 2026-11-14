@@ -4,9 +4,9 @@ import fs from "node:fs";
 import ts from "typescript";
 import { runInNewContext } from "node:vm";
 
-function readers() {
+function readers(tenCategories = false) {
   const fixture: { prisma?: { category: { findMany: (args: unknown) => Promise<unknown[]>; findFirst: (args: unknown) => Promise<unknown> } } } = {};
-  runInNewContext(fs.readFileSync("scripts/fixtures/seo-prisma.cjs", "utf8"), { globalThis: fixture, process: { on() {} } });
+  runInNewContext(fs.readFileSync("scripts/fixtures/seo-prisma.cjs", "utf8"), { globalThis: fixture, process: { env: { JORO_FIXTURE_TEN_CATEGORIES: String(tenCategories) }, on() {} } });
   const queries: { operation: string; args: { where: Record<string, unknown>; orderBy?: unknown } }[] = [];
   const db = { category: {
     findMany: async (args: { where: Record<string, unknown> }) => { queries.push({ operation: "findMany", args }); return fixture.prisma!.category.findMany(args); },
@@ -28,10 +28,11 @@ function readers() {
 test("homepage includes only eligible populated categories, preserving configured order and images", async () => {
   const { home, queries } = readers();
   const rows = await home();
-  assert.deepEqual(Array.from(rows, row => row.slug), ["phones", ...Array.from({ length: 6 }, (_, i) => `public-category-${i}`)]);
+  assert.deepEqual(Array.from(rows, row => row.slug), ["phones", ...Array.from({ length: 6 }, (_, i) => `public-category-${i}`), "hidden-category"]);
   assert.ok(rows.every(row => row.image === "/icon.png"));
   assert.equal(queries.length, 1);
-  assert.equal(queries[0].args.where.showOnHome, true);
+  assert.equal(queries[0].args.where.showOnHome, undefined);
+  assert.equal((queries[0].args as { take?: number }).take, 10);
   assert.equal(JSON.stringify(queries[0].args.orderBy), JSON.stringify([{ showOnHome: "desc" }, { sortOrder: "asc" }, { name: "asc" }]));
   assert.equal(queries[0].args.where.isActive, true);
   assert.ok(queries[0].args.orderBy);
@@ -56,10 +57,19 @@ test("empty, inactive, pending-vendor, suspended-vendor and private-only categor
   }
 });
 
-test("showOnHome controls homepage visibility without hiding the public category landing page", async () => {
+test("eligible non-homepage categories supplement preferred categories without changing their settings", async () => {
   const { home, category } = readers();
-  assert.equal((await home()).some(row => row.slug === "hidden-category"), false);
+  assert.equal((await home()).at(-1)?.slug, "hidden-category");
   assert.equal((await category("hidden-category"))?.slug, "hidden-category");
+});
+
+test("ten preferred eligible categories fill the row before supplementary categories", async () => {
+  const { home, category } = readers(true);
+  const rows = await home();
+  assert.equal(rows.length, 10);
+  assert.equal(new Set(rows.map(row => row.slug)).size, 10);
+  assert.equal(rows.some(row => row.slug === "hidden-category"), false);
+  for (const row of rows) assert.equal((await category(row.slug))?.slug, row.slug);
 });
 
 test("out-of-stock public products remain eligible under the existing public-product policy", async () => {

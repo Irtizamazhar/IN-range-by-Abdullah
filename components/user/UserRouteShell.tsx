@@ -7,7 +7,6 @@ import { usePathname } from "next/navigation";
 import { AnnouncementBar } from "@/components/user/AnnouncementBar";
 import { Navbar } from "@/components/user/Navbar";
 import { Footer } from "@/components/user/Footer";
-import { WhatsAppFloat } from "@/components/user/WhatsAppButton";
 import { CartProvider } from "@/context/CartContext";
 import { CustomerAuthProvider } from "@/context/CustomerAuthContext";
 import { PostWantProvider } from "@/context/PostWantContext";
@@ -53,7 +52,6 @@ export function UserRouteShell({
           </Suspense>
           <main className="min-w-0 flex-1">{children}</main>
           <Footer settings={footerSettings} />
-          <WhatsAppFloat number={whatsappNumber} />
           {chatEnabled && !checkout && <LiveChat />}
         </div>
         )}

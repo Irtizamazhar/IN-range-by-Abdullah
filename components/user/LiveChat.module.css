@@ -1,0 +1,18 @@
+.launcher { bottom: calc(76px + env(safe-area-inset-bottom)); }
+.panel {
+  --chat-base: calc(136px + env(safe-area-inset-bottom));
+  bottom: calc(var(--chat-keyboard-offset, 0px) + var(--chat-base));
+  width: min(380px, calc(100vw - 24px));
+  height: min(560px, calc(var(--chat-visible-height, 100dvh) - var(--chat-base) - 12px));
+  animation: chat-open 160ms ease-out;
+}
+@media (min-width: 768px) {
+  .launcher { bottom: 24px; }
+  .panel { --chat-base: 84px; }
+}
+.panel.keyboard { --chat-base: 12px; }
+@keyframes chat-open {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) { .panel { animation: none; } }
